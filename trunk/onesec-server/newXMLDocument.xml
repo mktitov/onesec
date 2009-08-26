@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="windows-1251"?>
+
+<!--
+    Document   : newXMLDocument.xml
+    Created on : 26 Ноябрь 2007 г., 16:07
+    Author     : tim
+    Description:
+        Purpose of the document follows.
+-->
+
+<ns0:assembly  xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'
+   xmlns:ns0='http://maven.apache.org/POM/4.0.0'
+   xsi:schemaLocation='http://maven.apache.org/POM/4.0.0 src\main\conf\assembly-1.1.0-SNAPSHOT.xsd'>
+
+</ns0:assembly>
