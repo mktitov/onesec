@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.impl;
 
+import java.io.FileInputStream;
 import org.junit.Before;
 import org.junit.Test;
 import org.onesec.core.StateWaitResult;
@@ -27,6 +28,8 @@ import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.impl.CCMCallOperatorNode;
 import org.onesec.raven.impl.ProviderNode;
 import org.onesec.raven.ivr.IvrEndpointState;
+import org.onesec.raven.ivr.actions.PlayAudioActionNode;
+import org.onesec.raven.ivr.actions.StopConversationActionNode;
 import org.raven.log.LogLevel;
 import org.raven.sched.impl.ExecutorServiceNode;
 
@@ -61,8 +64,8 @@ public class IvrEndpointNodeTest extends OnesecRavenTestCase
         executor = new ExecutorServiceNode();
         executor.setName("executor");
         tree.getRootNode().addAndSaveChildren(executor);
-        executor.setMaximumPoolSize(10);
-        executor.setCorePoolSize(1);
+        executor.setMaximumPoolSize(15);
+        executor.setCorePoolSize(5);
         assertTrue(executor.start());
 
         scenario = new IvrConversationScenarioNode();
@@ -80,7 +83,7 @@ public class IvrEndpointNodeTest extends OnesecRavenTestCase
         endpoint.setLogLevel(LogLevel.TRACE);
     }
 
-    @Test(timeout=10000)
+//    @Test(timeout=10000)
 //    @Test
     public void startStopTest() throws Exception
     {
@@ -88,16 +91,50 @@ public class IvrEndpointNodeTest extends OnesecRavenTestCase
         System.out.println("Starting...");
         assertTrue(endpoint.start());
         assertEquals(IvrEndpointState.OUT_OF_SERVICE, endpoint.getEndpointState().getId());
-        System.out.println("Waiting for WAITING state");
+        System.out.println("Waiting for IN_SERVICE state");
         StateWaitResult res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.IN_SERVICE}, 2000);
         assertFalse(res.isWaitInterrupted());
         System.out.println("Stoping...");
         endpoint.stop();
-        System.out.println("Waiting for INVALID state");
+        System.out.println("Waiting for OUT_OF_SERVICE state");
         res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.OUT_OF_SERVICE}, 2000);
         assertFalse(res.isWaitInterrupted());
+    }
+
+    @Test
+    public void simpleConversationTest() throws Exception
+    {
+        AudioFileNode audioFileNode = new AudioFileNode();
+        audioFileNode.setName("audio file");
+        tree.getRootNode().addAndSaveChildren(audioFileNode);
+        FileInputStream is = new FileInputStream("src/test/wav/test.wav");
+        audioFileNode.getAudioFile().setDataStream(is);
+        assertTrue(audioFileNode.start());
+
+        PlayAudioActionNode playAudioActionNode = new PlayAudioActionNode();
+        playAudioActionNode.setName("Play audio");
+        scenario.addAndSaveChildren(playAudioActionNode);
+        playAudioActionNode.setAudioFile(audioFileNode);
+        assertTrue(playAudioActionNode.start());
+
+        StopConversationActionNode stopConversationActionNode = new StopConversationActionNode();
+        stopConversationActionNode.setName("stop conversation");
+        scenario.addAndSaveChildren(stopConversationActionNode);
+        assertTrue(stopConversationActionNode.start());
+        
+        waitForProvider();
+        assertTrue(endpoint.start());
+        StateWaitResult res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.IN_SERVICE}, 2000);
+        res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.ACCEPTING_CALL}, 20000);
+        res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.TALKING}, 5000);
+        res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.IN_SERVICE}, 5000);
+        
     }
 
     private void waitForProvider() throws Exception
@@ -108,7 +145,7 @@ public class IvrEndpointNodeTest extends OnesecRavenTestCase
         ProviderController provider = providerRegistry.getProviderControllers().iterator().next();
         assertNotNull(provider);
         StateWaitResult res = provider.getState().waitForState(
-                new int[]{ProviderControllerState.IN_SERVICE}, 2000);
+                new int[]{ProviderControllerState.IN_SERVICE}, 4000);
         assertFalse(res.isWaitInterrupted());
     }
 }

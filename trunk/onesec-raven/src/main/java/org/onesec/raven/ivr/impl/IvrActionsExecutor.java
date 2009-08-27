@@ -18,12 +18,9 @@
 package org.onesec.raven.ivr.impl;
 
 import java.util.Collection;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.onesec.raven.ivr.IvrAction;
 import org.onesec.raven.ivr.IvrActionException;
 import org.onesec.raven.ivr.IvrActionStatus;
-import org.onesec.raven.ivr.IvrEndpoint;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.ExecutorServiceException;
@@ -81,11 +78,15 @@ public class IvrActionsExecutor implements Task
             for (IvrAction action: actions)
             {
                 try {
+                    if (endpoint.isLogLevelEnabled(LogLevel.DEBUG))
+                        endpoint.debug(String.format(
+                                "ActionsExecutor. Executing action (%s)", action.getName()));
                     action.execute(endpoint);
                 } catch (IvrActionException ex) {
                     if (endpoint.isLogLevelEnabled(LogLevel.ERROR))
                         endpoint.error(String.format(
-                                "Action (%s) execution error", action.getName()), ex);
+                                "ActionsExecutor. Action (%s) execution error"
+                                , action.getName()), ex);
                     return;
                 }
                 boolean canceling = false;
@@ -94,14 +95,16 @@ public class IvrActionsExecutor implements Task
                     if (!canceling && isMustCancel())
                     {
                         if (endpoint.isLogLevelEnabled(LogLevel.DEBUG))
-                            endpoint.debug("Canceling current actions execution");
+                            endpoint.debug(String.format(
+                                    "ActionsExecutor. Canceling (%s) action execution"
+                                    , action.getName()));
                         try {
                             action.cancel();
                         } catch (IvrActionException ex) {
                             if (endpoint.isLogLevelEnabled(LogLevel.ERROR))
                                 endpoint.error(String.format(
-                                        "Error canceling execution of the action (%s)"
-                                        , action.getName()), ex);
+                                    "ActionsExecutor. Error canceling execution of the action (%s)"
+                                    , action.getName()), ex);
                         }
                         canceling = true;
                     }
@@ -109,7 +112,8 @@ public class IvrActionsExecutor implements Task
                         Thread.sleep(10);
                     } catch (InterruptedException ex) {
                         if (endpoint.isLogLevelEnabled(LogLevel.ERROR))
-                            endpoint.error("Action executor thread was interrupted");
+                            endpoint.error(
+                                    "ActionsExecutor. Action executor thread was interrupted");
                         return;
                     }
                 }
@@ -121,7 +125,10 @@ public class IvrActionsExecutor implements Task
         {
             running = false;
             actions = null;
-            notifyAll();
+            synchronized(this)
+            {
+                notifyAll();
+            }
         }
     }
 

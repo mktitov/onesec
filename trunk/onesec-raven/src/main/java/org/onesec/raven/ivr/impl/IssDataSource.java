@@ -36,6 +36,7 @@ public class IssDataSource extends PullDataSource
     private final String contentType;
     private IssStream[] sources;
     private boolean connected;
+    private boolean started;
 
     public IssDataSource(InputStreamSource source, String contentType) throws IOException
     {
@@ -93,6 +94,10 @@ public class IssDataSource extends PullDataSource
 
     public void start() throws IOException
     {
+        if (started)
+            return;
+        started = true;
+        System.out.println("!!!Converting input stream source to bytes");
         InputStream is = source.getInputStream();
         byte[] bytes = null;
         try
@@ -103,9 +108,11 @@ public class IssDataSource extends PullDataSource
         {
             IOUtils.closeQuietly(is);
         }
+        System.out.println("!!!Readed "+bytes.length+" bytes");
         ByteBuffer inputBuffer = ByteBuffer.wrap(bytes);
         inputBuffer.position(0);
         sources[0].setInputBuffer(inputBuffer);
+        System.out.println("!!!Byte buffer created");
     }
 
     public void stop() throws IOException
