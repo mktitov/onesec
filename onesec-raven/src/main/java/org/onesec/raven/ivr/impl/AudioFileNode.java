@@ -15,17 +15,32 @@
  *  under the License.
  */
 
-package org.onesec.raven.ivr;
+package org.onesec.raven.ivr.impl;
+
+import org.raven.annotations.NodeClass;
+import org.raven.annotations.Parameter;
+import org.raven.tree.DataFile;
+import org.raven.tree.impl.BaseNode;
+import org.raven.tree.impl.DataFileValueHandlerFactory;
+import org.weda.annotations.constraints.NotNull;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface AudioStream
+@NodeClass()
+public class AudioFileNode extends BaseNode
 {
-    public void addSource(InputStreamSource source);
-    /**
-     * Returns true if audio stream has buffers that not played yet.
-     */
-    public boolean isPlaying();
+    @NotNull @Parameter(valueHandlerType=DataFileValueHandlerFactory.TYPE)
+    private DataFile audioFile;
+
+    public DataFile getAudioFile()
+    {
+        return audioFile;
+    }
+
+    public void setAudioFile(DataFile audioFile)
+    {
+        this.audioFile = audioFile;
+    }
 }

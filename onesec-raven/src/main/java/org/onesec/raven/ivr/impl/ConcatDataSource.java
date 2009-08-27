@@ -18,7 +18,6 @@
 package org.onesec.raven.ivr.impl;
 
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
@@ -83,12 +82,20 @@ public class ConcatDataSource
 
     public void addSource(InputStreamSource source)
     {
-        sources.add(source);
+        if (source!=null)
+        {
+            sources.add(source);
+        }
     }
 
     public Format getFormat()
     {
         return format;
+    }
+
+    public boolean isPlaying()
+    {
+        return !isDataConcated() && (!sources.isEmpty() || !buffers.isEmpty());
     }
 
     public boolean isDataConcated()
@@ -197,6 +204,8 @@ public class ConcatDataSource
                     Thread.sleep(5);
                     continue;
                 }
+                if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                    owner.getLogger().debug("AudioStream. Found new source. Processing...");
                 IssDataSource ids = new IssDataSource(source, contentType);
                 Processor p = Manager.createProcessor(ids);
                 p.addControllerListener(this);
@@ -213,7 +222,7 @@ public class ConcatDataSource
                 p.realize();
                 waitForState(p, Processor.Realized);
                 p.start();
-                waitForState(p, Processor.Started);
+//                waitForState(p, Processor.Started);
 
                 PushBufferDataSource ds = (PushBufferDataSource) p.getDataOutput();
                 ds.start();
@@ -251,7 +260,7 @@ public class ConcatDataSource
         {
             e.printStackTrace();
             if (owner.isLogLevelEnabled(LogLevel.ERROR))
-                owner.getLogger().error("Error creating continuous audio stream.", e);
+                owner.getLogger().error("AudioStream. Error creating continuous audio stream.", e);
         }
     }
 

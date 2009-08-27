@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.media.protocol.FileTypeDescriptor;
@@ -43,10 +44,13 @@ import javax.telephony.callcontrol.CallControlCallObserver;
 import javax.telephony.callcontrol.CallControlConnection;
 import javax.telephony.callcontrol.events.CallCtlConnOfferedEv;
 import javax.telephony.events.AddrEv;
+import javax.telephony.events.AddrObservationEndedEv;
 import javax.telephony.events.CallEv;
+import javax.telephony.events.CallObservationEndedEv;
 import javax.telephony.events.TermConnDroppedEv;
 import javax.telephony.events.TermConnRingingEv;
 import javax.telephony.events.TermEv;
+import javax.telephony.events.TermObservationEndedEv;
 import javax.telephony.media.MediaCallObserver;
 import javax.telephony.media.events.MediaTermConnDtmfEv;
 import org.onesec.core.ObjectDescription;
@@ -112,6 +116,9 @@ public class IvrEndpointNode extends BaseNode
     private boolean terminalInService;
     private boolean terminalAddressInService;
     private boolean handlingIncomingCall;
+    private AtomicBoolean observingCall;
+    private AtomicBoolean observingTerminalAddress;
+    private AtomicBoolean observingTerminal;
     private IvrConversationScenarioNode currentConversation;
     private RTPSession rtpSession;
     private ConcatDataSource audioStream;
@@ -134,6 +141,9 @@ public class IvrEndpointNode extends BaseNode
         terminalInService = false;
         terminalAddressInService = false;
         handlingIncomingCall = false;
+        observingTerminal = new AtomicBoolean(false);
+        observingTerminalAddress = new AtomicBoolean(false);
+        observingCall = new AtomicBoolean(false);
         endpointState.setState(IvrEndpointState.OUT_OF_SERVICE);
     }
 
@@ -159,14 +169,55 @@ public class IvrEndpointNode extends BaseNode
     {
         super.doStop();
         stopConversation();
-        if (terminalAddress!=null)
-            terminalAddress.removeObserver(this);
-        terminalAddress = null;
-        if (terminal!=null)
-            terminal.removeObserver(this);
+        removeCallObserver();
+        removeTerminalAddressObserver();
+        removeTerminalObserver();
         terminal = null;
+        terminalAddress = null;
         actionsExecutor = null;
         resetStates();
+    }
+
+    private void removeCallObserver()
+    {
+        try
+        {
+            if (observingCall.get())
+                terminalAddress.removeCallObserver(this);
+        }
+        catch(Throwable e)
+        {
+            if (isLogLevelEnabled(LogLevel.WARN))
+                warn("Error removing call observer", e);
+        }
+    }
+
+    private void removeTerminalAddressObserver()
+    {
+        try
+        {
+            if (observingTerminalAddress.get())
+                terminalAddress.removeObserver(this);
+        }
+        catch(Throwable e)
+        {
+            if (isLogLevelEnabled(LogLevel.WARN))
+                warn("Error removing terminal address observer", e);
+        }
+    }
+
+    private void removeTerminalObserver()
+    {
+        try
+        {
+            if (observingTerminal.get())
+                terminal.removeObserver(this);
+        }
+        catch(Throwable e)
+        {
+            if (isLogLevelEnabled(LogLevel.WARN))
+                warn("Error removing terminal observer", e);
+        }
     }
 
     private synchronized void initializeEndpoint() throws Exception
@@ -204,7 +255,11 @@ public class IvrEndpointNode extends BaseNode
             terminal.register(InetAddress.getByName(ip), port, caps);
 
             terminal.addObserver(this);
+            observingTerminal.set(true);
             terminalAddress.addObserver(this);
+            observingTerminalAddress.set(true);
+            terminalAddress.addCallObserver(this);
+            observingCall.set(true);
         }
         catch(Exception e)
         {
@@ -285,6 +340,7 @@ public class IvrEndpointNode extends BaseNode
                             props.getRemoteAddress().getHostAddress(), props.getRemotePort());
                     break;
                 case CiscoRTPOutputStoppedEv.ID: stopRtpSession(); break;
+                case TermObservationEndedEv.ID: observingTerminal.set(false); break;
             }
         }
     }
@@ -301,6 +357,8 @@ public class IvrEndpointNode extends BaseNode
                     terminalAddressInService = true; checkStatus(); break;
                 case CiscoAddrOutOfServiceEv.ID:
                     terminalAddressInService = false; checkStatus(); break;
+                case AddrObservationEndedEv.ID:
+                    observingTerminalAddress.set(false); break;
             }
         }
     }
@@ -324,6 +382,9 @@ public class IvrEndpointNode extends BaseNode
                     break;
                 case MediaTermConnDtmfEv.ID:
                     continueConversation(((MediaTermConnDtmfEv)event).getDtmfDigit());
+                    break;
+                case CallObservationEndedEv.ID:
+                    observingCall.set(false);
                     break;
             }
         }
@@ -374,6 +435,8 @@ public class IvrEndpointNode extends BaseNode
     {
         try
         {
+            if (isLogLevelEnabled(LogLevel.DEBUG))
+                debug(String.format("Continue conversation with dtmf (%s)", dtmfChar));
             conversationState.getBindings().put(DTMF_BINDING, ""+dtmfChar);
             Collection<Node> actions = currentConversation.makeConversation(conversationState);
             Collection<IvrAction> ivrActions = new ArrayList<IvrAction>(10);
@@ -394,35 +457,43 @@ public class IvrEndpointNode extends BaseNode
     {
         if (isLogLevelEnabled(LogLevel.DEBUG))
             debug("Stoping conversation");
-        try
+        if (endpointState.getId()==IvrEndpointState.IN_SERVICE)
+        {
+        if (isLogLevelEnabled(LogLevel.DEBUG))
+            debug("Conversation already stopped");
+        }
+        else
         {
             try
             {
                 try
                 {
-                    if (isLogLevelEnabled(LogLevel.DEBUG))
-                        debug("Canceling actions execution");
-                    actionsExecutor.cancelActionsExecution();
-                }
-                finally
-                {
-                    TerminalConnection[] connections = terminal.getTerminalConnections();
-                    if (connections!=null && connections.length>0)
+                    try
                     {
                         if (isLogLevelEnabled(LogLevel.DEBUG))
-                            debug("Terminal has active connection. Disconnecting...");
-                        connections[0].getConnection().disconnect();
+                            debug("Canceling actions execution");
+                        actionsExecutor.cancelActionsExecution();
                     }
+                    finally
+                    {
+                        TerminalConnection[] connections = terminal.getTerminalConnections();
+                        if (connections!=null && connections.length>0)
+                        {
+                            if (isLogLevelEnabled(LogLevel.DEBUG))
+                                debug("Terminal has active connection. Disconnecting...");
+                            connections[0].getConnection().disconnect();
+                        }
+                    }
+                } catch (Exception e)
+                {
+                    if (isLogLevelEnabled(LogLevel.ERROR))
+                        error("Error stoping conversation");
                 }
-            } catch (Exception e)
-            {
-                if (isLogLevelEnabled(LogLevel.ERROR))
-                    error("Error stoping conversation");
             }
-        }
-        finally
-        {
-            endpointState.setState(IvrEndpointState.IN_SERVICE);
+            finally
+            {
+                endpointState.setState(IvrEndpointState.IN_SERVICE);
+            }
         }
     }
 
@@ -459,7 +530,7 @@ public class IvrEndpointNode extends BaseNode
         try
         {
             conversationState = currentConversation.createConversationState();
-            rtpSession = new RTPSession(address, remotePort, audioStream);
+            rtpSession = new RTPSession(remoteHost, remotePort, audioStream);
             rtpSession.start();
         } catch (Exception ex)
         {
@@ -474,6 +545,8 @@ public class IvrEndpointNode extends BaseNode
 
     private void stopRtpSession()
     {
+        if (isLogLevelEnabled(LogLevel.DEBUG))
+            debug("Stoping rtp session");
         try
         {
             if (rtpSession!=null)

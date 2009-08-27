@@ -135,7 +135,7 @@ public class RTPSessionTest extends EasyMock
                 new ConcatDataSource(FileTypeDescriptor.WAVE, executorService, 160, owner);
 
         dataSource.addSource(source1);
-        dataSource.addSource(source2);
+//        dataSource.addSource(source2);
 
         CListener listener = new CListener(dataSource);
         JtapiPeer jtapiPeer = JtapiPeerFactory.getJtapiPeer(null);
@@ -174,7 +174,7 @@ public class RTPSessionTest extends EasyMock
 //            call.connect(terminal, address, "88024");
 //            terminal.
             TimeUnit.SECONDS.sleep(20);
-            dataSource.addSource(source3);
+//            dataSource.addSource(source3);
             TimeUnit.SECONDS.sleep(5);
 
             System.out.println("   Press the Enter key to exit");
