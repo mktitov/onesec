@@ -77,7 +77,11 @@ public abstract class AsyncAction extends AbstractAction implements Task
         {
             try
             {
+                if (endpoint.isLogLevelEnabled(LogLevel.DEBUG))
+                    endpoint.getLogger().debug(String.format("Action. Executing (%s)", getName()));
                 doExecute(endpoint);
+                if (endpoint.isLogLevelEnabled(LogLevel.DEBUG))
+                    endpoint.getLogger().debug(String.format("Action. (%s) executed", getName()));
             }
             catch (Exception ex)
             {

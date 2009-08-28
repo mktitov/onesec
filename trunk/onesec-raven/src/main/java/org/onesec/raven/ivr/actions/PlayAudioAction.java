@@ -17,14 +17,12 @@
 
 package org.onesec.raven.ivr.actions;
 
-import java.io.FileInputStream;
 import java.io.InputStream;
 import org.onesec.raven.ivr.AudioStream;
 import org.onesec.raven.ivr.InputStreamSource;
 import org.onesec.raven.ivr.IvrEndpoint;
 import org.onesec.raven.ivr.impl.AudioFileNode;
 import org.raven.log.LogLevel;
-import org.raven.tree.DataFileException;
 
 /**
  *
@@ -51,9 +49,9 @@ public class PlayAudioAction extends AsyncAction implements InputStreamSource
         this.endpoint = endpoint;
         AudioStream stream = endpoint.getAudioStream();
         stream.addSource(this);
-        Thread.sleep(3000);
+//        Thread.sleep(3000);
         while (!hasCancelRequest() && stream.isPlaying())
-            Thread.sleep(1000);
+            Thread.sleep(10);
         if (endpoint.isLogLevelEnabled(LogLevel.DEBUG))
             endpoint.getLogger().debug(String.format(
                     "Action. Audio source (%s) successfuly played ", audioFile.getPath()));
