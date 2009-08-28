@@ -28,10 +28,16 @@ import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.impl.CCMCallOperatorNode;
 import org.onesec.raven.impl.ProviderNode;
 import org.onesec.raven.ivr.IvrEndpointState;
+import org.onesec.raven.ivr.actions.PauseActionNode;
 import org.onesec.raven.ivr.actions.PlayAudioActionNode;
 import org.onesec.raven.ivr.actions.StopConversationActionNode;
+import org.raven.conv.ConversationScenarioPoint;
+import org.raven.conv.impl.ConversationScenarioNode;
+import org.raven.conv.impl.ConversationScenarioPointNode;
+import org.raven.expr.impl.IfNode;
 import org.raven.log.LogLevel;
 import org.raven.sched.impl.ExecutorServiceNode;
+import org.raven.tree.Node;
 
 /**
  *
@@ -65,7 +71,7 @@ public class IvrEndpointNodeTest extends OnesecRavenTestCase
         executor.setName("executor");
         tree.getRootNode().addAndSaveChildren(executor);
         executor.setMaximumPoolSize(15);
-        executor.setCorePoolSize(5);
+        executor.setCorePoolSize(10);
         assertTrue(executor.start());
 
         scenario = new IvrConversationScenarioNode();
@@ -103,7 +109,7 @@ public class IvrEndpointNodeTest extends OnesecRavenTestCase
         assertFalse(res.isWaitInterrupted());
     }
 
-    @Test
+//    @Test
     public void simpleConversationTest() throws Exception
     {
         AudioFileNode audioFileNode = new AudioFileNode();
@@ -135,6 +141,92 @@ public class IvrEndpointNodeTest extends OnesecRavenTestCase
         res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.IN_SERVICE}, 5000);
         
+    }
+
+    @Test
+    public void simpleConversationTest2() throws Exception
+    {
+        AudioFileNode audioNode1 = createAudioFileNode("audio1", "src/test/wav/test2.wav");
+        AudioFileNode audioNode2 = createAudioFileNode("audio2", "src/test/wav/test.wav");
+
+        IfNode ifNode1 = createIfNode("if1", scenario, "dtmf=='1'");
+        IfNode ifNode2 = createIfNode("if2", scenario, "dtmf=='-'||dtmf=='#'");
+        createPlayAudioActionNode("hello", ifNode2, audioNode1);
+        createPauseActionNode(ifNode2, 10000l);
+        createConversationPoint("replay", scenario, ifNode2);
+        createPlayAudioActionNode("bye", ifNode1, audioNode2);
+
+        StopConversationActionNode stopConversationActionNode = new StopConversationActionNode();
+        stopConversationActionNode.setName("stop conversation");
+        ifNode1.addAndSaveChildren(stopConversationActionNode);
+        assertTrue(stopConversationActionNode.start());
+
+        waitForProvider();
+        assertTrue(endpoint.start());
+        StateWaitResult res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.IN_SERVICE}, 2000);
+        res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.ACCEPTING_CALL}, 200000);
+        res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.TALKING}, 25000);
+        res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.IN_SERVICE}, 50000);
+
+    }
+
+    private ConversationScenarioPointNode createConversationPoint(
+            String name, ConversationScenarioPoint nextPoint, Node owner)
+    {
+        ConversationScenarioPointNode point = new ConversationScenarioNode();
+        point.setName(name);
+        owner.addAndSaveChildren(point);
+        point.setNextPoint(nextPoint);
+        point.setImmediateTransition(Boolean.TRUE);
+        assertTrue(point.start());
+        return point;
+    }
+
+    private AudioFileNode createAudioFileNode(String nodeName, String filename) throws Exception
+    {
+        AudioFileNode audioFileNode = new AudioFileNode();
+        audioFileNode.setName(nodeName);
+        tree.getRootNode().addAndSaveChildren(audioFileNode);
+        FileInputStream is = new FileInputStream(filename);
+        audioFileNode.getAudioFile().setDataStream(is);
+        assertTrue(audioFileNode.start());
+        return audioFileNode;
+    }
+
+    private PlayAudioActionNode createPlayAudioActionNode(
+            String name, Node owner, AudioFileNode audioFileNode)
+    {
+        PlayAudioActionNode playAudioActionNode = new PlayAudioActionNode();
+        playAudioActionNode.setName("Play audio");
+        owner.addAndSaveChildren(playAudioActionNode);
+        playAudioActionNode.setAudioFile(audioFileNode);
+        assertTrue(playAudioActionNode.start());
+        return playAudioActionNode;
+    }
+
+    private PauseActionNode createPauseActionNode(Node owner, Long interval)
+    {
+        PauseActionNode pauseAction = new PauseActionNode();
+        pauseAction.setName("pause");
+        owner.addAndSaveChildren(pauseAction);
+        pauseAction.setInterval(interval);
+        assertTrue(pauseAction.start());
+        return pauseAction;
+    }
+
+    private IfNode createIfNode(String name, Node owner, String expression) throws Exception
+    {
+        IfNode ifNode = new IfNode();
+        ifNode.setName(name);
+        owner.addAndSaveChildren(ifNode);
+        ifNode.setUsedInTemplate(Boolean.FALSE);
+        ifNode.getNodeAttribute(IfNode.EXPRESSION_ATTRIBUTE).setValue(expression);
+        assertTrue(ifNode.start());
+        return ifNode;
     }
 
     private void waitForProvider() throws Exception

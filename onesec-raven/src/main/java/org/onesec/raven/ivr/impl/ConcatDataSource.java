@@ -198,59 +198,66 @@ public class ConcatDataSource
 //            {
             while (!stoped.get())
             {
-                InputStreamSource source = sources.poll();
+                InputStreamSource source = sources.peek();
                 if (source==null)
                 {
                     Thread.sleep(5);
                     continue;
                 }
-                if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                    owner.getLogger().debug("AudioStream. Found new source. Processing...");
-                IssDataSource ids = new IssDataSource(source, contentType);
-                Processor p = Manager.createProcessor(ids);
-                p.addControllerListener(this);
-                p.configure();
-                waitForState(p, Processor.Configured);
-                TrackControl[] tracks = p.getTrackControls();
-                tracks[0].setFormat(format);
-                Codec codec[] = new Codec[3];
-                codec[0] = new com.ibm.media.codec.audio.rc.RCModule();
-                codec[1] = new com.ibm.media.codec.audio.ulaw.JavaEncoder();
-                codec[2] = new com.sun.media.codec.audio.ulaw.Packetizer();
-                ((com.sun.media.codec.audio.ulaw.Packetizer)codec[2]).setPacketSize(rtpPacketSize);
-                tracks[0].setCodecChain(codec);
-                p.realize();
-                waitForState(p, Processor.Realized);
-                p.start();
-//                waitForState(p, Processor.Started);
-
-                PushBufferDataSource ds = (PushBufferDataSource) p.getDataOutput();
-                ds.start();
-                PushBufferStream s = ds.getStreams()[0];
                 try
                 {
-                    boolean eom = false;
-                    while (!eom)
+                    if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                        owner.getLogger().debug("AudioStream. Found new source. Processing...");
+                    IssDataSource ids = new IssDataSource(source, contentType);
+                    Processor p = Manager.createProcessor(ids);
+                    p.addControllerListener(this);
+                    p.configure();
+                    waitForState(p, Processor.Configured);
+                    TrackControl[] tracks = p.getTrackControls();
+                    tracks[0].setFormat(format);
+                    Codec codec[] = new Codec[3];
+                    codec[0] = new com.ibm.media.codec.audio.rc.RCModule();
+                    codec[1] = new com.ibm.media.codec.audio.ulaw.JavaEncoder();
+                    codec[2] = new com.sun.media.codec.audio.ulaw.Packetizer();
+                    ((com.sun.media.codec.audio.ulaw.Packetizer)codec[2]).setPacketSize(rtpPacketSize);
+                    tracks[0].setCodecChain(codec);
+                    p.realize();
+                    waitForState(p, Processor.Realized);
+                    p.start();
+    //                waitForState(p, Processor.Started);
+
+                    PushBufferDataSource ds = (PushBufferDataSource) p.getDataOutput();
+                    ds.start();
+                    PushBufferStream s = ds.getStreams()[0];
+                    try
                     {
-                        Buffer buffer = new Buffer();
-                        s.read(buffer);
-                        if (buffer.isEOM())
+                        boolean eom = false;
+                        while (!eom)
                         {
-                            eom = true;
-                            buffer.setEOM(false);
+                            Buffer buffer = new Buffer();
+                            s.read(buffer);
+                            if (buffer.isEOM())
+                            {
+                                eom = true;
+                                buffer.setEOM(false);
+                            }
+                            buffers.add(buffer);
+                            ++bufferCount;
+    //                        streams[0].transferData(null);
+                            Thread.sleep(1);
                         }
-                        buffers.add(buffer);
-                        ++bufferCount;
-//                        streams[0].transferData(null);
-                        Thread.sleep(1);
+                    }
+                    finally
+                    {
+                        ids.stop();
+                        p.stop();
+                        ds.stop();
+                        p.close();
                     }
                 }
                 finally
                 {
-                    ids.stop();
-                    p.stop();
-                    ds.stop();
-                    p.close();
+                    sources.poll();
                 }
             }
             dataConcated.set(true);
