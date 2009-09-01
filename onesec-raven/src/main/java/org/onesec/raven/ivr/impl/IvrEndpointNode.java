@@ -64,6 +64,7 @@ import org.onesec.raven.ivr.IvrActionStatus;
 import org.onesec.raven.ivr.IvrEndpoint;
 import org.onesec.raven.ivr.IvrEndpointState;
 import org.raven.annotations.Parameter;
+import org.raven.conv.BindingScope;
 import org.raven.conv.ConversationScenarioState;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
@@ -530,6 +531,8 @@ public class IvrEndpointNode extends BaseNode
         try
         {
             conversationState = currentConversation.createConversationState();
+            conversationState.setBinding(DTMF_BINDING, "-", BindingScope.REQUEST);
+            conversationState.setBindingDefaultValue(DTMF_BINDING, "-");
             rtpSession = new RTPSession(remoteHost, remotePort, audioStream);
             rtpSession.start();
         } catch (Exception ex)
