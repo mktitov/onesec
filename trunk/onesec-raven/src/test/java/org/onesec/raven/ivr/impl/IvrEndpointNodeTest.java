@@ -34,6 +34,7 @@ import org.onesec.raven.ivr.actions.StopConversationActionNode;
 import org.raven.conv.ConversationScenarioPoint;
 import org.raven.conv.impl.ConversationScenarioNode;
 import org.raven.conv.impl.ConversationScenarioPointNode;
+import org.raven.conv.impl.GotoNode;
 import org.raven.expr.impl.IfNode;
 import org.raven.log.LogLevel;
 import org.raven.sched.impl.ExecutorServiceNode;
@@ -149,11 +150,11 @@ public class IvrEndpointNodeTest extends OnesecRavenTestCase
         AudioFileNode audioNode1 = createAudioFileNode("audio1", "src/test/wav/test2.wav");
         AudioFileNode audioNode2 = createAudioFileNode("audio2", "src/test/wav/test.wav");
 
-        IfNode ifNode1 = createIfNode("if1", scenario, "dtmf=='1'");
+        IfNode ifNode1 = createIfNode("if1", scenario, "dtmf=='1'||repetitionCount==3");
         IfNode ifNode2 = createIfNode("if2", scenario, "dtmf=='-'||dtmf=='#'");
         createPlayAudioActionNode("hello", ifNode2, audioNode1);
-        createPauseActionNode(ifNode2, 10000l);
-        createConversationPoint("replay", scenario, ifNode2);
+        createPauseActionNode(ifNode2, 5000l);
+        createGotoNode("replay", ifNode2, scenario);
         createPlayAudioActionNode("bye", ifNode1, audioNode2);
 
         StopConversationActionNode stopConversationActionNode = new StopConversationActionNode();
@@ -168,10 +169,19 @@ public class IvrEndpointNodeTest extends OnesecRavenTestCase
         res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.ACCEPTING_CALL}, 200000);
         res = endpoint.getEndpointState().waitForState(
-                new int[]{IvrEndpointState.TALKING}, 25000);
+                new int[]{IvrEndpointState.TALKING}, 250000);
         res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.IN_SERVICE}, 50000);
 
+    }
+
+    private void createGotoNode(String name, Node owner, ConversationScenarioPoint point)
+    {
+        GotoNode gotoNode = new GotoNode();
+        gotoNode.setName(name);
+        owner.addAndSaveChildren(gotoNode);
+        gotoNode.setConversationPoint(point);
+        assertTrue(gotoNode.start());
     }
 
     private ConversationScenarioPointNode createConversationPoint(
@@ -180,8 +190,6 @@ public class IvrEndpointNodeTest extends OnesecRavenTestCase
         ConversationScenarioPointNode point = new ConversationScenarioNode();
         point.setName(name);
         owner.addAndSaveChildren(point);
-        point.setNextPoint(nextPoint);
-        point.setImmediateTransition(Boolean.TRUE);
         assertTrue(point.start());
         return point;
     }

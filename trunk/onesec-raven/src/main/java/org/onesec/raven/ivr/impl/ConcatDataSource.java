@@ -18,6 +18,8 @@
 package org.onesec.raven.ivr.impl;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
@@ -196,6 +198,7 @@ public class ConcatDataSource
             int bufferCount = 0;
 //            for (InputStreamSource source: sources)
 //            {
+            List<Buffer> initialBuffer = new ArrayList<Buffer>(10);
             while (!stoped.get())
             {
                 InputStreamSource source = sources.peek();
