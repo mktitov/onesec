@@ -41,7 +41,8 @@ public class IssDataSourceTest implements ControllerListener
     @Test
     public void test() throws Exception
     {
-        InputStreamSource source = new TestInputStreamSource("src/test/wav/test.wav");
+//        InputStreamSource source = new TestInputStreamSource("src/test/wav/test.wav");
+        InputStreamSource source = new TestInputStreamSource("/home/tim/tmp/sound/silence.wav");
         IssDataSource dataSource = new IssDataSource(source, FileTypeDescriptor.WAVE);
 
         Processor processor = Manager.createProcessor(dataSource);

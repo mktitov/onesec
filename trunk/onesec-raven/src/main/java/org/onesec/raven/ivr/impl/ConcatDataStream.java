@@ -39,6 +39,7 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
     private final ContentDescriptor contentDescriptor;
     private final Node owner;
     private BufferTransferHandler transferHandler;
+    private Buffer silentBuffer;
 
     public ConcatDataStream(Queue<Buffer> bufferQueue, ConcatDataSource dataSource, Node owner)
     {
@@ -57,9 +58,21 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
     {
         Buffer queueBuf = bufferQueue.poll();
         if (queueBuf==null)
-            buffer.setDiscard(true);
+        {
+            if (silentBuffer==null)
+                buffer.setDiscard(true);
+            else
+                buffer.copy(silentBuffer);
+        }
         else
+        {
+            if (silentBuffer==null)
+            {
+                silentBuffer = new Buffer();
+                silentBuffer.copy(queueBuf);
+            }
             buffer.copy(queueBuf);
+        }
     }
 
     public void setTransferHandler(BufferTransferHandler transferHandler)
@@ -110,9 +123,15 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
 
     public void run()
     {
+        long lastTransferTime = System.currentTimeMillis();
         while (!dataSource.isDataConcated() || !bufferQueue.isEmpty())
         {
-            transferData(null);
+            long currentTime = System.currentTimeMillis();
+            if (!bufferQueue.isEmpty() || currentTime-lastTransferTime>=20)
+            {
+                transferData(null);
+                lastTransferTime = System.currentTimeMillis();
+            }
             try {
                 Thread.sleep(5);
             } catch (InterruptedException ex) {

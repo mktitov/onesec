@@ -53,6 +53,8 @@ public class ConcatDataSource
         extends PushBufferDataSource
         implements AudioStream, Task, ControllerListener
 {
+    private final static int INITIAL_BUFFER_SIZE = 2;
+
     private final Queue<InputStreamSource> sources;
     private final String contentType;
     private final ExecutorService executorService;
@@ -198,7 +200,7 @@ public class ConcatDataSource
             int bufferCount = 0;
 //            for (InputStreamSource source: sources)
 //            {
-            List<Buffer> initialBuffer = new ArrayList<Buffer>(10);
+            List<Buffer> initialBuffer = new ArrayList<Buffer>(INITIAL_BUFFER_SIZE);
             while (!stoped.get())
             {
                 InputStreamSource source = sources.peek();
@@ -211,6 +213,7 @@ public class ConcatDataSource
                 {
                     if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                         owner.getLogger().debug("AudioStream. Found new source. Processing...");
+                    long ts = System.currentTimeMillis();
                     IssDataSource ids = new IssDataSource(source, contentType);
                     Processor p = Manager.createProcessor(ids);
                     p.addControllerListener(this);
@@ -232,9 +235,15 @@ public class ConcatDataSource
                     PushBufferDataSource ds = (PushBufferDataSource) p.getDataOutput();
                     ds.start();
                     PushBufferStream s = ds.getStreams()[0];
+                    if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                        owner.getLogger().debug(
+                                "AudioStream. Source initialization time (ms) - "
+                                +(System.currentTimeMillis()-ts));
                     try
                     {
                         boolean eom = false;
+                        initialBuffer.clear();
+                        boolean initialBufferInitialized = false;
                         while (!eom)
                         {
                             Buffer buffer = new Buffer();
@@ -244,10 +253,27 @@ public class ConcatDataSource
                                 eom = true;
                                 buffer.setEOM(false);
                             }
-                            buffers.add(buffer);
+                            if (!initialBufferInitialized)
+                            {
+                                initialBuffer.add(buffer);
+                                if (initialBuffer.size()==INITIAL_BUFFER_SIZE)
+                                {
+                                    initialBufferInitialized = true;
+                                    buffers.addAll(initialBuffer);
+                                    initialBuffer.clear();
+                                }
+                            }
+                            else
+                                buffers.add(buffer);
                             ++bufferCount;
     //                        streams[0].transferData(null);
-                            Thread.sleep(1);
+                            Thread.sleep(5);
+                        }
+                        if (!initialBufferInitialized)
+                        {
+                            initialBufferInitialized = true;
+                            buffers.addAll(initialBuffer);
+                            initialBuffer.clear();
                         }
                     }
                     finally

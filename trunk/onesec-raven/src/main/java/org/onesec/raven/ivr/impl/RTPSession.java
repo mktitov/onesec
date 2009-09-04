@@ -18,10 +18,16 @@
 package org.onesec.raven.ivr.impl;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import javax.media.DataSink;
 import javax.media.Manager;
 import javax.media.MediaLocator;
 import javax.media.NoDataSinkException;
+import javax.media.control.BufferControl;
+import javax.media.format.UnsupportedFormatException;
+import javax.media.rtp.RTPManager;
+import javax.media.rtp.SendStream;
+import javax.media.rtp.SessionAddress;
 
 /**
  *
@@ -29,28 +35,46 @@ import javax.media.NoDataSinkException;
  */
 public class RTPSession
 {
-    private final DataSink session;
+//    private final DataSink session;
     private final ConcatDataSource source;
+    private final RTPManager rtpManager;
+    private final SendStream sendStream;
 
-    public RTPSession(String host, int port, ConcatDataSource source) throws NoDataSinkException
+    public RTPSession(String host, int port, ConcatDataSource source) throws Exception
     {
         this.source = source;
-        session = Manager.createDataSink(
-                source, new MediaLocator("rtp://"+host+":"+port+"/audio/1"));
+        SessionAddress destAddress = new SessionAddress(InetAddress.getByName(host), port);
+        rtpManager = RTPManager.newInstance();
+        rtpManager.initialize(new SessionAddress());
+        rtpManager.addTarget(destAddress);
+        sendStream = rtpManager.createSendStream(source, 0);
+        sendStream.setBitRate(1);
+        BufferControl control = (BufferControl)rtpManager.getControl(BufferControl.class.getName());
+        System.out.println(String.format(
+                "!!! Buffer control length: %s, threshold enabled: %s, minimum threshold: %s"
+                , control.getBufferLength(), control.getEnabledThreshold()
+                , control.getMinimumThreshold()));
+        control.setMinimumThreshold(60);
+        control.setBufferLength(60);
+        
+//        session = Manager.createDataSink(
+//                source, new MediaLocator("rtp://"+host+":"+port+"/audio/1"));
     }
 
     public void start() throws IOException
     {
-        session.open();
-        session.start();
+        sendStream.start();
+//        session.open();
+//        session.start();
     }
 
     public void stop() throws IOException
     {
         try
         {
-            session.stop();
-            session.close();
+            sendStream.close();
+//            session.stop();
+//            session.close();
         }
         finally
         {

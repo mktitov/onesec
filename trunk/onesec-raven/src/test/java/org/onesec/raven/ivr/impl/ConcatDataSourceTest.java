@@ -44,6 +44,7 @@ public class ConcatDataSourceTest extends EasyMock
         Logger logger = createMock(Logger.class);
 
         executorService.execute(executeTask());
+        expectLastCall().times(2);
         expect(owner.isLogLevelEnabled(LogLevel.ERROR)).andReturn(Boolean.TRUE).anyTimes();
         expect(owner.isLogLevelEnabled(LogLevel.DEBUG)).andReturn(Boolean.TRUE).anyTimes();
         expect(owner.getLogger()).andReturn(logger).anyTimes();
