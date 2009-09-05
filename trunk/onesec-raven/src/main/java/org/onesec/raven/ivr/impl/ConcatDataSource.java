@@ -53,6 +53,7 @@ public class ConcatDataSource
         extends PushBufferDataSource
         implements AudioStream, Task, ControllerListener
 {
+    public final static String SILENCE_RESOURCE_NAME = "/org/onesec/raven/ivr/silence.wav";
     private final static int INITIAL_BUFFER_SIZE = 2;
 
     private final Queue<InputStreamSource> sources;
@@ -66,6 +67,7 @@ public class ConcatDataSource
     private final Format format = new AudioFormat(AudioFormat.ULAW_RTP, 8000d, 8, 1);
     private final int rtpPacketSize;
     private boolean started = false;
+    private boolean silenceSource = true;
 
     public ConcatDataSource(String contentType
             , ExecutorService executorService
@@ -82,6 +84,9 @@ public class ConcatDataSource
         stoped = new AtomicBoolean(false);
         buffers = new ConcurrentLinkedQueue<Buffer>();
         streams = new ConcatDataStream[]{new ConcatDataStream(buffers, this, owner)};
+        ResourceInputStreamSource silenceSource =
+                new ResourceInputStreamSource(SILENCE_RESOURCE_NAME);
+        addSource(silenceSource);
     }
 
     public void addSource(InputStreamSource source)
@@ -248,26 +253,35 @@ public class ConcatDataSource
                         {
                             Buffer buffer = new Buffer();
                             s.read(buffer);
-                            if (buffer.isEOM())
+                            if (silenceSource)
                             {
+                                buffers.add(buffer);
+                                silenceSource = false;
                                 eom = true;
-                                buffer.setEOM(false);
-                            }
-                            if (!initialBufferInitialized)
-                            {
-                                initialBuffer.add(buffer);
-                                if (initialBuffer.size()==INITIAL_BUFFER_SIZE)
-                                {
-                                    initialBufferInitialized = true;
-                                    buffers.addAll(initialBuffer);
-                                    initialBuffer.clear();
-                                }
                             }
                             else
-                                buffers.add(buffer);
-                            ++bufferCount;
-    //                        streams[0].transferData(null);
-                            Thread.sleep(5);
+                            {
+                                if (buffer.isEOM())
+                                {
+                                    eom = true;
+                                    buffer.setEOM(false);
+                                }
+                                if (!initialBufferInitialized)
+                                {
+                                    initialBuffer.add(buffer);
+                                    if (initialBuffer.size()==INITIAL_BUFFER_SIZE)
+                                    {
+                                        initialBufferInitialized = true;
+                                        buffers.addAll(initialBuffer);
+                                        initialBuffer.clear();
+                                    }
+                                }
+                                else
+                                    buffers.add(buffer);
+                                ++bufferCount;
+        //                        streams[0].transferData(null);
+                                Thread.sleep(5);
+                            }
                         }
                         if (!initialBufferInitialized)
                         {

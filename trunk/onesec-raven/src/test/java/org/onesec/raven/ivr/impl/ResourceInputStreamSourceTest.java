@@ -17,6 +17,9 @@
 
 package org.onesec.raven.ivr.impl;
 
+import java.io.IOException;
+import java.io.InputStream;
+import org.apache.commons.io.IOUtils;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -27,10 +30,15 @@ import static org.junit.Assert.*;
 public class ResourceInputStreamSourceTest
 {
     @Test
-    public void test()
+    public void test() throws IOException
     {
         ResourceInputStreamSource source =
-                new ResourceInputStreamSource("/org/onesec/raven/ivr/silence.wav");
-        assertNotNull(source.getInputStream());
+                new ResourceInputStreamSource(ConcatDataSource.SILENCE_RESOURCE_NAME);
+        InputStream is = source.getInputStream();
+        assertNotNull(is);
+
+        byte[] bytes = IOUtils.toByteArray(is);
+        assertNotNull(bytes);
+        assertTrue(bytes.length>0);
     }
 }
