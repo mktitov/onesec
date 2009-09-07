@@ -15,17 +15,15 @@
  *  under the License.
  */
 
-package org.onesec.raven.ivr.impl;
+package org.onesec.raven.ivr;
 
-import org.onesec.raven.ivr.IvrConversationScenario;
-import org.raven.conv.impl.ConversationScenarioNode;
+import org.raven.conv.ConversationScenario;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class IvrConversationScenarioNode extends ConversationScenarioNode
-        implements IvrConversationScenario
+public interface IvrConversationScenario extends ConversationScenario
 {
 
 }
