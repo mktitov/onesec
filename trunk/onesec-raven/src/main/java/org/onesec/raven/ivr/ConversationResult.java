@@ -15,17 +15,23 @@
  *  under the License.
  */
 
-package org.onesec.raven.ivr.impl;
-
-import org.onesec.raven.ivr.IvrConversationScenario;
-import org.raven.conv.impl.ConversationScenarioNode;
+package org.onesec.raven.ivr;
 
 /**
- *
+ * Contains the information of conversation result
+ * @see IvrEndpoint#invite
  * @author Mikhail Titov
  */
-public class IvrConversationScenarioNode extends ConversationScenarioNode
-        implements IvrConversationScenario
+public interface ConversationResult
 {
-
+    /**
+     * Returns the conversation completion code
+     */
+    public CompletionCode getCompletionCode();
+    /**
+     * Return the dureation of the conversation in seconds. For completion codes
+     * {@link CompletionCode#OPPENT_BUSY} and {@link CompletionCode#OPPENT_NO_ANSWER} method always
+     * returns 0.
+     */
+    public int getConversationDuration();
 }

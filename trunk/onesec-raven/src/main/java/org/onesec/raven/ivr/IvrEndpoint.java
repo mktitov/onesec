@@ -38,4 +38,13 @@ public interface IvrEndpoint extends Node, ObjectDescription
      * Stops the current conversation
      */
     public void stopConversation();
+    /**
+     * Invites opponent to the conversation
+     * @param opponentNumber the opponent phone number
+     * @param conversationScenario the conversation scenario
+     * @param callback the object which will be informed about conversation completion
+     */
+    public void invite(
+            String opponentNumber, IvrConversationScenario conversationScenario
+            , ConversationCompletetionCallback callback);
 }
