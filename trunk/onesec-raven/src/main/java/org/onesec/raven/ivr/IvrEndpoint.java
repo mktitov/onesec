@@ -46,5 +46,5 @@ public interface IvrEndpoint extends Node, ObjectDescription
      */
     public void invite(
             String opponentNumber, IvrConversationScenario conversationScenario
-            , ConversationCompletetionCallback callback);
+            , ConversationCompletetionCallback callback) throws IvrEndpointException;
 }

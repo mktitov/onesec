@@ -37,11 +37,13 @@ import java.util.logging.Logger;
 import javax.media.protocol.FileTypeDescriptor;
 import javax.telephony.Address;
 import javax.telephony.AddressObserver;
+import javax.telephony.Call;
 import javax.telephony.Provider;
 import javax.telephony.Terminal;
 import javax.telephony.TerminalConnection;
 import javax.telephony.callcontrol.CallControlCallObserver;
 import javax.telephony.callcontrol.CallControlConnection;
+import javax.telephony.callcontrol.events.CallCtlConnEstablishedEv;
 import javax.telephony.callcontrol.events.CallCtlConnOfferedEv;
 import javax.telephony.events.AddrEv;
 import javax.telephony.events.AddrObservationEndedEv;
@@ -57,11 +59,14 @@ import org.onesec.core.ObjectDescription;
 import org.onesec.core.provider.ProviderController;
 import org.onesec.core.services.ProviderRegistry;
 import org.onesec.core.services.StateListenersCoordinator;
+import org.onesec.raven.ivr.ConversationCompletetionCallback;
 import org.onesec.raven.ivr.IvrAction;
 import org.onesec.raven.ivr.IvrActionException;
 import org.onesec.raven.ivr.IvrActionNode;
 import org.onesec.raven.ivr.IvrActionStatus;
+import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.IvrEndpoint;
+import org.onesec.raven.ivr.IvrEndpointException;
 import org.onesec.raven.ivr.IvrEndpointState;
 import org.raven.annotations.Parameter;
 import org.raven.conv.BindingScope;
@@ -120,11 +125,17 @@ public class IvrEndpointNode extends BaseNode
     private AtomicBoolean observingCall;
     private AtomicBoolean observingTerminalAddress;
     private AtomicBoolean observingTerminal;
-    private IvrConversationScenarioNode currentConversation;
+    private IvrConversationScenario currentConversation;
     private RTPSession rtpSession;
     private ConcatDataSource audioStream;
     private IvrActionsExecutor actionsExecutor;
     private ConversationScenarioState conversationState;
+    private Provider provider;
+    private String remoteAddress;
+    private int remotePort;
+    private boolean connected;
+    private boolean rtpInitialized;
+
 
     @Override
     protected void initFields()
@@ -230,7 +241,7 @@ public class IvrEndpointNode extends BaseNode
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 debug("Checking provider...");
             ProviderController providerController = providerRegistry.getProviderController(address);
-            Provider provider = providerController.getProvider();
+            provider = providerController.getProvider();
             if (provider==null || provider.getState()!=Provider.IN_SERVICE)
                 throw new Exception(String.format(
                         "Provider (%s) not IN_SERVICE", providerController.getName()));
@@ -265,6 +276,28 @@ public class IvrEndpointNode extends BaseNode
         catch(Exception e)
         {
             throw new Exception(String.format("Error initializing IVR endpoint (%s)", getPath()));
+        }
+    }
+
+    public synchronized void invite(
+            String opponentNumber, IvrConversationScenario conversationScenario
+            , ConversationCompletetionCallback callback) throws IvrEndpointException
+    {
+        if (!getStatus().equals(Status.STARTED)
+                && endpointState.getId()!=IvrEndpointState.IN_SERVICE)
+            throw new IvrEndpointException(
+                    "Can't invite oppenent to conversation. Endpoint not ready");
+        try
+        {
+            Call call = provider.createCall();
+            handlingIncomingCall = true;
+            currentConversation = conversationScenario;
+            call.connect(terminal, terminalAddress, opponentNumber);
+        } catch (Exception e)
+        {
+            throw new IvrEndpointException(
+                    String.format("Error inviting opponent (%s) to conversation", opponentNumber)
+                    , e);
         }
     }
 
@@ -337,8 +370,8 @@ public class IvrEndpointNode extends BaseNode
                 case CiscoRTPOutputStartedEv.ID:
                     CiscoRTPOutputStartedEv rtpOutput = (CiscoRTPOutputStartedEv) event;
                     CiscoRTPOutputProperties props = rtpOutput.getRTPOutputProperties();
-                    startRtpSession(
-                            props.getRemoteAddress().getHostAddress(), props.getRemotePort());
+                    remoteAddress = props.getRemoteAddress().getHostAddress();
+                    remotePort = props.getRemotePort();
                     break;
                 case CiscoRTPOutputStoppedEv.ID: stopRtpSession(); break;
                 case TermObservationEndedEv.ID: observingTerminal.set(false); break;
@@ -373,10 +406,15 @@ public class IvrEndpointNode extends BaseNode
             switch (event.getID())
             {
                 case CallCtlConnOfferedEv.ID:
-                    acceptIncomingCall((CallCtlConnOfferedEv) event);
+                    if (!handlingIncomingCall)
+                        acceptIncomingCall((CallCtlConnOfferedEv) event);
                     break;
                 case TermConnRingingEv.ID:
                     answerOnIncomingCall((TermConnRingingEv)event);
+                    break;
+                case CallCtlConnEstablishedEv.ID:
+                    endpointState.setState(IvrEndpointState.TALKING);
+                    startRtpSession(remoteAddress, remotePort);
                     break;
                 case TermConnDroppedEv.ID:
                     stopConversation();
@@ -393,6 +431,8 @@ public class IvrEndpointNode extends BaseNode
 
     private synchronized void acceptIncomingCall(CallCtlConnOfferedEv event)
     {
+        if (isLogLevelEnabled(LogLevel.DEBUG))
+            debug("Accepting incoming call");
         CallCtlConnOfferedEv offEvent = (CallCtlConnOfferedEv)event;
         CallControlConnection conn = (CallControlConnection) offEvent.getConnection();
         try
@@ -420,10 +460,12 @@ public class IvrEndpointNode extends BaseNode
         
     private synchronized void answerOnIncomingCall(TermConnRingingEv event)
     {
+        if (isLogLevelEnabled(LogLevel.DEBUG))
+            debug("Answering on incoming call");
         try
         {
             event.getTerminalConnection().answer();
-            endpointState.setState(IvrEndpointState.TALKING);
+//            endpointState.setState(IvrEndpointState.TALKING);
         }
         catch (Exception e)
         {
@@ -465,6 +507,7 @@ public class IvrEndpointNode extends BaseNode
         }
         else
         {
+            handlingIncomingCall = false;
             try
             {
                 try

@@ -27,6 +27,8 @@ import org.onesec.core.services.ProviderRegistry;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.impl.CCMCallOperatorNode;
 import org.onesec.raven.impl.ProviderNode;
+import org.onesec.raven.ivr.ConversationCompletetionCallback;
+import org.onesec.raven.ivr.ConversationResult;
 import org.onesec.raven.ivr.IvrEndpointState;
 import org.onesec.raven.ivr.actions.PauseActionNode;
 import org.onesec.raven.ivr.actions.PlayAudioActionNode;
@@ -44,7 +46,8 @@ import org.raven.tree.Node;
  *
  * @author Mikhail Titov
  */
-public class IvrEndpointNodeTest extends OnesecRavenTestCase
+public class IvrEndpointNodeTest 
+        extends OnesecRavenTestCase implements ConversationCompletetionCallback
 {
     private IvrEndpointNode endpoint;
     private ExecutorServiceNode executor;
@@ -144,7 +147,7 @@ public class IvrEndpointNodeTest extends OnesecRavenTestCase
         
     }
 
-    @Test
+//    @Test
     public void simpleConversationTest2() throws Exception
     {
         AudioFileNode audioNode1 = createAudioFileNode("audio1", "src/test/wav/test2.wav");
@@ -166,6 +169,38 @@ public class IvrEndpointNodeTest extends OnesecRavenTestCase
         assertTrue(endpoint.start());
         StateWaitResult res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.IN_SERVICE}, 2000);
+        res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.ACCEPTING_CALL}, 200000);
+        res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.TALKING}, 250000);
+        res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.IN_SERVICE}, 50000);
+
+    }
+
+    @Test
+    public void inviteTest() throws Exception
+    {
+        AudioFileNode audioNode1 = createAudioFileNode("audio1", "src/test/wav/test2.wav");
+        AudioFileNode audioNode2 = createAudioFileNode("audio2", "src/test/wav/test.wav");
+
+        IfNode ifNode1 = createIfNode("if1", scenario, "dtmf=='1'||repetitionCount==3");
+        IfNode ifNode2 = createIfNode("if2", scenario, "dtmf=='-'||dtmf=='#'");
+        createPlayAudioActionNode("hello", ifNode2, audioNode1);
+        createPauseActionNode(ifNode2, 5000l);
+        createGotoNode("replay", ifNode2, scenario);
+        createPlayAudioActionNode("bye", ifNode1, audioNode2);
+
+        StopConversationActionNode stopConversationActionNode = new StopConversationActionNode();
+        stopConversationActionNode.setName("stop conversation");
+        ifNode1.addAndSaveChildren(stopConversationActionNode);
+        assertTrue(stopConversationActionNode.start());
+
+        waitForProvider();
+        assertTrue(endpoint.start());
+        StateWaitResult res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.IN_SERVICE}, 2000);
+        endpoint.invite("089128672947", scenario, this);
         res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.ACCEPTING_CALL}, 200000);
         res = endpoint.getEndpointState().waitForState(
@@ -247,5 +282,10 @@ public class IvrEndpointNodeTest extends OnesecRavenTestCase
         StateWaitResult res = provider.getState().waitForState(
                 new int[]{ProviderControllerState.IN_SERVICE}, 4000);
         assertFalse(res.isWaitInterrupted());
+    }
+
+    public void conversationCompleted(ConversationResult conversationResult)
+    {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 }
