@@ -54,7 +54,7 @@ public class ConcatDataSource
         implements AudioStream, Task, ControllerListener
 {
     public final static String SILENCE_RESOURCE_NAME = "/org/onesec/raven/ivr/silence.wav";
-    private final static int INITIAL_BUFFER_SIZE = 2;
+    private final static int INITIAL_BUFFER_SIZE = 10;
 
     private final Queue<InputStreamSource> sources;
     private final String contentType;
@@ -253,11 +253,19 @@ public class ConcatDataSource
                         {
                             Buffer buffer = new Buffer();
                             s.read(buffer);
+                            if (buffer.isDiscard())
+                            {
+                                Thread.sleep(2);
+                                continue;
+                            }
                             if (silenceSource)
                             {
                                 buffers.add(buffer);
                                 silenceSource = false;
                                 eom = true;
+                                if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                                    owner.getLogger().debug(
+                                            "AudioStream. Silence buffer initialized");
                             }
                             else
                             {
@@ -272,22 +280,24 @@ public class ConcatDataSource
                                     if (initialBuffer.size()==INITIAL_BUFFER_SIZE)
                                     {
                                         initialBufferInitialized = true;
+                                        System.out.println("!!!>>>Flushing initial buffer: "+initialBuffer.size());
                                         buffers.addAll(initialBuffer);
-                                        initialBuffer.clear();
+//                                        initialBuffer.clear();
                                     }
                                 }
                                 else
                                     buffers.add(buffer);
                                 ++bufferCount;
         //                        streams[0].transferData(null);
-                                Thread.sleep(5);
+                                Thread.sleep(2);
                             }
                         }
-                        if (!initialBufferInitialized)
+                        if (!initialBufferInitialized && !initialBuffer.isEmpty())
                         {
+                            System.out.println("!!!>>>Flushing initial buffer: "+initialBuffer.size());
                             initialBufferInitialized = true;
                             buffers.addAll(initialBuffer);
-                            initialBuffer.clear();
+//                            initialBuffer.clear();
                         }
                     }
                     finally

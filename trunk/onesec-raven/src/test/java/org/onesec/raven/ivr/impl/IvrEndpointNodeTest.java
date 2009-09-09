@@ -201,8 +201,9 @@ public class IvrEndpointNodeTest
         StateWaitResult res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.IN_SERVICE}, 2000);
         endpoint.invite("089128672947", scenario, this);
-        res = endpoint.getEndpointState().waitForState(
-                new int[]{IvrEndpointState.ACCEPTING_CALL}, 200000);
+//        endpoint.invite("0215359", scenario, this);
+//        res = endpoint.getEndpointState().waitForState(
+//                new int[]{IvrEndpointState.ACCEPTING_CALL}, 200000);
         res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.TALKING}, 250000);
         res = endpoint.getEndpointState().waitForState(
