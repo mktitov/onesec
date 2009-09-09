@@ -44,7 +44,9 @@ import javax.telephony.TerminalConnection;
 import javax.telephony.callcontrol.CallControlCallObserver;
 import javax.telephony.callcontrol.CallControlConnection;
 import javax.telephony.callcontrol.events.CallCtlConnEstablishedEv;
+import javax.telephony.callcontrol.events.CallCtlConnFailedEv;
 import javax.telephony.callcontrol.events.CallCtlConnOfferedEv;
+import javax.telephony.callcontrol.events.CallCtlTermConnDroppedEv;
 import javax.telephony.events.AddrEv;
 import javax.telephony.events.AddrObservationEndedEv;
 import javax.telephony.events.CallEv;
@@ -59,7 +61,9 @@ import org.onesec.core.ObjectDescription;
 import org.onesec.core.provider.ProviderController;
 import org.onesec.core.services.ProviderRegistry;
 import org.onesec.core.services.StateListenersCoordinator;
+import org.onesec.raven.ivr.CompletionCode;
 import org.onesec.raven.ivr.ConversationCompletetionCallback;
+import org.onesec.raven.ivr.ConversationResult;
 import org.onesec.raven.ivr.IvrAction;
 import org.onesec.raven.ivr.IvrActionException;
 import org.onesec.raven.ivr.IvrActionNode;
@@ -68,6 +72,7 @@ import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.IvrEndpoint;
 import org.onesec.raven.ivr.IvrEndpointException;
 import org.onesec.raven.ivr.IvrEndpointState;
+import org.onesec.raven.ivr.actions.AsyncAction;
 import org.raven.annotations.Parameter;
 import org.raven.conv.BindingScope;
 import org.raven.conv.ConversationScenarioState;
@@ -133,8 +138,9 @@ public class IvrEndpointNode extends BaseNode
     private Provider provider;
     private String remoteAddress;
     private int remotePort;
-    private boolean connected;
+    private int connected;
     private boolean rtpInitialized;
+    private ConversationResultImpl conversationResult;
 
 
     @Override
@@ -146,6 +152,7 @@ public class IvrEndpointNode extends BaseNode
         endpointState = new IvrEndpointStateImpl(this);
         stateListenersCoordinator.addListenersToState(endpointState);
         resetStates();
+        resetConversationFields();
     }
 
     public void resetStates()
@@ -157,6 +164,15 @@ public class IvrEndpointNode extends BaseNode
         observingTerminalAddress = new AtomicBoolean(false);
         observingCall = new AtomicBoolean(false);
         endpointState.setState(IvrEndpointState.OUT_OF_SERVICE);
+    }
+
+    private void resetConversationFields()
+    {
+        connected = 0;
+        rtpInitialized = false;
+        remotePort = 0;
+        remoteAddress = null;
+        handlingIncomingCall = false;
     }
 
 //    private synchronized void setEndpointStatus(IvrEndpointState endpointStatus)
@@ -290,8 +306,10 @@ public class IvrEndpointNode extends BaseNode
         try
         {
             Call call = provider.createCall();
+            resetConversationFields();
             handlingIncomingCall = true;
             currentConversation = conversationScenario;
+            conversationResult = new ConversationResultImpl();
             call.connect(terminal, terminalAddress, opponentNumber);
         } catch (Exception e)
         {
@@ -372,6 +390,8 @@ public class IvrEndpointNode extends BaseNode
                     CiscoRTPOutputProperties props = rtpOutput.getRTPOutputProperties();
                     remoteAddress = props.getRemoteAddress().getHostAddress();
                     remotePort = props.getRemotePort();
+                    rtpInitialized = true;
+                    startRtpSession(remoteAddress, remotePort);
                     break;
                 case CiscoRTPOutputStoppedEv.ID: stopRtpSession(); break;
                 case TermObservationEndedEv.ID: observingTerminal.set(false); break;
@@ -413,7 +433,8 @@ public class IvrEndpointNode extends BaseNode
                     answerOnIncomingCall((TermConnRingingEv)event);
                     break;
                 case CallCtlConnEstablishedEv.ID:
-                    endpointState.setState(IvrEndpointState.TALKING);
+                    CallCtlConnEstablishedEv e = (CallCtlConnEstablishedEv) event;
+                    ++connected;
                     startRtpSession(remoteAddress, remotePort);
                     break;
                 case TermConnDroppedEv.ID:
@@ -424,6 +445,37 @@ public class IvrEndpointNode extends BaseNode
                     break;
                 case CallObservationEndedEv.ID:
                     observingCall.set(false);
+                    break;
+                case CallCtlConnFailedEv.ID:
+                    if (handlingIncomingCall)
+                    {
+                        CallCtlConnFailedEv ev = (CallCtlConnFailedEv) event;
+                        int cause = ev.getCause();
+                        switch (cause)
+                        {
+                            case CallCtlConnFailedEv.CAUSE_BUSY:
+                                conversationResult.setCompletionCode(CompletionCode.OPPONENT_BUSY);
+                                break;
+                            case CallCtlConnFailedEv.CAUSE_CALL_NOT_ANSWERED:
+                                conversationResult.setCompletionCode(
+                                        CompletionCode.OPPONENT_NO_ANSWERED);
+                                break;
+                            default:
+                                conversationResult.setCompletionCode(
+                                        CompletionCode.OPPONENT_UNKNOWN_ERROR);
+                        }
+                    }
+                    break;
+                case CallCtlTermConnDroppedEv.ID:
+                    CallCtlTermConnDroppedEv ev = (CallCtlTermConnDroppedEv) event;
+                    switch (ev.getCause())
+                    {
+                        case CallCtlTermConnDroppedEv.CAUSE_NORMAL :
+                            System.out.println("    >>>> NORMAL <<<< :"+ev.getCause()); break;
+                        case CallCtlTermConnDroppedEv.CAUSE_CALL_CANCELLED :
+                            System.out.println("    >>>> CANCELED <<<< :"+ev.getCause()); break;
+                        default: System.out.println("    >>>> UNKNOWN <<<< :"+ev.getCause());
+                    }
                     break;
             }
         }
@@ -507,7 +559,7 @@ public class IvrEndpointNode extends BaseNode
         }
         else
         {
-            handlingIncomingCall = false;
+            resetConversationFields();
             try
             {
                 try
@@ -564,8 +616,16 @@ public class IvrEndpointNode extends BaseNode
         this.executorService = executorService;
     }
 
-    private void startRtpSession(String remoteHost, int remotePort)
+    private synchronized void startRtpSession(String remoteHost, int remotePort)
     {
+        if (connected<2 || !rtpInitialized)
+        {
+            if (isLogLevelEnabled(LogLevel.DEBUG))
+                debug("Can't start rtp session. Not ready");
+            return;
+
+        }
+        endpointState.setState(IvrEndpointState.TALKING);
         if (isLogLevelEnabled(LogLevel.DEBUG))
             debug(String.format(
                     "Starting rtp session: remoteHost (%s), remotePort (%s)"
@@ -614,50 +674,18 @@ public class IvrEndpointNode extends BaseNode
         return getPath();
     }
 
-    private class ContinueConversationAction implements IvrAction, Task
+    private class ContinueConversationAction extends AsyncAction
     {
-        private IvrActionStatus status = IvrActionStatus.WAITING;
-
-        public String getName()
+        public ContinueConversationAction()
         {
-            return "Continue conversation action";
+            super("Continue conversation action");
         }
 
-        public void execute(IvrEndpoint endpoint) throws IvrActionException
+        @Override
+        protected void doExecute(IvrEndpoint endpoint) throws Exception
         {
-            try
-            {
-                executorService.execute(this);
-                status = IvrActionStatus.EXECUTING;
-            } catch (ExecutorServiceException ex)
-            {
-                throw new IvrActionException("Error executing continue conversation action", ex);
-            }
-        }
-
-        public IvrActionStatus getStatus()
-        {
-            return status;
-        }
-
-        public void cancel() throws IvrActionException
-        {
-        }
-
-        public String getStatusMessage()
-        {
-            return "Executing IVR Continue conversation action";
-        }
-
-        public Node getTaskNode()
-        {
-            return IvrEndpointNode.this;
-        }
-
-        public void run()
-        {
+            setStatus(IvrActionStatus.EXECUTED);
             continueConversation(EMPTY_DTMF);
-            status = IvrActionStatus.EXECUTED;
         }
     }
 }

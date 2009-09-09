@@ -19,6 +19,7 @@ package org.onesec.raven.ivr.impl;
 
 import java.io.IOException;
 import java.util.Queue;
+import java.util.concurrent.TimeUnit;
 import javax.media.Buffer;
 import javax.media.Format;
 import javax.media.protocol.BufferTransferHandler;
@@ -40,6 +41,7 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
     private final Node owner;
     private BufferTransferHandler transferHandler;
     private Buffer silentBuffer;
+    private Buffer bufferToSend;
 
     public ConcatDataStream(Queue<Buffer> bufferQueue, ConcatDataSource dataSource, Node owner)
     {
@@ -56,8 +58,8 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
 
     public void read(Buffer buffer) throws IOException
     {
-        Buffer queueBuf = bufferQueue.poll();
-        if (queueBuf==null)
+//        Buffer queueBuf = bufferQueue.poll();
+        if (bufferToSend==null)
         {
             if (silentBuffer==null)
                 buffer.setDiscard(true);
@@ -69,9 +71,11 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
             if (silentBuffer==null)
             {
                 silentBuffer = new Buffer();
-                silentBuffer.copy(queueBuf);
+                silentBuffer.copy(bufferToSend);
+                if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                    owner.getLogger().debug("AudioStream. Silence buffer added to stream");
             }
-            buffer.copy(queueBuf);
+            buffer.copy(bufferToSend);
         }
     }
 
@@ -123,18 +127,20 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
 
     public void run()
     {
-        long lastTransferTime = System.currentTimeMillis();
+        long startTime = System.currentTimeMillis();
+        long packetNumber = 0;
         while (!dataSource.isDataConcated() || !bufferQueue.isEmpty())
         {
-            long currentTime = System.currentTimeMillis();
-            if (!bufferQueue.isEmpty() || currentTime-lastTransferTime>=20)
+            try
             {
+                bufferToSend = bufferQueue.poll();
                 transferData(null);
-                lastTransferTime = System.currentTimeMillis();
+                ++packetNumber;
+                long sleepTime = packetNumber*20-(System.currentTimeMillis()-startTime);
+                if (sleepTime>0)
+                    TimeUnit.MILLISECONDS.sleep(sleepTime);
             }
-            try {
-                Thread.sleep(5);
-            } catch (InterruptedException ex) {
+            catch (InterruptedException ex) {
                 if (owner.isLogLevelEnabled(LogLevel.ERROR))
                     owner.getLogger().error("Transfer buffers to rtp session task was interrupted");
             }
