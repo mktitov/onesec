@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.actions;
 
+import org.onesec.raven.ivr.CompletionCode;
 import org.onesec.raven.ivr.IvrActionStatus;
 import org.onesec.raven.ivr.IvrEndpoint;
 
@@ -37,6 +38,6 @@ public class StopConversationAction extends AsyncAction
     protected void doExecute(IvrEndpoint endpoint) throws Exception
     {
         setStatus(IvrActionStatus.EXECUTED);
-        endpoint.stopConversation();
+        endpoint.stopConversation(CompletionCode.COMPLETED_BY_ENDPOINT);
     }
 }

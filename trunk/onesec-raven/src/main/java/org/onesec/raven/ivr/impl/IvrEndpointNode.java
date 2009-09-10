@@ -62,7 +62,7 @@ import org.onesec.core.provider.ProviderController;
 import org.onesec.core.services.ProviderRegistry;
 import org.onesec.core.services.StateListenersCoordinator;
 import org.onesec.raven.ivr.CompletionCode;
-import org.onesec.raven.ivr.ConversationCompletetionCallback;
+import org.onesec.raven.ivr.ConversationCompletionCallback;
 import org.onesec.raven.ivr.ConversationResult;
 import org.onesec.raven.ivr.IvrAction;
 import org.onesec.raven.ivr.IvrActionException;
@@ -141,6 +141,7 @@ public class IvrEndpointNode extends BaseNode
     private int connected;
     private boolean rtpInitialized;
     private ConversationResultImpl conversationResult;
+    private ConversationCompletionCallback completionCallback;
 
 
     @Override
@@ -173,6 +174,8 @@ public class IvrEndpointNode extends BaseNode
         remotePort = 0;
         remoteAddress = null;
         handlingIncomingCall = false;
+        conversationResult = null;
+        completionCallback = null;
     }
 
 //    private synchronized void setEndpointStatus(IvrEndpointState endpointStatus)
@@ -196,7 +199,7 @@ public class IvrEndpointNode extends BaseNode
     protected void doStop() throws Exception
     {
         super.doStop();
-        stopConversation();
+        stopConversation(CompletionCode.COMPLETED_BY_ENDPOINT);
         removeCallObserver();
         removeTerminalAddressObserver();
         removeTerminalObserver();
@@ -297,7 +300,7 @@ public class IvrEndpointNode extends BaseNode
 
     public synchronized void invite(
             String opponentNumber, IvrConversationScenario conversationScenario
-            , ConversationCompletetionCallback callback) throws IvrEndpointException
+            , ConversationCompletionCallback callback) throws IvrEndpointException
     {
         if (!getStatus().equals(Status.STARTED)
                 && endpointState.getId()!=IvrEndpointState.IN_SERVICE)
@@ -305,17 +308,23 @@ public class IvrEndpointNode extends BaseNode
                     "Can't invite oppenent to conversation. Endpoint not ready");
         try
         {
-            Call call = provider.createCall();
             resetConversationFields();
             handlingIncomingCall = true;
             currentConversation = conversationScenario;
             conversationResult = new ConversationResultImpl();
+            conversationResult.setCallStartTime(System.currentTimeMillis());
+            completionCallback = callback;
+            endpointState.setState(IvrEndpointState.INVITING);
+            Call call = provider.createCall();
             call.connect(terminal, terminalAddress, opponentNumber);
-        } catch (Exception e)
+        }
+        catch (Throwable e)
         {
-            throw new IvrEndpointException(
+            if (isLogLevelEnabled(LogLevel.ERROR))
+                error(
                     String.format("Error inviting opponent (%s) to conversation", opponentNumber)
                     , e);
+            stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
         }
     }
 
@@ -438,7 +447,7 @@ public class IvrEndpointNode extends BaseNode
                     startRtpSession(remoteAddress, remotePort);
                     break;
                 case TermConnDroppedEv.ID:
-                    stopConversation();
+                    stopConversation(CompletionCode.COMPLETED_BY_OPPONENT);
                     break;
                 case MediaTermConnDtmfEv.ID:
                     continueConversation(((MediaTermConnDtmfEv)event).getDtmfDigit());
@@ -450,20 +459,20 @@ public class IvrEndpointNode extends BaseNode
                     if (handlingIncomingCall)
                     {
                         CallCtlConnFailedEv ev = (CallCtlConnFailedEv) event;
-                        int cause = ev.getCause();
+                        int cause = ev.getCallControlCause();
+                        System.out.println("        >>> CAUSE: "+cause+" : "+ev.getCause());
+                        CompletionCode code = CompletionCode.OPPONENT_UNKNOWN_ERROR;
                         switch (cause)
                         {
                             case CallCtlConnFailedEv.CAUSE_BUSY:
-                                conversationResult.setCompletionCode(CompletionCode.OPPONENT_BUSY);
+                                code = CompletionCode.OPPONENT_BUSY;
                                 break;
                             case CallCtlConnFailedEv.CAUSE_CALL_NOT_ANSWERED:
-                                conversationResult.setCompletionCode(
-                                        CompletionCode.OPPONENT_NO_ANSWERED);
+                            case CallCtlConnFailedEv.CAUSE_NORMAL:
+                                code = CompletionCode.OPPONENT_NO_ANSWERED;
                                 break;
-                            default:
-                                conversationResult.setCompletionCode(
-                                        CompletionCode.OPPONENT_UNKNOWN_ERROR);
                         }
+                        stopConversation(code);
                     }
                     break;
                 case CallCtlTermConnDroppedEv.ID:
@@ -548,7 +557,7 @@ public class IvrEndpointNode extends BaseNode
         }
     }
 
-    public synchronized void stopConversation()
+    public synchronized void stopConversation(CompletionCode completionCode)
     {
         if (isLogLevelEnabled(LogLevel.DEBUG))
             debug("Stoping conversation");
@@ -559,25 +568,41 @@ public class IvrEndpointNode extends BaseNode
         }
         else
         {
-            resetConversationFields();
             try
             {
                 try
                 {
                     try
                     {
-                        if (isLogLevelEnabled(LogLevel.DEBUG))
-                            debug("Canceling actions execution");
-                        actionsExecutor.cancelActionsExecution();
+                        try
+                        {
+                            if (isLogLevelEnabled(LogLevel.DEBUG))
+                                debug("Canceling actions execution");
+                            actionsExecutor.cancelActionsExecution();
+                        }
+                        finally
+                        {
+                            TerminalConnection[] connections = terminal.getTerminalConnections();
+                            if (connections!=null && connections.length>0)
+                            {
+                                if (isLogLevelEnabled(LogLevel.DEBUG))
+                                    debug("Terminal has active connection. Disconnecting...");
+                                connections[0].getConnection().disconnect();
+                            }
+                        }
                     }
                     finally
                     {
-                        TerminalConnection[] connections = terminal.getTerminalConnections();
-                        if (connections!=null && connections.length>0)
+                        if (handlingIncomingCall)
                         {
-                            if (isLogLevelEnabled(LogLevel.DEBUG))
-                                debug("Terminal has active connection. Disconnecting...");
-                            connections[0].getConnection().disconnect();
+                            long curTime = System.currentTimeMillis();
+                            conversationResult.setCallEndTime(curTime);
+                            conversationResult.setCompletionCode(completionCode);
+                            long startTime = conversationResult.getConversationStartTime();
+                            if (startTime>0)
+                                conversationResult.setConversationDuration(
+                                        (curTime - startTime) / 1000);
+                            completionCallback.conversationCompleted(conversationResult);
                         }
                     }
                 } catch (Exception e)
@@ -588,6 +613,7 @@ public class IvrEndpointNode extends BaseNode
             }
             finally
             {
+                resetConversationFields();
                 endpointState.setState(IvrEndpointState.IN_SERVICE);
             }
         }
@@ -626,6 +652,8 @@ public class IvrEndpointNode extends BaseNode
 
         }
         endpointState.setState(IvrEndpointState.TALKING);
+        if (handlingIncomingCall)
+            conversationResult.setConversationStartTime(System.currentTimeMillis());
         if (isLogLevelEnabled(LogLevel.DEBUG))
             debug(String.format(
                     "Starting rtp session: remoteHost (%s), remotePort (%s)"

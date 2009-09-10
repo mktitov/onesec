@@ -23,7 +23,7 @@ package org.onesec.raven.ivr;
  */
 public enum CompletionCode
 {
-    COMPLETED_BY_SCENARIO,
+    COMPLETED_BY_ENDPOINT,
     COMPLETED_BY_OPPONENT,
     OPPONENT_BUSY,
     OPPONENT_NO_ANSWERED,

@@ -14,7 +14,6 @@
  *  limitations under the License.
  *  under the License.
  */
-
 package org.onesec.raven.ivr;
 
 /**
@@ -25,13 +24,32 @@ package org.onesec.raven.ivr;
 public interface ConversationResult
 {
     /**
+     * Returns the call start time
+     * @return
+     */
+    public long getCallStartTime();
+    /**
+     * Returns the call end time
+     */
+    public long getCallEndTime();
+    /**
+     * Returns the call duration in seconds
+     */
+    public long getCallDuration();
+    /**
      * Returns the conversation completion code
      */
     public CompletionCode getCompletionCode();
+
     /**
      * Return the dureation of the conversation in seconds. For completion codes
      * {@link CompletionCode#OPPENT_BUSY} and {@link CompletionCode#OPPENT_NO_ANSWER} method always
      * returns 0.
      */
-    public int getConversationDuration();
+    public long getConversationDuration();
+
+    /**
+     * Returns the conversation start time in milliseconds.
+     */
+    public long getConversationStartTime();
 }

@@ -37,7 +37,7 @@ public interface IvrEndpoint extends Node, ObjectDescription
     /**
      * Stops the current conversation
      */
-    public void stopConversation();
+    public void stopConversation(CompletionCode completionCode);
     /**
      * Invites opponent to the conversation
      * @param opponentNumber the opponent phone number
@@ -46,5 +46,5 @@ public interface IvrEndpoint extends Node, ObjectDescription
      */
     public void invite(
             String opponentNumber, IvrConversationScenario conversationScenario
-            , ConversationCompletetionCallback callback) throws IvrEndpointException;
+            , ConversationCompletionCallback callback) throws IvrEndpointException;
 }
