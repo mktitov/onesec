@@ -21,7 +21,7 @@ package org.onesec.raven.ivr;
  *
  * @author Mikhail Titov
  */
-public interface ConversationCompletetionCallback
+public interface ConversationCompletionCallback
 {
     public void conversationCompleted(ConversationResult conversationResult);
 }

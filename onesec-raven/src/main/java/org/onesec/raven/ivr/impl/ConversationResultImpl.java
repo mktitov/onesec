@@ -26,15 +26,18 @@ import org.onesec.raven.ivr.ConversationResult;
  */
 public class ConversationResultImpl implements ConversationResult
 {
+    private long callStartTime;
+    private long callEndTime;
     private CompletionCode completionCode;
-    private int conversationDuration;
+    private long conversationDuration = 0;
+    private long conversationStartTime = 0;
 
     public void setCompletionCode(CompletionCode completionCode)
     {
         this.completionCode = completionCode;
     }
 
-    public void setConversationDuration(int conversationDuration)
+    public void setConversationDuration(long conversationDuration)
     {
         this.conversationDuration = conversationDuration;
     }
@@ -44,8 +47,43 @@ public class ConversationResultImpl implements ConversationResult
         return completionCode;
     }
 
-    public int getConversationDuration()
+    public long getConversationDuration()
     {
         return conversationDuration;
+    }
+
+    public long getConversationStartTime()
+    {
+        return conversationStartTime;
+    }
+
+    public void setConversationStartTime(long conversationStartTime)
+    {
+        this.conversationStartTime = conversationStartTime;
+    }
+
+    public void setCallEndTime(long callEndTime)
+    {
+        this.callEndTime = callEndTime;
+    }
+
+    public void setCallStartTime(long callStartTime)
+    {
+        this.callStartTime = callStartTime;
+    }
+
+    public long getCallStartTime()
+    {
+        return callStartTime;
+    }
+
+    public long getCallEndTime()
+    {
+        return callEndTime;
+    }
+
+    public long getCallDuration()
+    {
+        return (callEndTime-callStartTime)/1000;
     }
 }

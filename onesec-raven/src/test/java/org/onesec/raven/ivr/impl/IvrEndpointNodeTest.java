@@ -18,6 +18,7 @@
 package org.onesec.raven.ivr.impl;
 
 import java.io.FileInputStream;
+import java.util.Date;
 import org.junit.Before;
 import org.junit.Test;
 import org.onesec.core.StateWaitResult;
@@ -27,7 +28,7 @@ import org.onesec.core.services.ProviderRegistry;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.impl.CCMCallOperatorNode;
 import org.onesec.raven.impl.ProviderNode;
-import org.onesec.raven.ivr.ConversationCompletetionCallback;
+import org.onesec.raven.ivr.ConversationCompletionCallback;
 import org.onesec.raven.ivr.ConversationResult;
 import org.onesec.raven.ivr.IvrEndpointState;
 import org.onesec.raven.ivr.actions.PauseActionNode;
@@ -47,7 +48,7 @@ import org.raven.tree.Node;
  * @author Mikhail Titov
  */
 public class IvrEndpointNodeTest 
-        extends OnesecRavenTestCase implements ConversationCompletetionCallback
+        extends OnesecRavenTestCase implements ConversationCompletionCallback
 {
     private IvrEndpointNode endpoint;
     private ExecutorServiceNode executor;
@@ -200,10 +201,10 @@ public class IvrEndpointNodeTest
         assertTrue(endpoint.start());
         StateWaitResult res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.IN_SERVICE}, 2000);
-        endpoint.invite("089128672947", scenario, this);
-//        endpoint.invite("0215359", scenario, this);
-//        res = endpoint.getEndpointState().waitForState(
-//                new int[]{IvrEndpointState.ACCEPTING_CALL}, 200000);
+//        endpoint.invite("089128672947", scenario, this);
+        endpoint.invite("88024", scenario, this);
+        res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.INVITING}, 30000);
         res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.TALKING}, 250000);
         res = endpoint.getEndpointState().waitForState(
@@ -287,6 +288,13 @@ public class IvrEndpointNodeTest
 
     public void conversationCompleted(ConversationResult conversationResult)
     {
-        throw new UnsupportedOperationException("Not supported yet.");
+        System.out.println("\n-----------CONVERSATION RESULT-------------");
+        System.out.println("Complition code: "+conversationResult.getCompletionCode());
+        System.out.println("call start time: "+new Date(conversationResult.getCallStartTime()));
+        System.out.println("call end time: "+new Date(conversationResult.getCallEndTime()));
+        System.out.println("call duration (sec): "+conversationResult.getCallDuration());
+        System.out.println("conversation start time: "+new Date(conversationResult.getConversationStartTime()));
+        System.out.println("conversation duration (sec): "+conversationResult.getConversationDuration());
+        System.out.println("----------------------------------------------\n");
     }
 }
