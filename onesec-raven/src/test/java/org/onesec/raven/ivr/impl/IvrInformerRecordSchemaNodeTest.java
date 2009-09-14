@@ -46,9 +46,8 @@ public class IvrInformerRecordSchemaNodeTest extends OnesecRavenTestCase
         assertEquals(IvrInformerRecordSchemaNode.TABLE_NAME, dbExt.getTableName());
         
         checkField(rec, ID_FIELD, RecordSchemaFieldType.LONG, null, 0);
-        checkField(
-                rec, LIST_OPERATOR_ID_FIELD, RecordSchemaFieldType.STRING, null
-                , LIST_OPERATOR_ID_CSV_COL);
+        checkField(rec, OPERATOR_ID_FIELD, RecordSchemaFieldType.STRING, null, OPERATOR_ID_CSV_COL);
+        checkField(rec, LIST_ID_FIELD, RecordSchemaFieldType.STRING, null, LIST_ID_CSV_COL);
         checkField(rec, ABONENT_ID_FIELD, RecordSchemaFieldType.STRING, null, ABONENT_ID_CSV_COL);
         checkField(
                 rec, ABONENT_DESC_FIELD, RecordSchemaFieldType.STRING, null, ABONENT_DESC_CSV_COL);
@@ -58,12 +57,12 @@ public class IvrInformerRecordSchemaNodeTest extends OnesecRavenTestCase
         checkField(rec, CALL_ORDER_FIELD, RecordSchemaFieldType.SHORT, null, CALL_ORDER_CSV_COL);
         checkField(rec, COMPLETION_CODE_FIELD, RecordSchemaFieldType.STRING, null, 0);
         checkField(rec, 
-                CALL_START_TIME_FIELD, RecordSchemaFieldType.STRING, "dd.MM.yyyy HH:mm:ss", 0);
+                CALL_START_TIME_FIELD, RecordSchemaFieldType.TIMESTAMP, "dd.MM.yyyy HH:mm:ss", 0);
         checkField(rec,
-                CALL_END_TIME_FIELD, RecordSchemaFieldType.STRING, "dd.MM.yyyy HH:mm:ss", 0);
+                CALL_END_TIME_FIELD, RecordSchemaFieldType.TIMESTAMP, "dd.MM.yyyy HH:mm:ss", 0);
         checkField(rec, CALL_DURATION_FIELD, RecordSchemaFieldType.LONG, null, 0);
         checkField(rec,
-                CONVERSATION_START_TIME_FIELD, RecordSchemaFieldType.STRING
+                CONVERSATION_START_TIME_FIELD, RecordSchemaFieldType.TIMESTAMP
                 , "dd.MM.yyyy HH:mm:ss", 0);
         checkField(rec, CONVERSATION_DURATION_FIELD, RecordSchemaFieldType.LONG, null, 0);
 

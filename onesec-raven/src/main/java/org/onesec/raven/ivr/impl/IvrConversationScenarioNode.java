@@ -18,14 +18,23 @@
 package org.onesec.raven.ivr.impl;
 
 import org.onesec.raven.ivr.IvrConversationScenario;
+import org.onesec.raven.ivr.actions.PauseActionNode;
+import org.onesec.raven.ivr.actions.PlayAudioActionNode;
+import org.onesec.raven.ivr.actions.StopConversationActionNode;
+import org.raven.annotations.NodeClass;
 import org.raven.conv.impl.ConversationScenarioNode;
+import org.raven.conv.impl.ConversationScenarioPointNode;
+import org.raven.conv.impl.GotoNode;
+import org.raven.expr.impl.IfNode;
 
 /**
  *
  * @author Mikhail Titov
  */
+@NodeClass(childNodes={
+    ConversationScenarioPointNode.class, IfNode.class, GotoNode.class,
+    StopConversationActionNode.class, PlayAudioActionNode.class, PauseActionNode.class})
 public class IvrConversationScenarioNode extends ConversationScenarioNode
         implements IvrConversationScenario
 {
-
 }
