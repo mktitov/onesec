@@ -22,6 +22,7 @@ import org.raven.ds.RecordSchemaFieldType;
 import org.raven.ds.impl.CsvRecordFieldExtension;
 import org.raven.ds.impl.DatabaseRecordExtension;
 import org.raven.ds.impl.DatabaseRecordFieldExtension;
+import org.raven.ds.impl.FilterableRecordFieldExtension;
 import org.raven.ds.impl.IdRecordFieldExtension;
 import org.raven.ds.impl.RecordSchemaFieldNode;
 import org.raven.ds.impl.RecordSchemaNode;
@@ -83,37 +84,45 @@ public class IvrInformerRecordSchemaNode extends RecordSchemaNode
     {
         DatabaseRecordExtension.create(
                 getRecordExtensionsNode(), DB_TABLE_EXTENSION_NAME, TABLE_NAME);
-        createInformerField(ID_FIELD, RecordSchemaFieldType.LONG, null, 0);
+        createInformerField(ID_FIELD, RecordSchemaFieldType.LONG, null, 0, true);
         createInformerField(
                 OPERATOR_ID_FIELD, RecordSchemaFieldType.STRING, null
-                , OPERATOR_ID_CSV_COL);
-        createInformerField(LIST_ID_FIELD, RecordSchemaFieldType.STRING, null, LIST_ID_CSV_COL);
+                , OPERATOR_ID_CSV_COL, true);
         createInformerField(
-                ABONENT_ID_FIELD, RecordSchemaFieldType.STRING, null, ABONENT_ID_CSV_COL);
+                LIST_ID_FIELD, RecordSchemaFieldType.STRING, null, LIST_ID_CSV_COL, true);
         createInformerField(
-                ABONENT_DESC_FIELD, RecordSchemaFieldType.STRING, null, ABONENT_DESC_CSV_COL);
+                ABONENT_ID_FIELD, RecordSchemaFieldType.STRING, null, ABONENT_ID_CSV_COL, true);
         createInformerField(
-                ABONENT_NUMBER_FIELD, RecordSchemaFieldType.STRING, null, ABONENT_NUMBER_CSV_COL);
+                ABONENT_DESC_FIELD, RecordSchemaFieldType.STRING, null
+                , ABONENT_DESC_CSV_COL, false);
         createInformerField(
-                CALL_ORDER_FIELD, RecordSchemaFieldType.SHORT, null, CALL_ORDER_CSV_COL);
-        createInformerField(COMPLETION_CODE_FIELD, RecordSchemaFieldType.STRING, null, 0);
+                ABONENT_NUMBER_FIELD, RecordSchemaFieldType.STRING, null
+                , ABONENT_NUMBER_CSV_COL, false);
         createInformerField(
-                CALL_START_TIME_FIELD, RecordSchemaFieldType.TIMESTAMP, "dd.MM.yyyy HH:mm:ss", 0);
+                CALL_ORDER_FIELD, RecordSchemaFieldType.SHORT, null, CALL_ORDER_CSV_COL, false);
+        createInformerField(COMPLETION_CODE_FIELD, RecordSchemaFieldType.STRING, null, 0, true);
         createInformerField(
-                CALL_END_TIME_FIELD, RecordSchemaFieldType.TIMESTAMP, "dd.MM.yyyy HH:mm:ss", 0);
-        createInformerField(CALL_DURATION_FIELD, RecordSchemaFieldType.LONG, null, 0);
+                CALL_START_TIME_FIELD, RecordSchemaFieldType.TIMESTAMP
+                , "dd.MM.yyyy HH:mm:ss", 0, false);
+        createInformerField(
+                CALL_END_TIME_FIELD, RecordSchemaFieldType.TIMESTAMP
+                , "dd.MM.yyyy HH:mm:ss", 0, false);
+        createInformerField(CALL_DURATION_FIELD, RecordSchemaFieldType.LONG, null, 0, false);
         createInformerField(
                 CONVERSATION_START_TIME_FIELD, RecordSchemaFieldType.TIMESTAMP
-                , "dd.MM.yyyy HH:mm:ss", 0);
-        createInformerField(CONVERSATION_DURATION_FIELD, RecordSchemaFieldType.LONG, null, 0);
+                , "dd.MM.yyyy HH:mm:ss", 0, false);
+        createInformerField(
+                CONVERSATION_DURATION_FIELD, RecordSchemaFieldType.LONG, null, 0, false);
     }
 
     private void createInformerField(
-            String name, RecordSchemaFieldType type, String pattern, int columnNumber)
+            String name, RecordSchemaFieldType type, String pattern, int columnNumber
+            , boolean filterable)
     {
-        RecordSchemaFieldNode field = createField(name, type, pattern);
-        if (name.equals(field.getDisplayName()))
+        RecordSchemaFieldNode field = (RecordSchemaFieldNode) getChildren(name);
+        if (field==null)
         {
+            field = createField(name, type, pattern);
             String displayName = messagesRegistry.getMessages(
                     IvrInformerRecordSchemaNode.class).get(name);
             field.setDisplayName(displayName);
@@ -128,5 +137,9 @@ public class IvrInformerRecordSchemaNode extends RecordSchemaNode
         DatabaseRecordFieldExtension.create(field, DB_TABLE_COLUMN_EXTENSION_NAME, name);
         if (columnNumber>0)
             CsvRecordFieldExtension.create(field, CSV_COLUMN_EXTENSION_NAME, columnNumber);
+        if (filterable)
+        {
+            FilterableRecordFieldExtension.create(field, "FILTER", false, false, null);
+        }
     }
 }

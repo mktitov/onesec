@@ -23,6 +23,7 @@ import org.raven.ds.RecordSchemaFieldType;
 import org.raven.ds.impl.CsvRecordFieldExtension;
 import org.raven.ds.impl.DatabaseRecordExtension;
 import org.raven.ds.impl.DatabaseRecordFieldExtension;
+import org.raven.ds.impl.FilterableRecordFieldExtension;
 import org.raven.ds.impl.IdRecordFieldExtension;
 import org.raven.ds.impl.RecordSchemaFieldNode;
 import static org.onesec.raven.ivr.impl.IvrInformerRecordSchemaNode.*;
@@ -45,32 +46,38 @@ public class IvrInformerRecordSchemaNodeTest extends OnesecRavenTestCase
         assertStarted(dbExt);
         assertEquals(IvrInformerRecordSchemaNode.TABLE_NAME, dbExt.getTableName());
         
-        checkField(rec, ID_FIELD, RecordSchemaFieldType.LONG, null, 0);
-        checkField(rec, OPERATOR_ID_FIELD, RecordSchemaFieldType.STRING, null, OPERATOR_ID_CSV_COL);
-        checkField(rec, LIST_ID_FIELD, RecordSchemaFieldType.STRING, null, LIST_ID_CSV_COL);
-        checkField(rec, ABONENT_ID_FIELD, RecordSchemaFieldType.STRING, null, ABONENT_ID_CSV_COL);
+        checkField(rec, ID_FIELD, RecordSchemaFieldType.LONG, null, 0, true);
+        checkField(rec, OPERATOR_ID_FIELD, RecordSchemaFieldType.STRING, null
+                , OPERATOR_ID_CSV_COL, true);
+        checkField(rec, LIST_ID_FIELD, RecordSchemaFieldType.STRING, null, LIST_ID_CSV_COL, true);
+        checkField(rec, ABONENT_ID_FIELD, RecordSchemaFieldType.STRING, null
+                , ABONENT_ID_CSV_COL, true);
         checkField(
-                rec, ABONENT_DESC_FIELD, RecordSchemaFieldType.STRING, null, ABONENT_DESC_CSV_COL);
+                rec, ABONENT_DESC_FIELD, RecordSchemaFieldType.STRING, null
+                , ABONENT_DESC_CSV_COL, false);
         checkField(
                 rec, ABONENT_NUMBER_FIELD, RecordSchemaFieldType.STRING, null
-                , ABONENT_NUMBER_CSV_COL);
-        checkField(rec, CALL_ORDER_FIELD, RecordSchemaFieldType.SHORT, null, CALL_ORDER_CSV_COL);
-        checkField(rec, COMPLETION_CODE_FIELD, RecordSchemaFieldType.STRING, null, 0);
+                , ABONENT_NUMBER_CSV_COL, false);
+        checkField(rec, CALL_ORDER_FIELD, RecordSchemaFieldType.SHORT, null
+                , CALL_ORDER_CSV_COL, false);
+        checkField(rec, COMPLETION_CODE_FIELD, RecordSchemaFieldType.STRING, null, 0, true);
         checkField(rec, 
-                CALL_START_TIME_FIELD, RecordSchemaFieldType.TIMESTAMP, "dd.MM.yyyy HH:mm:ss", 0);
+                CALL_START_TIME_FIELD, RecordSchemaFieldType.TIMESTAMP, "dd.MM.yyyy HH:mm:ss"
+                , 0, false);
         checkField(rec,
-                CALL_END_TIME_FIELD, RecordSchemaFieldType.TIMESTAMP, "dd.MM.yyyy HH:mm:ss", 0);
-        checkField(rec, CALL_DURATION_FIELD, RecordSchemaFieldType.LONG, null, 0);
+                CALL_END_TIME_FIELD, RecordSchemaFieldType.TIMESTAMP, "dd.MM.yyyy HH:mm:ss", 0
+                , false);
+        checkField(rec, CALL_DURATION_FIELD, RecordSchemaFieldType.LONG, null, 0, false);
         checkField(rec,
                 CONVERSATION_START_TIME_FIELD, RecordSchemaFieldType.TIMESTAMP
-                , "dd.MM.yyyy HH:mm:ss", 0);
-        checkField(rec, CONVERSATION_DURATION_FIELD, RecordSchemaFieldType.LONG, null, 0);
+                , "dd.MM.yyyy HH:mm:ss", 0, false);
+        checkField(rec, CONVERSATION_DURATION_FIELD, RecordSchemaFieldType.LONG, null, 0, false);
 
     }
 
     private void checkField(
             IvrInformerRecordSchemaNode rec, String fieldName
-            , RecordSchemaFieldType type, String pattern, int csvColumnNumber)
+            , RecordSchemaFieldType type, String pattern, int csvColumnNumber, boolean filterable)
     {
         RecordSchemaFieldNode field = (RecordSchemaFieldNode) rec.getChildren(fieldName);
         assertNotNull(field);
@@ -99,6 +106,17 @@ public class IvrInformerRecordSchemaNodeTest extends OnesecRavenTestCase
             assertNotNull(csvExt);
             assertStarted(csvExt);
             assertEquals(new Integer(csvColumnNumber), csvExt.getColumnNumber());
+        }
+
+        if (filterable)
+        {
+            FilterableRecordFieldExtension filterExt =
+                    field.getFieldExtension(FilterableRecordFieldExtension.class, null);
+            assertNotNull(filterExt);
+            assertStarted(filterExt);
+            assertFalse(filterExt.getCaseSensitive());
+            assertFalse(filterExt.getFilterValueRequired());
+            assertNull(filterExt.getDefaultValue());
         }
     }
 }
