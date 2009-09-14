@@ -17,11 +17,19 @@
 
 package org.onesec.raven.ivr.impl;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.tree.DataFile;
+import org.raven.tree.NodeAttribute;
+import org.raven.tree.Viewable;
+import org.raven.tree.ViewableObject;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.DataFileValueHandlerFactory;
+import org.raven.tree.impl.DataFileViewableObject;
+import org.raven.tree.impl.ViewableObjectImpl;
 import org.weda.annotations.constraints.NotNull;
 
 /**
@@ -29,7 +37,7 @@ import org.weda.annotations.constraints.NotNull;
  * @author Mikhail Titov
  */
 @NodeClass()
-public class AudioFileNode extends BaseNode
+public class AudioFileNode extends BaseNode implements Viewable
 {
     @NotNull @Parameter(valueHandlerType=DataFileValueHandlerFactory.TYPE)
     private DataFile audioFile;
@@ -42,5 +50,29 @@ public class AudioFileNode extends BaseNode
     public void setAudioFile(DataFile audioFile)
     {
         this.audioFile = audioFile;
+    }
+
+    public Map<String, NodeAttribute> getRefreshAttributes() throws Exception
+    {
+        return null;
+    }
+
+    public List<ViewableObject> getViewableObjects(Map<String, NodeAttribute> refreshAttributes)
+            throws Exception
+    {
+        if (Status.STARTED!=getStatus() 
+            || audioFile.getMimeType()==null || audioFile.getMimeType().isEmpty())
+        {
+            return null;
+        }
+
+        ViewableObject obj = new DataFileViewableObject(audioFile, this);
+
+        return Arrays.asList(obj);
+    }
+
+    public Boolean getAutoRefresh()
+    {
+        return true;
     }
 }
