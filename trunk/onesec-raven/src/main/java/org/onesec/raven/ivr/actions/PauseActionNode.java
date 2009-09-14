@@ -19,6 +19,8 @@ package org.onesec.raven.ivr.actions;
 
 import org.onesec.raven.ivr.IvrAction;
 import org.onesec.raven.ivr.IvrActionNode;
+import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
+import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.tree.impl.BaseNode;
 import org.weda.annotations.constraints.NotNull;
@@ -27,6 +29,7 @@ import org.weda.annotations.constraints.NotNull;
  *
  * @author Mikhail Titov
  */
+@NodeClass(parentNode=IvrConversationScenarioNode.class)
 public class PauseActionNode extends BaseNode implements IvrActionNode
 {
     @NotNull @Parameter()

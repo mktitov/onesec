@@ -71,6 +71,7 @@ import org.onesec.raven.ivr.IvrEndpoint;
 import org.onesec.raven.ivr.IvrEndpointException;
 import org.onesec.raven.ivr.IvrEndpointState;
 import org.onesec.raven.ivr.actions.AsyncAction;
+import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.conv.BindingScope;
 import org.raven.conv.ConversationScenarioState;
@@ -86,6 +87,7 @@ import org.weda.internal.annotations.Service;
  *
  * @author Mikhail Titov
  */
+@NodeClass
 public class IvrEndpointNode extends BaseNode 
         implements IvrEndpoint, ObjectDescription, CiscoTerminalObserver, AddressObserver
             , CallControlCallObserver, MediaCallObserver

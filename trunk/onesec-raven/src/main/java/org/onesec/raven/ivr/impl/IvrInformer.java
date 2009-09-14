@@ -18,7 +18,10 @@
 package org.onesec.raven.ivr.impl;
 
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -34,18 +37,24 @@ import org.raven.ds.DataConsumer;
 import org.raven.ds.DataSource;
 import org.raven.ds.Record;
 import org.raven.ds.RecordException;
+import org.raven.ds.RecordSchemaField;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.ExecutorServiceException;
 import org.raven.sched.Task;
 import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
+import org.raven.table.TableImpl;
 import org.raven.tree.Node;
 import org.raven.tree.NodeAttribute;
 import org.raven.tree.NodeError;
+import org.raven.tree.Viewable;
+import org.raven.tree.ViewableObject;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
+import org.raven.tree.impl.ViewableObjectImpl;
 import org.weda.annotations.constraints.NotNull;
 import org.weda.beans.ObjectUtils;
+import org.weda.internal.annotations.Message;
 import static org.onesec.raven.ivr.impl.IvrInformerRecordSchemaNode.*;
 
 /**
@@ -54,7 +63,8 @@ import static org.onesec.raven.ivr.impl.IvrInformerRecordSchemaNode.*;
  */
 @NodeClass
 public class IvrInformer 
-        extends BaseNode implements DataSource, ConversationCompletionCallback, Task, DataConsumer
+        extends BaseNode 
+        implements DataSource, ConversationCompletionCallback, Task, DataConsumer, Viewable
 {
     public final static String NOT_PROCESSED_STATUS = "NOT_PROCESSED";
     public final static String PROCESSING_ERROR_STATUS = "PROCESSING_ERROR";
@@ -80,9 +90,35 @@ public class IvrInformer
     private String statusMessage;
     private Record currentRecord;
     private String lastSuccessfullyProcessedAbonId;
+    private String lastAbonId;
     private Lock recordLock;
     private Condition recordProcessed;
     private ConversationResult conversationResult;
+
+    private int processedRecordsCount;
+    private int processedAbonsCount;
+    private int informedAbonsCount;
+
+    @Message
+    private static String currentStatusMessage;
+    @Message
+    private static String currentRecordMessage;
+    @Message
+    private static String fieldNameColumnMessage;
+    @Message
+    private static String valueColumnMessage;
+    @Message
+    private static String statisticsMessage;
+    @Message
+    private static String statisticNameColumnMessage;
+    @Message
+    private static String statisticValueColumnMessage;
+    @Message
+    private static String  processedRecordsCountMessage;
+    @Message
+    private static String processedAbonsCountMessage;
+    @Message
+    private static String informedAbonsCountMessage;
 
     @Override
     protected void initFields()
@@ -91,12 +127,21 @@ public class IvrInformer
         recordLock = new ReentrantLock();
         recordProcessed = recordLock.newCondition();
         informerStatus = IvrInformerStatus.NOT_READY;
+        resetStatFields();
+    }
+
+    private void resetStatFields()
+    {
+        processedRecordsCount = 0;
+        processedAbonsCount = 0;
+        informedAbonsCount = 0;
     }
 
     @Override
     protected void doStart() throws Exception
     {
         super.doStart();
+        resetStatFields();
         informerStatus = IvrInformerStatus.WAITING;
     }
 
@@ -230,33 +275,60 @@ public class IvrInformer
         finally
         {
             informerStatus = IvrInformerStatus.PROCESSED;
+            statusMessage = "All records sended by data source where processed.";
         }
     }
 
     public void setData(DataSource dataSource, Object data)
     {
+        if (!Status.STARTED.equals(getStatus()))
+            return;
         if (!(data instanceof Record))
             return;
         Record rec = (Record) data;
         if (!(rec.getSchema() instanceof IvrInformerRecordSchemaNode))
             return;
 
+        ++processedRecordsCount;
         currentRecord = rec;
+        statusMessage = "Recieved new record: "+getRecordShortDesc();
         try
         {
-            if (ObjectUtils.equals(
-                    lastSuccessfullyProcessedAbonId, currentRecord.getValue(ABONENT_ID_FIELD)))
+            String abonId = (String) currentRecord.getValue(ABONENT_ID_FIELD);
+            if (!ObjectUtils.equals(lastAbonId, abonId))
+            {
+                ++processedAbonsCount;
+                lastAbonId = abonId;
+            }
+            if (ObjectUtils.equals(lastSuccessfullyProcessedAbonId, abonId))
             {
                 skipRecord();
             }
             else
                 informAbonent();
             sendDataToConsumers(currentRecord);
+            statusMessage = String.format(
+                    "Abonent informed (%s). Waiting for new record", getRecordShortDesc());
         }
         catch(Throwable e)
         {
             if (isLogLevelEnabled(LogLevel.ERROR))
                 error(getRecordInfo(), e);
+        }
+    }
+
+    private String getRecordShortDesc()
+    {
+        try
+        {
+            return String.format(
+                    "id (%s), abon_id (%s), abon_number (%s)"
+                    , currentRecord.getValue(ID_FIELD)
+                    , currentRecord.getValue(ABONENT_ID_FIELD)
+                    , currentRecord.getValue(ABONENT_NUMBER_FIELD));
+        } catch (RecordException ex)
+        {
+            return "";
         }
     }
 
@@ -283,6 +355,7 @@ public class IvrInformer
 
     private void skipRecord() throws RecordException
     {
+        statusMessage = "Skiping record: "+getRecordShortDesc();
         currentRecord.setValue(COMPLETION_CODE_FIELD, SKIPPED_STATUS);
         Timestamp curTs = new Timestamp(System.currentTimeMillis());
         currentRecord.setValue(CALL_START_TIME_FIELD, curTs);
@@ -298,8 +371,12 @@ public class IvrInformer
             String abonNumber = (String) currentRecord.getValue(ABONENT_NUMBER_FIELD);
             try{
                 informerStatus = IvrInformerStatus.WAITING_FOR_ENDPOINT;
+                statusMessage = 
+                        "Waiting for endpoint IN_SERVICE state to process record: "
+                        +getRecordShortDesc();
                 endpoint.getEndpointState().waitForState(
                         new int[]{IvrEndpointState.IN_SERVICE}, Long.MAX_VALUE);
+                statusMessage = "Informing abonent: "+getRecordShortDesc();
                 informerStatus = IvrInformerStatus.PROCESSING;
                 endpoint.invite(abonNumber, conversationScenario, this);
                 recordProcessed.await();
@@ -320,8 +397,11 @@ public class IvrInformer
                         case OPPONENT_UNKNOWN_ERROR: status = PROCESSING_ERROR_STATUS; break;
                     }
                     if (sucProc)
+                    {
                         lastSuccessfullyProcessedAbonId =
                                 (String) currentRecord.getValue(ABONENT_ID_FIELD);
+                        ++informedAbonsCount;
+                    }
                     currentRecord.setValue(COMPLETION_CODE_FIELD, status);
                     currentRecord.setValue(
                             CALL_START_TIME_FIELD, conversationResult.getCallStartTime());
@@ -357,5 +437,56 @@ public class IvrInformer
             for (Node dep: depNodes)
                 if (dep instanceof DataConsumer && Status.STARTED.equals(dep.getStatus()))
                     ((DataConsumer)dep).setData(this, data);
+    }
+
+    public Map<String, NodeAttribute> getRefreshAttributes() throws Exception
+    {
+        return null;
+    }
+
+    public List<ViewableObject> getViewableObjects(Map<String, NodeAttribute> refreshAttributes)
+            throws Exception
+    {
+        List<ViewableObject> viewableObjects = new ArrayList<ViewableObject>(5);
+
+        //current status
+        viewableObjects.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE
+                , "<b>"+currentStatusMessage+"</b>: ("+informerStatus+") "+statusMessage));
+
+        //current record
+        viewableObjects.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE
+                , "<b>"+currentRecordMessage+"</b>: "));
+
+        Record rec = currentRecord;
+        if (rec!=null)
+        {
+            TableImpl table = new TableImpl(
+                    new String[]{fieldNameColumnMessage, valueColumnMessage});
+            for (RecordSchemaField field: rec.getSchema().getFields())
+            {
+                String fieldName = field.getDisplayName();
+                String value = converter.convert(
+                        String.class, rec.getValue(field.getName()), field.getPattern());
+                table.addRow(new Object[]{fieldName, value});
+            }
+            viewableObjects.add(new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, table));
+        }
+
+        //statistics
+        viewableObjects.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE
+                , "<b>"+statisticsMessage+"</b>: "));
+        TableImpl table = new TableImpl(
+                new String[]{statisticNameColumnMessage, statisticValueColumnMessage});
+        table.addRow(new Object[]{processedRecordsCountMessage, processedRecordsCount});
+        table.addRow(new Object[]{processedAbonsCountMessage, processedAbonsCount});
+        table.addRow(new Object[]{informedAbonsCountMessage, informedAbonsCount});
+        viewableObjects.add(new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, table));
+
+        return viewableObjects;
+    }
+
+    public Boolean getAutoRefresh()
+    {
+        return true;
     }
 }
