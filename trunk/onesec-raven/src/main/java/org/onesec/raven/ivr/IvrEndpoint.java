@@ -26,6 +26,7 @@ import org.raven.tree.Node;
  */
 public interface IvrEndpoint extends Node, ObjectDescription
 {
+    public IvrEndpointState getEndpointState();
     /**
      * Returns the executor service
      */

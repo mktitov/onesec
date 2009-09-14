@@ -95,12 +95,12 @@ public class IvrInformerRecordSchemaNode extends RecordSchemaNode
                 CALL_ORDER_FIELD, RecordSchemaFieldType.SHORT, null, CALL_ORDER_CSV_COL);
         createInformerField(COMPLETION_CODE_FIELD, RecordSchemaFieldType.STRING, null, 0);
         createInformerField(
-                CALL_START_TIME_FIELD, RecordSchemaFieldType.STRING, "dd.MM.yyyy HH:mm:ss", 0);
+                CALL_START_TIME_FIELD, RecordSchemaFieldType.TIMESTAMP, "dd.MM.yyyy HH:mm:ss", 0);
         createInformerField(
-                CALL_END_TIME_FIELD, RecordSchemaFieldType.STRING, "dd.MM.yyyy HH:mm:ss", 0);
+                CALL_END_TIME_FIELD, RecordSchemaFieldType.TIMESTAMP, "dd.MM.yyyy HH:mm:ss", 0);
         createInformerField(CALL_DURATION_FIELD, RecordSchemaFieldType.LONG, null, 0);
         createInformerField(
-                CONVERSATION_START_TIME_FIELD, RecordSchemaFieldType.STRING
+                CONVERSATION_START_TIME_FIELD, RecordSchemaFieldType.TIMESTAMP
                 , "dd.MM.yyyy HH:mm:ss", 0);
         createInformerField(CONVERSATION_DURATION_FIELD, RecordSchemaFieldType.LONG, null, 0);
     }
