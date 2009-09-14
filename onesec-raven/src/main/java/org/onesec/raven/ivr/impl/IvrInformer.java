@@ -26,6 +26,8 @@ import org.onesec.raven.ivr.ConversationCompletionCallback;
 import org.onesec.raven.ivr.ConversationResult;
 import org.onesec.raven.ivr.IvrEndpoint;
 import org.onesec.raven.ivr.IvrEndpointException;
+import org.onesec.raven.ivr.IvrEndpointState;
+import org.onesec.raven.ivr.IvrInformerStatus;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.ds.DataConsumer;
@@ -55,12 +57,12 @@ public class IvrInformer
         extends BaseNode implements DataSource, ConversationCompletionCallback, Task, DataConsumer
 {
     public final static String NOT_PROCESSED_STATUS = "NOT_PROCESSED";
-    public final static String PROCESSING_ERROR = "PROCESSING_ERROR";
+    public final static String PROCESSING_ERROR_STATUS = "PROCESSING_ERROR";
     public final static String SKIPPED_STATUS = "SKIPPED";
     public final static String NUMBER_BUSY_STATUS = "NUMBER_BUSY";
     public final static String NUMBER_NOT_ANSWERED_STATUS = "NUMBER_NOT_ANSWERED";
-    public final static String COMPLETED_BY_ENDPOINT = "COMPLETED_BY_ENDPOINT";
-    public final static String COMPLETED_BY_ABONENT = "COMPLETED_BY_ABONENT";
+    public final static String COMPLETED_BY_INFORMER_STATUS = "COMPLETED_BY_INFORMER";
+    public final static String COMPLETED_BY_ABONENT_STATUS = "COMPLETED_BY_ABONENT";
 
     @NotNull @Parameter(valueHandlerType=SystemSchedulerValueHandlerFactory.TYPE)
     private ExecutorService executorService;
@@ -74,9 +76,10 @@ public class IvrInformer
     @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
     private IvrEndpoint endpoint;
 
+    private IvrInformerStatus informerStatus;
     private String statusMessage;
     private Record currentRecord;
-    private String lastAbonId;
+    private String lastSuccessfullyProcessedAbonId;
     private Lock recordLock;
     private Condition recordProcessed;
     private ConversationResult conversationResult;
@@ -87,12 +90,14 @@ public class IvrInformer
         super.initFields();
         recordLock = new ReentrantLock();
         recordProcessed = recordLock.newCondition();
+        informerStatus = IvrInformerStatus.NOT_READY;
     }
 
     @Override
     protected void doStart() throws Exception
     {
         super.doStart();
+        informerStatus = IvrInformerStatus.WAITING;
     }
 
     @Override
@@ -103,7 +108,7 @@ public class IvrInformer
         {
             if (result)
             {
-                lastAbonId = null;
+                lastSuccessfullyProcessedAbonId = null;
                 executorService.execute(this);
             }
         } catch (ExecutorServiceException ex)
@@ -114,9 +119,26 @@ public class IvrInformer
     }
 
     @Override
+    protected void doStop() throws Exception
+    {
+        super.doStop();
+        informerStatus = IvrInformerStatus.NOT_READY;
+    }
+
+    @Override
     public boolean isAutoStart()
     {
         return false;
+    }
+
+    public IvrInformerStatus getInformerStatus()
+    {
+        return informerStatus;
+    }
+
+    public void setInformerStatus(IvrInformerStatus informerStatus)
+    {
+        this.informerStatus = informerStatus;
     }
 
     public IvrConversationScenarioNode getConversationScenario()
@@ -196,10 +218,19 @@ public class IvrInformer
 
     public void run()
     {
-        statusMessage = "Requesting records from "+dataSource.getPath();
-        if (isLogLevelEnabled(LogLevel.DEBUG))
-            debug(statusMessage);
-        dataSource.getDataImmediate(this, null);
+        informerStatus = IvrInformerStatus.PROCESSING;
+        try
+        {
+            statusMessage = "Requesting records from "+dataSource.getPath();
+            if (isLogLevelEnabled(LogLevel.DEBUG))
+                debug(statusMessage);
+            dataSource.getDataImmediate(this, null);
+            sendDataToConsumers(null);
+        }
+        finally
+        {
+            informerStatus = IvrInformerStatus.PROCESSED;
+        }
     }
 
     public void setData(DataSource dataSource, Object data)
@@ -213,11 +244,14 @@ public class IvrInformer
         currentRecord = rec;
         try
         {
-            if (ObjectUtils.equals(lastAbonId, currentRecord.getValue(ABONENT_ID_FIELD)))
+            if (ObjectUtils.equals(
+                    lastSuccessfullyProcessedAbonId, currentRecord.getValue(ABONENT_ID_FIELD)))
+            {
                 skipRecord();
+            }
             else
                 informAbonent();
-            sendDataToConsumers();
+            sendDataToConsumers(currentRecord);
         }
         catch(Throwable e)
         {
@@ -263,12 +297,49 @@ public class IvrInformer
             conversationResult = null;
             String abonNumber = (String) currentRecord.getValue(ABONENT_NUMBER_FIELD);
             try{
+                informerStatus = IvrInformerStatus.WAITING_FOR_ENDPOINT;
+                endpoint.getEndpointState().waitForState(
+                        new int[]{IvrEndpointState.IN_SERVICE}, Long.MAX_VALUE);
+                informerStatus = IvrInformerStatus.PROCESSING;
                 endpoint.invite(abonNumber, conversationScenario, this);
                 recordProcessed.await();
+                String status = null;
+                if (conversationResult==null)
+                    status = PROCESSING_ERROR_STATUS;
+                else
+                {
+                    boolean sucProc = false;
+                    switch(conversationResult.getCompletionCode())
+                    {
+                        case COMPLETED_BY_ENDPOINT: 
+                            status = COMPLETED_BY_INFORMER_STATUS; sucProc = true; break;
+                        case COMPLETED_BY_OPPONENT: 
+                            status = COMPLETED_BY_ABONENT_STATUS; sucProc = true; break;
+                        case OPPONENT_BUSY: status = NUMBER_BUSY_STATUS; break;
+                        case OPPONENT_NO_ANSWERED: status = NUMBER_NOT_ANSWERED_STATUS; break;
+                        case OPPONENT_UNKNOWN_ERROR: status = PROCESSING_ERROR_STATUS; break;
+                    }
+                    if (sucProc)
+                        lastSuccessfullyProcessedAbonId =
+                                (String) currentRecord.getValue(ABONENT_ID_FIELD);
+                    currentRecord.setValue(COMPLETION_CODE_FIELD, status);
+                    currentRecord.setValue(
+                            CALL_START_TIME_FIELD, conversationResult.getCallStartTime());
+                    currentRecord.setValue(
+                            CALL_END_TIME_FIELD, conversationResult.getCallEndTime());
+                    currentRecord.setValue(
+                            CALL_DURATION_FIELD, conversationResult.getCallDuration());
+                    currentRecord.setValue(
+                            CONVERSATION_START_TIME_FIELD
+                            , conversationResult.getConversationStartTime());
+                    currentRecord.setValue(
+                            CONVERSATION_DURATION_FIELD
+                            , conversationResult.getConversationDuration());
+                }
             }
             catch(IvrEndpointException ex)
             {
-                currentRecord.setValue(COMPLETION_CODE_FIELD, PROCESSING_ERROR);
+                currentRecord.setValue(COMPLETION_CODE_FIELD, PROCESSING_ERROR_STATUS);
                 if (isLogLevelEnabled(LogLevel.ERROR))
                     error(getRecordInfo(), ex);
             }
@@ -277,15 +348,14 @@ public class IvrInformer
         {
             recordLock.unlock();
         }
-
     }
 
-    private void sendDataToConsumers()
+    private void sendDataToConsumers(Object data)
     {
         Collection<Node> depNodes = getDependentNodes();
         if (depNodes!=null && !depNodes.isEmpty())
             for (Node dep: depNodes)
                 if (dep instanceof DataConsumer && Status.STARTED.equals(dep.getStatus()))
-                    ((DataConsumer)dep).setData(this, currentRecord);
+                    ((DataConsumer)dep).setData(this, data);
     }
 }
