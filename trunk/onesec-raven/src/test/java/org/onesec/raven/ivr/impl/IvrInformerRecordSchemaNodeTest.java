@@ -49,7 +49,7 @@ public class IvrInformerRecordSchemaNodeTest extends OnesecRavenTestCase
         checkField(rec, ID_FIELD, RecordSchemaFieldType.LONG, null, 0, true);
         checkField(rec, OPERATOR_ID_FIELD, RecordSchemaFieldType.STRING, null
                 , OPERATOR_ID_CSV_COL, true);
-        checkField(rec, LIST_ID_FIELD, RecordSchemaFieldType.STRING, null, LIST_ID_CSV_COL, true);
+        checkField(rec, LIST_DATE_FIELD, RecordSchemaFieldType.DATE, null, 0, true);
         checkField(rec, ABONENT_ID_FIELD, RecordSchemaFieldType.STRING, null
                 , ABONENT_ID_CSV_COL, true);
         checkField(

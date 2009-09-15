@@ -44,6 +44,7 @@ import org.raven.expr.impl.IfNode;
 import org.raven.log.LogLevel;
 import org.raven.sched.impl.ExecutorServiceNode;
 import org.raven.test.DataCollector;
+import org.raven.test.DummyScheduler;
 import org.raven.test.PushOnDemandDataSource;
 import org.raven.tree.Node;
 import org.raven.tree.NodeError;
@@ -61,6 +62,7 @@ public class IvrInformerTest extends OnesecRavenTestCase
     private PushOnDemandDataSource dataSource;
     private DataCollector dataCollector;
     private IvrInformer informer;
+    private DummyScheduler startScheduler, stopScheduler;
 
     @Before
     public void prepare()
@@ -86,6 +88,16 @@ public class IvrInformerTest extends OnesecRavenTestCase
         executor.setMaximumPoolSize(15);
         executor.setCorePoolSize(10);
         assertTrue(executor.start());
+
+        startScheduler = new DummyScheduler();
+        startScheduler.setName("startScheduler");
+        tree.getRootNode().addAndSaveChildren(startScheduler);
+        assertTrue(startScheduler.start());
+
+        stopScheduler = new DummyScheduler();
+        stopScheduler.setName("stopScheduler");
+        tree.getRootNode().addAndSaveChildren(stopScheduler);
+        assertTrue(stopScheduler.start());
 
         scenario = new IvrConversationScenarioNode();
         scenario.setName("scenario");
@@ -117,8 +129,7 @@ public class IvrInformerTest extends OnesecRavenTestCase
         informer.setConversationScenario(scenario);
         informer.setDataSource(dataSource);
         informer.setEndpoint(endpoint);
-        informer.setExecutorService(executor);
-
+        
         dataCollector = new DataCollector();
         dataCollector.setName("dataCollector");
         tree.getRootNode().addAndSaveChildren(dataCollector);
@@ -130,10 +141,11 @@ public class IvrInformerTest extends OnesecRavenTestCase
     public void test() throws Exception
     {
         createScenario();
-        dataSource.addDataPortion(createRecord("abon1", "089128672947"));
         dataSource.addDataPortion(createRecord("abon1", "88024"));
+        dataSource.addDataPortion(createRecord("abon1", "089128672947"));
         dataSource.addDataPortion(createRecord("abon2", "88027"));
         assertTrue(informer.start());
+        informer.startProcessing();
         while (informer.getInformerStatus()!=IvrInformerStatus.PROCESSED)
             Thread.sleep(500);
 
@@ -257,7 +269,7 @@ public class IvrInformerTest extends OnesecRavenTestCase
         ProviderController provider = providerRegistry.getProviderControllers().iterator().next();
         assertNotNull(provider);
         StateWaitResult res = provider.getState().waitForState(
-                new int[]{ProviderControllerState.IN_SERVICE}, 4000);
+                new int[]{ProviderControllerState.IN_SERVICE}, 10000);
         assertFalse(res.isWaitInterrupted());
     }
 

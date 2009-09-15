@@ -46,14 +46,13 @@ public class IvrInformerRecordSchemaNode extends RecordSchemaNode
     public final static String ID_FIELD = "ID";
     public final static String OPERATOR_ID_FIELD = "OPERATOR_ID";
     public final static int OPERATOR_ID_CSV_COL = 1;
-    public final static String LIST_ID_FIELD = "LIST_ID";
-    public final static int LIST_ID_CSV_COL = 2;
+    public final static String LIST_DATE_FIELD = "LIST_DATE";
     public final static String ABONENT_ID_FIELD = "ABONENT_ID";
-    public final static int ABONENT_ID_CSV_COL = 3;
+    public final static int ABONENT_ID_CSV_COL = 2;
     public final static String ABONENT_DESC_FIELD = "ABONENT_DESC";
-    public final static int ABONENT_DESC_CSV_COL = 4;
+    public final static int ABONENT_DESC_CSV_COL = 3;
     public final static String ABONENT_NUMBER_FIELD = "ABONENT_NUMBER";
-    public final static int ABONENT_NUMBER_CSV_COL = 5;
+    public final static int ABONENT_NUMBER_CSV_COL = 4;
     public final static String CALL_ORDER_FIELD = "CALL_ORDER";
     public final static int CALL_ORDER_CSV_COL = 5;
     public final static String COMPLETION_CODE_FIELD = "COMPLETION_CODE";
@@ -89,7 +88,7 @@ public class IvrInformerRecordSchemaNode extends RecordSchemaNode
                 OPERATOR_ID_FIELD, RecordSchemaFieldType.STRING, null
                 , OPERATOR_ID_CSV_COL, true);
         createInformerField(
-                LIST_ID_FIELD, RecordSchemaFieldType.STRING, null, LIST_ID_CSV_COL, true);
+                LIST_DATE_FIELD, RecordSchemaFieldType.DATE, null, 0, true);
         createInformerField(
                 ABONENT_ID_FIELD, RecordSchemaFieldType.STRING, null, ABONENT_ID_CSV_COL, true);
         createInformerField(

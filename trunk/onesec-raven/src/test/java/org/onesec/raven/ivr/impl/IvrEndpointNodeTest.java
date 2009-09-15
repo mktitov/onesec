@@ -114,7 +114,7 @@ public class IvrEndpointNodeTest
         assertFalse(res.isWaitInterrupted());
     }
 
-//    @Test
+    @Test
     public void simpleConversationTest() throws Exception
     {
         AudioFileNode audioFileNode = new AudioFileNode();
@@ -145,7 +145,7 @@ public class IvrEndpointNodeTest
                 new int[]{IvrEndpointState.TALKING}, 5000);
         res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.IN_SERVICE}, 5000);
-        
+        Thread.sleep(1000);
     }
 
 //    @Test
@@ -179,7 +179,7 @@ public class IvrEndpointNodeTest
 
     }
 
-    @Test
+//    @Test
     public void inviteTest() throws Exception
     {
         AudioFileNode audioNode1 = createAudioFileNode("audio1", "src/test/wav/test2.wav");

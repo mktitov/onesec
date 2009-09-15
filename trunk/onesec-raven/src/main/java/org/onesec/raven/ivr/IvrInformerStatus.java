@@ -32,13 +32,13 @@ public enum IvrInformerStatus
      */
     WAITING,
     /**
-     * Informer waits for endpoint IN_SERVICE state
-     */
-    WAITING_FOR_ENDPOINT,
-    /**
      * Informer processing records
      */
     PROCESSING,
+    /**
+     * Informer stoping processing current list
+     */
+    STOP_PROCESSING,
     /**
      * Informer processed all records
      */

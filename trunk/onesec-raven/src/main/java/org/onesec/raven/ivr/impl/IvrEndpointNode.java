@@ -38,6 +38,7 @@ import javax.media.protocol.FileTypeDescriptor;
 import javax.telephony.Address;
 import javax.telephony.AddressObserver;
 import javax.telephony.Call;
+import javax.telephony.Connection;
 import javax.telephony.Provider;
 import javax.telephony.Terminal;
 import javax.telephony.TerminalConnection;
@@ -292,7 +293,8 @@ public class IvrEndpointNode extends BaseNode
         }
         catch(Exception e)
         {
-            throw new Exception(String.format("Error initializing IVR endpoint (%s)", getPath()));
+            throw new Exception(
+                    String.format("Error initializing IVR endpoint (%s)", getPath()), e);
         }
     }
 
@@ -306,6 +308,10 @@ public class IvrEndpointNode extends BaseNode
                     "Can't invite oppenent to conversation. Endpoint not ready");
         try
         {
+            if (isLogLevelEnabled(LogLevel.DEBUG))
+                debug(String.format(
+                        "Inviting opponent with number (%s) to conversation (%s)"
+                        , opponentNumber, conversationScenario));
             resetConversationFields();
             handlingIncomingCall = true;
             currentConversation = conversationScenario;
@@ -566,6 +572,7 @@ public class IvrEndpointNode extends BaseNode
         }
         else
         {
+            boolean changeStateToInService = true;
             try
             {
                 try
@@ -585,13 +592,18 @@ public class IvrEndpointNode extends BaseNode
                             {
                                 if (isLogLevelEnabled(LogLevel.DEBUG))
                                     debug("Terminal has active connection. Disconnecting...");
-                                connections[0].getConnection().disconnect();
+                                Connection connection = connections[0].getConnection();
+                                connection.disconnect();
+                                changeStateToInService = false;
+                                return;
+//                                while (connections[0].getState()!=TerminalConnection.DROPPED)
+//                                    Thread.sleep(100);
                             }
                         }
                     }
                     finally
                     {
-                        if (handlingIncomingCall)
+                        if (handlingIncomingCall && changeStateToInService)
                         {
                             long curTime = System.currentTimeMillis();
                             conversationResult.setCallEndTime(curTime);
@@ -611,8 +623,11 @@ public class IvrEndpointNode extends BaseNode
             }
             finally
             {
-                resetConversationFields();
-                endpointState.setState(IvrEndpointState.IN_SERVICE);
+                if (changeStateToInService)
+                {
+                    resetConversationFields();
+                    endpointState.setState(IvrEndpointState.IN_SERVICE);
+                }
             }
         }
     }
