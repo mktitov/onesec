@@ -603,16 +603,22 @@ public class IvrEndpointNode extends BaseNode
                     }
                     finally
                     {
-                        if (handlingIncomingCall && changeStateToInService)
+                        if (handlingIncomingCall)
                         {
-                            long curTime = System.currentTimeMillis();
-                            conversationResult.setCallEndTime(curTime);
-                            conversationResult.setCompletionCode(completionCode);
-                            long startTime = conversationResult.getConversationStartTime();
-                            if (startTime>0)
-                                conversationResult.setConversationDuration(
-                                        (curTime - startTime) / 1000);
-                            completionCallback.conversationCompleted(conversationResult);
+                            if (!changeStateToInService)
+                                conversationResult.setCompletionCode(completionCode);
+                            else
+                            {
+                                if (conversationResult.getCompletionCode()==null)
+                                    conversationResult.setCompletionCode(completionCode);
+                                long curTime = System.currentTimeMillis();
+                                conversationResult.setCallEndTime(curTime);
+                                long startTime = conversationResult.getConversationStartTime();
+                                if (startTime>0)
+                                    conversationResult.setConversationDuration(
+                                            (curTime - startTime) / 1000);
+                                completionCallback.conversationCompleted(conversationResult);
+                            }
                         }
                     }
                 } catch (Exception e)

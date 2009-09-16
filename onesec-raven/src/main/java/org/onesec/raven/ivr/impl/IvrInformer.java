@@ -147,6 +147,7 @@ public class IvrInformer
         resetStatFields();
         generateNodes();
         lastSuccessfullyProcessedAbonId = null;
+        lastAbonId = null;
         informerStatus.set(IvrInformerStatus.WAITING);
     }
 
@@ -259,6 +260,8 @@ public class IvrInformer
             }
             finally
             {
+                lastSuccessfullyProcessedAbonId = null;
+                lastAbonId = null;
                 informerStatus.set(IvrInformerStatus.PROCESSED);
                 statusMessage = "All records sended by data source where processed.";
             }
