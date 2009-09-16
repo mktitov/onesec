@@ -17,12 +17,10 @@
 
 package org.onesec.raven.ivr.impl;
 
-import java.util.Collection;
 import org.raven.annotations.Parameter;
 import org.raven.sched.Schedulable;
 import org.raven.sched.Scheduler;
 import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
-import org.raven.tree.NodeAttribute;
 import org.raven.tree.impl.BaseNode;
 import org.weda.annotations.constraints.NotNull;
 

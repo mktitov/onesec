@@ -272,5 +272,4 @@ public class IvrInformerTest extends OnesecRavenTestCase
                 new int[]{ProviderControllerState.IN_SERVICE}, 10000);
         assertFalse(res.isWaitInterrupted());
     }
-
 }
