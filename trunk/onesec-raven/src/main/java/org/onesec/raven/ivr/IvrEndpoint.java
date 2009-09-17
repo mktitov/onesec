@@ -48,4 +48,10 @@ public interface IvrEndpoint extends Node, ObjectDescription
     public void invite(
             String opponentNumber, IvrConversationScenario conversationScenario
             , ConversationCompletionCallback callback) throws IvrEndpointException;
+    /**
+     * Transfers current call to the address passed in the parameter.
+     * @param address The destination telephone address string to where the Call is being
+     *      transferred
+     */
+    public void transfer(String address);
 }

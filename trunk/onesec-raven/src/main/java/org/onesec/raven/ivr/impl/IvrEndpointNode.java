@@ -42,6 +42,7 @@ import javax.telephony.Connection;
 import javax.telephony.Provider;
 import javax.telephony.Terminal;
 import javax.telephony.TerminalConnection;
+import javax.telephony.callcontrol.CallControlCall;
 import javax.telephony.callcontrol.CallControlCallObserver;
 import javax.telephony.callcontrol.CallControlConnection;
 import javax.telephony.callcontrol.events.CallCtlConnEstablishedEv;
@@ -122,6 +123,7 @@ public class IvrEndpointNode extends BaseNode
 
     private Address terminalAddress;
     private CiscoMediaTerminal terminal;
+    private Call call;
 
     private boolean terminalInService;
     private boolean terminalAddressInService;
@@ -332,6 +334,29 @@ public class IvrEndpointNode extends BaseNode
         }
     }
 
+    public void transfer(String address)
+    {
+        if (IvrEndpointState.TALKING!=endpointState.getId() || Status.STARTED!=getStatus())
+        {
+            if (isLogLevelEnabled(LogLevel.WARN))
+                warn(String.format(
+                        "Can't transfer call to the address (%s). Endpoint not ready"
+                        , address));
+        }
+        else
+        {
+            try
+            {
+                ((CallControlCall) call).transfer(address);
+            }
+            catch (Exception ex)
+            {
+                if (isLogLevelEnabled(LogLevel.ERROR))
+                    error(String.format("Error transfering call to the address (%s)", address), ex);
+            }
+        }
+    }
+
     private synchronized void checkStatus()
     {
         if (endpointState.getId()==IvrEndpointState.OUT_OF_SERVICE)
@@ -448,6 +473,7 @@ public class IvrEndpointNode extends BaseNode
                 case CallCtlConnEstablishedEv.ID:
                     CallCtlConnEstablishedEv e = (CallCtlConnEstablishedEv) event;
                     ++connected;
+                    call = event.getCall();
                     startRtpSession(remoteAddress, remotePort);
                     break;
                 case TermConnDroppedEv.ID:
