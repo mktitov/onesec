@@ -32,7 +32,8 @@ import org.testng.annotations.BeforeClass;
  *
  * @author Mikhail Titov
  */
-public abstract class ServiceTestCase {
+public abstract class ServiceTestCase
+{
     protected Registry registry;
     protected String home;
         
