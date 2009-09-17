@@ -34,6 +34,7 @@ import org.onesec.raven.ivr.IvrEndpointState;
 import org.onesec.raven.ivr.actions.PauseActionNode;
 import org.onesec.raven.ivr.actions.PlayAudioActionNode;
 import org.onesec.raven.ivr.actions.StopConversationActionNode;
+import org.onesec.raven.ivr.actions.TransferCallActionNode;
 import org.raven.conv.ConversationScenarioPoint;
 import org.raven.conv.impl.ConversationScenarioNode;
 import org.raven.conv.impl.ConversationScenarioPointNode;
@@ -114,7 +115,7 @@ public class IvrEndpointNodeTest
         assertFalse(res.isWaitInterrupted());
     }
 
-    @Test
+//    @Test
     public void simpleConversationTest() throws Exception
     {
         AudioFileNode audioFileNode = new AudioFileNode();
@@ -211,6 +212,42 @@ public class IvrEndpointNodeTest
                 new int[]{IvrEndpointState.IN_SERVICE}, 50000);
 
     }
+
+    @Test
+    public void transferTest() throws Exception
+    {
+        AudioFileNode audioFileNode = new AudioFileNode();
+        audioFileNode.setName("audio file");
+        tree.getRootNode().addAndSaveChildren(audioFileNode);
+        FileInputStream is = new FileInputStream("src/test/wav/test.wav");
+        audioFileNode.getAudioFile().setDataStream(is);
+        assertTrue(audioFileNode.start());
+
+        PlayAudioActionNode playAudioActionNode = new PlayAudioActionNode();
+        playAudioActionNode.setName("Play audio");
+        scenario.addAndSaveChildren(playAudioActionNode);
+        playAudioActionNode.setAudioFile(audioFileNode);
+        assertTrue(playAudioActionNode.start());
+
+        TransferCallActionNode transfer = new TransferCallActionNode();
+        transfer.setName("transfer to 89128672947");
+        scenario.addAndSaveChildren(transfer);
+        transfer.setAddress("089128672947");
+        assertTrue(transfer.start());
+
+        waitForProvider();
+        assertTrue(endpoint.start());
+        StateWaitResult res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.IN_SERVICE}, 2000);
+        res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.ACCEPTING_CALL}, 20000);
+        res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.TALKING}, 5000);
+        res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.IN_SERVICE}, 5000);
+        Thread.sleep(1000);
+    }
+
 
     private void createGotoNode(String name, Node owner, ConversationScenarioPoint point)
     {
