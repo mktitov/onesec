@@ -17,8 +17,10 @@
 
 package org.onesec.core.call.impl;
 
+import java.util.Date;
 import org.onesec.core.StateWaitResult;
 import org.onesec.core.call.AddressMonitor;
+import org.onesec.core.call.CallResult;
 import org.onesec.core.provider.ProviderConfiguratorState;
 import org.onesec.core.provider.ProviderController;
 import org.onesec.core.provider.ProviderControllerState;
@@ -52,22 +54,29 @@ public class AddressMonitorImplTest extends ServiceTestCase
                 providerRegistry.getProviderControllers().iterator().next();
 
         result = providerController.getState().waitForState(
-                new int[]{ProviderControllerState.IN_SERVICE}, 60000L);
+                new int[]{ProviderControllerState.IN_SERVICE}, 120000L);
 
         assertFalse(result.isWaitInterrupted());
 
         AddressMonitor monitor = new AddressMonitorImpl(providerRegistry, "88024");
         System.out.println("WAITING For in service");
         assertTrue(monitor.waitForInService(20000));
-        assertTrue(monitor.waitForCallWait(60000));
+//        assertTrue(monitor.waitForCallWait(60000));
+        CallResult callRes = monitor.waitForCallCompletion("089128672947", 10000, 60000);
+        System.out.println("\n-------------CALL RESULT--------------");
+        System.out.println("completion code: "+callRes.getCompletionCode());
+        System.out.println("call start time: "+new Date(callRes.getCallStartTime()));
+        System.out.println("conversation start time: "+new Date(callRes.getConversationStartTime()));
+        System.out.println("conversation duration: "+callRes.getConversationDuration());
         Thread.sleep(2000);
+        monitor.releaseMonitor();
     }
 
     @Override
     protected String[][] initConfigurationFiles()
     {
         return new String[][]{
-            {"providers_OperatorServiceTest.cfg", "providers.cfg"}
+            {"providers_CtiUser1.cfg", "providers.cfg"}
         };
     }
 }

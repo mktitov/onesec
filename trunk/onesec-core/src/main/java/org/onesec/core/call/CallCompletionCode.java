@@ -21,11 +21,9 @@ package org.onesec.core.call;
  *
  * @author Mikhail Titov
  */
-public interface AddressMonitor
+public enum CallCompletionCode
 {
-    public boolean waitForInService(long timeout);
-    public boolean waitForCallWait(long timeout);
-    public CallResult waitForCallCompletion(
-            String expectedAddress, long callStarttimeout, long callEndTimeout);
-    public void releaseMonitor();
+    NORMAL,
+    NO_ANSWER,
+    ERROR
 }
