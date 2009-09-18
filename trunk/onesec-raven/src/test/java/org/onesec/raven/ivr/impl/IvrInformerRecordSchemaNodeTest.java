@@ -72,7 +72,16 @@ public class IvrInformerRecordSchemaNodeTest extends OnesecRavenTestCase
                 CONVERSATION_START_TIME_FIELD, RecordSchemaFieldType.TIMESTAMP
                 , "dd.MM.yyyy HH:mm:ss", 0, false);
         checkField(rec, CONVERSATION_DURATION_FIELD, RecordSchemaFieldType.LONG, null, 0, false);
-
+        checkField(rec, TRANSFER_COMPLETION_CODE_FIELD, RecordSchemaFieldType.STRING, null, 0, false);
+        checkField(rec, TRANSFER_ADDRESS_FIELD, RecordSchemaFieldType.STRING, null, 0, false);
+        checkField(rec,
+                TRANSFER_TIME_FIELD, RecordSchemaFieldType.TIMESTAMP
+                , "dd.MM.yyyy HH:mm:ss", 0, false);
+        checkField(rec,
+                TRANSFER_CONVERSATION_START_TIME_FIELD, RecordSchemaFieldType.TIMESTAMP
+                , "dd.MM.yyyy HH:mm:ss", 0, false);
+        checkField(rec,
+                TRANSFER_CONVERSATION_DURATION_FIELD, RecordSchemaFieldType.LONG, null, 0, false);
     }
 
     private void checkField(

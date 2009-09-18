@@ -17,8 +17,6 @@
 
 package org.onesec.raven.ivr.actions;
 
-import org.onesec.raven.ivr.IvrActionException;
-import org.onesec.raven.ivr.IvrActionStatus;
 import org.onesec.raven.ivr.IvrEndpoint;
 import org.raven.log.LogLevel;
 
@@ -26,34 +24,31 @@ import org.raven.log.LogLevel;
  *
  * @author Mikhail Titov
  */
-public class TransferCallAction extends AbstractAction
+public class TransferCallAction extends AsyncAction
 {
     public final static String ACTION_NAME = "Transfer call action";
     
     private final String address;
+    private final boolean monitorTransfer;
+    private final long callStartTimeout;
+    private final long callEndTimeout;
 
-    public TransferCallAction(String address)
+    public TransferCallAction(
+            String address, boolean monitorTransfer, long callStartTimeout, long callEndTimeout)
     {
         super(ACTION_NAME);
         this.address = address;
+        this.monitorTransfer = monitorTransfer;
+        this.callStartTimeout = callStartTimeout;
+        this.callEndTimeout = callEndTimeout;
         setStatusMessage("Transfering call to the ("+address+") address");
     }
 
-    public void execute(IvrEndpoint endpoint) throws IvrActionException
+    @Override
+    protected void doExecute(IvrEndpoint endpoint) throws Exception
     {
-        try
-        {
-            if (endpoint.isLogLevelEnabled(LogLevel.DEBUG))
-                endpoint.getLogger().debug("Action. Transfering call to the ("+address+") address");
-            endpoint.transfer(address);
-        }
-        finally
-        {
-            setStatus(IvrActionStatus.EXECUTED);
-        }
-    }
-
-    public void cancel() throws IvrActionException
-    {
+        if (endpoint.isLogLevelEnabled(LogLevel.DEBUG))
+            endpoint.getLogger().debug("Action. Transfering call to the ("+address+") address");
+        endpoint.transfer(address, monitorTransfer, callStartTimeout, callEndTimeout);
     }
 }

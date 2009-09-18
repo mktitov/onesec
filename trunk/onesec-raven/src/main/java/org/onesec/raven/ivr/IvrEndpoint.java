@@ -52,6 +52,11 @@ public interface IvrEndpoint extends Node, ObjectDescription
      * Transfers current call to the address passed in the parameter.
      * @param address The destination telephone address string to where the Call is being
      *      transferred
+     * @param monitorTransfer if <code>true</code> then method will monitor call transfer, etc will
+     *      wait until transfered call end
+     * @param callStartTimeout
+     * @param callEndTimeout 
      */
-    public void transfer(String address);
+    public void transfer(
+            String address, boolean monitorTransfer, long callStartTimeout, long callEndTimeout);
 }

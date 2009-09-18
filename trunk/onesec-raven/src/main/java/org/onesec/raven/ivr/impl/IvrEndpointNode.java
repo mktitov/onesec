@@ -60,7 +60,11 @@ import javax.telephony.events.TermObservationEndedEv;
 import javax.telephony.media.MediaCallObserver;
 import javax.telephony.media.events.MediaTermConnDtmfEv;
 import org.onesec.core.ObjectDescription;
+import org.onesec.core.call.AddressMonitor;
+import org.onesec.core.call.CallCompletionCode;
+import org.onesec.core.call.CallResult;
 import org.onesec.core.provider.ProviderController;
+import org.onesec.core.services.Operator;
 import org.onesec.core.services.ProviderRegistry;
 import org.onesec.core.services.StateListenersCoordinator;
 import org.onesec.raven.ivr.CompletionCode;
@@ -103,9 +107,12 @@ public class IvrEndpointNode extends BaseNode
     @Service
     protected static StateListenersCoordinator stateListenersCoordinator;
 
+    @Service
+    protected static Operator operator;
+
     @NotNull @Parameter
     private String address;
-
+    
     @Parameter
     private IvrConversationScenarioNode conversationScenario;
 
@@ -128,6 +135,7 @@ public class IvrEndpointNode extends BaseNode
     private boolean terminalInService;
     private boolean terminalAddressInService;
     private boolean handlingIncomingCall;
+    private boolean transfering;
     private AtomicBoolean observingCall;
     private AtomicBoolean observingTerminalAddress;
     private AtomicBoolean observingTerminal;
@@ -143,6 +151,7 @@ public class IvrEndpointNode extends BaseNode
     private boolean rtpInitialized;
     private ConversationResultImpl conversationResult;
     private ConversationCompletionCallback completionCallback;
+    private String opponentNumber;
 
 
     @Override
@@ -175,8 +184,10 @@ public class IvrEndpointNode extends BaseNode
         remotePort = 0;
         remoteAddress = null;
         handlingIncomingCall = false;
+        transfering = false;
         conversationResult = null;
         completionCallback = null;
+        opponentNumber = null;
     }
 
 //    private synchronized void setEndpointStatus(IvrEndpointState endpointStatus)
@@ -316,6 +327,7 @@ public class IvrEndpointNode extends BaseNode
                         , opponentNumber, conversationScenario));
             resetConversationFields();
             handlingIncomingCall = true;
+            this.opponentNumber = opponentNumber;
             currentConversation = conversationScenario;
             conversationResult = new ConversationResultImpl();
             conversationResult.setCallStartTime(System.currentTimeMillis());
@@ -334,7 +346,8 @@ public class IvrEndpointNode extends BaseNode
         }
     }
 
-    public void transfer(String address)
+    public void transfer(
+            String address, boolean monitorTransfer, long callStartTimeout, long callEndTimeout)
     {
         if (IvrEndpointState.TALKING!=endpointState.getId() || Status.STARTED!=getStatus())
         {
@@ -347,7 +360,49 @@ public class IvrEndpointNode extends BaseNode
         {
             try
             {
-                ((CallControlCall) call).transfer(address);
+                if (handlingIncomingCall)
+                {
+                    conversationResult.setCallEndTime(System.currentTimeMillis());
+                    transfering = true;
+                }
+                try
+                {
+                    try
+                    {
+                        if (handlingIncomingCall)
+                        {
+                            conversationResult.setTransferAddress(address);
+                            conversationResult.setTransferTime(System.currentTimeMillis());
+                            conversationResult.setTransferCompletionCode(CallCompletionCode.NORMAL);
+                        }
+                        ((CallControlCall) call).transfer(address);
+                        if (handlingIncomingCall && monitorTransfer)
+                        {
+                            AddressMonitor monitor = operator.createAddressMonitor(address);
+                            CallResult res = monitor.waitForCallCompletion(
+                                    opponentNumber, callStartTimeout, callEndTimeout);
+                            conversationResult.setTransferCompletionCode(res.getCompletionCode());
+                            conversationResult.setTransferConversationStartTime(
+                                    res.getConversationStartTime());
+                            conversationResult.setTransferConversationDuration(
+                                    res.getConversationDuration());
+                        }
+                    }
+                    catch(Exception e)
+                    {
+                        if (handlingIncomingCall)
+                            conversationResult.setTransferCompletionCode(CallCompletionCode.ERROR);
+                        throw e;
+                    }
+                }
+                finally
+                {
+                    if (transfering)
+                    {
+                        transfering = false;
+                        stopConversation(CompletionCode.COMPLETED_BY_ENDPOINT);
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -593,73 +648,73 @@ public class IvrEndpointNode extends BaseNode
             debug("Stoping conversation");
         if (endpointState.getId()==IvrEndpointState.IN_SERVICE)
         {
-        if (isLogLevelEnabled(LogLevel.DEBUG))
-            debug("Conversation already stopped");
+            if (isLogLevelEnabled(LogLevel.DEBUG))
+                debug("Conversation already stopped");
+            return;
         }
-        else
+        if (transfering)
         {
-            boolean changeStateToInService = true;
+            if (isLogLevelEnabled(LogLevel.DEBUG))
+                debug("Can't stop conversation until transfer complete");
+            return;
+        }
+        boolean changeStateToInService = true;
+        try
+        {
             try
             {
                 try
                 {
                     try
                     {
-                        try
-                        {
-                            if (isLogLevelEnabled(LogLevel.DEBUG))
-                                debug("Canceling actions execution");
-                            actionsExecutor.cancelActionsExecution();
-                        }
-                        finally
-                        {
-                            TerminalConnection[] connections = terminal.getTerminalConnections();
-                            if (connections!=null && connections.length>0)
-                            {
-                                if (isLogLevelEnabled(LogLevel.DEBUG))
-                                    debug("Terminal has active connection. Disconnecting...");
-                                Connection connection = connections[0].getConnection();
-                                connection.disconnect();
-                                changeStateToInService = false;
-                                return;
-//                                while (connections[0].getState()!=TerminalConnection.DROPPED)
-//                                    Thread.sleep(100);
-                            }
-                        }
+                        if (isLogLevelEnabled(LogLevel.DEBUG))
+                            debug("Canceling actions execution");
+                        actionsExecutor.cancelActionsExecution();
                     }
                     finally
                     {
-                        if (handlingIncomingCall)
+                        TerminalConnection[] connections = terminal.getTerminalConnections();
+                        if (connections!=null && connections.length>0)
                         {
-                            if (!changeStateToInService)
-                                conversationResult.setCompletionCode(completionCode);
-                            else
-                            {
-                                if (conversationResult.getCompletionCode()==null)
-                                    conversationResult.setCompletionCode(completionCode);
-                                long curTime = System.currentTimeMillis();
-                                conversationResult.setCallEndTime(curTime);
-                                long startTime = conversationResult.getConversationStartTime();
-                                if (startTime>0)
-                                    conversationResult.setConversationDuration(
-                                            (curTime - startTime) / 1000);
-                                completionCallback.conversationCompleted(conversationResult);
-                            }
+                            if (isLogLevelEnabled(LogLevel.DEBUG))
+                                debug("Terminal has active connection. Disconnecting...");
+                            Connection connection = connections[0].getConnection();
+                            connection.disconnect();
+                            changeStateToInService = false;
+                            return;
+//                                while (connections[0].getState()!=TerminalConnection.DROPPED)
+//                                    Thread.sleep(100);
                         }
                     }
-                } catch (Exception e)
-                {
-                    if (isLogLevelEnabled(LogLevel.ERROR))
-                        error("Error stoping conversation");
                 }
-            }
-            finally
+                finally
+                {
+                    if (handlingIncomingCall)
+                    {
+                        if (!changeStateToInService)
+                            conversationResult.setCompletionCode(completionCode);
+                        else
+                        {
+                            if (conversationResult.getCompletionCode()==null)
+                                conversationResult.setCompletionCode(completionCode);
+                            long curTime = System.currentTimeMillis();
+                            conversationResult.setCallEndTime(curTime);
+                            completionCallback.conversationCompleted(conversationResult);
+                        }
+                    }
+                }
+            } catch (Exception e)
             {
-                if (changeStateToInService)
-                {
-                    resetConversationFields();
-                    endpointState.setState(IvrEndpointState.IN_SERVICE);
-                }
+                if (isLogLevelEnabled(LogLevel.ERROR))
+                    error("Error stoping conversation");
+            }
+        }
+        finally
+        {
+            if (changeStateToInService)
+            {
+                resetConversationFields();
+                endpointState.setState(IvrEndpointState.IN_SERVICE);
             }
         }
     }
