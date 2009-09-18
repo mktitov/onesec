@@ -35,6 +35,15 @@ public class TransferCallActionNode extends BaseNode implements IvrActionNode
     @NotNull @Parameter
     private String address;
 
+    @NotNull @Parameter(defaultValue="false")
+    private Boolean monitorTransfer;
+
+    @NotNull @Parameter(defaultValue="10")
+    private Long callStartTimeout;
+
+    @NotNull @Parameter(defaultValue="600")
+    private Long callEndTimeout;
+
     public String getAddress()
     {
         return address;
@@ -45,8 +54,39 @@ public class TransferCallActionNode extends BaseNode implements IvrActionNode
         this.address = address;
     }
 
+    public Long getCallEndTimeout()
+    {
+        return callEndTimeout;
+    }
+
+    public void setCallEndTimeout(Long callEndTimeout)
+    {
+        this.callEndTimeout = callEndTimeout;
+    }
+
+    public Long getCallStartTimeout()
+    {
+        return callStartTimeout;
+    }
+
+    public void setCallStartTimeout(Long callStartTimeout)
+    {
+        this.callStartTimeout = callStartTimeout;
+    }
+
+    public Boolean getMonitorTransfer()
+    {
+        return monitorTransfer;
+    }
+
+    public void setMonitorTransfer(Boolean monitorTransfer)
+    {
+        this.monitorTransfer = monitorTransfer;
+    }
+
     public IvrAction createAction()
     {
-        return new TransferCallAction(address);
+        return new TransferCallAction(
+                address, monitorTransfer, callStartTimeout*1000, callEndTimeout*1000);
     }
 }

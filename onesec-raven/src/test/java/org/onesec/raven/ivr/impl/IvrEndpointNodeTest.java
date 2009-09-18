@@ -67,7 +67,7 @@ public class IvrEndpointNodeTest
         provider.setName("88013 provider");
         callOperator.getProvidersNode().addAndSaveChildren(provider);
         provider.setFromNumber(88013);
-        provider.setToNumber(88013);
+        provider.setToNumber(88024);
         provider.setHost("10.16.15.1");
         provider.setPassword("cti_user1");
         provider.setUser("cti_user1");
@@ -213,7 +213,7 @@ public class IvrEndpointNodeTest
 
     }
 
-    @Test
+//    @Test
     public void transferTest() throws Exception
     {
         AudioFileNode audioFileNode = new AudioFileNode();
@@ -248,6 +248,34 @@ public class IvrEndpointNodeTest
         Thread.sleep(1000);
     }
 
+    @Test
+    public void inviteWithTransferTest() throws Exception
+    {
+        AudioFileNode audioNode1 = createAudioFileNode("audio1", "src/test/wav/test2.wav");
+
+        createPlayAudioActionNode("hello", scenario, audioNode1);
+
+        TransferCallActionNode transfer = new TransferCallActionNode();
+        transfer.setName("transfer to 88024");
+        scenario.addAndSaveChildren(transfer);
+        transfer.setAddress("88024");
+        transfer.setMonitorTransfer(Boolean.TRUE);
+        assertTrue(transfer.start());
+
+        waitForProvider();
+        assertTrue(endpoint.start());
+        StateWaitResult res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.IN_SERVICE}, 2000);
+        endpoint.invite("089128672947", scenario, this);
+//        endpoint.invite("88024", scenario, this);
+        res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.INVITING}, 30000);
+        res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.TALKING}, 250000);
+        res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.IN_SERVICE}, 50000);
+
+    }
 
     private void createGotoNode(String name, Node owner, ConversationScenarioPoint point)
     {
@@ -323,15 +351,20 @@ public class IvrEndpointNodeTest
         assertFalse(res.isWaitInterrupted());
     }
 
-    public void conversationCompleted(ConversationResult conversationResult)
+    public void conversationCompleted(ConversationResult res)
     {
         System.out.println("\n-----------CONVERSATION RESULT-------------");
-        System.out.println("Complition code: "+conversationResult.getCompletionCode());
-        System.out.println("call start time: "+new Date(conversationResult.getCallStartTime()));
-        System.out.println("call end time: "+new Date(conversationResult.getCallEndTime()));
-        System.out.println("call duration (sec): "+conversationResult.getCallDuration());
-        System.out.println("conversation start time: "+new Date(conversationResult.getConversationStartTime()));
-        System.out.println("conversation duration (sec): "+conversationResult.getConversationDuration());
+        System.out.println("Complition code: "+res.getCompletionCode());
+        System.out.println("call start time: "+new Date(res.getCallStartTime()));
+        System.out.println("call end time: "+new Date(res.getCallEndTime()));
+        System.out.println("call duration (sec): "+res.getCallDuration());
+        System.out.println("conversation start time: "+new Date(res.getConversationStartTime()));
+        System.out.println("conversation duration (sec): "+res.getConversationDuration());
+        System.out.println("\ntransfer completion code: "+res.getTransferCompletionCode());
+        System.out.println("transfer address: "+res.getTransferAddress());
+        System.out.println("transfer time: "+new Date(res.getTransferTime()));
+        System.out.println("transfer conversation start time: "+new Date(res.getTransferConversationStartTime()));
+        System.out.println("transfer conversation duration: "+res.getTransferConversationDuration());
         System.out.println("----------------------------------------------\n");
     }
 }

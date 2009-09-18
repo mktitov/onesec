@@ -61,6 +61,11 @@ public class IvrInformerRecordSchemaNode extends RecordSchemaNode
     public final static String CALL_DURATION_FIELD = "CALL_DURATION";
     public final static String CONVERSATION_START_TIME_FIELD = "CONVERSATION_START_TIME";
     public final static String CONVERSATION_DURATION_FIELD = "CONVERSATION_DURATION";
+    public final static String TRANSFER_COMPLETION_CODE_FIELD = "TRANSFER_COMPLETION_CODE";
+    public final static String TRANSFER_ADDRESS_FIELD = "TRANSFER_ADDRESS";
+    public final static String TRANSFER_TIME_FIELD = "TRANSFER_TIME";
+    public final static String TRANSFER_CONVERSATION_START_TIME_FIELD = "TRANSFER_CONVERSATION_START_TIME";
+    public final static String TRANSFER_CONVERSATION_DURATION_FIELD = "TRANSFER_CONVERSATION_DURATION";
 
     @Service
     private static MessagesRegistry messagesRegistry;
@@ -112,6 +117,18 @@ public class IvrInformerRecordSchemaNode extends RecordSchemaNode
                 , "dd.MM.yyyy HH:mm:ss", 0, false);
         createInformerField(
                 CONVERSATION_DURATION_FIELD, RecordSchemaFieldType.LONG, null, 0, false);
+        createInformerField(
+                TRANSFER_COMPLETION_CODE_FIELD, RecordSchemaFieldType.STRING, null, 0, false);
+        createInformerField(
+                TRANSFER_ADDRESS_FIELD, RecordSchemaFieldType.STRING, null, 0, false);
+        createInformerField(
+                TRANSFER_TIME_FIELD, RecordSchemaFieldType.TIMESTAMP
+                , "dd.MM.yyyy HH:mm:ss", 0, false);
+        createInformerField(
+                TRANSFER_CONVERSATION_START_TIME_FIELD, RecordSchemaFieldType.TIMESTAMP
+                , "dd.MM.yyyy HH:mm:ss", 0, false);
+        createInformerField(
+                TRANSFER_CONVERSATION_DURATION_FIELD, RecordSchemaFieldType.LONG, null, 0, false);
     }
 
     private void createInformerField(

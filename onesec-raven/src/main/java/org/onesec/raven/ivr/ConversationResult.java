@@ -16,6 +16,8 @@
  */
 package org.onesec.raven.ivr;
 
+import org.onesec.core.call.CallCompletionCode;
+
 /**
  * Contains the information of conversation result
  * @see IvrEndpoint#invite
@@ -52,4 +54,27 @@ public interface ConversationResult
      * Returns the conversation start time in milliseconds.
      */
     public long getConversationStartTime();
+    /**
+     * Returns completion code for transfered call or null if the call was not transfered
+     */
+    public CallCompletionCode getTransferCompletionCode();
+    /**
+     * Returns the address to which call was transfered or null if the call was not transfered
+     */
+    public String getTransferAddress();
+    /**
+     * Returns the time when transfer was initiated or 0 (zero) if the call was not transfered
+     */
+    public long getTransferTime();
+    /**
+     * Returns the time when conversation of the transfered call was started.
+     * Method returns 0 (zero) if the call was not transfered or transfer monitor was not enabled.
+     */
+    public long getTransferConversationStartTime();
+    /**
+     * Returns the conversation duration of the transfered call.
+     * Method returns 0 (zero) if the call was not transfered or transfer monitor was not enabled
+     * or number to which call was transfered not ready or not answered.
+     */
+    public long getTransferConversationDuration();
 }

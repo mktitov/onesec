@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.impl;
 
+import org.onesec.core.call.CallCompletionCode;
 import org.onesec.raven.ivr.CompletionCode;
 import org.onesec.raven.ivr.ConversationResult;
 
@@ -31,6 +32,12 @@ public class ConversationResultImpl implements ConversationResult
     private CompletionCode completionCode;
     private long conversationDuration = 0;
     private long conversationStartTime = 0;
+    private CallCompletionCode transferCompletionCode;
+    private String transferAddress;
+    private long transferTime = 0;
+    private long transferConversationStartTime = 0;
+    private long transferConversationDuration = 0;
+
 
     public void setCompletionCode(CompletionCode completionCode)
     {
@@ -64,7 +71,12 @@ public class ConversationResultImpl implements ConversationResult
 
     public void setCallEndTime(long callEndTime)
     {
+        if (this.callEndTime>0)
+            return;
+        
         this.callEndTime = callEndTime;
+        if (conversationStartTime>0)
+            conversationDuration = (callEndTime - conversationStartTime) / 1000;
     }
 
     public void setCallStartTime(long callStartTime)
@@ -85,5 +97,55 @@ public class ConversationResultImpl implements ConversationResult
     public long getCallDuration()
     {
         return (callEndTime-callStartTime)/1000;
+    }
+
+    public String getTransferAddress()
+    {
+        return transferAddress;
+    }
+
+    public void setTransferAddress(String transferAddress)
+    {
+        this.transferAddress = transferAddress;
+    }
+
+    public CallCompletionCode getTransferCompletionCode()
+    {
+        return transferCompletionCode;
+    }
+
+    public void setTransferCompletionCode(CallCompletionCode transferCompletionCode)
+    {
+        this.transferCompletionCode = transferCompletionCode;
+    }
+
+    public long getTransferConversationDuration()
+    {
+        return transferConversationDuration;
+    }
+
+    public void setTransferConversationDuration(long transferConversationDuration)
+    {
+        this.transferConversationDuration = transferConversationDuration;
+    }
+
+    public long getTransferConversationStartTime()
+    {
+        return transferConversationStartTime;
+    }
+
+    public void setTransferConversationStartTime(long transferConversationStartTime)
+    {
+        this.transferConversationStartTime = transferConversationStartTime;
+    }
+
+    public long getTransferTime()
+    {
+        return transferTime;
+    }
+
+    public void setTransferTime(long transferTime)
+    {
+        this.transferTime = transferTime;
     }
 }

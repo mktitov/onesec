@@ -69,6 +69,9 @@ public class IvrInformer
     public final static String NUMBER_NOT_ANSWERED_STATUS = "NUMBER_NOT_ANSWERED";
     public final static String COMPLETED_BY_INFORMER_STATUS = "COMPLETED_BY_INFORMER";
     public final static String COMPLETED_BY_ABONENT_STATUS = "COMPLETED_BY_ABONENT";
+    public final static String TRANSFER_SUCCESSFULL_STATUS = "TRANSFER_SUCCESSFULL";
+    public final static String TRANSFER_DESTINATION_NOT_ANSWER_STATUS = "TRANSFER_DESTINATION_NOT_ANSWER";
+    public final static String TRANSFER_ERROR_STATUS = "TRANSFER_ERROR";
 
     @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
     private DataSource dataSource;
@@ -411,6 +414,27 @@ public class IvrInformer
                     currentRecord.setValue(
                             CONVERSATION_DURATION_FIELD
                             , conversationResult.getConversationDuration());
+                    if (conversationResult.getTransferCompletionCode()!=null)
+                    {
+                        String transferStatus = null;
+                        switch(conversationResult.getTransferCompletionCode())
+                        {
+                            case ERROR : transferStatus = TRANSFER_ERROR_STATUS; break;
+                            case NORMAL : transferStatus = TRANSFER_SUCCESSFULL_STATUS; break;
+                            case NO_ANSWER :
+                                transferStatus = TRANSFER_DESTINATION_NOT_ANSWER_STATUS;
+                                break;
+                        }
+                        currentRecord.setValue(TRANSFER_COMPLETION_CODE_FIELD, transferStatus);
+                        currentRecord.setValue(
+                                TRANSFER_ADDRESS_FIELD, conversationResult.getTransferAddress());
+                        currentRecord.setValue(
+                                TRANSFER_TIME_FIELD, conversationResult.getTransferTime());
+                        currentRecord.setValue(TRANSFER_CONVERSATION_START_TIME_FIELD
+                                , conversationResult.getTransferConversationStartTime());
+                        currentRecord.setValue(TRANSFER_CONVERSATION_DURATION_FIELD
+                                , conversationResult.getTransferConversationDuration());
+                    }
                 }
             }
             catch(IvrEndpointException ex)
