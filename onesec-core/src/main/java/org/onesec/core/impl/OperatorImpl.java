@@ -20,8 +20,10 @@ package org.onesec.core.impl;
 import javax.telephony.Address;
 import javax.telephony.InvalidArgumentException;
 import javax.telephony.Provider;
+import org.onesec.core.call.AddressMonitor;
 import org.onesec.core.call.CallController;
 import org.onesec.core.call.CallState;
+import org.onesec.core.call.impl.AddressMonitorImpl;
 import org.onesec.core.call.impl.CallControllerImpl;
 import org.onesec.core.provider.ProviderController;
 import org.onesec.core.provider.ProviderRegistryException;
@@ -49,6 +51,11 @@ public class OperatorImpl implements Operator
         CallController callController = 
                 new CallControllerImpl(providerRegistry, listenersCoordinator, numA, numB);
         return callController.getState();
+    }
+
+    public AddressMonitor createAddressMonitor(String address) throws Exception
+    {
+        return new AddressMonitorImpl(providerRegistry, address);
     }
 
     public boolean isOperatorNumber(String num)

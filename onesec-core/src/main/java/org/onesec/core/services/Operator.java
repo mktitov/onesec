@@ -17,6 +17,7 @@
 
 package org.onesec.core.services;
 
+import org.onesec.core.call.AddressMonitor;
 import org.onesec.core.call.CallState;
 
 /**
@@ -38,4 +39,9 @@ public interface Operator
      * @param num the number
      */
     public boolean isOperatorNumber(String num);
+    /**
+     * Returns new address monitor. After usage monitor must be 
+     * {@link AddressMonitor#releaseMonitor() realesed}.
+     */
+    public AddressMonitor createAddressMonitor(String address) throws Exception;
 }

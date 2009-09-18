@@ -21,6 +21,10 @@ import com.cisco.jtapi.extensions.CiscoAddrInServiceEv;
 import com.cisco.jtapi.extensions.CiscoAddrOutOfServiceEv;
 import com.cisco.jtapi.extensions.CiscoTermInServiceEv;
 import com.cisco.jtapi.extensions.CiscoTermOutOfServiceEv;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
@@ -33,11 +37,19 @@ import javax.telephony.Provider;
 import javax.telephony.Terminal;
 import javax.telephony.TerminalObserver;
 import javax.telephony.callcontrol.CallControlCallObserver;
+import javax.telephony.callcontrol.events.CallCtlCallEv;
 import javax.telephony.callcontrol.events.CallCtlConnDisconnectedEv;
+import javax.telephony.callcontrol.events.CallCtlConnEstablishedEv;
+import javax.telephony.callcontrol.events.CallCtlConnEv;
+import javax.telephony.callcontrol.events.CallCtlConnFailedEv;
+import javax.telephony.callcontrol.events.CallCtlEv;
+import javax.telephony.callcontrol.events.CallCtlTermConnTalkingEv;
 import javax.telephony.events.AddrEv;
 import javax.telephony.events.CallEv;
 import javax.telephony.events.TermEv;
 import org.onesec.core.call.AddressMonitor;
+import org.onesec.core.call.CallCompletionCode;
+import org.onesec.core.call.CallResult;
 import org.onesec.core.impl.OnesecUtils;
 import org.onesec.core.services.ProviderRegistry;
 import org.slf4j.Logger;
@@ -61,9 +73,13 @@ public class AddressMonitorImpl
     private AtomicBoolean addressReady;
     private boolean inService;
     private boolean waitingForCall;
+    private String expectedAddress;
+    private Map<String, CallResultImpl> activeCalls;
     private Lock lock;
     private Condition inServiceCondition;
     private Condition waitingForCallCondition;
+    private Condition callCompleteCondition;
+    private Condition callStartedCondition;
 
     public AddressMonitorImpl(ProviderRegistry providerRegistry, String address)
             throws Exception
@@ -71,6 +87,8 @@ public class AddressMonitorImpl
         this.address = address;
         terminalReady = new AtomicBoolean(false);
         addressReady = new AtomicBoolean(false);
+        activeCalls = new HashMap<String, CallResultImpl>();
+        
         inService = false;
         waitingForCall = false;
 
@@ -84,16 +102,18 @@ public class AddressMonitorImpl
         lock = new ReentrantLock();
         inServiceCondition = lock.newCondition();
         waitingForCallCondition = lock.newCondition();
+        callStartedCondition = lock.newCondition();
+        callCompleteCondition = lock.newCondition();
         
         terminal.addObserver(this);
         terminalAddress.addObserver(this);
         terminalAddress.addCallObserver(this);
 
         Thread.sleep(1000);
-        checkStatus();
+        checkStatus(null, null);
     }
 
-    private void checkStatus()
+    private void checkStatus(String callStartAddress, String callFinishAddress)
     {
         lock.lock();
         try
@@ -117,6 +137,27 @@ public class AddressMonitorImpl
                     logger.debug(address+". WaitingForCall changed state to ("+waitingForCall+")");
                 if (waitingForCall)
                     waitingForCallCondition.signal();
+            }
+            if (callFinishAddress!=null)
+            {
+                if (logger.isDebugEnabled())
+                    logger.debug(address+". Finished call with ("+callFinishAddress+")");
+                CallResultImpl callRes = activeCalls.remove(callFinishAddress);
+                if (callFinishAddress.equals(expectedAddress))
+                {
+                    callRes.markConversationEnd();
+                    if (callRes.getCompletionCode()==null)
+                        callRes.setCompletionCode(CallCompletionCode.NORMAL);
+                    callCompleteCondition.signal();
+                }
+            }
+            if (callStartAddress!=null)
+            {
+                if (logger.isDebugEnabled())
+                    logger.debug(address+". Started call with ("+callStartAddress+")");
+                activeCalls.put(callStartAddress, new CallResultImpl(System.currentTimeMillis()));
+                if (callStartAddress.equals(expectedAddress))
+                    callStartedCondition.signal();
             }
         }
         finally
@@ -159,6 +200,48 @@ public class AddressMonitorImpl
         }
     }
 
+    public CallResult waitForCallCompletion(
+            String expectedAddress, long callStartTimeout, long callEndTimeout)
+    {
+        if (logger.isDebugEnabled())
+            logger.debug(
+                    address+". Waiting for completion the call with ("+expectedAddress+") address");
+        lock.lock();
+        try
+        {
+            this.expectedAddress = expectedAddress;
+            if (!activeCalls.containsKey(expectedAddress))
+            {
+                boolean started = waitForCondition(callStartedCondition, callStartTimeout);
+                if (!started)
+                    return new CallResultImpl(CallCompletionCode.ERROR);
+            }
+            CallResultImpl callResult = activeCalls.get(expectedAddress);
+            if (!waitForCondition(callCompleteCondition, callEndTimeout))
+                callResult.setCompletionCode(CallCompletionCode.ERROR);
+            return callResult;
+        }
+        finally
+        {
+            lock.unlock();
+        }
+    }
+
+    public void releaseMonitor()
+    {
+        try{
+            try{
+                terminalAddress.removeCallObserver(this);
+            } finally {
+                try {
+                    terminalAddress.removeObserver(this);
+                } finally {
+                    terminal.removeObserver(this);
+                }
+            }
+        }catch(Throwable e){}
+    }
+
     private boolean waitForCondition(Condition condition, long timeout)
     {
         try
@@ -171,11 +254,6 @@ public class AddressMonitorImpl
         }
     }
 
-    public boolean waitForCallCompletion(String addess, long timeout)
-    {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-    
     public void addressChangedEvent(AddrEv[] events)
     {
         if (logger.isDebugEnabled())
@@ -183,8 +261,10 @@ public class AddressMonitorImpl
         for (AddrEv event: events)
             switch (event.getID())
             {
-                case CiscoAddrInServiceEv.ID: addressReady.set(true); checkStatus(); break;
-                case CiscoAddrOutOfServiceEv.ID: addressReady.set(false); checkStatus(); break;
+                case CiscoAddrInServiceEv.ID:
+                    addressReady.set(true); checkStatus(null, null); break;
+                case CiscoAddrOutOfServiceEv.ID: 
+                    addressReady.set(false); checkStatus(null, null); break;
             }
     }
 
@@ -195,55 +275,84 @@ public class AddressMonitorImpl
         for (TermEv event: events)
             switch (event.getID())
             {
-                case CiscoTermInServiceEv.ID: terminalReady.set(true); checkStatus(); break;
-                case CiscoTermOutOfServiceEv.ID: terminalReady.set(false); checkStatus(); break;
+                case CiscoTermInServiceEv.ID: 
+                    terminalReady.set(true); checkStatus(null, null); break;
+                case CiscoTermOutOfServiceEv.ID: 
+                    terminalReady.set(false); checkStatus(null, null); break;
             }
     }
 
     public void callChangedEvent(CallEv[] events)
     {
         if (logger.isDebugEnabled())
-            logger.debug(address+". Recieved address events: "+OnesecUtils.eventsToString(events));
+            logger.debug(address+". Recieved call events: "+OnesecUtils.eventsToString(events));
         for (CallEv event: events)
         {
             switch(event.getID())
             {
-                case CallCtlConnDisconnectedEv.ID: checkStatus(); break;
+                case CallCtlConnFailedEv.ID:
+                {
+                    CallCtlConnFailedEv ev = (CallCtlConnFailedEv) event;
+                    lock.lock();
+                    try {
+                        String opAddress = getOppositeAddress(ev);
+                        CallResultImpl callRes = activeCalls.get(opAddress);
+                        if (ev.getCallControlCause()==CallCtlConnFailedEv.CAUSE_NORMAL)
+                            callRes.setCompletionCode(CallCompletionCode.NO_ANSWER);
+                        else
+                            callRes.setCompletionCode(CallCompletionCode.ERROR);
+                        if (logger.isDebugEnabled())
+                            logger.debug(
+                                    "{}. Connection with ({}) address failed. " +
+                                    "Completion code is {}"
+                                    , new Object[]{
+                                        address, opAddress, callRes.getCompletionCode()});
+                    }finally{
+                        lock.unlock();
+                    }
+                    break;
+                }
+                case CallCtlConnDisconnectedEv.ID:
+                {
+                    CallCtlConnDisconnectedEv ev = (CallCtlConnDisconnectedEv) event;
+                    String connectionAddress = ev.getConnection().getAddress().getName();
+                    if (!address.equals(connectionAddress))
+                        checkStatus(null, connectionAddress);
+                    else
+                        checkStatus(null, null);
+                    break;
+                }
+                case CallCtlConnEstablishedEv.ID:
+                {
+                    CallCtlConnEstablishedEv ev = (CallCtlConnEstablishedEv) event;
+                    String connectionAddress = ev.getConnection().getAddress().getName();
+                    if (!address.equals(connectionAddress))
+                        checkStatus(connectionAddress, null);
+                    break;
+                }
+                case CallCtlTermConnTalkingEv.ID:
+                {
+                    CallCtlTermConnTalkingEv ev = (CallCtlTermConnTalkingEv) event;
+                    lock.lock();
+                    try {
+                        String opAddress = getOppositeAddress(ev);
+                        activeCalls.get(opAddress).markConversationStart();
+                        if (logger.isDebugEnabled())
+                            logger.debug(
+                                    "{}. Conversation started with ({}) address"
+                                    , new Object[]{address, opAddress});
+                    } finally {
+                        lock.unlock();
+                    }
+                    break;
+                }
             }
         }
-//            switch(event.getID()){
-//                case CallCtlConnEstablishedEv.ID:
-//                {
-//                    String address = ((ConnEv)event).getConnection().getAddress().getName();
-//                    if (numA.equals(address))
-//                        state.setSideAConnected(true);
-//                    else
-//                        state.setSideBConnected(true);
-//                }
-//                case CallCtlTermConnTalkingEv.ID:
-//                {
-//                    TerminalConnection tc =
-//                            ((CallCtlTermConnTalkingEv)event).getTerminalConnection();
-//                    if (tc.getConnection().getAddress().getName().equals(numB)){
-//                        try{
-//                            tc.getConnection().disconnect();
-//                        }catch(Exception e){
-//                            state.setState(
-//                                    CallState.FINISHED
-//                                    , "Error while diconnection counter part connection"
-//                                    , e);
-//                        }
-//                    }
-//                    break;
-//                }
-//                case CallCtlConnDisconnectedEv.ID:
-//                {
-//                    Connection conn = ((CallCtlConnDisconnectedEv)event).getConnection();
-//                    if (conn.getAddress().equals(sourceAddress))
-//                        state.setState(CallState.FINISHED);
-//                }
-//            }
-//        }
     }
 
+    private String getOppositeAddress(CallCtlCallEv ev)
+    {
+        return !address.equals(ev.getCalledAddress().getName())?
+            ev.getCalledAddress().getName() : ev.getCallingAddress().getName();
+    }
 }
