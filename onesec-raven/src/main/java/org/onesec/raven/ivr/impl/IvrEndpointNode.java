@@ -27,6 +27,7 @@ import com.cisco.jtapi.extensions.CiscoRTPOutputStoppedEv;
 import com.cisco.jtapi.extensions.CiscoTermInServiceEv;
 import com.cisco.jtapi.extensions.CiscoTermOutOfServiceEv;
 import com.cisco.jtapi.extensions.CiscoTerminalObserver;
+import com.cisco.jtapi.extensions.CiscoUnregistrationException;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
@@ -212,6 +213,7 @@ public class IvrEndpointNode extends BaseNode
     {
         super.doStop();
         stopConversation(CompletionCode.COMPLETED_BY_ENDPOINT);
+        unregisterTerminal();
         removeCallObserver();
         removeTerminalAddressObserver();
         removeTerminalObserver();
@@ -800,6 +802,20 @@ public class IvrEndpointNode extends BaseNode
     public String getObjectDescription()
     {
         return getPath();
+    }
+
+    private void unregisterTerminal()
+    {
+        try
+        {
+            terminal.unregister();
+        } catch (CiscoUnregistrationException e)
+        {
+            if (isLogLevelEnabled(LogLevel.ERROR))
+            {
+                error("Error unregistering terminal", e);
+            }
+        }
     }
 
     private class ContinueConversationAction extends AsyncAction
