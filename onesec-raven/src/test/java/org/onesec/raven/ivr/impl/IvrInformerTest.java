@@ -137,7 +137,7 @@ public class IvrInformerTest extends OnesecRavenTestCase
         assertTrue(dataCollector.start());
     }
 
-    @Test()
+//    @Test()
     public void test() throws Exception
     {
         createScenario();
@@ -146,8 +146,24 @@ public class IvrInformerTest extends OnesecRavenTestCase
         dataSource.addDataPortion(createRecord("abon2", "88027"));
         assertTrue(informer.start());
         informer.startProcessing();
-        while (informer.getInformerStatus()!=IvrInformerStatus.PROCESSED)
-            Thread.sleep(500);
+
+        List recs = dataCollector.getDataList();
+//        assertEquals(3, recs.size());
+        printRecordsInformation(recs);
+    }
+
+    @Test()
+    public void maxTriesTest() throws Exception
+    {
+        createScenario();
+        dataSource.addDataPortion(createRecord("abon1", "88024"));
+        dataSource.addDataPortion(createRecord("abon1", "089128672947"));
+        Record rec = createRecord("abon2", "88027");
+        rec.setValue(IvrInformerRecordSchemaNode.TRIES_FIELD, 1);
+        dataSource.addDataPortion(rec);
+        informer.setMaxTries((short)1);
+        assertTrue(informer.start());
+        informer.startProcessing();
 
         List recs = dataCollector.getDataList();
 //        assertEquals(3, recs.size());

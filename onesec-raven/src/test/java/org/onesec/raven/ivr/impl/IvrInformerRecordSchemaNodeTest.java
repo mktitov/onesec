@@ -61,6 +61,7 @@ public class IvrInformerRecordSchemaNodeTest extends OnesecRavenTestCase
         checkField(rec, CALL_ORDER_FIELD, RecordSchemaFieldType.SHORT, null
                 , CALL_ORDER_CSV_COL, false);
         checkField(rec, COMPLETION_CODE_FIELD, RecordSchemaFieldType.STRING, null, 0, true);
+        checkField(rec, TRIES_FIELD, RecordSchemaFieldType.SHORT, null, 0, false);
         checkField(rec, 
                 CALL_START_TIME_FIELD, RecordSchemaFieldType.TIMESTAMP, "dd.MM.yyyy HH:mm:ss"
                 , 0, false);

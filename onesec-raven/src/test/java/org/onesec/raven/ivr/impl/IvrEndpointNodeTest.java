@@ -19,6 +19,8 @@ package org.onesec.raven.ivr.impl;
 
 import java.io.FileInputStream;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import org.junit.Before;
 import org.junit.Test;
 import org.onesec.core.StateWaitResult;
@@ -39,10 +41,13 @@ import org.raven.conv.ConversationScenarioPoint;
 import org.raven.conv.impl.ConversationScenarioNode;
 import org.raven.conv.impl.ConversationScenarioPointNode;
 import org.raven.conv.impl.GotoNode;
+import org.raven.expr.impl.ExpressionAttributeValueHandlerFactory;
 import org.raven.expr.impl.IfNode;
+import org.raven.expr.impl.ScriptAttributeValueHandlerFactory;
 import org.raven.log.LogLevel;
 import org.raven.sched.impl.ExecutorServiceNode;
 import org.raven.tree.Node;
+import org.raven.tree.NodeAttribute;
 
 /**
  *
@@ -203,7 +208,7 @@ public class IvrEndpointNodeTest
         StateWaitResult res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.IN_SERVICE}, 2000);
 //        endpoint.invite("089128672947", scenario, this);
-        endpoint.invite("88024", scenario, this);
+        endpoint.invite("88024", scenario, this, null);
         res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.INVITING}, 30000);
         res = endpoint.getEndpointState().waitForState(
@@ -258,15 +263,20 @@ public class IvrEndpointNodeTest
         TransferCallActionNode transfer = new TransferCallActionNode();
         transfer.setName("transfer to 88024");
         scenario.addAndSaveChildren(transfer);
-        transfer.setAddress("88024");
+        NodeAttribute attr = transfer.getNodeAttribute("address");
+        attr.setValueHandlerType(ExpressionAttributeValueHandlerFactory.TYPE);
+        attr.setValue("tim_address");
+        attr.save();
         transfer.setMonitorTransfer(Boolean.TRUE);
         assertTrue(transfer.start());
 
         waitForProvider();
         assertTrue(endpoint.start());
+        Map<String, Object> params = new HashMap<String, Object>();
+        params.put("tim_address", "88024");
         StateWaitResult res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.IN_SERVICE}, 2000);
-        endpoint.invite("089128672947", scenario, this);
+        endpoint.invite("089128672947", scenario, this, params);
 //        endpoint.invite("88024", scenario, this);
         res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.INVITING}, 30000);

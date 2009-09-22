@@ -56,6 +56,7 @@ public class IvrInformerRecordSchemaNode extends RecordSchemaNode
     public final static String CALL_ORDER_FIELD = "CALL_ORDER";
     public final static int CALL_ORDER_CSV_COL = 5;
     public final static String COMPLETION_CODE_FIELD = "COMPLETION_CODE";
+    public final static String TRIES_FIELD = "TRIES";
     public final static String CALL_START_TIME_FIELD = "CALL_START_TIME";
     public final static String CALL_END_TIME_FIELD = "CALL_END_TIME";
     public final static String CALL_DURATION_FIELD = "CALL_DURATION";
@@ -105,6 +106,7 @@ public class IvrInformerRecordSchemaNode extends RecordSchemaNode
         createInformerField(
                 CALL_ORDER_FIELD, RecordSchemaFieldType.SHORT, null, CALL_ORDER_CSV_COL, false);
         createInformerField(COMPLETION_CODE_FIELD, RecordSchemaFieldType.STRING, null, 0, true);
+        createInformerField(TRIES_FIELD, RecordSchemaFieldType.SHORT, null, 0, false);
         createInformerField(
                 CALL_START_TIME_FIELD, RecordSchemaFieldType.TIMESTAMP
                 , "dd.MM.yyyy HH:mm:ss", 0, false);

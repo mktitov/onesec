@@ -32,10 +32,12 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.media.protocol.FileTypeDescriptor;
+import javax.script.Bindings;
 import javax.telephony.Address;
 import javax.telephony.AddressObserver;
 import javax.telephony.Call;
@@ -82,6 +84,8 @@ import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.conv.BindingScope;
 import org.raven.conv.ConversationScenarioState;
+import org.raven.expr.BindingSupport;
+import org.raven.expr.impl.BindingSupportImpl;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
@@ -101,6 +105,7 @@ public class IvrEndpointNode extends BaseNode
 {
     public static final char EMPTY_DTMF = '-';
     public final static String DTMF_BINDING = "dtmf";
+    public final static String CONVERSATION_STATE_BINDING = "conversationState";
 
     @Service
     protected static ProviderRegistry providerRegistry;
@@ -152,8 +157,9 @@ public class IvrEndpointNode extends BaseNode
     private boolean rtpInitialized;
     private ConversationResultImpl conversationResult;
     private ConversationCompletionCallback completionCallback;
+    private Map<String, Object> inviteBindings;
     private String opponentNumber;
-
+    private BindingSupportImpl bindingSupport;
 
     @Override
     protected void initFields()
@@ -163,6 +169,7 @@ public class IvrEndpointNode extends BaseNode
         terminalAddress = null;
         endpointState = new IvrEndpointStateImpl(this);
         stateListenersCoordinator.addListenersToState(endpointState);
+        bindingSupport = new BindingSupportImpl();
         resetStates();
         resetConversationFields();
     }
@@ -189,6 +196,7 @@ public class IvrEndpointNode extends BaseNode
         conversationResult = null;
         completionCallback = null;
         opponentNumber = null;
+        inviteBindings = null;
     }
 
 //    private synchronized void setEndpointStatus(IvrEndpointState endpointStatus)
@@ -315,7 +323,8 @@ public class IvrEndpointNode extends BaseNode
 
     public synchronized void invite(
             String opponentNumber, IvrConversationScenario conversationScenario
-            , ConversationCompletionCallback callback) throws IvrEndpointException
+            , ConversationCompletionCallback callback
+            , Map<String, Object> bindings) throws IvrEndpointException
     {
         if (!getStatus().equals(Status.STARTED)
                 && endpointState.getId()!=IvrEndpointState.IN_SERVICE)
@@ -323,6 +332,7 @@ public class IvrEndpointNode extends BaseNode
                     "Can't invite oppenent to conversation. Endpoint not ready");
         try
         {
+            endpointState.setState(IvrEndpointState.INVITING);
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 debug(String.format(
                         "Inviting opponent with number (%s) to conversation (%s)"
@@ -334,7 +344,7 @@ public class IvrEndpointNode extends BaseNode
             conversationResult = new ConversationResultImpl();
             conversationResult.setCallStartTime(System.currentTimeMillis());
             completionCallback = callback;
-            endpointState.setState(IvrEndpointState.INVITING);
+            inviteBindings = bindings;
             Call call = provider.createCall();
             call.connect(terminal, terminalAddress, opponentNumber);
         }
@@ -631,12 +641,23 @@ public class IvrEndpointNode extends BaseNode
             conversationState.getBindings().put(DTMF_BINDING, ""+dtmfChar);
             Collection<Node> actions = currentConversation.makeConversation(conversationState);
             Collection<IvrAction> ivrActions = new ArrayList<IvrAction>(10);
-            for (Node node: actions)
-                if (node instanceof IvrActionNode)
-                    ivrActions.add(((IvrActionNode)node).createAction());
-            if (conversationState.hasImmediateTransition())
-                ivrActions.add(new ContinueConversationAction());
-            actionsExecutor.executeActions(ivrActions);
+            try
+            {
+                tree.addGlobalBindings(getId()+"", bindingSupport);
+                bindingSupport.putAll(conversationState.getBindings());
+                bindingSupport.put(DTMF_BINDING, ""+dtmfChar);
+                for (Node node: actions)
+                    if (node instanceof IvrActionNode)
+                        ivrActions.add(((IvrActionNode)node).createAction());
+                if (conversationState.hasImmediateTransition())
+                    ivrActions.add(new ContinueConversationAction());
+                actionsExecutor.executeActions(ivrActions);
+            }
+            finally
+            {
+                tree.removeGlobalBindings(getId()+"");
+                bindingSupport.reset();
+            }
         }
         catch (Exception ex)
         {
@@ -766,6 +787,13 @@ public class IvrEndpointNode extends BaseNode
             conversationState = currentConversation.createConversationState();
             conversationState.setBinding(DTMF_BINDING, "-", BindingScope.REQUEST);
             conversationState.setBindingDefaultValue(DTMF_BINDING, "-");
+            conversationState.setBinding(
+                    CONVERSATION_STATE_BINDING, conversationState, BindingScope.CONVERSATION);
+            if (inviteBindings!=null)
+                for (Map.Entry<String, Object> b: inviteBindings.entrySet())
+                    conversationState.setBinding(
+                            b.getKey(), b.getValue(), BindingScope.CONVERSATION);
+
             rtpSession = new RTPSession(remoteHost, remotePort, audioStream);
             rtpSession.start();
         } catch (Exception ex)
