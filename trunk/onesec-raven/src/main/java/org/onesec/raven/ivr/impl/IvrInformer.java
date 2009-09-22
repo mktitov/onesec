@@ -20,6 +20,7 @@ package org.onesec.raven.ivr.impl;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -64,6 +65,7 @@ public class IvrInformer
 {
     public final static String NOT_PROCESSED_STATUS = "NOT_PROCESSED";
     public final static String PROCESSING_ERROR_STATUS = "PROCESSING_ERROR";
+    public static final String RECORD_BINDING = "record";
     public final static String SKIPPED_STATUS = "SKIPPED";
     public final static String NUMBER_BUSY_STATUS = "NUMBER_BUSY";
     public final static String NUMBER_NOT_ANSWERED_STATUS = "NUMBER_NOT_ANSWERED";
@@ -82,6 +84,9 @@ public class IvrInformer
     @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
     private IvrEndpoint endpoint;
 
+    @NotNull @Parameter(defaultValue="5")
+    private Short maxTries;
+
     private AtomicReference<IvrInformerStatus> informerStatus;
     private String statusMessage;
     private Record currentRecord;
@@ -96,7 +101,6 @@ public class IvrInformer
     private int processedRecordsCount;
     private int processedAbonsCount;
     private int informedAbonsCount;
-
 
     @Message
     private static String currentStatusMessage;
@@ -218,6 +222,16 @@ public class IvrInformer
         this.endpoint = endpoint;
     }
 
+    public Short getMaxTries()
+    {
+        return maxTries;
+    }
+
+    public void setMaxTries(Short maxTries)
+    {
+        this.maxTries = maxTries;
+    }
+
     public boolean getDataImmediate(
             DataConsumer dataConsumer, Collection<NodeAttribute> sessionAttributes)
     {
@@ -245,34 +259,32 @@ public class IvrInformer
 
     public void startProcessing()
     {
-        if (IvrInformerStatus.PROCESSING.equals(informerStatus.get()))
+        if (!informerStatus.compareAndSet(IvrInformerStatus.WAITING, IvrInformerStatus.PROCESSING))
         {
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 debug("Informator already processing records");
+            return;
         }
-        else
+        try
         {
-            informerStatus.set(IvrInformerStatus.PROCESSING);
-            try
-            {
-                statusMessage = "Requesting records from "+dataSource.getPath();
-                if (isLogLevelEnabled(LogLevel.DEBUG))
-                    debug(statusMessage);
-                dataSource.getDataImmediate(this, null);
-                sendDataToConsumers(null);
-            }
-            finally
-            {
-                lastSuccessfullyProcessedAbonId = null;
-                lastAbonId = null;
-                informerStatus.set(IvrInformerStatus.PROCESSED);
-                statusMessage = "All records sended by data source where processed.";
-            }
+            statusMessage = "Requesting records from "+dataSource.getPath();
+            if (isLogLevelEnabled(LogLevel.DEBUG))
+                debug(statusMessage);
+            dataSource.getDataImmediate(this, null);
+            sendDataToConsumers(null);
+        }
+        finally
+        {
+            lastSuccessfullyProcessedAbonId = null;
+            lastAbonId = null;
+            informerStatus.set(IvrInformerStatus.WAITING);
+            statusMessage = "All records sended by data source where processed.";
         }
     }
 
     public void stopProcessing()
     {
+
         informerStatus.compareAndSet(
                 IvrInformerStatus.PROCESSING, IvrInformerStatus.STOP_PROCESSING);
     }
@@ -295,21 +307,27 @@ public class IvrInformer
         statusMessage = "Recieved new record: "+getRecordShortDesc();
         try
         {
-            String abonId = (String) currentRecord.getValue(ABONENT_ID_FIELD);
-            if (!ObjectUtils.equals(lastAbonId, abonId))
+            Short tries = (Short) currentRecord.getValue(TRIES_FIELD);
+            if (tries==null || tries<maxTries)
             {
-                ++processedAbonsCount;
-                lastAbonId = abonId;
-            }
-            if (ObjectUtils.equals(lastSuccessfullyProcessedAbonId, abonId))
-            {
-                skipRecord();
+                String abonId = (String) currentRecord.getValue(ABONENT_ID_FIELD);
+                if (!ObjectUtils.equals(lastAbonId, abonId))
+                {
+                    ++processedAbonsCount;
+                    lastAbonId = abonId;
+                }
+                if (ObjectUtils.equals(lastSuccessfullyProcessedAbonId, abonId))
+                    skipRecord();
+                else
+                    informAbonent();
+                sendDataToConsumers(currentRecord);
+                statusMessage = String.format(
+                        "Abonent informed (%s). Waiting for new record", getRecordShortDesc());
             }
             else
-                informAbonent();
-            sendDataToConsumers(currentRecord);
-            statusMessage = String.format(
-                    "Abonent informed (%s). Waiting for new record", getRecordShortDesc());
+                statusMessage = String.format(
+                        "Abonent skiped (%s). Max tries (%s) reached"
+                        , getRecordShortDesc(), maxTries);
         }
         catch(Throwable e)
         {
@@ -377,7 +395,9 @@ public class IvrInformer
                 endpoint.getEndpointState().waitForState(
                         new int[]{IvrEndpointState.IN_SERVICE}, Long.MAX_VALUE);
                 statusMessage = "Informing abonent: "+getRecordShortDesc();
-                endpoint.invite(abonNumber, conversationScenario, this);
+                Map<String, Object> bindings = new HashMap<String, Object>();
+                bindings.put( RECORD_BINDING, currentRecord);
+                endpoint.invite(abonNumber, conversationScenario, this, bindings);
                 recordProcessed.await();
                 String status = null;
                 if (conversationResult==null)
@@ -414,6 +434,12 @@ public class IvrInformer
                     currentRecord.setValue(
                             CONVERSATION_DURATION_FIELD
                             , conversationResult.getConversationDuration());
+                    Short tries = (Short) currentRecord.getValue(TRIES_FIELD);
+                    if (tries==null)
+                        tries = 1;
+                    else
+                        tries = (short)(tries + 1);
+                    currentRecord.setValue(TRIES_FIELD, tries);
                     if (conversationResult.getTransferCompletionCode()!=null)
                     {
                         String transferStatus = null;

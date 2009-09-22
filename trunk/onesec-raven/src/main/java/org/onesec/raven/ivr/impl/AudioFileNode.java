@@ -29,7 +29,6 @@ import org.raven.tree.ViewableObject;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.DataFileValueHandlerFactory;
 import org.raven.tree.impl.DataFileViewableObject;
-import org.raven.tree.impl.ViewableObjectImpl;
 import org.weda.annotations.constraints.NotNull;
 
 /**

@@ -32,7 +32,7 @@ import org.weda.annotations.constraints.NotNull;
 @NodeClass(parentNode=IvrConversationScenarioNode.class)
 public class TransferCallActionNode extends BaseNode implements IvrActionNode
 {
-    @NotNull @Parameter
+    @Parameter
     private String address;
 
     @NotNull @Parameter(defaultValue="false")

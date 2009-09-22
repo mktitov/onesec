@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr;
 
+import java.util.Map;
 import org.onesec.core.ObjectDescription;
 import org.raven.sched.ExecutorService;
 import org.raven.tree.Node;
@@ -44,10 +45,13 @@ public interface IvrEndpoint extends Node, ObjectDescription
      * @param opponentNumber the opponent phone number
      * @param conversationScenario the conversation scenario
      * @param callback the object which will be informed about conversation completion
+     * @param bindings the binding that will be added to the conversation state bindings as session
+     *      bindings
      */
     public void invite(
             String opponentNumber, IvrConversationScenario conversationScenario
-            , ConversationCompletionCallback callback) throws IvrEndpointException;
+            , ConversationCompletionCallback callback
+            , Map<String, Object> bindings) throws IvrEndpointException;
     /**
      * Transfers current call to the address passed in the parameter.
      * @param address The destination telephone address string to where the Call is being
