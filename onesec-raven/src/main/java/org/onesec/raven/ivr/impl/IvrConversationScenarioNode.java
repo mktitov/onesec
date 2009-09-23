@@ -21,9 +21,10 @@ import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.actions.PauseActionNode;
 import org.onesec.raven.ivr.actions.PlayAudioActionNode;
 import org.onesec.raven.ivr.actions.StopConversationActionNode;
+import org.onesec.raven.ivr.actions.TransferCallActionNode;
 import org.raven.annotations.NodeClass;
+import org.raven.annotations.Parameter;
 import org.raven.conv.impl.ConversationScenarioNode;
-import org.raven.conv.impl.ConversationScenarioPointNode;
 import org.raven.conv.impl.GotoNode;
 import org.raven.expr.impl.IfNode;
 
@@ -32,9 +33,22 @@ import org.raven.expr.impl.IfNode;
  * @author Mikhail Titov
  */
 @NodeClass(childNodes={
-    ConversationScenarioPointNode.class, IfNode.class, GotoNode.class,
-    StopConversationActionNode.class, PlayAudioActionNode.class, PauseActionNode.class})
+    IvrConversationScenarioPointNode.class, IfNode.class, GotoNode.class,
+    StopConversationActionNode.class, PlayAudioActionNode.class, PauseActionNode.class,
+    TransferCallActionNode.class})
 public class IvrConversationScenarioNode extends ConversationScenarioNode
         implements IvrConversationScenario
 {
+    @Parameter
+    private String validDtmfs;
+
+    public void setValidDtmfs(String validDtmfs)
+    {
+        this.validDtmfs = validDtmfs;
+    }
+
+    public String getValidDtmfs()
+    {
+        return validDtmfs;
+    }
 }

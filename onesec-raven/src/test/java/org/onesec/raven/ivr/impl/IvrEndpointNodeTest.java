@@ -43,7 +43,6 @@ import org.raven.conv.impl.ConversationScenarioPointNode;
 import org.raven.conv.impl.GotoNode;
 import org.raven.expr.impl.ExpressionAttributeValueHandlerFactory;
 import org.raven.expr.impl.IfNode;
-import org.raven.expr.impl.ScriptAttributeValueHandlerFactory;
 import org.raven.log.LogLevel;
 import org.raven.sched.impl.ExecutorServiceNode;
 import org.raven.tree.Node;
@@ -185,12 +184,13 @@ public class IvrEndpointNodeTest
 
     }
 
-//    @Test
+    @Test
     public void inviteTest() throws Exception
     {
         AudioFileNode audioNode1 = createAudioFileNode("audio1", "src/test/wav/test2.wav");
         AudioFileNode audioNode2 = createAudioFileNode("audio2", "src/test/wav/test.wav");
 
+        scenario.setValidDtmfs("1#");
         IfNode ifNode1 = createIfNode("if1", scenario, "dtmf=='1'||repetitionCount==3");
         IfNode ifNode2 = createIfNode("if2", scenario, "dtmf=='-'||dtmf=='#'");
         createPlayAudioActionNode("hello", ifNode2, audioNode1);
@@ -253,7 +253,7 @@ public class IvrEndpointNodeTest
         Thread.sleep(1000);
     }
 
-    @Test
+//    @Test
     public void inviteWithTransferTest() throws Exception
     {
         AudioFileNode audioNode1 = createAudioFileNode("audio1", "src/test/wav/test2.wav");

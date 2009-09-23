@@ -76,6 +76,7 @@ import org.onesec.raven.ivr.IvrAction;
 import org.onesec.raven.ivr.IvrActionNode;
 import org.onesec.raven.ivr.IvrActionStatus;
 import org.onesec.raven.ivr.IvrConversationScenario;
+import org.onesec.raven.ivr.IvrConversationScenarioPoint;
 import org.onesec.raven.ivr.IvrEndpoint;
 import org.onesec.raven.ivr.IvrEndpointException;
 import org.onesec.raven.ivr.IvrEndpointState;
@@ -636,6 +637,15 @@ public class IvrEndpointNode extends BaseNode
     {
         try
         {
+            IvrConversationScenarioPoint point =
+                    (IvrConversationScenarioPoint) conversationState.getNextConversationPoint();
+            String validDtmfs = point.getValidDtmfs();
+            if (dtmfChar!=EMPTY_DTMF && (validDtmfs==null || validDtmfs.indexOf(dtmfChar)<0))
+            {
+                if (isLogLevelEnabled(LogLevel.DEBUG))
+                    debug(String.format("Invalid dtmf (%s). Skipping", dtmfChar));
+                return;
+            }
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 debug(String.format("Continue conversation with dtmf (%s)", dtmfChar));
             conversationState.getBindings().put(DTMF_BINDING, ""+dtmfChar);
