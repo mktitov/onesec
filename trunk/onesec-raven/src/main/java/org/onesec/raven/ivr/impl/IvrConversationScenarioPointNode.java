@@ -15,15 +15,29 @@
  *  under the License.
  */
 
-package org.onesec.raven.ivr;
+package org.onesec.raven.ivr.impl;
 
-import org.raven.conv.ConversationScenario;
+import org.onesec.raven.ivr.IvrConversationScenarioPoint;
+import org.raven.annotations.Parameter;
+import org.raven.conv.impl.ConversationScenarioPointNode;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface IvrConversationScenario extends ConversationScenario, IvrConversationScenarioPoint
+public class IvrConversationScenarioPointNode
+        extends ConversationScenarioPointNode implements IvrConversationScenarioPoint
 {
+    @Parameter
+    private String validDtmfs;
 
+    public void setValidDtmfs(String validDtmfs)
+    {
+        this.validDtmfs = validDtmfs;
+    }
+
+    public String getValidDtmfs()
+    {
+        return validDtmfs;
+    }
 }

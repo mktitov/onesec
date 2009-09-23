@@ -17,13 +17,17 @@
 
 package org.onesec.raven.ivr;
 
-import org.raven.conv.ConversationScenario;
+import org.raven.conv.ConversationScenarioPoint;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface IvrConversationScenario extends ConversationScenario, IvrConversationScenarioPoint
+public interface IvrConversationScenarioPoint extends ConversationScenarioPoint
 {
-
+    /**
+     * Returns the valid dtmf symbols. The null or empty string result means that point does not
+     * have valid dtmf symblols, etc does not expect input
+     */
+    public String getValidDtmfs();
 }
