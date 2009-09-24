@@ -17,12 +17,17 @@
 
 package org.onesec.raven.ivr.actions;
 
+import java.util.List;
+import java.util.Map;
 import org.onesec.raven.ivr.IvrAction;
 import org.onesec.raven.ivr.IvrActionNode;
 import org.onesec.raven.ivr.impl.AudioFileNode;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
+import org.raven.tree.NodeAttribute;
+import org.raven.tree.Viewable;
+import org.raven.tree.ViewableObject;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
 import org.weda.annotations.constraints.NotNull;
@@ -32,7 +37,7 @@ import org.weda.annotations.constraints.NotNull;
  * @author Mikhail Titov
  */
 @NodeClass(parentNode=IvrConversationScenarioNode.class)
-public class PlayAudioActionNode extends BaseNode implements IvrActionNode
+public class PlayAudioActionNode extends BaseNode implements IvrActionNode, Viewable
 {
     @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
     private AudioFileNode audioFile;
@@ -50,5 +55,25 @@ public class PlayAudioActionNode extends BaseNode implements IvrActionNode
     public IvrAction createAction()
     {
         return new PlayAudioAction(audioFile);
+    }
+
+    public Map<String, NodeAttribute> getRefreshAttributes() throws Exception
+    {
+        return null;
+    }
+
+    public List<ViewableObject> getViewableObjects(Map<String, NodeAttribute> refreshAttributes)
+        throws Exception
+    {
+        AudioFileNode audio = audioFile;
+        if (audio!=null)
+            return audio.getViewableObjects(refreshAttributes);
+        else
+            return null;
+    }
+
+    public Boolean getAutoRefresh()
+    {
+        return true;
     }
 }

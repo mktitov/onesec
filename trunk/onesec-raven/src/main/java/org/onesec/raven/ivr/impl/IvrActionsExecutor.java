@@ -78,15 +78,14 @@ public class IvrActionsExecutor implements Task
             for (IvrAction action: actions)
             {
                 try {
+                    statusMessage = String.format("Executing action (%s)", action.getName());
                     if (endpoint.isLogLevelEnabled(LogLevel.DEBUG))
-                        endpoint.debug(String.format(
-                                "ActionsExecutor. Executing action (%s)", action.getName()));
+                        endpoint.debug(getStatusMessage());
                     action.execute(endpoint);
                 } catch (IvrActionException ex) {
+                    statusMessage = String.format("Action (%s) execution error", action.getName());
                     if (endpoint.isLogLevelEnabled(LogLevel.ERROR))
-                        endpoint.error(String.format(
-                                "ActionsExecutor. Action (%s) execution error"
-                                , action.getName()), ex);
+                        endpoint.error(getStatusMessage(), ex);
                     return;
                 }
                 boolean canceling = false;
@@ -94,26 +93,27 @@ public class IvrActionsExecutor implements Task
                 {
                     if (!canceling && isMustCancel())
                     {
+                        statusMessage = String.format(
+                                "Canceling (%s) action execution", action.getName());
                         if (endpoint.isLogLevelEnabled(LogLevel.DEBUG))
-                            endpoint.debug(String.format(
-                                    "ActionsExecutor. Canceling (%s) action execution"
-                                    , action.getName()));
+                            endpoint.debug(getStatusMessage());
                         try {
                             action.cancel();
                         } catch (IvrActionException ex) {
+                            statusMessage = String.format(
+                                    "Error canceling execution of the action (%s)"
+                                    , action.getName());
                             if (endpoint.isLogLevelEnabled(LogLevel.ERROR))
-                                endpoint.error(String.format(
-                                    "ActionsExecutor. Error canceling execution of the action (%s)"
-                                    , action.getName()), ex);
+                                endpoint.error(getStatusMessage(), ex);
                         }
                         canceling = true;
                     }
                     try {
                         Thread.sleep(10);
                     } catch (InterruptedException ex) {
+                        statusMessage = "Action executor thread was interrupted";
                         if (endpoint.isLogLevelEnabled(LogLevel.ERROR))
-                            endpoint.error(
-                                    "ActionsExecutor. Action executor thread was interrupted");
+                            endpoint.error(getStatusMessage());
                         return;
                     }
                 }
@@ -147,7 +147,7 @@ public class IvrActionsExecutor implements Task
 
     public String getStatusMessage()
     {
-        return statusMessage;
+        return "Actions executor. "+statusMessage;
     }
 
 }
