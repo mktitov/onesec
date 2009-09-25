@@ -208,7 +208,7 @@ public class IvrEndpointNodeTest
         StateWaitResult res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.IN_SERVICE}, 2000);
 //        endpoint.invite("089128672947", scenario, this);
-        endpoint.invite("88024", scenario, this, null);
+        endpoint.invite("089128672947", scenario, this, null);
         res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.INVITING}, 30000);
         res = endpoint.getEndpointState().waitForState(
@@ -216,6 +216,8 @@ public class IvrEndpointNodeTest
         res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.IN_SERVICE}, 50000);
 
+        Thread.sleep(1000);
+        assertEquals(new Integer(0), executor.getExecutingTaskCount());
     }
 
 //    @Test

@@ -72,13 +72,13 @@ public class RTPSession
     {
         try
         {
-            sendStream.close();
+            source.close();
 //            session.stop();
 //            session.close();
         }
         finally
         {
-            source.close();
+            sendStream.close();
         }
     }
 }

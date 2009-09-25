@@ -37,7 +37,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.media.protocol.FileTypeDescriptor;
-import javax.script.Bindings;
 import javax.telephony.Address;
 import javax.telephony.AddressObserver;
 import javax.telephony.Call;
@@ -85,7 +84,6 @@ import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.conv.BindingScope;
 import org.raven.conv.ConversationScenarioState;
-import org.raven.expr.BindingSupport;
 import org.raven.expr.impl.BindingSupportImpl;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
@@ -373,6 +371,7 @@ public class IvrEndpointNode extends BaseNode
         {
             try
             {
+                audioStream.reset();
                 if (handlingIncomingCall)
                 {
                     conversationResult.setCallEndTime(System.currentTimeMillis());
