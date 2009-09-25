@@ -133,29 +133,39 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
 
     public void run()
     {
-        long startTime = System.currentTimeMillis();
-        packetNumber = 0;
-        while (!dataSource.isDataConcated() || !bufferQueue.isEmpty())
+        dataSource.setStreamThreadRunning(true);
+        try
         {
-            try
+            long startTime = System.currentTimeMillis();
+            packetNumber = 0;
+            while (!dataSource.isDataConcated() || !bufferQueue.isEmpty())
             {
-                action = "getting new buffer from queue";
-                bufferToSend = bufferQueue.poll();
-                action = "sending transfer event";
-                transferData(null);
-                ++packetNumber;
-                action = "sleeping";
-                sleepTime = packetNumber*20-(System.currentTimeMillis()-startTime);
-                if (sleepTime>0)
-                    TimeUnit.MILLISECONDS.sleep(sleepTime);
+                try
+                {
+                    action = "getting new buffer from queue";
+                    bufferToSend = bufferQueue.poll();
+                    action = "sending transfer event";
+                    transferData(null);
+                    ++packetNumber;
+                    action = "sleeping";
+                    long expectedPacketNumber = (System.currentTimeMillis()-startTime)/20;
+                    sleepTime = (packetNumber-expectedPacketNumber-(bufferToSend==null? 0 : 10))*20;
+                    if (sleepTime>0)
+                        TimeUnit.MILLISECONDS.sleep(sleepTime);
+                }
+                catch (InterruptedException ex) {
+                    if (owner.isLogLevelEnabled(LogLevel.ERROR))
+                        owner.getLogger().error(
+                                "Transfer buffers to rtp session task was interrupted");
+                }
             }
-            catch (InterruptedException ex) {
-                if (owner.isLogLevelEnabled(LogLevel.ERROR))
-                    owner.getLogger().error("Transfer buffers to rtp session task was interrupted");
-            }
+            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                owner.getLogger().debug(
+                        "Transfer buffers to rtp session task was finished");
         }
-        if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-            owner.getLogger().debug(
-                    "Transfer buffers to rtp session task was finished");
+        finally
+        {
+            dataSource.setStreamThreadRunning(false);
+        }
     }
 }

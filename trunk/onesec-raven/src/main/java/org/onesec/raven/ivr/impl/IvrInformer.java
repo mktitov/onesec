@@ -63,6 +63,7 @@ public class IvrInformer
         extends BaseNode 
         implements DataSource, ConversationCompletionCallback, DataConsumer, Viewable
 {
+    public static final String INFORMER_BINDING = "informer";
     public final static String NOT_PROCESSED_STATUS = "NOT_PROCESSED";
     public final static String PROCESSING_ERROR_STATUS = "PROCESSING_ERROR";
     public static final String RECORD_BINDING = "record";
@@ -396,7 +397,8 @@ public class IvrInformer
                         new int[]{IvrEndpointState.IN_SERVICE}, Long.MAX_VALUE);
                 statusMessage = "Informing abonent: "+getRecordShortDesc();
                 Map<String, Object> bindings = new HashMap<String, Object>();
-                bindings.put( RECORD_BINDING, currentRecord);
+                bindings.put(RECORD_BINDING, currentRecord);
+                bindings.put(INFORMER_BINDING, this);
                 endpoint.invite(abonNumber, conversationScenario, this, bindings);
                 recordProcessed.await();
                 String status = null;

@@ -64,6 +64,8 @@ public class ConcatDataSource
     private final Node owner;
     private final AtomicBoolean dataConcated;
     private final AtomicBoolean stoped;
+    private final AtomicBoolean sourceThreadRunning;
+    private final AtomicBoolean streamThreadRunning;
     private final Format format = new AudioFormat(AudioFormat.ULAW_RTP, 8000d, 8, 1);
     private final int rtpPacketSize;
     private boolean started = false;
@@ -82,6 +84,8 @@ public class ConcatDataSource
         sources = new ConcurrentLinkedQueue<InputStreamSource>();
         dataConcated = new AtomicBoolean(false);
         stoped = new AtomicBoolean(false);
+        sourceThreadRunning = new AtomicBoolean(false);
+        streamThreadRunning = new AtomicBoolean(false);
         buffers = new ConcurrentLinkedQueue<Buffer>();
         streams = new ConcatDataStream[]{new ConcatDataStream(buffers, this, owner)};
         ResourceInputStreamSource silenceSource =
@@ -157,15 +161,38 @@ public class ConcatDataSource
     {
     }
 
-    public void close()
+    public void close() 
     {
+        reset();
         stoped.set(true);
+        try
+        {
+            while (sourceThreadRunning.get())
+                Thread.sleep(100);
+            while (streamThreadRunning.get())
+                Thread.sleep(100);
+        }
+        catch (InterruptedException interruptedException)
+        {
+            if (owner.isLogLevelEnabled(LogLevel.ERROR))
+                owner.getLogger().error("ConcatDataSource close operation was interrupted");
+        }
+    }
+
+    public boolean isClosed()
+    {
+        return stoped.get();
     }
 
     public void reset()
     {
         sources.clear();
         buffers.clear();
+    }
+
+    void setStreamThreadRunning(boolean streamThreadRunning)
+    {
+        this.streamThreadRunning.set(streamThreadRunning);
     }
 
     @Override
@@ -199,128 +226,136 @@ public class ConcatDataSource
 
     public void run()
     {
+        sourceThreadRunning.set(true);
         try
         {
-//            int i=0;
-            int bufferCount = 0;
-//            for (InputStreamSource source: sources)
-//            {
-            List<Buffer> initialBuffer = new ArrayList<Buffer>(INITIAL_BUFFER_SIZE);
-            while (!stoped.get())
+            try
             {
-                InputStreamSource source = sources.peek();
-                if (source==null)
+    //            int i=0;
+                int bufferCount = 0;
+    //            for (InputStreamSource source: sources)
+    //            {
+                List<Buffer> initialBuffer = new ArrayList<Buffer>(INITIAL_BUFFER_SIZE);
+                while (!stoped.get())
                 {
-                    Thread.sleep(5);
-                    continue;
-                }
-                try
-                {
-                    if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                        owner.getLogger().debug("AudioStream. Found new source. Processing...");
-                    long ts = System.currentTimeMillis();
-                    IssDataSource ids = new IssDataSource(source, contentType);
-                    Processor p = Manager.createProcessor(ids);
-                    p.addControllerListener(this);
-                    p.configure();
-                    waitForState(p, Processor.Configured);
-                    TrackControl[] tracks = p.getTrackControls();
-                    tracks[0].setFormat(format);
-                    Codec codec[] = new Codec[3];
-                    codec[0] = new com.ibm.media.codec.audio.rc.RCModule();
-                    codec[1] = new com.ibm.media.codec.audio.ulaw.JavaEncoder();
-                    codec[2] = new com.sun.media.codec.audio.ulaw.Packetizer();
-                    ((com.sun.media.codec.audio.ulaw.Packetizer)codec[2]).setPacketSize(rtpPacketSize);
-                    tracks[0].setCodecChain(codec);
-                    p.realize();
-                    waitForState(p, Processor.Realized);
-                    p.start();
-    //                waitForState(p, Processor.Started);
-
-                    PushBufferDataSource ds = (PushBufferDataSource) p.getDataOutput();
-                    ds.start();
-                    PushBufferStream s = ds.getStreams()[0];
-                    if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                        owner.getLogger().debug(
-                                "AudioStream. Source initialization time (ms) - "
-                                +(System.currentTimeMillis()-ts));
+                    InputStreamSource source = sources.peek();
+                    if (source==null)
+                    {
+                        Thread.sleep(5);
+                        continue;
+                    }
                     try
                     {
-                        boolean eom = false;
-                        initialBuffer.clear();
-                        boolean initialBufferInitialized = false;
-                        while (!eom)
+                        if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                            owner.getLogger().debug("AudioStream. Found new source. Processing...");
+                        long ts = System.currentTimeMillis();
+                        IssDataSource ids = new IssDataSource(source, contentType);
+                        Processor p = Manager.createProcessor(ids);
+                        p.addControllerListener(this);
+                        p.configure();
+                        waitForState(p, Processor.Configured);
+                        TrackControl[] tracks = p.getTrackControls();
+                        tracks[0].setFormat(format);
+                        Codec codec[] = new Codec[3];
+                        codec[0] = new com.ibm.media.codec.audio.rc.RCModule();
+                        codec[1] = new com.ibm.media.codec.audio.ulaw.JavaEncoder();
+                        codec[2] = new com.sun.media.codec.audio.ulaw.Packetizer();
+                        ((com.sun.media.codec.audio.ulaw.Packetizer)codec[2]).setPacketSize(rtpPacketSize);
+                        tracks[0].setCodecChain(codec);
+                        p.realize();
+                        waitForState(p, Processor.Realized);
+                        p.start();
+        //                waitForState(p, Processor.Started);
+
+                        PushBufferDataSource ds = (PushBufferDataSource) p.getDataOutput();
+                        ds.start();
+                        PushBufferStream s = ds.getStreams()[0];
+                        if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                            owner.getLogger().debug(
+                                    "AudioStream. Source initialization time (ms) - "
+                                    +(System.currentTimeMillis()-ts));
+                        try
                         {
-                            Buffer buffer = new Buffer();
-                            s.read(buffer);
-                            if (buffer.isDiscard())
+                            boolean eom = false;
+                            initialBuffer.clear();
+                            boolean initialBufferInitialized = false;
+                            while (!eom)
                             {
-                                Thread.sleep(2);
-                                continue;
-                            }
-                            if (silenceSource)
-                            {
-                                buffers.add(buffer);
-                                silenceSource = false;
-                                eom = true;
-                                if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                                    owner.getLogger().debug(
-                                            "AudioStream. Silence buffer initialized");
-                            }
-                            else
-                            {
-                                if (buffer.isEOM())
+                                Buffer buffer = new Buffer();
+                                s.read(buffer);
+                                if (buffer.isDiscard())
                                 {
-                                    eom = true;
-                                    buffer.setEOM(false);
+                                    Thread.sleep(2);
+                                    continue;
                                 }
-                                if (!initialBufferInitialized)
+                                if (silenceSource)
                                 {
-                                    initialBuffer.add(buffer);
-                                    if (initialBuffer.size()==INITIAL_BUFFER_SIZE)
-                                    {
-                                        initialBufferInitialized = true;
-                                        System.out.println("!!!>>>Flushing initial buffer: "+initialBuffer.size());
-                                        buffers.addAll(initialBuffer);
-//                                        initialBuffer.clear();
-                                    }
+                                    buffers.add(buffer);
+                                    silenceSource = false;
+                                    eom = true;
+                                    if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                                        owner.getLogger().debug(
+                                                "AudioStream. Silence buffer initialized");
                                 }
                                 else
-                                    buffers.add(buffer);
-                                ++bufferCount;
-        //                        streams[0].transferData(null);
-                                Thread.sleep(2);
+                                {
+                                    if (buffer.isEOM())
+                                    {
+                                        eom = true;
+                                        buffer.setEOM(false);
+                                    }
+                                    if (!initialBufferInitialized)
+                                    {
+                                        initialBuffer.add(buffer);
+                                        if (initialBuffer.size()==INITIAL_BUFFER_SIZE)
+                                        {
+                                            initialBufferInitialized = true;
+                                            System.out.println("!!!>>>Flushing initial buffer: "+initialBuffer.size());
+                                            buffers.addAll(initialBuffer);
+    //                                        initialBuffer.clear();
+                                        }
+                                    }
+                                    else
+                                        buffers.add(buffer);
+                                    ++bufferCount;
+            //                        streams[0].transferData(null);
+                                    Thread.sleep(2);
+                                }
+                            }
+                            if (!initialBufferInitialized && !initialBuffer.isEmpty())
+                            {
+                                System.out.println("!!!>>>Flushing initial buffer: "+initialBuffer.size());
+                                initialBufferInitialized = true;
+                                buffers.addAll(initialBuffer);
+    //                            initialBuffer.clear();
                             }
                         }
-                        if (!initialBufferInitialized && !initialBuffer.isEmpty())
+                        finally
                         {
-                            System.out.println("!!!>>>Flushing initial buffer: "+initialBuffer.size());
-                            initialBufferInitialized = true;
-                            buffers.addAll(initialBuffer);
-//                            initialBuffer.clear();
+                            ids.stop();
+                            p.stop();
+                            ds.stop();
+                            p.close();
                         }
                     }
                     finally
                     {
-                        ids.stop();
-                        p.stop();
-                        ds.stop();
-                        p.close();
+                        sources.poll();
                     }
                 }
-                finally
-                {
-                    sources.poll();
-                }
+                dataConcated.set(true);
+                if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                    owner.getLogger().debug(String.format("Gathered (%s) buffers", bufferCount));
+            } catch(Throwable e)
+            {
+                e.printStackTrace();
+                if (owner.isLogLevelEnabled(LogLevel.ERROR))
+                    owner.getLogger().error("AudioStream. Error creating continuous audio stream.", e);
             }
-            dataConcated.set(true);
-            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                owner.getLogger().debug(String.format("Gathered (%s) buffers", bufferCount));
-        } catch(Throwable e)
+        }
+        finally
         {
-            e.printStackTrace();
-            if (owner.isLogLevelEnabled(LogLevel.ERROR))
-                owner.getLogger().error("AudioStream. Error creating continuous audio stream.", e);
+            sourceThreadRunning.set(false);
         }
     }
 
