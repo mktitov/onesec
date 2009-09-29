@@ -21,8 +21,10 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -88,6 +90,9 @@ public class IvrInformer
     @NotNull @Parameter(defaultValue="5")
     private Short maxTries;
 
+    @Parameter
+    private String displayFields;
+
     private AtomicReference<IvrInformerStatus> informerStatus;
     private String statusMessage;
     private Record currentRecord;
@@ -123,6 +128,8 @@ public class IvrInformer
     private static String processedAbonsCountMessage;
     @Message
     private static String informedAbonsCountMessage;
+    @Message
+    private static String endpointStatusMessage;
 
     @Override
     protected void initFields()
@@ -181,6 +188,7 @@ public class IvrInformer
     {
         super.doStop();
         informerStatus.set(IvrInformerStatus.NOT_READY);
+        currentRecord = null;
     }
 
     public IvrInformerStatus getInformerStatus()
@@ -231,6 +239,16 @@ public class IvrInformer
     public void setMaxTries(Short maxTries)
     {
         this.maxTries = maxTries;
+    }
+
+    public String getDisplayFields()
+    {
+        return displayFields;
+    }
+
+    public void setDisplayFields(String displayFields)
+    {
+        this.displayFields = displayFields;
     }
 
     public boolean getDataImmediate(
@@ -417,7 +435,7 @@ public class IvrInformer
                         case OPPONENT_NO_ANSWERED: status = NUMBER_NOT_ANSWERED_STATUS; break;
                         case OPPONENT_UNKNOWN_ERROR: status = PROCESSING_ERROR_STATUS; break;
                     }
-                    if (sucProc)
+                    if (sucProc && conversationResult.getConversationDuration()>0)
                     {
                         lastSuccessfullyProcessedAbonId =
                                 (String) currentRecord.getValue(ABONENT_ID_FIELD);
@@ -501,6 +519,12 @@ public class IvrInformer
         viewableObjects.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE
                 , "<b>"+currentStatusMessage+"</b>: ("+informerStatus+") "+statusMessage));
 
+        //endpoint status
+        IvrEndpoint term = endpoint;
+        String termStatus = term==null? "UNKNOWN" : term.getEndpointState().getIdName();
+        viewableObjects.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE
+                , "<b>"+endpointStatusMessage+"</b>: "+termStatus));
+
         //current record
         viewableObjects.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE
                 , "<b>"+currentRecordMessage+"</b>: "));
@@ -508,14 +532,23 @@ public class IvrInformer
         Record rec = currentRecord;
         if (rec!=null)
         {
+            String fieldNames = displayFields;
+            String[] fields = fieldNames==null? null : fieldNames.split("\\s*,\\s*");
+            Set<String> fieldsSet = new HashSet<String>();
+            if (fields!=null)
+                for (String name: fields)
+                    fieldsSet.add(name);
             TableImpl table = new TableImpl(
                     new String[]{fieldNameColumnMessage, valueColumnMessage});
             for (RecordSchemaField field: rec.getSchema().getFields())
             {
-                String fieldName = field.getDisplayName();
-                String value = converter.convert(
-                        String.class, rec.getValue(field.getName()), field.getPattern());
-                table.addRow(new Object[]{fieldName, value});
+                if (fieldsSet.isEmpty() || fieldsSet.contains(field.getName()))
+                {
+                    String fieldName = field.getDisplayName();
+                    String value = converter.convert(
+                            String.class, rec.getValue(field.getName()), field.getPattern());
+                    table.addRow(new Object[]{fieldName, value});
+                }
             }
             viewableObjects.add(new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, table));
         }

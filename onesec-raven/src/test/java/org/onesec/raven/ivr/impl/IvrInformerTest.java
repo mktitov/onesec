@@ -18,6 +18,7 @@
 package org.onesec.raven.ivr.impl;
 
 import java.io.FileInputStream;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.Before;
@@ -30,16 +31,17 @@ import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.impl.CCMCallOperatorNode;
 import org.onesec.raven.impl.ProviderNode;
 import org.onesec.raven.ivr.IvrEndpointState;
-import org.onesec.raven.ivr.IvrInformerStatus;
 import org.onesec.raven.ivr.actions.PauseActionNode;
 import org.onesec.raven.ivr.actions.PlayAudioActionNode;
 import org.onesec.raven.ivr.actions.StopConversationActionNode;
+import org.onesec.raven.ivr.actions.TransferCallActionNode;
 import org.raven.conv.ConversationScenarioPoint;
 import org.raven.conv.impl.ConversationScenarioNode;
 import org.raven.conv.impl.ConversationScenarioPointNode;
 import org.raven.conv.impl.GotoNode;
 import org.raven.ds.Record;
 import org.raven.ds.RecordException;
+import org.raven.expr.impl.ExpressionAttributeValueHandlerFactory;
 import org.raven.expr.impl.IfNode;
 import org.raven.log.LogLevel;
 import org.raven.sched.impl.ExecutorServiceNode;
@@ -47,6 +49,7 @@ import org.raven.test.DataCollector;
 import org.raven.test.DummyScheduler;
 import org.raven.test.PushOnDemandDataSource;
 import org.raven.tree.Node;
+import org.raven.tree.NodeAttribute;
 import org.raven.tree.NodeError;
 
 /**
@@ -76,7 +79,7 @@ public class IvrInformerTest extends OnesecRavenTestCase
         provider.setName("88013 provider");
         callOperator.getProvidersNode().addAndSaveChildren(provider);
         provider.setFromNumber(88013);
-        provider.setToNumber(88013);
+        provider.setToNumber(88024);
         provider.setHost("10.16.15.1");
         provider.setPassword("cti_user1");
         provider.setUser("cti_user1");
@@ -152,7 +155,7 @@ public class IvrInformerTest extends OnesecRavenTestCase
         printRecordsInformation(recs);
     }
 
-    @Test()
+//    @Test()
     public void maxTriesTest() throws Exception
     {
         createScenario();
@@ -162,6 +165,20 @@ public class IvrInformerTest extends OnesecRavenTestCase
         rec.setValue(IvrInformerRecordSchemaNode.TRIES_FIELD, 1);
         dataSource.addDataPortion(rec);
         informer.setMaxTries((short)1);
+        assertTrue(informer.start());
+        informer.startProcessing();
+
+        List recs = dataCollector.getDataList();
+//        assertEquals(3, recs.size());
+        printRecordsInformation(recs);
+    }
+
+    @Test
+    public void transferTest() throws Exception
+    {
+        createScenario2();
+        dataSource.addDataPortion(createRecord("abon1", "089128672947"));
+        dataSource.addDataPortion(createRecord("abon2", "089128672947"));
         assertTrue(informer.start());
         informer.startProcessing();
 
@@ -271,6 +288,25 @@ public class IvrInformerTest extends OnesecRavenTestCase
         stopConversationActionNode.setName("stop conversation");
         ifNode1.addAndSaveChildren(stopConversationActionNode);
         assertTrue(stopConversationActionNode.start());
+        waitForProvider();
+        assertTrue(endpoint.start());
+        StateWaitResult res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.IN_SERVICE}, 2000);
+    }
+
+    private void createScenario2() throws Exception, NodeError
+    {
+        AudioFileNode audioNode1 = createAudioFileNode("audio1", "src/test/wav/test2.wav");
+
+        createPlayAudioActionNode("hello", scenario, audioNode1);
+
+        TransferCallActionNode transfer = new TransferCallActionNode();
+        transfer.setName("transfer to 88024");
+        scenario.addAndSaveChildren(transfer);
+        transfer.setAddress("88024");
+        transfer.setMonitorTransfer(Boolean.TRUE);
+        assertTrue(transfer.start());
+
         waitForProvider();
         assertTrue(endpoint.start());
         StateWaitResult res = endpoint.getEndpointState().waitForState(

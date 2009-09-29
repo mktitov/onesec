@@ -184,7 +184,7 @@ public class IvrEndpointNodeTest
 
     }
 
-    @Test
+//    @Test
     public void inviteTest() throws Exception
     {
         AudioFileNode audioNode1 = createAudioFileNode("audio1", "src/test/wav/test2.wav");
@@ -255,7 +255,7 @@ public class IvrEndpointNodeTest
         Thread.sleep(1000);
     }
 
-//    @Test
+    @Test
     public void inviteWithTransferTest() throws Exception
     {
         AudioFileNode audioNode1 = createAudioFileNode("audio1", "src/test/wav/test2.wav");
@@ -285,7 +285,7 @@ public class IvrEndpointNodeTest
         res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.TALKING}, 250000);
         res = endpoint.getEndpointState().waitForState(
-                new int[]{IvrEndpointState.IN_SERVICE}, 50000);
+                new int[]{IvrEndpointState.IN_SERVICE}, 600000);
 
     }
 
