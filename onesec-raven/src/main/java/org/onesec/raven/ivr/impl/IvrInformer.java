@@ -138,6 +138,7 @@ public class IvrInformer
         recordLock = new ReentrantLock();
         recordProcessed = recordLock.newCondition();
         informerStatus = new AtomicReference<IvrInformerStatus>(IvrInformerStatus.NOT_READY);
+        statusMessage = "";
         resetStatFields();
     }
 
@@ -318,8 +319,8 @@ public class IvrInformer
         if (!(data instanceof Record))
             return;
         Record rec = (Record) data;
-        if (!(rec.getSchema() instanceof IvrInformerRecordSchemaNode))
-            return;
+//        if (!(rec.getSchema() instanceof IvrInformerRecordSchemaNode))
+//            return;
 
         ++processedRecordsCount;
         currentRecord = rec;
@@ -329,7 +330,7 @@ public class IvrInformer
             Short tries = (Short) currentRecord.getValue(TRIES_FIELD);
             if (tries==null || tries<maxTries)
             {
-                String abonId = (String) currentRecord.getValue(ABONENT_ID_FIELD);
+                String abonId = "" + currentRecord.getValue(ABONENT_ID_FIELD);
                 if (!ObjectUtils.equals(lastAbonId, abonId))
                 {
                     ++processedAbonsCount;
@@ -438,7 +439,7 @@ public class IvrInformer
                     if (sucProc && conversationResult.getConversationDuration()>0)
                     {
                         lastSuccessfullyProcessedAbonId =
-                                (String) currentRecord.getValue(ABONENT_ID_FIELD);
+                                ""+ currentRecord.getValue(ABONENT_ID_FIELD);
                         ++informedAbonsCount;
                     }
                     currentRecord.setValue(COMPLETION_CODE_FIELD, status);
