@@ -121,7 +121,6 @@ public class IvrEndpointNode extends BaseNode
     @Parameter
     private IvrConversationScenarioNode conversationScenario;
 
-    @Parameter(readOnly=true)
     private IvrEndpointStateImpl endpointState;
 
     @NotNull @Parameter(valueHandlerType=SystemSchedulerValueHandlerFactory.TYPE)
@@ -435,6 +434,12 @@ public class IvrEndpointNode extends BaseNode
         {
             endpointState.setState(IvrEndpointState.OUT_OF_SERVICE);
         }
+    }
+
+    @Parameter(readOnly=true)
+    public String getState()
+    {
+        return endpointState.getIdName();
     }
 
     public IvrEndpointState getEndpointState()
