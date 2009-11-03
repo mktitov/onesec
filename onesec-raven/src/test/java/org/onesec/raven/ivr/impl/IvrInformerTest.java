@@ -18,7 +18,6 @@
 package org.onesec.raven.ivr.impl;
 
 import java.io.FileInputStream;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.Before;
@@ -41,7 +40,6 @@ import org.raven.conv.impl.ConversationScenarioPointNode;
 import org.raven.conv.impl.GotoNode;
 import org.raven.ds.Record;
 import org.raven.ds.RecordException;
-import org.raven.expr.impl.ExpressionAttributeValueHandlerFactory;
 import org.raven.expr.impl.IfNode;
 import org.raven.log.LogLevel;
 import org.raven.sched.impl.ExecutorServiceNode;
@@ -49,7 +47,6 @@ import org.raven.test.DataCollector;
 import org.raven.test.DummyScheduler;
 import org.raven.test.PushOnDemandDataSource;
 import org.raven.tree.Node;
-import org.raven.tree.NodeAttribute;
 import org.raven.tree.NodeError;
 
 /**
@@ -132,6 +129,7 @@ public class IvrInformerTest extends OnesecRavenTestCase
         informer.setConversationScenario(scenario);
         informer.setDataSource(dataSource);
         informer.setEndpoint(endpoint);
+        informer.setLogLevel(LogLevel.DEBUG);
         
         dataCollector = new DataCollector();
         dataCollector.setName("dataCollector");
@@ -146,7 +144,23 @@ public class IvrInformerTest extends OnesecRavenTestCase
         createScenario();
         dataSource.addDataPortion(createRecord("abon1", "88024"));
         dataSource.addDataPortion(createRecord("abon1", "089128672947"));
-        dataSource.addDataPortion(createRecord("abon2", "88027"));
+        dataSource.addDataPortion(createRecord("abon2", "88024"));
+        assertTrue(informer.start());
+        informer.startProcessing();
+
+        List recs = dataCollector.getDataList();
+//        assertEquals(3, recs.size());
+        printRecordsInformation(recs);
+    }
+
+    @Test()
+    public void maxCallDurationTest() throws Exception
+    {
+        createScenario();
+        informer.setMaxCallDuration(30);
+        dataSource.addDataPortion(createRecord("abon1", "88024"));
+        dataSource.addDataPortion(createRecord("abon1", "089128672947"));
+        dataSource.addDataPortion(createRecord("abon2", "88024"));
         assertTrue(informer.start());
         informer.startProcessing();
 
@@ -173,7 +187,7 @@ public class IvrInformerTest extends OnesecRavenTestCase
         printRecordsInformation(recs);
     }
 
-    @Test
+//    @Test
     public void transferTest() throws Exception
     {
         createScenario2();

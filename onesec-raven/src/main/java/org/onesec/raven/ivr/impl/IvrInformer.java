@@ -25,6 +25,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -46,6 +47,7 @@ import org.raven.log.LogLevel;
 import org.raven.table.TableImpl;
 import org.raven.tree.Node;
 import org.raven.tree.NodeAttribute;
+import org.raven.tree.NodeError;
 import org.raven.tree.Viewable;
 import org.raven.tree.ViewableObject;
 import org.raven.tree.impl.BaseNode;
@@ -91,6 +93,9 @@ public class IvrInformer
     private Short maxTries;
 
     @Parameter
+    private Integer maxCallDuration;
+
+    @Parameter
     private String displayFields;
 
     private AtomicReference<IvrInformerStatus> informerStatus;
@@ -107,6 +112,9 @@ public class IvrInformer
     private int processedRecordsCount;
     private int processedAbonsCount;
     private int informedAbonsCount;
+    private long processRecordStartTime;
+    private long callStartTime;
+    private int handledRecordSets;
 
     @Message
     private static String currentStatusMessage;
@@ -130,6 +138,12 @@ public class IvrInformer
     private static String informedAbonsCountMessage;
     @Message
     private static String endpointStatusMessage;
+    @Message
+    private static String processRecordDurationMessage;
+    @Message
+    private static String currentCallDurationMessage;
+    @Message
+    private static String handledRecordSetsMessage;
 
     @Override
     protected void initFields()
@@ -147,6 +161,9 @@ public class IvrInformer
         processedRecordsCount = 0;
         processedAbonsCount = 0;
         informedAbonsCount = 0;
+        handledRecordSets = 0;
+        callStartTime = 0;
+        processRecordStartTime = 0;
     }
 
     @Override
@@ -190,6 +207,28 @@ public class IvrInformer
         super.doStop();
         informerStatus.set(IvrInformerStatus.NOT_READY);
         currentRecord = null;
+    }
+
+    public Integer getMaxCallDuration()
+    {
+        return maxCallDuration;
+    }
+
+    public void setMaxCallDuration(Integer maxCallDuration)
+    {
+        this.maxCallDuration = maxCallDuration;
+    }
+
+    @Parameter(readOnly=true)
+    public Long getCurrentCallDuration()
+    {
+        return callStartTime==0? 0 : (System.currentTimeMillis()-callStartTime)/1000;
+    }
+
+    @Parameter(readOnly=true)
+    public Long getProcessRecordDuration()
+    {
+        return processRecordStartTime==0? 0 : (System.currentTimeMillis()-processRecordStartTime)/1000;
     }
 
     public IvrInformerStatus getInformerStatus()
@@ -295,6 +334,7 @@ public class IvrInformer
         }
         finally
         {
+            ++handledRecordSets;
             lastSuccessfullyProcessedAbonId = null;
             lastAbonId = null;
             informerStatus.set(IvrInformerStatus.WAITING);
@@ -321,38 +361,46 @@ public class IvrInformer
         Record rec = (Record) data;
 //        if (!(rec.getSchema() instanceof IvrInformerRecordSchemaNode))
 //            return;
-
-        ++processedRecordsCount;
-        currentRecord = rec;
-        statusMessage = "Recieved new record: "+getRecordShortDesc();
+        processRecordStartTime = System.currentTimeMillis();
         try
         {
-            Short tries = (Short) currentRecord.getValue(TRIES_FIELD);
-            if (tries==null || tries<maxTries)
+            ++processedRecordsCount;
+            currentRecord = rec;
+            statusMessage = "Recieved new record: "+getRecordShortDesc();
+            try
             {
-                String abonId = "" + currentRecord.getValue(ABONENT_ID_FIELD);
-                if (!ObjectUtils.equals(lastAbonId, abonId))
+                Short tries = (Short) currentRecord.getValue(TRIES_FIELD);
+                if (tries==null || tries<maxTries)
                 {
-                    ++processedAbonsCount;
-                    lastAbonId = abonId;
+                    String abonId = "" + currentRecord.getValue(ABONENT_ID_FIELD);
+                    if (!ObjectUtils.equals(lastAbonId, abonId))
+                    {
+                        ++processedAbonsCount;
+                        lastAbonId = abonId;
+                    }
+                    if (ObjectUtils.equals(lastSuccessfullyProcessedAbonId, abonId))
+                        skipRecord();
+                    else
+                        informAbonent();
+                    sendDataToConsumers(currentRecord);
+                    sendDataToConsumers(null);
+                    statusMessage = String.format(
+                            "Abonent informed (%s). Waiting for new record", getRecordShortDesc());
                 }
-                if (ObjectUtils.equals(lastSuccessfullyProcessedAbonId, abonId))
-                    skipRecord();
                 else
-                    informAbonent();
-                sendDataToConsumers(currentRecord);
-                statusMessage = String.format(
-                        "Abonent informed (%s). Waiting for new record", getRecordShortDesc());
+                    statusMessage = String.format(
+                            "Abonent skiped (%s). Max tries (%s) reached"
+                            , getRecordShortDesc(), maxTries);
             }
-            else
-                statusMessage = String.format(
-                        "Abonent skiped (%s). Max tries (%s) reached"
-                        , getRecordShortDesc(), maxTries);
+            catch(Throwable e)
+            {
+                if (isLogLevelEnabled(LogLevel.ERROR))
+                    error(getRecordInfo(), e);
+            }
         }
-        catch(Throwable e)
+        finally
         {
-            if (isLogLevelEnabled(LogLevel.ERROR))
-                error(getRecordInfo(), e);
+            processRecordStartTime = 0;
         }
     }
 
@@ -392,6 +440,27 @@ public class IvrInformer
         return null;
     }
 
+    private void restartEndpoint() throws InterruptedException, NodeError
+    {
+        if (isLogLevelEnabled(LogLevel.WARN))
+            warn(String.format("The call is too long! Restaring endpoint (%s)", endpoint.getPath()));
+
+        endpoint.stop();
+
+        if (isLogLevelEnabled(LogLevel.DEBUG))
+            debug(String.format("Endpoint (%s) stoped", endpoint.getPath()));
+        TimeUnit.SECONDS.sleep(5);
+        endpoint.start();
+        TimeUnit.SECONDS.sleep(10);
+        if (   Status.STARTED.equals(endpoint.getStatus())
+            && IvrEndpointState.IN_SERVICE == endpoint.getEndpointState().getId())
+        {
+            if (isLogLevelEnabled(LogLevel.DEBUG))
+                debug(String.format("Endpoint (%s) successfully restarted", endpoint.getPath()));
+        } else if (isLogLevelEnabled(LogLevel.ERROR))
+            error(String.format("Error restarting endpoint (%s)", endpoint.getPath()));
+    }
+
     private void skipRecord() throws RecordException
     {
         statusMessage = "Skiping record: "+getRecordShortDesc();
@@ -414,15 +483,23 @@ public class IvrInformer
                         +getRecordShortDesc();
                 endpoint.getEndpointState().waitForState(
                         new int[]{IvrEndpointState.IN_SERVICE}, Long.MAX_VALUE);
+                callStartTime = System.currentTimeMillis();
                 statusMessage = "Informing abonent: "+getRecordShortDesc();
                 Map<String, Object> bindings = new HashMap<String, Object>();
                 bindings.put(RECORD_BINDING, currentRecord);
                 bindings.put(INFORMER_BINDING, this);
                 endpoint.invite(abonNumber, conversationScenario, this, bindings);
-                recordProcessed.await();
+                Integer _maxCallDuration = maxCallDuration;
+                if (_maxCallDuration!=null && _maxCallDuration>0)
+                {
+                    if (!recordProcessed.await(_maxCallDuration, TimeUnit.SECONDS))
+                        restartEndpoint();
+                }
+                else
+                    recordProcessed.await();
                 String status = null;
                 if (conversationResult==null)
-                    status = PROCESSING_ERROR_STATUS;
+                    currentRecord.setValue(COMPLETION_CODE_FIELD, PROCESSING_ERROR_STATUS);
                 else
                 {
                     boolean sucProc = false;
@@ -494,6 +571,7 @@ public class IvrInformer
         finally
         {
             recordLock.unlock();
+            callStartTime = 0;
         }
     }
 
@@ -526,9 +604,17 @@ public class IvrInformer
         viewableObjects.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE
                 , "<b>"+endpointStatusMessage+"</b>: "+termStatus));
 
+        viewableObjects.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE
+                , "<b>"+handledRecordSetsMessage+"</b>: "+handledRecordSets));
+        viewableObjects.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE
+                , "<b>"+processRecordDurationMessage+"</b>: "+getCurrentCallDuration()));
+        viewableObjects.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE
+                , "<b>"+currentCallDurationMessage+"</b>: "+getCurrentCallDuration()));
+
         //current record
         viewableObjects.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE
                 , "<b>"+currentRecordMessage+"</b>: "));
+
 
         Record rec = currentRecord;
         if (rec!=null)
