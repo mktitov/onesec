@@ -75,8 +75,8 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
         provider.setFromNumber(88013);
         provider.setToNumber(88024);
         provider.setHost("10.16.15.1");
-//        provider.setPassword("cti_user1");
-//        provider.setUser("cti_user1");
+        provider.setPassword("cti_user1");
+        provider.setUser("cti_user1");
         assertTrue(provider.start());
 
         executor = new ExecutorServiceNode();
@@ -202,6 +202,30 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
     }
 
     @Test(timeout=60000)
+    public void alreadyInformingTest() throws Exception
+    {
+        createScenario();
+        assertTrue(informer.start());
+        dataSource.pushData(createRecord(1, "abon1", "88024"));
+        dataSource.pushData(createRecord(2, "abon1", "88024"));
+
+        while (informer.getSessionsCount()>0)
+            TimeUnit.MILLISECONDS.sleep(500);
+
+        List dataList = dataCollector.getDataList();
+        Map<Long, Record> recs = getRecords(dataList);
+        assertEquals(4, dataList.size());
+        assertEquals(2, recs.size());
+        assertNotNull(recs.get(1l));
+        assertTrue((Long)recs.get(1l).getValue(CONVERSATION_DURATION_FIELD)>0);
+        assertNotNull(recs.get(2l));
+        assertEquals(
+                AsyncIvrInformer.ALREADY_INFORMING
+                , recs.get(2l).getValue(COMPLETION_CODE_FIELD));
+        printRecordsInformation(dataList);
+    }
+
+//    @Test(timeout=60000)
     public void asyncTest() throws Exception
     {
         informer.setWaitForSession(Boolean.FALSE);
