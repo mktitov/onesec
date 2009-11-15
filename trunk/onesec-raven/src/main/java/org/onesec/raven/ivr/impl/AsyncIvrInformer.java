@@ -161,6 +161,7 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
     {
         super.doStart();
         resetStatFields();
+        sessions.clear();
         generateNodes();
         informerStatus.set(IvrInformerStatus.WAITING);
     }
@@ -197,6 +198,36 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
     public void setRecordSchema(RecordSchemaNode recordSchema)
     {
         this.recordSchema = recordSchema;
+    }
+
+    public Integer getEndpointWaitTimeout()
+    {
+        return endpointWaitTimeout;
+    }
+
+    public void setEndpointWaitTimeout(Integer endpointWaitTimeout)
+    {
+        this.endpointWaitTimeout = endpointWaitTimeout;
+    }
+
+    public Integer getMaxSessionsCount()
+    {
+        return maxSessionsCount;
+    }
+
+    public void setMaxSessionsCount(Integer maxSessionsCount)
+    {
+        this.maxSessionsCount = maxSessionsCount;
+    }
+
+    public Boolean getWaitForSession()
+    {
+        return waitForSession;
+    }
+
+    public void setWaitForSession(Boolean waitForSession)
+    {
+        this.waitForSession = waitForSession;
     }
 
     public Integer getMaxCallDuration()
@@ -485,6 +516,19 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         return true;
     }
 
+    public int getSessionsCount()
+    {
+        dataLock.readLock().lock();
+        try
+        {
+            return sessions.size();
+        }
+        finally
+        {
+            dataLock.readLock().unlock();
+        }
+    }
+
     private void initFields(Record rec) throws RecordException
     {
         rec.setValue(CALL_START_TIME_FIELD, new Timestamp(System.currentTimeMillis()));
@@ -498,7 +542,7 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
             if (ObjectUtils.equals(number, session.getRecord().getValue(ABONENT_NUMBER_FIELD)))
             {
                 rec.setValue(COMPLETION_CODE_FIELD, ALREADY_INFORMING);
-                sendDataToConsumers(rec);
+                sendRecordToConsumers(rec);
                 return true;
             }
         }
@@ -514,7 +558,7 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         if (sessions.size()>=maxSessionsCount && !waitForSession)
         {
             rec.setValue(COMPLETION_CODE_FIELD, ERROR_TOO_MANY_SESSIONS);
-            sendDataToConsumers(rec);
+            sendRecordToConsumers(rec);
             return null;
         }
 
@@ -526,7 +570,7 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         if (endpoint==null)
         {
             rec.setValue(COMPLETION_CODE_FIELD, ERROR_NO_FREE_ENDPOINT_IN_THE_POOL);
-            sendDataToConsumers(rec);
+            sendRecordToConsumers(rec);
             return null;
         }
 

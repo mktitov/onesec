@@ -102,7 +102,7 @@ public class IvrInformerSession implements Task, ConversationCompletionCallback
                 bindings.put(AsyncIvrInformer.RECORD_BINDING, record);
                 bindings.put(AsyncIvrInformer.INFORMER_BINDING, this);
                 statusMessage = "Calling to the abonent";
-                String abonentNumber = converter.convert(String.class, record.getValue(ID_FIELD), null);
+                String abonentNumber = converter.convert(String.class, record.getValue(ABONENT_NUMBER_FIELD), null);
                 informLock.lock();
                 try
                 {
