@@ -71,7 +71,7 @@ public class IvrEndpointNodeTest
         provider.setName("88013 provider");
         callOperator.getProvidersNode().addAndSaveChildren(provider);
         provider.setFromNumber(88013);
-        provider.setToNumber(88024);
+        provider.setToNumber(88037);
         provider.setHost("10.16.15.1");
         provider.setPassword("cti_user1");
         provider.setUser("cti_user1");
@@ -94,7 +94,7 @@ public class IvrEndpointNodeTest
         tree.getRootNode().addAndSaveChildren(endpoint);
         endpoint.setExecutorService(executor);
         endpoint.setConversationScenario(scenario);
-        endpoint.setAddress("88013");
+        endpoint.setAddress("88037");
         endpoint.setIp("10.50.1.134");
         endpoint.setLogLevel(LogLevel.TRACE);
     }
