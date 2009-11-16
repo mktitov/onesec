@@ -31,6 +31,7 @@ import org.onesec.raven.ivr.IvrEndpoint;
 import org.onesec.raven.ivr.IvrEndpointPool;
 import org.onesec.raven.ivr.IvrInformerStatus;
 import org.raven.RavenUtils;
+import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.ds.DataConsumer;
 import org.raven.ds.DataSource;
@@ -59,6 +60,7 @@ import static org.onesec.raven.ivr.impl.IvrInformerRecordSchemaNode.*;
  *
  * @author Mikhail Titov
  */
+@NodeClass
 public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsumer, Viewable
 {
     public static final String ERROR_NO_FREE_ENDPOINT_IN_THE_POOL = "ERROR_NO_FREE_ENDPOINT_IN_THE_POOL";
@@ -372,9 +374,8 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         try
         {
             return String.format(
-                    "id (%s), abon_id (%s), abon_number (%s)"
+                    "id (%s), abon_number (%s)"
                     , rec.getValue(ID_FIELD)
-                    , rec.getValue(ABONENT_ID_FIELD)
                     , rec.getValue(ABONENT_NUMBER_FIELD));
         } catch (RecordException ex)
         {
@@ -529,6 +530,19 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         }
     }
 
+    public IvrInformerSession getSession(long id)
+    {
+        dataLock.readLock().lock();
+        try
+        {
+            return sessions.get(id);
+        }
+        finally
+        {
+            dataLock.readLock().unlock();
+        }
+    }
+
     private void initFields(Record rec) throws RecordException
     {
         rec.setValue(CALL_START_TIME_FIELD, new Timestamp(System.currentTimeMillis()));
@@ -586,17 +600,26 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
     {
         try
         {
+            if (isLogLevelEnabled(LogLevel.DEBUG))
+                debug("Realising endpoint: "+session.getEndpoint().getName());
             endpointPool.releaseEndpoint(session.getEndpoint());
             
             Long id = converter.convert(Long.class, session.getRecord().getValue(ID_FIELD), null);
+            if (isLogLevelEnabled(LogLevel.DEBUG))
+                debug("Removing session: "+id);
             dataLock.writeLock().lock();
             try
             {
                 session = sessions.remove(id);
                 if (session != null)
                 {
+                    if (isLogLevelEnabled(LogLevel.DEBUG))
+                        debug("Session successfully removed: "+id);
                     sessionRemoved.signal();
                 }
+                else
+                    if (isLogLevelEnabled(LogLevel.DEBUG))
+                        debug("Session with id ("+id+") not found");
             } finally
             {
                 dataLock.writeLock().unlock();
