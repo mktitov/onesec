@@ -662,7 +662,11 @@ public class IvrEndpointNode extends BaseNode
                 bindingSupport.put(DTMF_BINDING, ""+dtmfChar);
                 for (Node node: actions)
                     if (node instanceof IvrActionNode)
-                        ivrActions.add(((IvrActionNode)node).createAction());
+                    {
+                        IvrAction action = ((IvrActionNode)node).createAction();
+                        if (action!=null)
+                            ivrActions.add(action);
+                    }
                 if (conversationState.hasImmediateTransition())
                     ivrActions.add(new ContinueConversationAction());
                 actionsExecutor.executeActions(ivrActions);
