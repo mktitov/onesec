@@ -34,6 +34,11 @@ public class NumberToDigitConverterTest extends Assert
         assertEquals(234, n);
         n/=100;
         assertEquals(2, n);
+
+        double d = 20.3456;
+        long l = (long) d;
+        assertEquals(20l, l);
+        assertEquals(34l, (long)((d-l)*100));
     }
 
     @Test
@@ -98,5 +103,165 @@ public class NumberToDigitConverterTest extends Assert
         Collection<String> list = NumberToDigitConverter.getDigits(90);
         assertNotNull(list);
         assertArrayEquals(new Object[]{"90"}, list.toArray());
+    }
+
+    @Test
+    public void getDigits_1000()
+    {
+        Collection<String> list = NumberToDigitConverter.getDigits(1000);
+        assertNotNull(list);
+        assertArrayEquals(new Object[]{"1'", "тыс€ча"}, list.toArray());
+    }
+
+    @Test
+    public void getDigits_22000()
+    {
+        Collection<String> list = NumberToDigitConverter.getDigits(22000);
+        assertNotNull(list);
+        assertArrayEquals(new Object[]{"20", "2'", "тыс€чи"}, list.toArray());
+    }
+
+    @Test
+    public void getDigits_33000()
+    {
+        Collection<String> list = NumberToDigitConverter.getDigits(33000);
+        assertNotNull(list);
+        assertArrayEquals(new Object[]{"30", "3", "тыс€чи"}, list.toArray());
+    }
+
+    @Test
+    public void getDigits_44000()
+    {
+        Collection<String> list = NumberToDigitConverter.getDigits(44000);
+        assertNotNull(list);
+        assertArrayEquals(new Object[]{"40", "4", "тыс€чи"}, list.toArray());
+    }
+
+    @Test
+    public void getDigits_55000()
+    {
+        Collection<String> list = NumberToDigitConverter.getDigits(55000);
+        assertNotNull(list);
+        assertArrayEquals(new Object[]{"50", "5", "тыс€ч"}, list.toArray());
+    }
+
+    @Test
+    public void getDigits_1001()
+    {
+        Collection<String> list = NumberToDigitConverter.getDigits(1001);
+        assertNotNull(list);
+        assertArrayEquals(new Object[]{"1'", "тыс€ча", "1"}, list.toArray());
+    }
+
+    @Test
+    public void getDigits_1011()
+    {
+        Collection<String> list = NumberToDigitConverter.getDigits(1011);
+        assertNotNull(list);
+        assertArrayEquals(new Object[]{"1'", "тыс€ча", "11"}, list.toArray());
+    }
+
+    @Test
+    public void getCurrencyDigits_1()
+    {
+        Collection<String> list = NumberToDigitConverter.getCurrencyDigits(1.);
+        assertNotNull(list);
+        assertArrayEquals(new Object[]{"1", "рубль"}, list.toArray());
+    }
+
+    @Test
+    public void getCurrencyDigits_2()
+    {
+        Collection<String> list = NumberToDigitConverter.getCurrencyDigits(2.);
+        assertNotNull(list);
+        assertArrayEquals(new Object[]{"2", "рубл€"}, list.toArray());
+    }
+
+    @Test
+    public void getCurrencyDigits_3()
+    {
+        Collection<String> list = NumberToDigitConverter.getCurrencyDigits(3.);
+        assertNotNull(list);
+        assertArrayEquals(new Object[]{"3", "рубл€"}, list.toArray());
+    }
+    
+    @Test
+    public void getCurrencyDigits_4()
+    {
+        Collection<String> list = NumberToDigitConverter.getCurrencyDigits(4.);
+        assertNotNull(list);
+        assertArrayEquals(new Object[]{"4", "рубл€"}, list.toArray());
+    }
+    
+    @Test
+    public void getCurrencyDigits_5()
+    {
+        Collection<String> list = NumberToDigitConverter.getCurrencyDigits(5.);
+        assertNotNull(list);
+        assertArrayEquals(new Object[]{"5", "рублей"}, list.toArray());
+    }
+
+    @Test
+    public void getCurrencyDigits_1000()
+    {
+        Collection<String> list = NumberToDigitConverter.getCurrencyDigits(1000.);
+        assertNotNull(list);
+        assertArrayEquals(new Object[]{"1'", "тыс€ча", "рублей"}, list.toArray());
+    }
+
+    @Test
+    public void getCurrencyDigits_0_1()
+    {
+        Collection<String> list = NumberToDigitConverter.getCurrencyDigits(.01);
+        assertNotNull(list);
+        assertArrayEquals(new Object[]{"1'", "копейка"}, list.toArray());
+    }
+
+    @Test
+    public void getCurrencyDigits_0_22()
+    {
+        Collection<String> list = NumberToDigitConverter.getCurrencyDigits(.22);
+        assertNotNull(list);
+        assertArrayEquals(new Object[]{"20", "2'", "копейки"}, list.toArray());
+    }
+    
+    @Test
+    public void getCurrencyDigits_0_33()
+    {
+        Collection<String> list = NumberToDigitConverter.getCurrencyDigits(.33);
+        assertNotNull(list);
+        assertArrayEquals(new Object[]{"30", "3", "копейки"}, list.toArray());
+    }
+    
+    @Test
+    public void getCurrencyDigits_0_44()
+    {
+        Collection<String> list = NumberToDigitConverter.getCurrencyDigits(.44);
+        assertNotNull(list);
+        assertArrayEquals(new Object[]{"40", "4", "копейки"}, list.toArray());
+    }
+    
+    @Test
+    public void getCurrencyDigits_0_55()
+    {
+        Collection<String> list = NumberToDigitConverter.getCurrencyDigits(.55);
+        assertNotNull(list);
+        assertArrayEquals(new Object[]{"50", "5", "копеек"}, list.toArray());
+    }
+
+    @Test
+    public void getCurrencyDigits_0_19()
+    {
+        Collection<String> list = NumberToDigitConverter.getCurrencyDigits(.19);
+        assertNotNull(list);
+        assertArrayEquals(new Object[]{"19", "копеек"}, list.toArray());
+    }
+
+    @Test
+    public void getCurrencyDigits_101023_19()
+    {
+        Collection<String> list = NumberToDigitConverter.getCurrencyDigits(101023.19);
+        assertNotNull(list);
+        assertArrayEquals(new Object[]{"100", "1'", "тыс€ча","20", "3", "рубл€", "19", "копеек"}, list.toArray());
     }
 }
