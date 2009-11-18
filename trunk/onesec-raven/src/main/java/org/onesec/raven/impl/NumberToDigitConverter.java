@@ -17,6 +17,7 @@
 
 package org.onesec.raven.impl;
 
+import java.math.BigDecimal;
 import java.util.LinkedList;
 import java.util.List;
 import static org.weda.beans.ObjectUtils.*;
@@ -78,7 +79,7 @@ public class NumberToDigitConverter
     public static List<String> getCurrencyDigits(double amount)
     {
         long rub = (long) amount;
-        long kop = (long) ((amount - rub) * 100);
+        long kop = (long) (Math.round((amount - rub) * 100));
 
         List<String> res = null;
 

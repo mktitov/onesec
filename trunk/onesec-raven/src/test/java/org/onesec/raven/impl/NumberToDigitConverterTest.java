@@ -35,10 +35,10 @@ public class NumberToDigitConverterTest extends Assert
         n/=100;
         assertEquals(2, n);
 
-        double d = 20.3456;
+        double d = 195912.12;
         long l = (long) d;
-        assertEquals(20l, l);
-        assertEquals(34l, (long)((d-l)*100));
+        assertEquals(195912l, l);
+        assertEquals(12l, (long)(Math.round((d-l)*100)));
     }
 
     @Test

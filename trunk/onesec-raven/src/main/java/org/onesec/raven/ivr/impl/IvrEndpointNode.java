@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
@@ -105,6 +106,7 @@ public class IvrEndpointNode extends BaseNode
     public static final char EMPTY_DTMF = '-';
     public final static String DTMF_BINDING = "dtmf";
     public final static String CONVERSATION_STATE_BINDING = "conversationState";
+    public static final String VARS_BINDING = "vars";
 
     @Service
     protected static ProviderRegistry providerRegistry;
@@ -652,6 +654,7 @@ public class IvrEndpointNode extends BaseNode
             }
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 debug(String.format("Continue conversation with dtmf (%s)", dtmfChar));
+            audioStream.reset();
             conversationState.getBindings().put(DTMF_BINDING, ""+dtmfChar);
             Collection<Node> actions = currentConversation.makeConversation(conversationState);
             Collection<IvrAction> ivrActions = new ArrayList<IvrAction>(10);
@@ -805,6 +808,7 @@ public class IvrEndpointNode extends BaseNode
             conversationState = currentConversation.createConversationState();
             conversationState.setBinding(DTMF_BINDING, "-", BindingScope.REQUEST);
             conversationState.setBindingDefaultValue(DTMF_BINDING, "-");
+            conversationState.setBinding(VARS_BINDING, new HashMap(), BindingScope.CONVERSATION);
             conversationState.setBinding(
                     CONVERSATION_STATE_BINDING, conversationState, BindingScope.CONVERSATION);
             if (inviteBindings!=null)

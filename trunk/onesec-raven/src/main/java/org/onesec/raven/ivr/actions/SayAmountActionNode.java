@@ -24,6 +24,7 @@ import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.tree.Node;
 import org.raven.tree.impl.BaseNode;
+import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
 import org.weda.annotations.constraints.NotNull;
 
 /**
@@ -33,11 +34,24 @@ import org.weda.annotations.constraints.NotNull;
 @NodeClass(parentNode=IvrConversationScenarioNode.class)
 public class SayAmountActionNode extends BaseNode implements IvrActionNode
 {
-    @NotNull @Parameter
+    @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
     private Node numbersNode;
 
     @Parameter
     private Double amount;
+
+    @Parameter @NotNull
+    private Integer pauseBetweenWords;
+
+    public Integer getPauseBetweenWords()
+    {
+        return pauseBetweenWords;
+    }
+
+    public void setPauseBetweenWords(Integer pauseBetweenWords)
+    {
+        this.pauseBetweenWords = pauseBetweenWords;
+    }
 
     public Node getNumbersNode()
     {
@@ -61,7 +75,6 @@ public class SayAmountActionNode extends BaseNode implements IvrActionNode
 
     public IvrAction createAction()
     {
-        return null;
+        return new SayAmountAction(numbersNode, amount, pauseBetweenWords);
     }
-
 }
