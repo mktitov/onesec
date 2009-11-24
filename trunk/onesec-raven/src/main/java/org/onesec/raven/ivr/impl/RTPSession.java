@@ -19,12 +19,7 @@ package org.onesec.raven.ivr.impl;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import javax.media.DataSink;
-import javax.media.Manager;
-import javax.media.MediaLocator;
-import javax.media.NoDataSinkException;
 import javax.media.control.BufferControl;
-import javax.media.format.UnsupportedFormatException;
 import javax.media.rtp.RTPManager;
 import javax.media.rtp.SendStream;
 import javax.media.rtp.SessionAddress;

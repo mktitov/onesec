@@ -17,21 +17,27 @@
 
 package org.onesec.raven.ivr;
 
-import javax.media.protocol.DataSource;
-
 /**
- *
+ * The base contract for {@link OutgoingRtpStream} and {@link IncomingRtpStream} rtp streams.
  * @author Mikhail Titov
  */
-public interface AudioStream
+public interface RtpStream
 {
-    public void addSource(InputStreamSource source);
     /**
-     * Returns true if audio stream has buffers that not played yet.
+     * Do not call this method direct. This method must be used by {@link RtpStreamManager}.
+     * @param rtpStat the object that aggregates the global statistics
      */
-    public boolean isPlaying();
+//    public void init(RtpStat rtpStat);
     /**
-     * Returns audio source
+     * Releases rtp stream
      */
-    public DataSource getDataSource();
+    public void release();
+    /**
+     * Returns amount of bytes handled by stream.
+     */
+    public long getHandledBytes();
+    /**
+     * Returns amount of packets handled by stream.
+     */
+    public long getHandledPackets();
 }

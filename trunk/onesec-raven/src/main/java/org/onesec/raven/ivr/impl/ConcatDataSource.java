@@ -35,6 +35,7 @@ import javax.media.Time;
 import javax.media.control.TrackControl;
 import javax.media.format.AudioFormat;
 import javax.media.protocol.ContentDescriptor;
+import javax.media.protocol.DataSource;
 import javax.media.protocol.PushBufferDataSource;
 import javax.media.protocol.PushBufferStream;
 import org.onesec.raven.ivr.AudioStream;
@@ -91,6 +92,11 @@ public class ConcatDataSource
         ResourceInputStreamSource silenceSource =
                 new ResourceInputStreamSource(SILENCE_RESOURCE_NAME);
         addSource(silenceSource);
+    }
+
+    public DataSource getDataSource()
+    {
+        return this;
     }
 
     public void addSource(InputStreamSource source)

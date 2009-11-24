@@ -17,21 +17,12 @@
 
 package org.onesec.raven.ivr;
 
-import javax.media.protocol.DataSource;
-
 /**
  *
  * @author Mikhail Titov
  */
-public interface AudioStream
+public interface RTPSession 
 {
-    public void addSource(InputStreamSource source);
-    /**
-     * Returns true if audio stream has buffers that not played yet.
-     */
-    public boolean isPlaying();
-    /**
-     * Returns audio source
-     */
-    public DataSource getDataSource();
+    public void open(AudioStream source);
+    public void close();
 }
