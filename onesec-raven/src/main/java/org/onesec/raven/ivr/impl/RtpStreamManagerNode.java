@@ -17,17 +17,25 @@
 
 package org.onesec.raven.ivr.impl;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.locks.ReadWriteLock;
+import java.util.NavigableMap;
+import java.util.TreeMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.onesec.raven.ivr.IncomingRtpStream;
 import org.onesec.raven.ivr.OutgoingRtpStream;
 import org.onesec.raven.ivr.RtpStream;
 import org.onesec.raven.ivr.RtpStreamManager;
+import org.raven.annotations.Parameter;
+import org.raven.log.LogLevel;
+import org.raven.tree.Node;
 import org.raven.tree.impl.BaseNode;
+import org.weda.annotations.constraints.NotNull;
 
 /**
  *
@@ -35,21 +43,20 @@ import org.raven.tree.impl.BaseNode;
  */
 public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager
 {
-    private Map<String, RtpStream> incomingStreams;
-    private Map<String, RtpStream> outgoingStreams;
+    @NotNull @Parameter(defaultValue="20")
+    private Integer maxStreamCount;
 
-    private ReentrantReadWriteLock isLock;
+    private Map<InetAddress, NavigableMap<Integer, RtpStream>> streams;
+
+    private ReentrantReadWriteLock streamsLock;
     private ReentrantReadWriteLock osLock;
 
     @Override
     protected void initFields()
     {
         super.initFields();
-        incomingStreams = new HashMap<String, RtpStream>();
-        outgoingStreams = new HashMap<String, RtpStream>();
-
-        isLock = new ReentrantReadWriteLock();
-        osLock = new ReentrantReadWriteLock();
+        streams = new HashMap<InetAddress, NavigableMap<Integer, RtpStream>>();
+        streamsLock = new ReentrantReadWriteLock();
     }
 
     @Override
@@ -63,36 +70,140 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager
     {
         super.doStop();
 
-        releaseStreams(isLock, incomingStreams);
-        releaseStreams(osLock, outgoingStreams);
+        releaseStreams(streams);
     }
 
     public IncomingRtpStream getIncomingRtpStream()
     {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return (IncomingRtpStream)createStream(true);
     }
 
     public OutgoingRtpStream getOutgoingRtpStream(String remoteHost, int remotePort)
     {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return (OutgoingRtpStream)createStream(false);
     }
 
-    private void releaseStreams(ReadWriteLock lock, Map<String, RtpStream> streams)
+    private void releaseStreams(Map<InetAddress, NavigableMap<Integer, RtpStream>> streams)
     {
-        lock.writeLock().lock();
+        streamsLock.writeLock().lock();
         try
         {
-            if (streams.size()>0)
+            for (Map<Integer, RtpStream> portStreams: streams.values())
             {
-                Collection<RtpStream> list = new ArrayList<RtpStream>(streams.values());
-                for (RtpStream stream: list)
-                    stream.release();
+                if (portStreams.size()>0)
+                {
+                    Collection<RtpStream> list = new ArrayList<RtpStream>(portStreams.values());
+                    for (RtpStream stream: list)
+                        stream.release();
+                }
+                portStreams.clear();
             }
-            streams.clear();
         }
         finally
         {
-            lock.writeLock().unlock();
+            streamsLock.writeLock().unlock();
         }
+    }
+
+    private RtpStream createStream(boolean incomingStream)
+    {
+        try
+        {
+            streamsLock.writeLock().lock();
+            try
+            {
+                if (getStreamsCount() >= maxStreamCount)
+                    throw new Exception("Max streams count exceded");
+
+                RtpStream stream = null;
+                NavigableMap<Integer, RtpStream> portStreams = null;
+                InetAddress address = null;
+                int portNumber = 0;
+
+                Map<InetAddress, RtpAddressNode> avalAddresses = getAvailableAddresses();
+                for (Map.Entry<InetAddress, RtpAddressNode> addr: avalAddresses.entrySet())
+                {
+                    if (!streams.containsKey(addr.getKey()))
+                    {
+                        portNumber = addr.getValue().getStartingPort();
+                        portStreams = new TreeMap<Integer, RtpStream>();
+                        address = addr.getKey();
+                        streams.put(addr.getKey(), portStreams);
+                    }
+                }
+
+                if (portStreams==null)
+                    for (Map.Entry<InetAddress, NavigableMap<Integer, RtpStream>> streamEntry: streams.entrySet())
+                        if (portStreams==null || streamEntry.getValue().size()<portStreams.size())
+                        {
+                            portStreams = streamEntry.getValue();
+                            address = streamEntry.getKey();
+                            portNumber = portStreams.size()==0?
+                                avalAddresses.get(streamEntry.getKey()).getStartingPort()
+                                : portStreams.lastKey()+2;
+                        }
+
+                if (incomingStream)
+                    stream = new IncomingRtpStreamImpl(address, portNumber);
+                else
+                    stream = new OutgoingRtpStreamImpl(address, portNumber);
+
+                portStreams.put(portNumber, stream);
+
+                return stream;
+            }
+            finally
+            {
+                streamsLock.writeLock().unlock();
+            }
+        }
+        catch (Exception e)
+        {
+            if (isLogLevelEnabled(LogLevel.ERROR))
+                error(
+                    String.format(
+                        "Error creating %s RTP stream. %s"
+                        , incomingStream? "incoming" : "outgoing", e.getMessage())
+                    , e);
+            return null;
+        }
+    }
+
+    @Parameter(readOnly=true)
+    public Integer getStreamsCount()
+    {
+        if (!Status.STARTED.equals(getStatus()))
+            return 0;
+        streamsLock.readLock().lock();
+        try
+        {
+            int count = 0;
+            for (Map portStreams: streams.values())
+                count += portStreams==null? 0 : portStreams.size();
+
+            return count;
+        }
+        finally
+        {
+            streamsLock.readLock().unlock();
+        }
+    }
+
+    private Map<InetAddress, RtpAddressNode> getAvailableAddresses() throws UnknownHostException
+    {
+        Collection<Node> childs = getChildrens();
+        Map<InetAddress, RtpAddressNode> res = null;
+        if (childs!=null && !childs.isEmpty())
+        {
+            for (Node child: childs)
+                if (child instanceof RtpAddressNode && Status.STARTED.equals(child.getStatus()))
+                {
+                    if (res==null)
+                        res = new HashMap<InetAddress, RtpAddressNode>();
+                    res.put(InetAddress.getByName(child.getName()), (RtpAddressNode)child);
+                }
+        }
+
+        return res==null? Collections.EMPTY_MAP : res;
     }
 }
