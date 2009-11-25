@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.impl;
 
+import java.net.InetAddress;
 import java.util.concurrent.atomic.AtomicLong;
 import org.onesec.raven.ivr.RtpReleaser;
 import org.onesec.raven.ivr.RtpStat;
@@ -28,11 +29,20 @@ import org.onesec.raven.ivr.RtpStream;
  */
 public abstract class AbstractRtpStream implements RtpStream
 {
+    protected final InetAddress address;
+    protected final int port;
+
     private AtomicLong handledPackets;
     private AtomicLong handledBytes;
     private RtpStreamManagerNode manager;
     private RtpStat globalStat;
     private RtpReleaser releaser;
+
+    public AbstractRtpStream(InetAddress address, int port)
+    {
+        this.address = address;
+        this.port = port;
+    }
 
     void setManager(RtpStreamManagerNode manager)
     {

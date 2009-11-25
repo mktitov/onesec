@@ -15,23 +15,29 @@
  *  under the License.
  */
 
-package org.onesec.raven.ivr;
+package org.onesec.raven.ivr.impl;
+
+import org.raven.annotations.NodeClass;
+import org.raven.annotations.Parameter;
+import org.weda.annotations.constraints.NotNull;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface RtpStreamManager
+@NodeClass(parentNode=RtpStreamManagerNode.class)
+public class RtpAddressNode
 {
-    /**
-     * Return the incoming rtp stream (the object that can recieve the incoming rtp stream).
-     * The stream must be {@link RtpStreamHandler#release() released}
-     * after use.
-     */
-    public IncomingRtpStream getIncomingRtpStream();
-    /**
-     * Returns the outgoing rtp stream. The stream must be {@link RtpStream#release() released}
-     * after use.
-     */
-    public OutgoingRtpStream getOutgoingRtpStream(String remoteHost, int remotePort);
+    @NotNull @Parameter
+    private Integer startingPort;
+
+    public Integer getStartingPort()
+    {
+        return startingPort;
+    }
+
+    public void setStartingPort(Integer startingPort)
+    {
+        this.startingPort = startingPort;
+    }
 }

@@ -15,23 +15,29 @@
  *  under the License.
  */
 
-package org.onesec.raven.ivr;
+package org.onesec.raven.ivr.impl;
+
+import java.net.InetAddress;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface RtpStreamManager
+public class OutgoingRtpStreamImpl extends AbstractRtpStream
 {
-    /**
-     * Return the incoming rtp stream (the object that can recieve the incoming rtp stream).
-     * The stream must be {@link RtpStreamHandler#release() released}
-     * after use.
-     */
-    public IncomingRtpStream getIncomingRtpStream();
-    /**
-     * Returns the outgoing rtp stream. The stream must be {@link RtpStream#release() released}
-     * after use.
-     */
-    public OutgoingRtpStream getOutgoingRtpStream(String remoteHost, int remotePort);
+
+    public OutgoingRtpStreamImpl(InetAddress address, int portNumber)
+    {
+        super(address, portNumber);
+    }
+
+    public long getHandledBytes()
+    {
+        return 0;
+    }
+
+    public long getHandledPackets()
+    {
+        return 0;
+    }
 }
