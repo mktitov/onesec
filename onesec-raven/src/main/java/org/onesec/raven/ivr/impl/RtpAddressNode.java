@@ -19,6 +19,7 @@ package org.onesec.raven.ivr.impl;
 
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
+import org.raven.tree.impl.BaseNode;
 import org.weda.annotations.constraints.NotNull;
 
 /**
@@ -26,7 +27,7 @@ import org.weda.annotations.constraints.NotNull;
  * @author Mikhail Titov
  */
 @NodeClass(parentNode=RtpStreamManagerNode.class)
-public class RtpAddressNode
+public class RtpAddressNode extends BaseNode
 {
     @NotNull @Parameter
     private Integer startingPort;

@@ -17,6 +17,8 @@
 
 package org.onesec.raven.ivr;
 
+import org.raven.tree.Node;
+
 /**
  *
  * @author Mikhail Titov
@@ -28,10 +30,10 @@ public interface RtpStreamManager
      * The stream must be {@link RtpStreamHandler#release() released}
      * after use.
      */
-    public IncomingRtpStream getIncomingRtpStream();
+    public IncomingRtpStream getIncomingRtpStream(Node owner);
     /**
      * Returns the outgoing rtp stream. The stream must be {@link RtpStream#release() released}
      * after use.
      */
-    public OutgoingRtpStream getOutgoingRtpStream(String remoteHost, int remotePort);
+    public OutgoingRtpStream getOutgoingRtpStream(Node owner);
 }

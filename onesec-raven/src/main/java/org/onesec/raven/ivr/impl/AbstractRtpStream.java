@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.onesec.raven.ivr.RtpReleaser;
 import org.onesec.raven.ivr.RtpStat;
 import org.onesec.raven.ivr.RtpStream;
+import org.raven.tree.Node;
 
 /**
  *
@@ -36,12 +37,32 @@ public abstract class AbstractRtpStream implements RtpStream
     private AtomicLong handledBytes;
     private RtpStreamManagerNode manager;
     private RtpStat globalStat;
-    private RtpReleaser releaser;
+    private Node owner;
 
     public AbstractRtpStream(InetAddress address, int port)
     {
         this.address = address;
         this.port = port;
+    }
+
+    Node getOwner()
+    {
+        return owner;
+    }
+
+    void setOwner(Node owner)
+    {
+        this.owner = owner;
+    }
+
+    public InetAddress getAddress()
+    {
+        return address;
+    }
+
+    public int getPort()
+    {
+        return port;
     }
 
     void setManager(RtpStreamManagerNode manager)
@@ -52,11 +73,6 @@ public abstract class AbstractRtpStream implements RtpStream
     void setGlobalRtpStat(RtpStat globalStat)
     {
         this.globalStat = globalStat;
-    }
-
-    public void setReleaser(RtpReleaser releaser)
-    {
-        this.releaser = releaser;
     }
 
     protected void incHandledPacketsBy(long packets)
@@ -73,6 +89,6 @@ public abstract class AbstractRtpStream implements RtpStream
 
     public void release()
     {
-        releaser.release(this);
+        manager.releaseStream(this);
     }
 }

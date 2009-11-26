@@ -17,6 +17,8 @@
 
 package org.onesec.raven.ivr;
 
+import java.net.InetAddress;
+
 /**
  * The base contract for {@link OutgoingRtpStream} and {@link IncomingRtpStream} rtp streams.
  * @author Mikhail Titov
@@ -40,4 +42,12 @@ public interface RtpStream
      * Returns amount of packets handled by stream.
      */
     public long getHandledPackets();
+    /**
+     * Returns the ip address of the stream
+     */
+    public InetAddress getAddress();
+    /**
+     * Return the port of the stream
+     */
+    public int getPort();
 }
