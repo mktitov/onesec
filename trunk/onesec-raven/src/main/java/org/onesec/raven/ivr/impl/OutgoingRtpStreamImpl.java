@@ -18,12 +18,14 @@
 package org.onesec.raven.ivr.impl;
 
 import java.net.InetAddress;
+import org.onesec.raven.ivr.AudioStream;
+import org.onesec.raven.ivr.OutgoingRtpStream;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class OutgoingRtpStreamImpl extends AbstractRtpStream
+public class OutgoingRtpStreamImpl extends AbstractRtpStream implements OutgoingRtpStream
 {
 
     public OutgoingRtpStreamImpl(InetAddress address, int portNumber)
@@ -39,5 +41,9 @@ public class OutgoingRtpStreamImpl extends AbstractRtpStream
     public long getHandledPackets()
     {
         return 0;
+    }
+
+    public void open(String remoteHost, int remotePort, AudioStream audioStream)
+    {
     }
 }

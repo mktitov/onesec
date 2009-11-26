@@ -49,7 +49,6 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager
     private Map<InetAddress, NavigableMap<Integer, RtpStream>> streams;
 
     private ReentrantReadWriteLock streamsLock;
-    private ReentrantReadWriteLock osLock;
 
     @Override
     protected void initFields()
@@ -73,14 +72,36 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager
         releaseStreams(streams);
     }
 
-    public IncomingRtpStream getIncomingRtpStream()
+    public Integer getMaxStreamCount()
     {
-        return (IncomingRtpStream)createStream(true);
+        return maxStreamCount;
     }
 
-    public OutgoingRtpStream getOutgoingRtpStream(String remoteHost, int remotePort)
+    public void setMaxStreamCount(Integer maxStreamCount)
     {
-        return (OutgoingRtpStream)createStream(false);
+        this.maxStreamCount = maxStreamCount;
+    }
+
+    public IncomingRtpStream getIncomingRtpStream(Node owner)
+    {
+        return (IncomingRtpStream)createStream(true, owner);
+    }
+
+    public OutgoingRtpStream getOutgoingRtpStream(Node owner)
+    {
+        return (OutgoingRtpStream)createStream(false, owner);
+    }
+
+    void releaseStream(RtpStream stream)
+    {
+        Map portStreams = streams.get(stream.getAddress());
+        if (portStreams!=null)
+            portStreams.remove(stream.getPort());
+    }
+
+    Map<InetAddress, NavigableMap<Integer, RtpStream>> getStreams()
+    {
+        return streams;
     }
 
     private void releaseStreams(Map<InetAddress, NavigableMap<Integer, RtpStream>> streams)
@@ -105,8 +126,10 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager
         }
     }
 
-    private RtpStream createStream(boolean incomingStream)
+    private RtpStream createStream(boolean incomingStream, Node owner)
     {
+        if (!Status.STARTED.equals(getStatus()))
+            return null;
         try
         {
             streamsLock.writeLock().lock();
@@ -129,6 +152,7 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager
                         portStreams = new TreeMap<Integer, RtpStream>();
                         address = addr.getKey();
                         streams.put(addr.getKey(), portStreams);
+                        break;
                     }
                 }
 
@@ -138,9 +162,13 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager
                         {
                             portStreams = streamEntry.getValue();
                             address = streamEntry.getKey();
-                            portNumber = portStreams.size()==0?
-                                avalAddresses.get(streamEntry.getKey()).getStartingPort()
-                                : portStreams.lastKey()+2;
+                            int startingPort = avalAddresses.get(streamEntry.getKey()).getStartingPort();
+                            if (portStreams.size()==0)
+                                portNumber = startingPort;
+                            else if (portStreams.firstKey()>startingPort)
+                                portNumber = portStreams.firstKey()-2;
+                            else
+                                portNumber = portStreams.lastKey()+2;
                         }
 
                 if (incomingStream)
@@ -148,6 +176,8 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager
                 else
                     stream = new OutgoingRtpStreamImpl(address, portNumber);
 
+                ((AbstractRtpStream)stream).setManager(this);
+                ((AbstractRtpStream)stream).setOwner(owner);
                 portStreams.put(portNumber, stream);
 
                 return stream;
