@@ -41,4 +41,9 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream implements Incoming
     {
         return 0;
     }
+
+    @Override
+    public void doRelease() throws Exception
+    {
+    }
 }

@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.onesec.raven.ivr.IncomingRtpStream;
 import org.onesec.raven.ivr.OutgoingRtpStream;
@@ -50,18 +51,31 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager
 
     private ReentrantReadWriteLock streamsLock;
 
+    private AtomicLong sendedBytes;
+    private AtomicLong recievedBytes;
+    private AtomicLong sendedPackets;
+    private AtomicLong recievedPackets;
+
     @Override
     protected void initFields()
     {
         super.initFields();
         streams = new HashMap<InetAddress, NavigableMap<Integer, RtpStream>>();
         streamsLock = new ReentrantReadWriteLock();
+        sendedBytes = new AtomicLong();
+        recievedBytes = new AtomicLong();
+        recievedPackets = new AtomicLong();
+        sendedPackets = new AtomicLong();
     }
 
     @Override
     protected void doStart() throws Exception
     {
         super.doStart();
+        sendedBytes.set(0);
+        recievedBytes.set(0);
+        sendedPackets.set(0);
+        recievedPackets.set(0);
     }
 
     @Override
@@ -90,6 +104,22 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager
     public OutgoingRtpStream getOutgoingRtpStream(Node owner)
     {
         return (OutgoingRtpStream)createStream(false, owner);
+    }
+
+    void incHandledBytes(RtpStream stream, long bytes)
+    {
+        if (stream instanceof OutgoingRtpStream)
+            sendedBytes.addAndGet(bytes);
+        else
+            recievedBytes.addAndGet(bytes);
+    }
+
+    void incHandledPackets(RtpStream stream, long packets)
+    {
+        if (stream instanceof OutgoingRtpStream)
+            sendedPackets.addAndGet(packets);
+        else
+            recievedPackets.addAndGet(packets);
     }
 
     void releaseStream(RtpStream stream)
