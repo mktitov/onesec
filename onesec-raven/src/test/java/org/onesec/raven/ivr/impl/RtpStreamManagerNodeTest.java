@@ -52,8 +52,8 @@ public class RtpStreamManagerNodeTest extends OnesecRavenTestCase
     {
         manager.setMaxStreamCount(0);
         assertTrue(manager.start());
-        assertNull(manager.getIncomingRtpStream());
-        assertNull(manager.getOutgoingRtpStream("localhost", 1234));
+        assertNull(manager.getIncomingRtpStream(manager));
+        assertNull(manager.getOutgoingRtpStream(manager));
     }
 
     @Test()
@@ -116,7 +116,7 @@ public class RtpStreamManagerNodeTest extends OnesecRavenTestCase
 
     private RtpStream createStream(InetAddress address, Integer port)
     {
-        IncomingRtpStream iStream = manager.getIncomingRtpStream();
+        IncomingRtpStream iStream = manager.getIncomingRtpStream(manager);
         assertNotNull(iStream);
         if (address==null)
             assertNotNull(iStream.getAddress());

@@ -34,4 +34,8 @@ public interface AudioStream
      * Returns audio source
      */
     public DataSource getDataSource();
+    /**
+     * Closes audio source.
+     */
+    public void close();
 }

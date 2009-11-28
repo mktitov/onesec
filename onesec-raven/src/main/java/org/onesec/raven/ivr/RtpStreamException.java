@@ -21,8 +21,15 @@ package org.onesec.raven.ivr;
  *
  * @author Mikhail Titov
  */
-public interface RtpStat
+public class RtpStreamException extends Exception
 {
-    public void incHandledBytesBy(long bytes);
-    public void incHandledPacketsBy(long packets);
+    public RtpStreamException(String message, Throwable cause)
+    {
+        super(message, cause);
+    }
+
+    public RtpStreamException(String message)
+    {
+        super(message);
+    }
 }

@@ -23,5 +23,5 @@ package org.onesec.raven.ivr;
  */
 public interface OutgoingRtpStream  extends RtpStream
 {
-    public void open(String remoteHost, int remotePort, AudioStream audioStream);
+    public void open(String remoteHost, int remotePort, AudioStream audioStream) throws RtpStreamException;
 }

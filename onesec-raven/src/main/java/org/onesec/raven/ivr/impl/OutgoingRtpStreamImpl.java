@@ -18,8 +18,15 @@
 package org.onesec.raven.ivr.impl;
 
 import java.net.InetAddress;
+import javax.media.control.BufferControl;
+import javax.media.rtp.RTPManager;
+import javax.media.rtp.SendStream;
+import javax.media.rtp.SessionAddress;
+import javax.media.rtp.TransmissionStats;
 import org.onesec.raven.ivr.AudioStream;
 import org.onesec.raven.ivr.OutgoingRtpStream;
+import org.onesec.raven.ivr.RtpStreamException;
+import org.raven.log.LogLevel;
 
 /**
  *
@@ -27,6 +34,9 @@ import org.onesec.raven.ivr.OutgoingRtpStream;
  */
 public class OutgoingRtpStreamImpl extends AbstractRtpStream implements OutgoingRtpStream
 {
+    private AudioStream audioStream;
+    private RTPManager rtpManager;
+    private SendStream sendStream;
 
     public OutgoingRtpStreamImpl(InetAddress address, int portNumber)
     {
@@ -43,7 +53,53 @@ public class OutgoingRtpStreamImpl extends AbstractRtpStream implements Outgoing
         return 0;
     }
 
-    public void open(String remoteHost, int remotePort, AudioStream audioStream)
+    public void open(String remoteHost, int remotePort, AudioStream audioStream) throws RtpStreamException
     {
+        try
+        {
+            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                owner.getLogger().debug(String.format(
+                        "AudioStream. Trying to open RTP stream to the remote host (%s) on port (%s)"
+                        , remoteHost, remotePort));
+            this.audioStream = audioStream;
+            SessionAddress destAddress = new SessionAddress(InetAddress.getByName(remoteHost), remotePort);
+            rtpManager = RTPManager.newInstance();
+            rtpManager.initialize(new SessionAddress());
+            rtpManager.addTarget(destAddress);
+            sendStream = rtpManager.createSendStream(audioStream.getDataSource(), 0);
+            sendStream.setBitRate(1);
+            BufferControl control = (BufferControl)rtpManager.getControl(BufferControl.class.getName());
+            control.setMinimumThreshold(60);
+            control.setBufferLength(60);
+            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                owner.getLogger().debug(String.format(
+                        "AudioStream. RTP stream was successfully opened to the remote host (%s) on port (%s)"
+                        , remoteHost, remotePort));
+        }
+        catch(Exception e)
+        {
+            throw new RtpStreamException(
+                    String.format(
+                        "Error opening RTP stream to remote host (%s) using port (%s)"
+                        , remoteHost, remotePort)
+                    , e);
+        }
+    }
+
+    @Override
+    public void doRelease() throws Exception
+    {
+        TransmissionStats stats = sendStream.getSourceTransmissionStats();
+        incHandledBytesBy(stats.getBytesTransmitted());
+        incHandledPacketsBy(stats.getPDUTransmitted());
+        try
+        {
+            audioStream.close();
+        }
+        finally
+        {
+            sendStream.close();
+        }
+        
     }
 }

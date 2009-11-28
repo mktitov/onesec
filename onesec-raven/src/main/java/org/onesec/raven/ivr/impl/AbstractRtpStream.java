@@ -19,9 +19,8 @@ package org.onesec.raven.ivr.impl;
 
 import java.net.InetAddress;
 import java.util.concurrent.atomic.AtomicLong;
-import org.onesec.raven.ivr.RtpReleaser;
-import org.onesec.raven.ivr.RtpStat;
 import org.onesec.raven.ivr.RtpStream;
+import org.raven.log.LogLevel;
 import org.raven.tree.Node;
 
 /**
@@ -36,8 +35,7 @@ public abstract class AbstractRtpStream implements RtpStream
     private AtomicLong handledPackets;
     private AtomicLong handledBytes;
     private RtpStreamManagerNode manager;
-    private RtpStat globalStat;
-    private Node owner;
+    protected Node owner;
 
     public AbstractRtpStream(InetAddress address, int port)
     {
@@ -70,25 +68,31 @@ public abstract class AbstractRtpStream implements RtpStream
         this.manager = manager;
     }
 
-    void setGlobalRtpStat(RtpStat globalStat)
-    {
-        this.globalStat = globalStat;
-    }
-
     protected void incHandledPacketsBy(long packets)
     {
         handledPackets.addAndGet(packets);
-        globalStat.incHandledPacketsBy(packets);
+        manager.incHandledPackets(this, packets);
     }
 
     protected void incHandledBytesBy(long bytes)
     {
         handledBytes.addAndGet(bytes);
-        globalStat.incHandledBytesBy(bytes);
+        manager.incHandledBytes(this, bytes);
     }
 
     public void release()
     {
         manager.releaseStream(this);
+        try
+        {
+            doRelease();
+        }
+        catch(Exception e)
+        {
+            if (owner.isLogLevelEnabled(LogLevel.ERROR))
+                owner.getLogger().error("Error releasing RTP stream", e);
+        }
     }
+
+    public abstract void doRelease() throws Exception;
 }
