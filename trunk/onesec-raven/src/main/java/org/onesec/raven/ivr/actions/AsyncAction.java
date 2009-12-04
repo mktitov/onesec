@@ -20,7 +20,7 @@ package org.onesec.raven.ivr.actions;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.onesec.raven.ivr.IvrActionException;
 import org.onesec.raven.ivr.IvrActionStatus;
-import org.onesec.raven.ivr.IvrEndpoint;
+import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorServiceException;
 import org.raven.sched.Task;
@@ -32,7 +32,7 @@ import org.raven.tree.Node;
  */
 public abstract class AsyncAction extends AbstractAction implements Task
 {
-    private IvrEndpoint endpoint;
+    protected IvrEndpointConversation conversation;
     private final AtomicBoolean cancelRequest;
 
     public AsyncAction(String actionName)
@@ -51,9 +51,9 @@ public abstract class AsyncAction extends AbstractAction implements Task
         return cancelRequest.get();
     }
 
-    public void execute(IvrEndpoint endpoint) throws IvrActionException
+    public void execute(IvrEndpointConversation endpoint) throws IvrActionException
     {
-        this.endpoint = endpoint;
+        this.conversation = endpoint;
         try
         {
             setStatus(IvrActionStatus.EXECUTING);
@@ -68,7 +68,7 @@ public abstract class AsyncAction extends AbstractAction implements Task
 
     public Node getTaskNode()
     {
-        return endpoint;
+        return conversation.getOwner();
     }
 
     public void run()
@@ -77,16 +77,16 @@ public abstract class AsyncAction extends AbstractAction implements Task
         {
             try
             {
-                if (endpoint.isLogLevelEnabled(LogLevel.DEBUG))
-                    endpoint.getLogger().debug(String.format("Action. Executing (%s)", getName()));
-                doExecute(endpoint);
-                if (endpoint.isLogLevelEnabled(LogLevel.DEBUG))
-                    endpoint.getLogger().debug(String.format("Action. (%s) executed", getName()));
+                if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
+                    conversation.getOwner().getLogger().debug(String.format("Action. Executing (%s)", getName()));
+                doExecute(conversation);
+                if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
+                    conversation.getOwner().getLogger().debug(String.format("Action. (%s) executed", getName()));
             }
             catch (Exception ex)
             {
-                if (endpoint.isLogLevelEnabled(LogLevel.ERROR))
-                    endpoint.getLogger().error(
+                if (conversation.getOwner().isLogLevelEnabled(LogLevel.ERROR))
+                    conversation.getOwner().getLogger().error(
                         String.format(
                             "Action (%s) execution error", getName())
                         , ex);
@@ -98,5 +98,5 @@ public abstract class AsyncAction extends AbstractAction implements Task
         }
     }
 
-    protected abstract void doExecute(IvrEndpoint endpoint) throws Exception;
+    protected abstract void doExecute(IvrEndpointConversation conversation) throws Exception;
 }

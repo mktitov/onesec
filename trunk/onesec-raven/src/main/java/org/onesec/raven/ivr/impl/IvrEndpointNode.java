@@ -78,6 +78,7 @@ import org.onesec.raven.ivr.IvrActionStatus;
 import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.IvrConversationScenarioPoint;
 import org.onesec.raven.ivr.IvrEndpoint;
+import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.IvrEndpointException;
 import org.onesec.raven.ivr.IvrEndpointState;
 import org.onesec.raven.ivr.actions.AsyncAction;
@@ -103,11 +104,6 @@ public class IvrEndpointNode extends BaseNode
         implements IvrEndpoint, ObjectDescription, CiscoTerminalObserver, AddressObserver
             , CallControlCallObserver, MediaCallObserver
 {
-    public static final char EMPTY_DTMF = '-';
-    public final static String DTMF_BINDING = "dtmf";
-    public final static String CONVERSATION_STATE_BINDING = "conversationState";
-    public static final String VARS_BINDING = "vars";
-
     @Service
     protected static ProviderRegistry providerRegistry;
 
@@ -868,6 +864,11 @@ public class IvrEndpointNode extends BaseNode
         }
     }
 
+    public Node getOwner()
+    {
+        return this;
+    }
+
     private class ContinueConversationAction extends AsyncAction
     {
         public ContinueConversationAction()
@@ -876,7 +877,7 @@ public class IvrEndpointNode extends BaseNode
         }
 
         @Override
-        protected void doExecute(IvrEndpoint endpoint) throws Exception
+        protected void doExecute(IvrEndpointConversation conversation) throws Exception
         {
             setStatus(IvrActionStatus.EXECUTED);
             continueConversation(EMPTY_DTMF);

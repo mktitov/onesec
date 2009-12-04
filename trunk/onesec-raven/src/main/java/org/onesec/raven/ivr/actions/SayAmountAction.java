@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.onesec.raven.impl.NumberToDigitConverter;
 import org.onesec.raven.ivr.AudioStream;
-import org.onesec.raven.ivr.IvrEndpoint;
+import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.impl.AudioFileInputStreamSource;
 import org.onesec.raven.ivr.impl.AudioFileNode;
 import org.raven.log.LogLevel;
@@ -48,7 +48,7 @@ public class SayAmountAction extends AsyncAction
     }
 
     @Override
-    protected void doExecute(IvrEndpoint endpoint) throws Exception
+    protected void doExecute(IvrEndpointConversation conversation) throws Exception
     {
         if (amount==null || amount==0.)
             return;
@@ -64,20 +64,20 @@ public class SayAmountAction extends AsyncAction
             Node node = numbersNode.getChildren(number);
             if (!(node instanceof AudioFileNode))
             {
-                if (endpoint.isLogLevelEnabled(LogLevel.ERROR))
-                    endpoint.getLogger().error(
+                if (conversation.getOwner().isLogLevelEnabled(LogLevel.ERROR))
+                    conversation.getOwner().getLogger().error(
                             "Action. Can not say the amount because of not found " +
                             "the AudioFileNode (%s) node in the (%s) numbers node"
                             , number, numbersNode.getPath());
                 return;
             }
-            audioSources[i] = new AudioFileInputStreamSource((AudioFileNode)node, endpoint);
+            audioSources[i] = new AudioFileInputStreamSource((AudioFileNode)node, conversation.getOwner());
             ++i;
         }
 
         for (AudioFileInputStreamSource audioSource: audioSources)
         {
-            if (!playAudio(audioSource, endpoint.getAudioStream()))
+            if (!playAudio(audioSource, conversation.getAudioStream()))
                 return;
             TimeUnit.MILLISECONDS.sleep(pauseBetweenWords);
         }

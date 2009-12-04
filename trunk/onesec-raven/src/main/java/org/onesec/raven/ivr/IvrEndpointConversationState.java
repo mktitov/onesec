@@ -15,29 +15,13 @@
  *  under the License.
  */
 
-package org.onesec.raven.ivr.actions;
-
-import org.onesec.raven.ivr.CompletionCode;
-import org.onesec.raven.ivr.IvrActionStatus;
-import org.onesec.raven.ivr.IvrEndpointConversation;
+package org.onesec.raven.ivr;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class StopConversationAction extends AsyncAction
+public enum IvrEndpointConversationState
 {
-    public static final String NAME = "Stop conversation action";
-
-    public StopConversationAction()
-    {
-        super(NAME);
-    }
-
-    @Override
-    protected void doExecute(IvrEndpointConversation conversation) throws Exception
-    {
-        setStatus(IvrActionStatus.EXECUTED);
-        conversation.stopConversation(CompletionCode.COMPLETED_BY_ENDPOINT);
-    }
+    READY, TALKING, TRANSFERING, INVALID
 }

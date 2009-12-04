@@ -20,7 +20,7 @@ package org.onesec.raven.ivr.actions;
 import java.io.InputStream;
 import org.onesec.raven.ivr.AudioStream;
 import org.onesec.raven.ivr.InputStreamSource;
-import org.onesec.raven.ivr.IvrEndpoint;
+import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.impl.AudioFileNode;
 import org.raven.log.LogLevel;
 
@@ -32,7 +32,6 @@ public class PlayAudioAction extends AsyncAction implements InputStreamSource
 {
     public final static String NAME = "Play audio action";
     private final AudioFileNode audioFile;
-    private IvrEndpoint endpoint;
 
     public PlayAudioAction(AudioFileNode audioFile)
     {
@@ -41,19 +40,17 @@ public class PlayAudioAction extends AsyncAction implements InputStreamSource
     }
 
     @Override
-    protected void doExecute(IvrEndpoint endpoint) throws Exception
+    protected void doExecute(IvrEndpointConversation conversation) throws Exception
     {
-        if (endpoint.isLogLevelEnabled(LogLevel.DEBUG))
-            endpoint.getLogger().debug(
+        if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
+            conversation.getOwner().getLogger().debug(
                     String.format("Action. Playing audio from source (%s)", audioFile.getPath()));
-        this.endpoint = endpoint;
-        AudioStream stream = endpoint.getAudioStream();
+        AudioStream stream = conversation.getAudioStream();
         stream.addSource(this);
-//        Thread.sleep(3000);
         while (!hasCancelRequest() && stream.isPlaying())
             Thread.sleep(10);
-        if (endpoint.isLogLevelEnabled(LogLevel.DEBUG))
-            endpoint.getLogger().debug(String.format(
+        if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
+            conversation.getOwner().getLogger().debug(String.format(
                     "Action. Audio source (%s) successfuly played ", audioFile.getPath()));
     }
 
@@ -62,12 +59,11 @@ public class PlayAudioAction extends AsyncAction implements InputStreamSource
         try
         {
             return audioFile.getAudioFile().getDataStream();
-//            return new FileInputStream("src/test/wav/test.wav");
         }
         catch (Exception ex)
         {
-            if (endpoint.isLogLevelEnabled(LogLevel.ERROR))
-                endpoint.getLogger().error(
+            if (conversation.getOwner().isLogLevelEnabled(LogLevel.ERROR))
+                conversation.getOwner().getLogger().error(
                     String.format(
                         "Action. Error geting audio stream from audio file node (%s) ",
                         audioFile.getPath())

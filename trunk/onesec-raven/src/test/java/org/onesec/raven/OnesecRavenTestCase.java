@@ -17,6 +17,10 @@
 
 package org.onesec.raven;
 
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
+import java.util.Enumeration;
 import org.apache.tapestry5.ioc.RegistryBuilder;
 import org.onesec.core.services.OnesecCoreModule;
 import org.raven.test.RavenCoreTestCase;
@@ -33,5 +37,22 @@ public class OnesecRavenTestCase extends RavenCoreTestCase
         super.configureRegistry(builder);
         builder.add(OnesecCoreModule.class);
         builder.add(OnesecRavenModule.class);
+    }
+
+    public InetAddress getInterfaceAddress() throws Exception
+    {
+        Enumeration<NetworkInterface> ifs = NetworkInterface.getNetworkInterfaces();
+        while (ifs.hasMoreElements())
+        {
+            NetworkInterface nif = ifs.nextElement();
+            if (nif.isUp() && !nif.isLoopback())
+            {
+                InetAddress addr = nif.getInetAddresses().nextElement();
+                System.out.println("\n@@@ Interface address is: "+addr.getHostAddress()+"\n");
+                return nif.getInetAddresses().nextElement();
+            }
+        }
+
+        throw new Exception("Interfaces not found");
     }
 }

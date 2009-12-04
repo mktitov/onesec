@@ -17,7 +17,10 @@
 
 package org.onesec.raven.ivr.impl;
 
+import java.io.IOException;
 import java.net.InetAddress;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.media.control.BufferControl;
 import javax.media.rtp.RTPManager;
 import javax.media.rtp.SendStream;
@@ -37,6 +40,8 @@ public class OutgoingRtpStreamImpl extends AbstractRtpStream implements Outgoing
     private AudioStream audioStream;
     private RTPManager rtpManager;
     private SendStream sendStream;
+    private String remoteHost;
+    private int remotePort;
 
     public OutgoingRtpStreamImpl(InetAddress address, int portNumber)
     {
@@ -57,14 +62,16 @@ public class OutgoingRtpStreamImpl extends AbstractRtpStream implements Outgoing
     {
         try
         {
+            this.remoteHost = remoteHost;
+            this.remotePort = remotePort;
             if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                 owner.getLogger().debug(String.format(
-                        "AudioStream. Trying to open RTP stream to the remote host (%s) on port (%s)"
+                        "Outgoing RTP. Trying to open RTP stream to the remote host (%s) using port (%s)"
                         , remoteHost, remotePort));
             this.audioStream = audioStream;
             SessionAddress destAddress = new SessionAddress(InetAddress.getByName(remoteHost), remotePort);
             rtpManager = RTPManager.newInstance();
-            rtpManager.initialize(new SessionAddress());
+            rtpManager.initialize(new SessionAddress(address, port));
             rtpManager.addTarget(destAddress);
             sendStream = rtpManager.createSendStream(audioStream.getDataSource(), 0);
             sendStream.setBitRate(1);
@@ -73,14 +80,14 @@ public class OutgoingRtpStreamImpl extends AbstractRtpStream implements Outgoing
             control.setBufferLength(60);
             if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                 owner.getLogger().debug(String.format(
-                        "AudioStream. RTP stream was successfully opened to the remote host (%s) on port (%s)"
+                        "Outgoing RTP. RTP stream was successfully opened to the remote host (%s) using port (%s)"
                         , remoteHost, remotePort));
         }
         catch(Exception e)
         {
             throw new RtpStreamException(
                     String.format(
-                        "Error opening RTP stream to remote host (%s) using port (%s)"
+                        "Outgoing RTP. Error opening RTP stream to remote host (%s) using port (%s)"
                         , remoteHost, remotePort)
                     , e);
         }
@@ -101,5 +108,21 @@ public class OutgoingRtpStreamImpl extends AbstractRtpStream implements Outgoing
             sendStream.close();
         }
         
+    }
+
+    public void start() throws RtpStreamException
+    {
+        try 
+        {
+            sendStream.start();
+        }
+        catch (IOException ex)
+        {
+            throw new RtpStreamException(
+                    String.format(
+                        "Outgoing RTP. Error start outgoing rtp stream (remote address: %s; remote port: %s)"
+                        , remoteHost, remotePort)
+                    , ex);
+        }
     }
 }

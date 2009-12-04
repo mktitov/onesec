@@ -23,6 +23,7 @@ import org.onesec.raven.ivr.IvrAction;
 import org.onesec.raven.ivr.IvrActionException;
 import org.onesec.raven.ivr.IvrActionStatus;
 import org.onesec.raven.ivr.IvrEndpoint;
+import org.onesec.raven.ivr.IvrEndpointConversation;
 
 /**
  *
@@ -42,7 +43,7 @@ public class TestPauseAction implements IvrAction
         return canceled;
     }
 
-    public void execute(IvrEndpoint endpoint) throws IvrActionException
+    public void execute(IvrEndpointConversation conversation) throws IvrActionException
     {
         setStatus(IvrActionStatus.EXECUTING);
         new Thread(){
