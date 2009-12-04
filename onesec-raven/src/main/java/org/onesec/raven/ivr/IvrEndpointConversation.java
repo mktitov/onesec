@@ -17,24 +17,35 @@
 
 package org.onesec.raven.ivr;
 
-import java.util.Map;
-import org.onesec.core.ObjectDescription;
 import org.raven.sched.ExecutorService;
 import org.raven.tree.Node;
 
 /**
+ *
  * @author Mikhail Titov
  */
-public interface IvrEndpoint extends IvrEndpointConversation, Node, ObjectDescription
+public interface IvrEndpointConversation
 {
-    public IvrEndpointState getEndpointState();
+    public final static char EMPTY_DTMF = '-';
+    public final static String DTMF_BINDING = "dtmf";
+    public final static String CONVERSATION_STATE_BINDING = "conversationState";
+    public final static String VARS_BINDING = "vars";
+    /**
+     * Returns the node owned by this conversation.
+     */
+    public Node getOwner();
     /**
      * Returns the executor service
      */
-    public void invite(
-            String opponentNumber, IvrConversationScenario conversationScenario
-            , ConversationCompletionCallback callback
-            , Map<String, Object> bindings) throws IvrEndpointException;
+    public ExecutorService getExecutorService();
+    /**
+     * Returns the audio stream
+     */
+    public AudioStream getAudioStream();
+    /**
+     * Stops the current conversation
+     */
+    public void stopConversation(CompletionCode completionCode);
     /**
      * Transfers current call to the address passed in the parameter.
      * @param address The destination telephone address string to where the Call is being
@@ -42,6 +53,9 @@ public interface IvrEndpoint extends IvrEndpointConversation, Node, ObjectDescri
      * @param monitorTransfer if <code>true</code> then method will monitor call transfer, etc will
      *      wait until transfered call end
      * @param callStartTimeout
-     * @param callEndTimeout 
+     * @param callEndTimeout
      */
+    public void transfer(
+            String address, boolean monitorTransfer, long callStartTimeout, long callEndTimeout);
+
 }

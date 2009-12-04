@@ -23,11 +23,23 @@ import com.cisco.jtapi.extensions.CiscoRTPInputStartedEv;
 import com.cisco.jtapi.extensions.CiscoRTPOutputProperties;
 import com.cisco.jtapi.extensions.CiscoRTPOutputStartedEv;
 import com.cisco.jtapi.extensions.CiscoTerminalObserver;
+import com.sun.media.rtp.RTPSessionMgr;
 import java.net.InetAddress;
 import java.util.concurrent.TimeUnit;
 import javax.media.ControllerEvent;
 import javax.media.ControllerListener;
+import javax.media.Manager;
+import javax.media.MediaLocator;
+import javax.media.Player;
 import javax.media.protocol.FileTypeDescriptor;
+import javax.media.rtp.RTPManager;
+import javax.media.rtp.ReceiveStreamListener;
+import javax.media.rtp.SessionAddress;
+import javax.media.rtp.SessionListener;
+import javax.media.rtp.SessionManager;
+import javax.media.rtp.event.ReceiveStreamEvent;
+import javax.media.rtp.event.SessionEvent;
+import javax.media.rtp.rtcp.SourceDescription;
 import javax.telephony.Address;
 import javax.telephony.AddressObserver;
 import javax.telephony.JtapiPeer;
@@ -54,14 +66,15 @@ import org.raven.sched.ExecutorService;
 import org.raven.sched.Task;
 import org.raven.tree.Node;
 import org.slf4j.Logger;
+import static org.easymock.EasyMock.*;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class RTPSessionTest extends EasyMock
+public class RTPSessionTest extends EasyMock implements ReceiveStreamListener, SessionListener
 {
-    @Test @Ignore
+    @Test 
     public void test() throws Exception
     {
         Node owner = createMock(Node.class);
@@ -88,7 +101,19 @@ public class RTPSessionTest extends EasyMock
         ConcatDataSource dataSource =
                 new ConcatDataSource(FileTypeDescriptor.WAVE, executorService, 160, owner);
 
-        RTPSession session = new RTPSession("127.0.0.1", 1234, dataSource);
+//        RTPSession session = new RTPSession("127.0.0.1", 1234, dataSource);
+        
+        final Player player = Manager.createPlayer(new MediaLocator("rtp://10.50.1.9:1234/audio/1"));
+        new Thread(new Runnable()
+        {
+            public void run() {
+                player.start();
+            }
+        }).start();
+//        createRtpSessionManager(1234, 1236);
+        Thread.sleep(2000);
+
+        RTPSession session = new RTPSession("10.50.1.9", 1234, dataSource);
         session.start();
 //        Player player = Manager.createPlayer(dataSource);
 //        player.start();
@@ -107,7 +132,7 @@ public class RTPSessionTest extends EasyMock
 //        fail();
     }
 
-    @Test
+    @Test @Ignore
     public void testCall() throws Exception
     {
         Node owner = createMock(Node.class);
@@ -245,6 +270,21 @@ public class RTPSessionTest extends EasyMock
         }
     }
 
+    public void update(ReceiveStreamEvent event) 
+    {
+        logEventInfo(event);
+    }
+
+    public void update(SessionEvent event) 
+    {
+        logEventInfo(event);
+    }
+
+    private void logEventInfo(Object event)
+    {
+        System.out.println("@@@Event class: "+event.getClass().getName()+"; event: "+event.toString());
+    }
+
 
     private static class CListener implements
             ControllerListener, ProviderObserver, CiscoTerminalObserver, CallControlCallObserver,
@@ -351,4 +391,40 @@ public class RTPSessionTest extends EasyMock
         }
     }
 
+    private void createRtpSessionManager(int port, int port2) throws Exception
+    {
+        RTPSessionMgr manager = new RTPSessionMgr();
+        SessionAddress addr = new SessionAddress(InetAddress.getLocalHost(), port);
+        manager.addReceiveStreamListener(this);
+        manager.addSessionListener(this);
+        manager.initSession(addr, getSDES(manager), .05, .25);
+        manager.startSession(null, 1, null);
+
+//        RTPManager manager = RTPManager.newInstance();
+//        manager.
+
+    }
+
+    private SourceDescription[] getSDES(SessionManager mgr) throws Exception
+    {
+        SourceDescription[] desclist = new  SourceDescription[3];
+        String cname = mgr.generateCNAME();
+
+        desclist[0] = new
+                    SourceDescription(SourceDescription.SOURCE_DESC_NAME,
+                                      System.getProperty("user.name"),
+                                      1,
+                                      false);
+        desclist[1] = new
+                    SourceDescription(SourceDescription.SOURCE_DESC_CNAME,
+                                      cname,
+                                      1,
+                                      false);
+        desclist[2] = new
+                    SourceDescription(SourceDescription.SOURCE_DESC_TOOL,
+                                      "AVReceive powered by JMF",
+                                      1,
+                                      false);
+        return desclist;
+    }
 }

@@ -31,6 +31,7 @@ import org.onesec.raven.ivr.IvrEndpointState;
 import org.onesec.raven.ivr.impl.ConcatDataSource;
 import org.raven.annotations.Parameter;
 import org.raven.sched.ExecutorService;
+import org.raven.tree.Node;
 import org.raven.tree.impl.BaseNode;
 import org.weda.annotations.constraints.NotNull;
 
@@ -103,6 +104,11 @@ public class TestEndpointNode extends BaseNode implements IvrEndpoint
     public String getObjectDescription()
     {
         return "test endpoint node";
+    }
+
+    public Node getOwner()
+    {
+        return this;
     }
 
 }

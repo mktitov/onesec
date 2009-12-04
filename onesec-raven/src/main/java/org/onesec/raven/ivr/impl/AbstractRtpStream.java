@@ -41,6 +41,9 @@ public abstract class AbstractRtpStream implements RtpStream
     {
         this.address = address;
         this.port = port;
+
+        handledBytes = new AtomicLong();
+        handledPackets = new AtomicLong();
     }
 
     Node getOwner()

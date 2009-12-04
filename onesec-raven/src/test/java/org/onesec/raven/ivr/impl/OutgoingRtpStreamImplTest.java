@@ -17,10 +17,24 @@
 
 package org.onesec.raven.ivr.impl;
 
-import java.net.URL;
+import com.sun.media.rtp.RTPSessionMgr;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.media.Manager;
+import javax.media.MediaLocator;
+import javax.media.NoPlayerException;
 import javax.media.Player;
 import javax.media.protocol.FileTypeDescriptor;
+import javax.media.rtp.ReceiveStreamListener;
+import javax.media.rtp.SessionAddress;
+import javax.media.rtp.SessionListener;
+import javax.media.rtp.SessionManager;
+import javax.media.rtp.event.ReceiveStreamEvent;
+import javax.media.rtp.event.SessionEvent;
+import javax.media.rtp.event.StreamMappedEvent;
+import javax.media.rtp.rtcp.SourceDescription;
 import org.junit.Before;
 import org.junit.Test;
 import org.onesec.raven.OnesecRavenTestCase;
@@ -33,11 +47,12 @@ import org.raven.sched.impl.ExecutorServiceNode;
  *
  * @author Mikhail Titov
  */
-public class OutgoingRtpStreamImplTest extends OnesecRavenTestCase
+public class OutgoingRtpStreamImplTest extends OnesecRavenTestCase implements ReceiveStreamListener, SessionListener
 {
     private RtpStreamManagerNode manager;
     private ExecutorServiceNode executor;
     private AudioStream audioStream;
+    private InetAddress localAddress;
 
     @Before
     public void prepare() throws Exception
@@ -47,7 +62,8 @@ public class OutgoingRtpStreamImplTest extends OnesecRavenTestCase
         tree.getRootNode().addAndSaveChildren(manager);
         manager.setMaxStreamCount(10);
 
-        RtpAddressNode address1 = createAddress("localhost", 3000);
+        localAddress  = getInterfaceAddress();
+        RtpAddressNode address1 = createAddress(localAddress.getHostAddress(), 3000);
         assertTrue(manager.start());
 
         executor = new ExecutorServiceNode();
@@ -68,17 +84,27 @@ public class OutgoingRtpStreamImplTest extends OnesecRavenTestCase
                 new ConcatDataSource(FileTypeDescriptor.WAVE, executor, 160, manager);
 
         OutgoingRtpStream sendStream = manager.getOutgoingRtpStream(manager);
-        Player player = Manager.createPlayer(new URL("rtp://localhost:"+sendStream.getPort()+"/1"));
-        player.start();
+        Player player = Manager.createPlayer(new MediaLocator("rtp://"+localAddress.getHostAddress()+":1234/audio/1"));
+        Thread.sleep(2000);
         try
         {
-            sendStream.open("localhost", remotePort, audioStream);
+            assertEquals(new Integer(1), manager.getStreamsCount());
+            sendStream.open(localAddress.getHostAddress(), 1234, audioSource);
+            player.start();
+            sendStream.start();
+            audioSource.addSource(source1);
+            Thread.sleep(2000);
+            audioSource.addSource(source2);
+            Thread.sleep(2000);
+            audioSource.addSource(source3);
+            Thread.sleep(3000);
         }
         finally
         {
-            player.stop();
             sendStream.release();
+            player.stop();
         }
+        assertEquals(new Integer(0), manager.getStreamsCount());
     }
 
     private RtpAddressNode createAddress(String ip, int startingPort)
@@ -91,4 +117,71 @@ public class OutgoingRtpStreamImplTest extends OnesecRavenTestCase
 
         return addr;
     }
+    private void createRtpSessionManager(int port, int port2) throws Exception
+    {
+        RTPSessionMgr manager = new RTPSessionMgr();
+//        SessionAddress addr = new SessionAddress(iaddr, 1234);
+        SessionAddress addr = new SessionAddress();
+        manager.addReceiveStreamListener(this);
+        manager.addSessionListener(this);
+        manager.initSession(addr, getSDES(manager), .05, .25);
+        manager.startSession(new SessionAddress(localAddress, 1234, localAddress, 1235), 1, null);
+
+//        RTPManager manager = RTPManager.newInstance();
+//        manager.
+
+    }
+
+    private SourceDescription[] getSDES(SessionManager mgr) throws Exception
+    {
+        SourceDescription[] desclist = new  SourceDescription[3];
+        String cname = mgr.generateCNAME();
+
+        desclist[0] = new
+                    SourceDescription(SourceDescription.SOURCE_DESC_NAME,
+                                      System.getProperty("user.name"),
+                                      1,
+                                      false);
+        desclist[1] = new
+                    SourceDescription(SourceDescription.SOURCE_DESC_CNAME,
+                                      cname,
+                                      1,
+                                      false);
+        desclist[2] = new
+                    SourceDescription(SourceDescription.SOURCE_DESC_TOOL,
+                                      "AVReceive powered by JMF",
+                                      1,
+                                      false);
+        return desclist;
+    }
+    public void update(ReceiveStreamEvent event)
+    {
+        logEventInfo("RECEIVE STREAM EVENT: ", event);
+        if (event instanceof StreamMappedEvent)
+        {
+            try {
+                Player player = Manager.createPlayer(event.getReceiveStream().getDataSource());
+                player.start();
+            } catch (IOException ex) {
+                Logger.getLogger(OutgoingRtpStreamImplTest.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (NoPlayerException ex) {
+                Logger.getLogger(OutgoingRtpStreamImplTest.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+    }
+
+    public void update(SessionEvent event)
+    {
+        logEventInfo("SESSION EVENT: ", event);
+    }
+
+    private void logEventInfo(String prefix, Object event)
+    {
+        System.out.println("@@@"+prefix+". class: "+event.getClass().getName()+"; event: "+event.toString());
+    }
+
+    private void createSessionMagager()
+    {
+    }
+
 }

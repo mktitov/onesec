@@ -18,7 +18,7 @@
 package org.onesec.raven.ivr.actions;
 
 import java.util.concurrent.TimeUnit;
-import org.onesec.raven.ivr.IvrEndpoint;
+import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.raven.log.LogLevel;
 
 /**
@@ -38,10 +38,10 @@ public class PauseAction extends AsyncAction
     }
 
     @Override
-    protected void doExecute(IvrEndpoint endpoint) throws Exception
+    protected void doExecute(IvrEndpointConversation conversation) throws Exception
     {
-        if (endpoint.isLogLevelEnabled(LogLevel.DEBUG))
-            endpoint.getLogger().debug("Action. Pausing on "+interval+" ms");
+        if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
+            conversation.getOwner().getLogger().debug("Action. Pausing on "+interval+" ms");
         long start = System.currentTimeMillis();
         do
         {
@@ -49,43 +49,4 @@ public class PauseAction extends AsyncAction
         }
         while (System.currentTimeMillis()-start<interval && !hasCancelRequest());
     }
-    
-//
-//    private class PauseActionTask implements Task
-//    {
-//        private final Node initiator;
-//
-//        public PauseActionTask(Node initiator) {
-//            this.initiator = initiator;
-//        }
-//
-//        public Node getTaskNode() {
-//            throw new UnsupportedOperationException("Not supported yet.");
-//        }
-//
-//        public String getStatusMessage() {
-//            return PauseAction.this.getStatusMessage();
-//        }
-//
-//        public void run()
-//        {
-//            try
-//            {
-//                long start = System.currentTimeMillis();
-//                do {
-//                    try {
-//                        TimeUnit.MILLISECONDS.sleep(10);
-//                    } catch (InterruptedException ex) {
-//                        if (initiator.isLogLevelEnabled(LogLevel.ERROR))
-//                            initiator.getLogger().error("Pause action was itnterrupted");
-//                    }
-//
-//                } while (System.currentTimeMillis()-start<interval && !isMustCancel());
-//            }
-//            finally
-//            {
-//                setStatus(IvrActionStatus.EXECUTED);
-//            }
-//        }
-//    }
 }

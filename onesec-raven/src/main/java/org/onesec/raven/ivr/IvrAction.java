@@ -31,7 +31,7 @@ public interface IvrAction
      * Executes action for passed in the parameter endpoint
      * @throws IvrActionException
      */
-    public void execute(IvrEndpoint endpoint) throws IvrActionException;
+    public void execute(IvrEndpointConversation endpoint) throws IvrActionException;
     /**
      * Returns the action status
      */

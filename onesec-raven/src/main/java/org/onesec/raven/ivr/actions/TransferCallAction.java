@@ -17,7 +17,7 @@
 
 package org.onesec.raven.ivr.actions;
 
-import org.onesec.raven.ivr.IvrEndpoint;
+import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.raven.log.LogLevel;
 
 /**
@@ -45,10 +45,10 @@ public class TransferCallAction extends AsyncAction
     }
 
     @Override
-    protected void doExecute(IvrEndpoint endpoint) throws Exception
+    protected void doExecute(IvrEndpointConversation conversation) throws Exception
     {
-        if (endpoint.isLogLevelEnabled(LogLevel.DEBUG))
-            endpoint.getLogger().debug("Action. Transfering call to the ("+address+") address");
-        endpoint.transfer(address, monitorTransfer, callStartTimeout, callEndTimeout);
+        if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
+            conversation.getOwner().getLogger().debug("Action. Transfering call to the ("+address+") address");
+        conversation.transfer(address, monitorTransfer, callStartTimeout, callEndTimeout);
     }
 }

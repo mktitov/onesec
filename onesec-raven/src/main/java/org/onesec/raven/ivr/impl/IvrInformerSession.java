@@ -106,14 +106,19 @@ public class IvrInformerSession implements Task, ConversationCompletionCallback
                 informLock.lock();
                 try
                 {
+                    conversationResult = null;
                     endpoint.invite(abonentNumber, scenario, this, bindings);
-                    if (maxCallDuration!=null && maxCallDuration>0)
+                    //разговор может завершиться не начавшись
+                    if (conversationResult!=null)
                     {
-                        if (!abonentInformed.await(maxCallDuration, TimeUnit.SECONDS))
-                            restartEndpoint();
+                        if (maxCallDuration!=null && maxCallDuration>0)
+                        {
+                            if (!abonentInformed.await(maxCallDuration, TimeUnit.SECONDS))
+                                restartEndpoint();
+                        }
+                        else
+                            abonentInformed.await();
                     }
-                    else
-                        abonentInformed.await();
                     handleConversationResult();
                     informer.sendRecordToConsumers(record);
                 }
