@@ -17,16 +17,25 @@
 
 package org.onesec.raven.ivr.impl;
 
+import com.cisco.jtapi.extensions.CiscoCall;
 import java.util.HashMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.media.protocol.FileTypeDescriptor;
 import javax.telephony.Call;
 import javax.telephony.Connection;
+import javax.telephony.InvalidStateException;
+import javax.telephony.MethodNotSupportedException;
+import javax.telephony.PrivilegeViolationException;
+import javax.telephony.ResourceUnavailableException;
+import javax.telephony.callcontrol.CallControlCall;
 import org.onesec.raven.ivr.AudioStream;
 import org.onesec.raven.ivr.CompletionCode;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.OutgoingRtpStream;
+import org.onesec.raven.ivr.RtpStreamException;
 import org.raven.conv.ConversationScenario;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
@@ -46,7 +55,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     private final ExecutorService executor;
     private final ConversationScenario scenario;
     private final OutgoingRtpStream rtpStream;
-    private final Call call;
+    private final CallControlCall call;
     private final IvrActionsExecutor actionsExecutor;
     private final AudioStream audioStream;
     private final ConversationScenarioState conversationState;
@@ -59,7 +68,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
 
     public IvrEndpointConversationImpl(
             Node owner, ExecutorService executor, ConversationScenario scenario
-            , OutgoingRtpStream rtpStream, Call call, String remoteAddress, int remotePort)
+            , OutgoingRtpStream rtpStream, CallControlCall call, String remoteAddress, int remotePort)
         throws Exception
     {
         this.owner = owner;
@@ -81,7 +90,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         state = READY;
     }
 
-    public void startConversation() 
+    public IvrEndpointConversationState startConversation()
     {
         lock.writeLock().lock();
         try
@@ -100,12 +109,21 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                             "Conversation. Not all participant are ready for conversation. Ready (%s) " +
                             "participant(s)"
                             , activeConnections));
-                return;
+                return READY;
+            }
+
+            try
+            {
+                rtpStream.open(remoteAddress, remotePort, audioStream);
+            }
+            catch (RtpStreamException ex)
+            {
+                stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
             }
 
             state = TALKING;
-
-//            rtpStream.open(remoteAddress, remotePort, audioStream);
+            
+            return state;
         }
         finally
         {
@@ -120,7 +138,44 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
 
     public void stopConversation(CompletionCode completionCode)
     {
-        
+        lock.writeLock().lock();
+        try
+        {
+            rtpStream.release();
+            audioStream.close();
+            try
+            {
+                actionsExecutor.cancelActionsExecution();
+            }
+            catch (InterruptedException ex)
+            {
+                if (owner.isLogLevelEnabled(LogLevel.ERROR))
+                    owner.getLogger().error(
+                            String.format(
+                                "%s. Error canceling actions executor while stoping conversation"
+                                , getCallId())
+                            , ex);
+            }
+            try
+            {
+                if (call.getState()==Call.ACTIVE)
+                    call.drop();
+            }
+            catch (Exception ex)
+            {
+                if (owner.isLogLevelEnabled(LogLevel.ERROR))
+                    owner.getLogger().error(
+                            String.format(
+                                "%s. Error droping a call while stoping conversation"
+                                , getCallId())
+                            , ex);
+            }
+        }
+        finally
+        {
+            state = INVALID;
+            lock.writeLock().unlock();
+        }
     }
 
     public Node getOwner()
@@ -142,4 +197,10 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     {
         throw new UnsupportedOperationException("Not supported yet.");
     }
+
+    private String getCallId()
+    {
+        return "Conversation <- "+((CiscoCall)call).getCurrentCalledPartyDisplayName()+". ";
+    }
+
 }
