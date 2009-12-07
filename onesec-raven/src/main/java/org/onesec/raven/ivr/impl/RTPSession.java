@@ -68,6 +68,7 @@ public class RTPSession
         try
         {
             source.close();
+            rtpManager.dispose();
 //            session.stop();
 //            session.close();
         }

@@ -60,7 +60,7 @@ public class IvrEndpointNodeTest
     private IvrConversationScenarioNode scenario;
 
     @Before
-    public void prepare()
+    public void prepare() throws Exception
     {
         CCMCallOperatorNode callOperator = new CCMCallOperatorNode();
         callOperator.setName("call operator");
@@ -94,8 +94,8 @@ public class IvrEndpointNodeTest
         tree.getRootNode().addAndSaveChildren(endpoint);
         endpoint.setExecutorService(executor);
         endpoint.setConversationScenario(scenario);
-        endpoint.setAddress("88037");
-        endpoint.setIp("10.50.1.134");
+        endpoint.setAddress("88013");
+        endpoint.setIp(getInterfaceAddress().getHostAddress());
         endpoint.setLogLevel(LogLevel.TRACE);
     }
 
@@ -194,7 +194,7 @@ public class IvrEndpointNodeTest
         IfNode ifNode1 = createIfNode("if1", scenario, "dtmf=='1'||repetitionCount==3");
         IfNode ifNode2 = createIfNode("if2", scenario, "dtmf=='-'||dtmf=='#'");
         createPlayAudioActionNode("hello", ifNode2, audioNode1);
-        createPauseActionNode(ifNode2, 5000l);
+//        createPauseActionNode(ifNode2, 5000l);
         createGotoNode("replay", ifNode2, scenario);
         createPlayAudioActionNode("bye", ifNode1, audioNode2);
 
@@ -208,6 +208,18 @@ public class IvrEndpointNodeTest
         StateWaitResult res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.IN_SERVICE}, 2000);
 //        endpoint.invite("089128672947", scenario, this);
+        endpoint.invite("089128672947", scenario, this, null);
+        res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.INVITING}, 30000);
+        res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.TALKING}, 250000);
+        res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.IN_SERVICE}, 50000);
+
+        Thread.sleep(1000);
+        assertEquals(new Integer(0), executor.getExecutingTaskCount());
+        
+        Thread.sleep(3000);
         endpoint.invite("089128672947", scenario, this, null);
         res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.INVITING}, 30000);
@@ -260,6 +272,7 @@ public class IvrEndpointNodeTest
     {
         AudioFileNode audioNode1 = createAudioFileNode("audio1", "src/test/wav/test2.wav");
 
+        createPauseActionNode(scenario, 2000l);
         createPlayAudioActionNode("hello", scenario, audioNode1);
 
         TransferCallActionNode transfer = new TransferCallActionNode();

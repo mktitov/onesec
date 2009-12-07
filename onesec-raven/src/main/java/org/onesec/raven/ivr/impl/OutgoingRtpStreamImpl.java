@@ -19,8 +19,6 @@ package org.onesec.raven.ivr.impl;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.media.control.BufferControl;
 import javax.media.rtp.RTPManager;
 import javax.media.rtp.SendStream;
