@@ -111,4 +111,8 @@ public class TestEndpointNode extends BaseNode implements IvrEndpoint
         return this;
     }
 
+    public void continueConversation(char dtmfChar) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
 }

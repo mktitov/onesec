@@ -82,6 +82,7 @@ import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.IvrEndpointException;
 import org.onesec.raven.ivr.IvrEndpointState;
 import org.onesec.raven.ivr.actions.AsyncAction;
+import org.onesec.raven.ivr.actions.ContinueConversationAction;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.conv.BindingScope;
@@ -635,7 +636,7 @@ public class IvrEndpointNode extends BaseNode
         }
     }
 
-    private void continueConversation(char dtmfChar)
+    public void continueConversation(char dtmfChar)
     {
         try
         {
@@ -867,20 +868,5 @@ public class IvrEndpointNode extends BaseNode
     public Node getOwner()
     {
         return this;
-    }
-
-    private class ContinueConversationAction extends AsyncAction
-    {
-        public ContinueConversationAction()
-        {
-            super("Continue conversation action");
-        }
-
-        @Override
-        protected void doExecute(IvrEndpointConversation conversation) throws Exception
-        {
-            setStatus(IvrActionStatus.EXECUTED);
-            continueConversation(EMPTY_DTMF);
-        }
     }
 }

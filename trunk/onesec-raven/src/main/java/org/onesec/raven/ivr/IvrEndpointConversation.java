@@ -43,6 +43,11 @@ public interface IvrEndpointConversation
      */
     public AudioStream getAudioStream();
     /**
+     * Continues the conversation with passed in the parameter dtmf char
+     * @param dtmfChar the dtmf char
+     */
+    public void continueConversation(char dtmfChar);
+    /**
      * Stops the current conversation
      */
     public void stopConversation(CompletionCode completionCode);
