@@ -15,31 +15,26 @@
  *  under the License.
  */
 
-package org.onesec.raven.ivr;
+package org.onesec.raven.ivr.actions;
 
-import javax.media.protocol.DataSource;
+import org.onesec.raven.ivr.IvrActionStatus;
+import org.onesec.raven.ivr.IvrEndpointConversation;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface AudioStream
-{
-    public void addSource(InputStreamSource source);
-    /**
-     * Returns true if audio stream has buffers that not played yet.
-     */
-    public boolean isPlaying();
-    /**
-     * Returns audio source
-     */
-    public DataSource getDataSource();
-    /**
-     * Resets the stream. This means that all audio data is not played for now will be cleared.
-     */
-    public void reset();
-    /**
-     * Closes audio source.
-     */
-    public void close();
-}
+public class ContinueConversationAction extends AsyncAction
+    {
+        public ContinueConversationAction()
+        {
+            super("Continue conversation action");
+        }
+
+        @Override
+        protected void doExecute(IvrEndpointConversation conversation) throws Exception
+        {
+            setStatus(IvrActionStatus.EXECUTED);
+            conversation.continueConversation(IvrEndpointConversation.EMPTY_DTMF);
+        }
+    }
