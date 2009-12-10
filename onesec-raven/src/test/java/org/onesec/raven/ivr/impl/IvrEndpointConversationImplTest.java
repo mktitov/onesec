@@ -104,6 +104,7 @@ public class IvrEndpointConversationImplTest extends OnesecRavenTestCase
         tree.getRootNode().addAndSaveChildren(conversationOwner);
         conversationOwner.setLogLevel(LogLevel.TRACE);
         assertTrue(conversationOwner.start());
+//        Thread.currentThread().
     }
 
     @Test

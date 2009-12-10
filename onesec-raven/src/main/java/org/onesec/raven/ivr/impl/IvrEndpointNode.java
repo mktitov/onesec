@@ -687,7 +687,7 @@ public class IvrEndpointNode extends BaseNode
     {
         if (isLogLevelEnabled(LogLevel.DEBUG))
             debug("Stoping conversation");
-        if (endpointState.getId()==IvrEndpointState.IN_SERVICE)
+        if (endpointState.getId()==IvrEndpointState.IN_SERVICE || endpointState.getId()==IvrEndpointState.OUT_OF_SERVICE)
         {
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 debug("Conversation already stopped");
@@ -747,7 +747,7 @@ public class IvrEndpointNode extends BaseNode
             } catch (Exception e)
             {
                 if (isLogLevelEnabled(LogLevel.ERROR))
-                    error("Error stoping conversation");
+                    error("Error stoping conversation", e);
             }
         }
         finally
@@ -834,7 +834,7 @@ public class IvrEndpointNode extends BaseNode
         {
             if (rtpSession!=null)
                 rtpSession.stop();
-        } catch (IOException ex)
+        } catch (Exception ex)
         {
             if (isLogLevelEnabled(LogLevel.ERROR))
                 error("Error stoping rtp session", ex);

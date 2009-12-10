@@ -70,7 +70,7 @@ public class ConcatDataSource
     private final Format format = new AudioFormat(AudioFormat.ULAW_RTP, 8000d, 8, 1);
     private final int rtpPacketSize;
     private boolean started = false;
-    private boolean silenceSource = true;
+    private AtomicBoolean silenceSource;
 
     public ConcatDataSource(String contentType
             , ExecutorService executorService
@@ -87,6 +87,7 @@ public class ConcatDataSource
         stoped = new AtomicBoolean(false);
         sourceThreadRunning = new AtomicBoolean(false);
         streamThreadRunning = new AtomicBoolean(false);
+        silenceSource = new AtomicBoolean(true);
         buffers = new ConcurrentLinkedQueue<Buffer>();
         streams = new ConcatDataStream[]{new ConcatDataStream(buffers, this, owner)};
         ResourceInputStreamSource silenceSource =
@@ -192,6 +193,15 @@ public class ConcatDataSource
 
     public void reset()
     {
+        try {
+            while (silenceSource.get())
+                TimeUnit.MILLISECONDS.sleep(10);
+        }
+        catch (InterruptedException e)
+        {
+            if (owner.isLogLevelEnabled(LogLevel.ERROR))
+                owner.getLogger().error("Error reseting audio stream. Error waiting for audio source initialization", e);
+        }
         sources.clear();
         buffers.clear();
     }
@@ -294,10 +304,10 @@ public class ConcatDataSource
                                     Thread.sleep(2);
                                     continue;
                                 }
-                                if (silenceSource)
+                                if (silenceSource.get())
                                 {
                                     buffers.add(buffer);
-                                    silenceSource = false;
+                                    silenceSource.set(false);
                                     eom = true;
                                     if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                                         owner.getLogger().debug(
