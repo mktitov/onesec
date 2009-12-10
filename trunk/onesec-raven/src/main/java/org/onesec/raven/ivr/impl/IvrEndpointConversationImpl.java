@@ -274,7 +274,25 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
 
     public void transfer(String address, boolean monitorTransfer, long callStartTimeout, long callEndTimeout)
     {
-        throw new UnsupportedOperationException("Not supported yet.");
+        lock.writeLock().lock();
+        try
+        {
+            if (state!=TALKING)
+            {
+                if (owner.isLogLevelEnabled(LogLevel.WARN))
+                    owner.getLogger().warn(String.format(
+                            "Conversation. Can't transfer call to the address (%s). Invalid call state (%s)"
+                            , address, state.name()));
+                return;
+            }
+
+            
+
+        }
+        finally
+        {
+            lock.writeLock().unlock();
+        }
     }
 
     private String getCallId()

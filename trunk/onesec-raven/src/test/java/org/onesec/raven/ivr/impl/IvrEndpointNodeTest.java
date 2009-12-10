@@ -153,7 +153,7 @@ public class IvrEndpointNodeTest
         Thread.sleep(1000);
     }
 
-//    @Test
+    @Test
     public void simpleConversationTest2() throws Exception
     {
         AudioFileNode audioNode1 = createAudioFileNode("audio1", "src/test/wav/test2.wav");
@@ -184,14 +184,14 @@ public class IvrEndpointNodeTest
 
     }
 
-//    @Test
+    @Test
     public void inviteTest() throws Exception
     {
         AudioFileNode audioNode1 = createAudioFileNode("audio1", "src/test/wav/test2.wav");
         AudioFileNode audioNode2 = createAudioFileNode("audio2", "src/test/wav/test.wav");
 
         scenario.setValidDtmfs("1#");
-        IfNode ifNode1 = createIfNode("if1", scenario, "dtmf=='1'||repetitionCount==3");
+        IfNode ifNode1 = createIfNode("if1", scenario, "dtmf=='1'||repetitionCount==5");
         IfNode ifNode2 = createIfNode("if2", scenario, "dtmf=='-'||dtmf=='#'");
         createPlayAudioActionNode("hello", ifNode2, audioNode1);
 //        createPauseActionNode(ifNode2, 5000l);
@@ -207,8 +207,8 @@ public class IvrEndpointNodeTest
         assertTrue(endpoint.start());
         StateWaitResult res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.IN_SERVICE}, 2000);
-//        endpoint.invite("089128672947", scenario, this);
-        endpoint.invite("089128672947", scenario, this, null);
+        endpoint.invite("88024", scenario, this, null);
+//        endpoint.invite("089128672947", scenario, this, null);
         res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.INVITING}, 30000);
         res = endpoint.getEndpointState().waitForState(
@@ -267,7 +267,7 @@ public class IvrEndpointNodeTest
         Thread.sleep(1000);
     }
 
-    @Test
+//    @Test
     public void inviteWithTransferTest() throws Exception
     {
         AudioFileNode audioNode1 = createAudioFileNode("audio1", "src/test/wav/test2.wav");

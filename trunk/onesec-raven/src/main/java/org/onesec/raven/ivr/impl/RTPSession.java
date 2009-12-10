@@ -34,11 +34,12 @@ public class RTPSession
     private final ConcatDataSource source;
     private final RTPManager rtpManager;
     private final SendStream sendStream;
+    private final SessionAddress destAddress;
 
     public RTPSession(String host, int port, ConcatDataSource source) throws Exception
     {
         this.source = source;
-        SessionAddress destAddress = new SessionAddress(InetAddress.getByName(host), port);
+        destAddress = new SessionAddress(InetAddress.getByName(host), port);
         rtpManager = RTPManager.newInstance();
         rtpManager.initialize(new SessionAddress());
         rtpManager.addTarget(destAddress);
@@ -63,18 +64,20 @@ public class RTPSession
 //        session.start();
     }
 
-    public void stop() throws IOException
+    public void stop() throws Exception
     {
-        try
-        {
-            source.close();
+        try {
+            try {
+                try {
+                    source.close();
+                } finally {
+                    sendStream.close();
+                }
+            } finally {
+                rtpManager.removeTarget(destAddress, "disconnected");
+            }
+        } finally {
             rtpManager.dispose();
-//            session.stop();
-//            session.close();
-        }
-        finally
-        {
-            sendStream.close();
         }
     }
 }

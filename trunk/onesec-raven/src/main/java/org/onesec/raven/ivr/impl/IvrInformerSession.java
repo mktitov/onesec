@@ -109,7 +109,7 @@ public class IvrInformerSession implements Task, ConversationCompletionCallback
                     conversationResult = null;
                     endpoint.invite(abonentNumber, scenario, this, bindings);
                     //разговор может завершиться не начавшись
-                    if (conversationResult!=null)
+                    if (conversationResult==null)
                     {
                         if (maxCallDuration!=null && maxCallDuration>0)
                         {
