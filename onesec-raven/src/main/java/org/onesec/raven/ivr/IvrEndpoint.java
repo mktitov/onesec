@@ -19,7 +19,6 @@ package org.onesec.raven.ivr;
 
 import java.util.Map;
 import org.onesec.core.ObjectDescription;
-import org.raven.sched.ExecutorService;
 import org.raven.tree.Node;
 
 /**

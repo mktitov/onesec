@@ -68,7 +68,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     private final String remoteAddress;
     private final int remotePort;
     private final BindingSupportImpl bindingSupport;
-    private IvrEndpointConversationState state;
+    private IvrEndpointConversationStateImpl state;
 
 
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
@@ -95,7 +95,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         actionsExecutor = new IvrActionsExecutor(this, executor);
         this.bindingSupport = new BindingSupportImpl();
         
-        state = READY;
+        state.setState(READY);
     }
 
     public IvrEndpointConversationState startConversation()
@@ -117,7 +117,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                             "Conversation. Not all participant are ready for conversation. Ready (%s) " +
                             "participant(s)"
                             , activeConnections));
-                return READY;
+                return state;
             }
 
             try
@@ -130,7 +130,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
             }
 
-            state = TALKING;
+            state.setState(TALKING);
 
             if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                 owner.getLogger().debug(getCallId()+". Conversation successfully started");            
@@ -211,7 +211,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         lock.writeLock().lock();
         try
         {
-            if (state==INVALID)
+            if (state.getId()==INVALID)
                 return;
             
             if (owner.isLogLevelEnabled(LogLevel.DEBUG))
@@ -250,7 +250,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         }
         finally
         {
-            state = INVALID;
+            state.setState(INVALID);
             lock.writeLock().unlock();
             if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                 owner.getLogger().debug(getCallId()+". Conversation stoped");
@@ -277,12 +277,12 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         lock.writeLock().lock();
         try
         {
-            if (state!=TALKING)
+            if (state.getId()!=TALKING)
             {
                 if (owner.isLogLevelEnabled(LogLevel.WARN))
                     owner.getLogger().warn(String.format(
                             "Conversation. Can't transfer call to the address (%s). Invalid call state (%s)"
-                            , address, state.name()));
+                            , address, state.getIdName()));
                 return;
             }
 
@@ -298,6 +298,16 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     private String getCallId()
     {
         return "Conversation <- "+((CiscoCall)call).getCallingAddress().getName();
+    }
+
+    public String getObjectName()
+    {
+        return getCallId();
+    }
+
+    public String getObjectDescription()
+    {
+        return getCallId();
     }
 
 }

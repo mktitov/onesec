@@ -179,10 +179,10 @@ public class ConcatDataSource
             while (streamThreadRunning.get())
                 Thread.sleep(100);
         }
-        catch (InterruptedException interruptedException)
+        catch (InterruptedException e)
         {
             if (owner.isLogLevelEnabled(LogLevel.ERROR))
-                owner.getLogger().error("ConcatDataSource close operation was interrupted");
+                owner.getLogger().error("ConcatDataSource close operation was interrupted", e);
         }
     }
 

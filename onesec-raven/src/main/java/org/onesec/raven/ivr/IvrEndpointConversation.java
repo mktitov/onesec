@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr;
 
+import org.onesec.core.ObjectDescription;
 import org.raven.sched.ExecutorService;
 import org.raven.tree.Node;
 
@@ -24,7 +25,7 @@ import org.raven.tree.Node;
  *
  * @author Mikhail Titov
  */
-public interface IvrEndpointConversation
+public interface IvrEndpointConversation extends ObjectDescription
 {
     public final static char EMPTY_DTMF = '-';
     public final static String DTMF_BINDING = "dtmf";
