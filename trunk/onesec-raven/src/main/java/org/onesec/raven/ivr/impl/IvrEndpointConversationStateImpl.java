@@ -15,18 +15,27 @@
  *  under the License.
  */
 
-package org.onesec.raven.ivr;
+package org.onesec.raven.ivr.impl;
 
-import org.onesec.core.State;
+import org.onesec.core.impl.BaseState;
+import org.onesec.raven.ivr.IvrEndpointConversation;
+import org.onesec.raven.ivr.IvrEndpointConversationState;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface IvrEndpointConversationState extends State<IvrEndpointConversationState, IvrEndpointConversation>
+public class IvrEndpointConversationStateImpl
+        extends BaseState<IvrEndpointConversationState, IvrEndpointConversation>
+        implements IvrEndpointConversationState
 {
-    public final static int READY = 1;
-    public final static int TALKING = 2;
-    public final static int TRANSFERING = 3;
-    public final static int INVALID = 4;
+    public IvrEndpointConversationStateImpl(IvrEndpointConversation observableObject)
+    {
+        super(observableObject);
+
+        addIdName(READY, "READY");
+        addIdName(TALKING, "TALKING");
+        addIdName(TRANSFERING, "TRANSFERING");
+        addIdName(INVALID, "INVALID");
+    }
 }
