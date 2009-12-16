@@ -19,6 +19,7 @@ package org.onesec.raven.ivr.impl;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -109,6 +110,9 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
     @Parameter
     private String displayFields;
 
+    @Parameter
+    private String groupField;
+
     private ReentrantReadWriteLock dataLock;
     private Map<Long, IvrInformerSession> sessions;
     private Condition sessionRemoved;
@@ -120,6 +124,8 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
     private AtomicReference<IvrInformerStatus> informerStatus;
     private IvrInformerScheduler startScheduler;
     private IvrInformerScheduler stopScheduler;
+    private List<Record> records;
+
 
     @Message
     private static String informedAbonentsMessage;
@@ -149,6 +155,7 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         informedAbonents = 0;
         statusMessage = null;
         handledRecordSets = 0;
+        records = null;
     }
 
     @Override
@@ -166,6 +173,37 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         sessions.clear();
         generateNodes();
         informerStatus.set(IvrInformerStatus.WAITING);
+    }
+
+    public void startProcessing()
+    {
+        if (!informerStatus.compareAndSet(IvrInformerStatus.WAITING, IvrInformerStatus.PROCESSING))
+        {
+            if (isLogLevelEnabled(LogLevel.DEBUG))
+                debug("Informator already processing records");
+            return;
+        }
+        try
+        {
+            statusMessage = "Requesting records from "+dataSource.getPath();
+            if (isLogLevelEnabled(LogLevel.DEBUG))
+                debug(statusMessage);
+            dataSource.getDataImmediate(this, null);
+            sendDataToConsumers(null);
+        }
+        finally
+        {
+            ++handledRecordSets;
+            informerStatus.set(IvrInformerStatus.WAITING);
+            statusMessage = "All records sended by data source where processed.";
+        }
+    }
+
+    public void stopProcessing()
+    {
+
+        informerStatus.compareAndSet(
+                IvrInformerStatus.PROCESSING, IvrInformerStatus.STOP_PROCESSING);
     }
 
     private void generateNodes()
@@ -292,6 +330,14 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         this.endpointPool = endpointPool;
     }
 
+    public String getGroupField() {
+        return groupField;
+    }
+
+    public void setGroupField(String groupField) {
+        this.groupField = groupField;
+    }
+
     public String getDisplayFields()
     {
         return displayFields;
@@ -313,40 +359,16 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         return null;
     }
 
-    public void startProcessing()
-    {
-        try
-        {
-            statusMessage = "Requesting records from "+dataSource.getPath();
-            if (isLogLevelEnabled(LogLevel.DEBUG))
-                debug(statusMessage);
-            dataSource.getDataImmediate(this, null);
-            sendDataToConsumers(null);
-        }
-        finally
-        {
-            ++handledRecordSets;
-            informerStatus.set(IvrInformerStatus.WAITING);
-            statusMessage = "All records sended by data source where processed.";
-        }
-    }
-
-    public void stopProcessing()
-    {
-        informerStatus.compareAndSet(
-                IvrInformerStatus.PROCESSING, IvrInformerStatus.STOP_PROCESSING);
-    }
-
     public void setData(DataSource dataSource, Object data)
     {
-//        if (!Status.STARTED.equals(getStatus())
-//            || !IvrInformerStatus.PROCESSING.equals(informerStatus.get()))
-//        {
-//            return;
-//        }
-        if (!(data instanceof Record))
+        if (!Status.STARTED.equals(getStatus())
+            || ObjectUtils.in(informerStatus.get(), IvrInformerStatus.STOP_PROCESSING))
+        {
             return;
-
+        }
+        if (data!=null && !(data instanceof Record))
+            return;
+        
         Record rec = (Record) data;
         if (isLogLevelEnabled(LogLevel.DEBUG))
             debug("Tring to inform abonent: "+getRecordInfo(rec));
@@ -354,13 +376,48 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         {
             if (dataLock.writeLock().tryLock(2, TimeUnit.SECONDS))
             {
-                try{
-                    initFields(rec);
-                    createSession(rec);
-                }finally{
+                try
+                {
+                    List<Record> recordsChain = null;
+                    if (rec!=null)
+                    {
+                        String _groupField = groupField;
+                        if (_groupField!=null)
+                        {
+                            if (records==null)
+                                records = new ArrayList<Record>();
+                            if (records.isEmpty() || ObjectUtils.equals(rec.getValue(_groupField), records.get(0).getValue(_groupField)))
+                                records.add(rec);
+                            else
+                            {
+                                recordsChain = records;
+                                records = new ArrayList();
+                                records.add(rec);
+                            }
+                        }
+                        else
+                        {
+                            recordsChain = Arrays.asList(rec);
+                        }
+                    }
+                    else if (records!=null)
+                        recordsChain = records;
+
+                    if (recordsChain!=null)
+                    {
+                        try{
+                            for (Record record: recordsChain)
+                                initFields(record);
+                            createSession(recordsChain);
+                        }finally{
+                            recordsChain = null;
+                        }
+                    }
+                }
+                finally
+                {
                     dataLock.writeLock().unlock();
                 }
-
             }
         } catch (Exception ex)
         {
@@ -371,6 +428,8 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
     
     String getRecordInfo(Record rec)
     {
+        if (rec==null)
+            return "";
         try
         {
             return String.format(
@@ -440,7 +499,11 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
                     Object[] row = new Object[fields.length];
                     for (int i=0; i<fields.length; ++i)
                         if (recordFields.containsKey(fields[i]))
-                            row[i] = session.getRecord().getValue(fields[i]);
+                        {
+                            Record record = session.getCurrentRecord();
+                            if (record!=null)
+                                row[i] = session.getCurrentRecord().getValue(fields[i]);
+                        }
                     table.addRow(row);
                 }
 
@@ -553,10 +616,10 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         Object number = rec.getValue(ABONENT_NUMBER_FIELD);
         for (IvrInformerSession session: sessions.values())
         {
-            if (ObjectUtils.equals(number, session.getRecord().getValue(ABONENT_NUMBER_FIELD)))
+            if (session.containsAbonentNumber(number))
             {
-                rec.setValue(COMPLETION_CODE_FIELD, ALREADY_INFORMING);
-                sendRecordToConsumers(rec);
+//                rec.setValue(COMPLETION_CODE_FIELD, ALREADY_INFORMING);
+//                sendRecordToConsumers(rec);
                 return true;
             }
         }
@@ -564,32 +627,54 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         return false;
     }
 
-    private IvrInformerSession createSession(Record rec) throws Exception
+    private IvrInformerSession createSession(List<Record> records) throws Exception
     {
-        if (isAlreadyInforming(rec))
+        boolean alreadyInforming = false;
+        for (Record record: records)
+        {
+            if (isAlreadyInforming(record))
+            {
+                alreadyInforming = true;
+                break;
+            }
+        }
+        if (alreadyInforming)
+        {
+            for (Record record: records)
+            {
+                record.setValue(COMPLETION_CODE_FIELD, ALREADY_INFORMING);
+                sendRecordToConsumers(record);
+            }
             return null;
+        }
         
         if (sessions.size()>=maxSessionsCount && !waitForSession)
         {
-            rec.setValue(COMPLETION_CODE_FIELD, ERROR_TOO_MANY_SESSIONS);
-            sendRecordToConsumers(rec);
+            for (Record record: records)
+            {
+                record.setValue(COMPLETION_CODE_FIELD, ERROR_TOO_MANY_SESSIONS);
+                sendRecordToConsumers(record);
+            }
             return null;
         }
 
         if (sessions.size()>=maxSessionsCount)
             sessionRemoved.await();
 
-        Long id = converter.convert(Long.class, rec.getValue(ID_FIELD), null);
         IvrEndpoint endpoint = endpointPool.getEndpoint(endpointWaitTimeout);
         if (endpoint==null)
         {
-            rec.setValue(COMPLETION_CODE_FIELD, ERROR_NO_FREE_ENDPOINT_IN_THE_POOL);
-            sendRecordToConsumers(rec);
+            for (Record record: records)
+            {
+                record.setValue(COMPLETION_CODE_FIELD, ERROR_NO_FREE_ENDPOINT_IN_THE_POOL);
+                sendRecordToConsumers(record);
+            }
             return null;
         }
 
+        Long id = converter.convert(Long.class, records.iterator().next().getValue(ID_FIELD), null);
         IvrInformerSession session = new IvrInformerSession(
-                rec, this, endpoint, maxCallDuration, conversationScenario);
+                records, this, endpoint, maxCallDuration, conversationScenario);
         sessions.put(id, session);
         executor.execute(session);
 
@@ -598,13 +683,14 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
 
     void removeSession(IvrInformerSession session)
     {
+        Record firstRecord = session.getRecords().get(0);
         try
         {
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 debug("Realising endpoint: "+session.getEndpoint().getName());
             endpointPool.releaseEndpoint(session.getEndpoint());
             
-            Long id = converter.convert(Long.class, session.getRecord().getValue(ID_FIELD), null);
+            Long id = converter.convert(Long.class, firstRecord.getValue(ID_FIELD), null);
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 debug("Removing session: "+id);
             dataLock.writeLock().lock();
@@ -628,7 +714,7 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         catch (RecordException ex)
         {
             if (isLogLevelEnabled(LogLevel.ERROR))
-                error("Error removing session from the list: "+getRecordInfo(session.getRecord()), ex);
+                error("Error removing session from the list: "+getRecordInfo(firstRecord), ex);
         }
     }
 
