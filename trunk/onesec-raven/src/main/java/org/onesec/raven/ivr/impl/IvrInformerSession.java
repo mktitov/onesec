@@ -17,21 +17,27 @@
 
 package org.onesec.raven.ivr.impl;
 
+import java.sql.Timestamp;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import org.onesec.raven.ivr.CompletionCode;
 import org.onesec.raven.ivr.ConversationCompletionCallback;
 import org.onesec.raven.ivr.ConversationResult;
 import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.IvrEndpoint;
 import org.onesec.raven.ivr.IvrEndpointState;
 import org.raven.ds.Record;
+import org.raven.ds.RecordException;
 import org.raven.log.LogLevel;
 import org.raven.sched.Task;
 import org.raven.tree.Node;
+import org.weda.beans.ObjectUtils;
 import org.weda.internal.annotations.Service;
 import org.weda.services.TypeConverter;
 import static org.onesec.raven.ivr.impl.IvrInformerRecordSchemaNode.*;
@@ -45,7 +51,7 @@ public class IvrInformerSession implements Task, ConversationCompletionCallback
     @Service
     private static TypeConverter converter;
 
-    private final Record record;
+    private final List<Record> records;
     private final AsyncIvrInformer informer;
     private final IvrEndpoint endpoint;
     private final Integer maxCallDuration;
@@ -56,12 +62,13 @@ public class IvrInformerSession implements Task, ConversationCompletionCallback
 
     private String statusMessage;
     private ConversationResult conversationResult;
+    private Record currentRecord;
 
     public IvrInformerSession(
-            Record record, AsyncIvrInformer informer, IvrEndpoint endpoint, Integer maxCallDuration
+            List<Record> records, AsyncIvrInformer informer, IvrEndpoint endpoint, Integer maxCallDuration
             , IvrConversationScenario scenario)
     {
-        this.record = record;
+        this.records = records;
         this.informer = informer;
         this.endpoint = endpoint;
         this.maxCallDuration = maxCallDuration;
@@ -76,9 +83,23 @@ public class IvrInformerSession implements Task, ConversationCompletionCallback
         return endpoint;
     }
 
-    public Record getRecord()
+    public Record getCurrentRecord()
     {
-        return record;
+        return currentRecord;
+    }
+
+    public List<Record> getRecords()
+    {
+        return records;
+    }
+
+    public boolean containsAbonentNumber(Object abonentNumber) throws RecordException
+    {
+        for (Record record: records)
+            if (ObjectUtils.equals(abonentNumber, record.getValue(ABONENT_NUMBER_FIELD)))
+                return true;
+
+        return false;
     }
 
     public Node getTaskNode()
@@ -88,7 +109,7 @@ public class IvrInformerSession implements Task, ConversationCompletionCallback
 
     public String getStatusMessage()
     {
-        return statusMessage+" ("+informer.getRecordInfo(record)+")";
+        return statusMessage+" ("+informer.getRecordInfo(currentRecord)+")";
     }
 
     public void run()
@@ -97,41 +118,57 @@ public class IvrInformerSession implements Task, ConversationCompletionCallback
         {
             try
             {
-                statusMessage = "Starting inform abonent";
-                Map<String, Object> bindings = new HashMap<String, Object>();
-                bindings.put(AsyncIvrInformer.RECORD_BINDING, record);
-                bindings.put(AsyncIvrInformer.INFORMER_BINDING, this);
-                statusMessage = "Calling to the abonent";
-                String abonentNumber = converter.convert(String.class, record.getValue(ABONENT_NUMBER_FIELD), null);
                 informLock.lock();
-                try
+                boolean groupInformed = false;
+                for (Record record: records)
                 {
-                    conversationResult = null;
-                    endpoint.invite(abonentNumber, scenario, this, bindings);
-                    //разговор может завершиться не начавшись
-                    if (conversationResult==null)
+                    currentRecord = record;
+                    try
                     {
-                        if (maxCallDuration!=null && maxCallDuration>0)
-                        {
-                            if (!abonentInformed.await(maxCallDuration, TimeUnit.SECONDS))
-                                restartEndpoint();
-                        }
+                        statusMessage = "Starting inform abonent";
+                        Map<String, Object> bindings = new HashMap<String, Object>();
+                        bindings.put(AsyncIvrInformer.RECORD_BINDING, record);
+                        bindings.put(AsyncIvrInformer.INFORMER_BINDING, this);
+                        statusMessage = "Calling to the abonent";
+                        String abonentNumber = converter.convert(String.class, record.getValue(ABONENT_NUMBER_FIELD), null);
+                        conversationResult = null;
+                        if (groupInformed)
+                            skipRecord(record);
                         else
-                            abonentInformed.await();
+                        {
+                            endpoint.invite(abonentNumber, scenario, this, bindings);
+                            //разговор может завершиться не начавшись
+                            if (conversationResult==null)
+                            {
+                                if (maxCallDuration!=null && maxCallDuration>0)
+                                {
+                                    if (!abonentInformed.await(maxCallDuration, TimeUnit.SECONDS))
+                                        restartEndpoint();
+                                }
+                                else
+                                    abonentInformed.await();
+                            }
+                            handleConversationResult(record);
+                            if (ObjectUtils.in(conversationResult.getCompletionCode()
+                                    , CompletionCode.COMPLETED_BY_ENDPOINT, CompletionCode.COMPLETED_BY_OPPONENT)
+                                && conversationResult.getConversationDuration()>0)
+                            {
+                                groupInformed = true;
+                            }
+                        }
+                        informer.sendRecordToConsumers(record);
                     }
-                    handleConversationResult();
-                    informer.sendRecordToConsumers(record);
-                }
-                finally
-                {
-                    informLock.unlock();
+                    catch(Exception e)
+                    {
+                        if (informer.isLogLevelEnabled(LogLevel.ERROR))
+                            informer.getLogger().error(
+                                    "Error informing abonent: "+informer.getRecordInfo(record));
+                    }
                 }
             }
-            catch(Exception e)
+            finally
             {
-                if (informer.isLogLevelEnabled(LogLevel.ERROR))
-                    informer.getLogger().error(
-                            "Error informing abonent: "+informer.getRecordInfo(record));
+                informLock.unlock();
             }
         }
         finally
@@ -152,6 +189,15 @@ public class IvrInformerSession implements Task, ConversationCompletionCallback
         {
             informLock.unlock();
         }
+    }
+
+    private void skipRecord(Record record) throws RecordException
+    {
+        statusMessage = "Skiping record: "+informer.getRecordInfo(record);
+        record.setValue(COMPLETION_CODE_FIELD, AsyncIvrInformer.SKIPPED_STATUS);
+        Timestamp curTs = new Timestamp(System.currentTimeMillis());
+        record.setValue(CALL_START_TIME_FIELD, curTs);
+        record.setValue(CALL_END_TIME_FIELD, curTs);
     }
 
     private void restartEndpoint() throws Exception
@@ -178,7 +224,7 @@ public class IvrInformerSession implements Task, ConversationCompletionCallback
                     "Error restarting endpoint (%s)", endpoint.getPath()));
     }
 
-    private void handleConversationResult() throws Exception
+    private void handleConversationResult(Record record) throws Exception
     {
         String status = null;
         if (conversationResult==null)

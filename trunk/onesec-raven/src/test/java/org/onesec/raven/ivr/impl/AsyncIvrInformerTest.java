@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import javax.media.protocol.PullDataSource;
 import org.junit.Before;
 import org.junit.Test;
 import org.onesec.core.StateWaitResult;
@@ -44,6 +45,7 @@ import org.raven.log.LogLevel;
 import org.raven.sched.impl.ExecutorServiceNode;
 import org.raven.test.DataCollector;
 import org.raven.test.PushDataSource;
+import org.raven.test.PushOnDemandDataSource;
 import org.raven.tree.Node;
 import org.raven.tree.NodeError;
 import static org.onesec.raven.ivr.impl.IvrInformerRecordSchemaNode.*;
@@ -58,6 +60,7 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
     private IvrConversationScenarioNode scenario;
     private IvrInformerRecordSchemaNode schema;
     private PushDataSource dataSource;
+    private PushOnDemandDataSource pullDataSource;
     private DataCollector dataCollector;
     private AsyncIvrInformer informer;
 
@@ -107,6 +110,11 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
         dataSource.setName("dataSource");
         tree.getRootNode().addAndSaveChildren(dataSource);
         assertTrue(dataSource.start());
+
+        pullDataSource = new PushOnDemandDataSource();
+        pullDataSource.setName("pullDataSource");
+        tree.getRootNode().addAndSaveChildren(pullDataSource);
+        assertTrue(pullDataSource.start());
 
         informer = new AsyncIvrInformer();
         informer.setName("informer");
@@ -159,7 +167,7 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
         createScenario();
         assertTrue(informer.start());
         dataSource.pushData(createRecord(1, "abon1", "88024"));
-        dataSource.pushData(createRecord(2, "abon1", "88027"));
+        dataSource.pushData(createRecord(2, "abon1", "089128672947"));
 
         while (informer.getSessionsCount()>0)
             TimeUnit.MILLISECONDS.sleep(500);
@@ -183,7 +191,7 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
         createScenario();
         assertTrue(informer.start());
         dataSource.pushData(createRecord(1, "abon1", "88024"));
-        dataSource.pushData(createRecord(2, "abon1", "88027"));
+        dataSource.pushData(createRecord(2, "abon1", "089128672947"));
 
         while (informer.getSessionsCount()>0)
             TimeUnit.MILLISECONDS.sleep(500);
@@ -201,7 +209,7 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
         printRecordsInformation(dataList);
     }
 
-    @Test(timeout=60000)
+//    @Test(timeout=60000)
     public void alreadyInformingTest() throws Exception
     {
         createScenario();
@@ -213,6 +221,7 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
             TimeUnit.MILLISECONDS.sleep(500);
 
         List dataList = dataCollector.getDataList();
+        printRecordsInformation(dataList);
         Map<Long, Record> recs = getRecords(dataList);
         assertEquals(4, dataList.size());
         assertEquals(2, recs.size());
@@ -222,7 +231,6 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
         assertEquals(
                 AsyncIvrInformer.ALREADY_INFORMING
                 , recs.get(2l).getValue(COMPLETION_CODE_FIELD));
-        printRecordsInformation(dataList);
     }
 
 //    @Test(timeout=60000)
@@ -234,7 +242,7 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
         createScenario();
         assertTrue(informer.start());
         dataSource.pushData(createRecord(1, "abon1", "88024"));
-        dataSource.pushData(createRecord(2, "abon1", "88027"));
+        dataSource.pushData(createRecord(2, "abon1", "089128672947"));
 
         while (informer.getSessionsCount()>0)
             TimeUnit.MILLISECONDS.sleep(500);
@@ -248,6 +256,60 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
         assertTrue((Long)recs.get(1l).getValue(CONVERSATION_DURATION_FIELD)>0);
         assertNotNull(recs.get(2l));
         assertTrue((Long)recs.get(2l).getValue(CONVERSATION_DURATION_FIELD)>0);
+    }
+
+    @Test(timeout=60000)
+    public void groupTest() throws Exception
+    {
+        informer.setWaitForSession(Boolean.FALSE);
+        informer.setMaxSessionsCount(2);
+        informer.setGroupField(IvrInformerRecordSchemaNode.ABONENT_ID_FIELD);
+        
+        createEndpoint("88014", 1236);
+        createScenario();
+        assertTrue(informer.start());
+        dataSource.pushData(createRecord(1, "abon1", "88024"));
+        dataSource.pushData(createRecord(2, "abon1", "089128672947"));
+        dataSource.pushData(null);
+
+        while (informer.getSessionsCount()>0)
+            TimeUnit.MILLISECONDS.sleep(500);
+
+        List dataList = dataCollector.getDataList();
+        Map<Long, Record> recs = getRecords(dataList);
+        printRecordsInformation(dataList);
+        assertEquals(4, dataList.size());
+        assertEquals(2, recs.size());
+        assertNotNull(recs.get(1l));
+        assertTrue((Long)recs.get(1l).getValue(CONVERSATION_DURATION_FIELD)>0);
+        assertNotNull(recs.get(2l));
+        assertEquals(AsyncIvrInformer.SKIPPED_STATUS, recs.get(2l).getValue(IvrInformerRecordSchemaNode.COMPLETION_CODE_FIELD));
+    }
+
+    public void startProcessingTest() throws Exception
+    {
+        informer.setWaitForSession(Boolean.FALSE);
+        informer.setMaxSessionsCount(2);
+
+        createEndpoint("88014", 1236);
+        createScenario();
+        assertTrue(informer.start());
+        dataSource.pushData(createRecord(1, "abon1", "88024"));
+        dataSource.pushData(createRecord(2, "abon1", "089128672947"));
+        dataSource.pushData(null);
+
+        while (informer.getSessionsCount()>0)
+            TimeUnit.MILLISECONDS.sleep(500);
+
+        List dataList = dataCollector.getDataList();
+        Map<Long, Record> recs = getRecords(dataList);
+        printRecordsInformation(dataList);
+        assertEquals(4, dataList.size());
+        assertEquals(2, recs.size());
+        assertNotNull(recs.get(1l));
+        assertTrue((Long)recs.get(1l).getValue(CONVERSATION_DURATION_FIELD)>0);
+        assertNotNull(recs.get(2l));
+        assertEquals(AsyncIvrInformer.SKIPPED_STATUS, recs.get(2l).getValue(IvrInformerRecordSchemaNode.COMPLETION_CODE_FIELD));
     }
 
     private Map<Long, Record> getRecords(List list) throws RecordException
