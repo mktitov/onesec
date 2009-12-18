@@ -28,13 +28,15 @@ import com.cisco.jtapi.extensions.CiscoTermInServiceEv;
 import com.cisco.jtapi.extensions.CiscoTermOutOfServiceEv;
 import com.cisco.jtapi.extensions.CiscoTerminalObserver;
 import com.cisco.jtapi.extensions.CiscoUnregistrationException;
-import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.media.protocol.FileTypeDescriptor;
@@ -74,14 +76,11 @@ import org.onesec.raven.ivr.CompletionCode;
 import org.onesec.raven.ivr.ConversationCompletionCallback;
 import org.onesec.raven.ivr.IvrAction;
 import org.onesec.raven.ivr.IvrActionNode;
-import org.onesec.raven.ivr.IvrActionStatus;
 import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.IvrConversationScenarioPoint;
 import org.onesec.raven.ivr.IvrEndpoint;
-import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.IvrEndpointException;
 import org.onesec.raven.ivr.IvrEndpointState;
-import org.onesec.raven.ivr.actions.AsyncAction;
 import org.onesec.raven.ivr.actions.ContinueConversationAction;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
@@ -158,6 +157,8 @@ public class IvrEndpointNode extends BaseNode
     private String opponentNumber;
     private BindingSupportImpl bindingSupport;
 
+    private Lock rtpSessionLock;
+
     @Override
     protected void initFields()
     {
@@ -167,6 +168,7 @@ public class IvrEndpointNode extends BaseNode
         endpointState = new IvrEndpointStateImpl(this);
         stateListenersCoordinator.addListenersToState(endpointState);
         bindingSupport = new BindingSupportImpl();
+        rtpSessionLock = new ReentrantLock();
         resetStates();
         resetConversationFields();
     }
@@ -502,7 +504,7 @@ public class IvrEndpointNode extends BaseNode
                     rtpInitialized = true;
                     startRtpSession(remoteAddress, remotePort);
                     break;
-                case CiscoRTPOutputStoppedEv.ID: stopRtpSession(); break;
+                case CiscoRTPOutputStoppedEv.ID: closeRtpSession(); break;
                 case TermObservationEndedEv.ID: observingTerminal.set(false); break;
             }
         }
@@ -700,6 +702,7 @@ public class IvrEndpointNode extends BaseNode
             return;
         }
         boolean changeStateToInService = true;
+        closeRtpSession();
         try
         {
             try
@@ -714,17 +717,20 @@ public class IvrEndpointNode extends BaseNode
                     }
                     finally
                     {
-                        TerminalConnection[] connections = terminal.getTerminalConnections();
-                        if (connections!=null && connections.length>0)
+                        if (terminal!=null)
                         {
-                            if (isLogLevelEnabled(LogLevel.DEBUG))
-                                debug("Terminal has active connection. Disconnecting...");
-                            Connection connection = connections[0].getConnection();
-                            connection.disconnect();
-                            changeStateToInService = false;
-                            return;
-//                                while (connections[0].getState()!=TerminalConnection.DROPPED)
-//                                    Thread.sleep(100);
+                            TerminalConnection[] connections = terminal.getTerminalConnections();
+                            if (connections!=null && connections.length>0)
+                            {
+                                if (isLogLevelEnabled(LogLevel.DEBUG))
+                                    debug("Terminal has active connection. Disconnecting...");
+                                Connection connection = connections[0].getConnection();
+                                connection.disconnect();
+                                changeStateToInService = false;
+                                return;
+    //                                while (connections[0].getState()!=TerminalConnection.DROPPED)
+    //                                    Thread.sleep(100);
+                            }
                         }
                     }
                 }
@@ -757,6 +763,40 @@ public class IvrEndpointNode extends BaseNode
                 resetConversationFields();
                 endpointState.setState(IvrEndpointState.IN_SERVICE);
             }
+        }
+    }
+
+    private void closeRtpSession()
+    {
+        try 
+        {
+            if (rtpSessionLock.tryLock(5, TimeUnit.SECONDS)) {
+                try{
+                    if (rtpSession != null)
+                    {
+                        if (isLogLevelEnabled(LogLevel.DEBUG))
+                            debug("Stoping rtp session");
+                        try {
+                            rtpSession.stop();
+                        } catch (Exception ex) {
+                            if (isLogLevelEnabled(LogLevel.ERROR))
+                                error("Error stoping rtp session", ex);
+                        }
+                        rtpSession = null;
+                        audioStream = null;
+                    }
+                }
+                finally
+                {
+                    rtpSessionLock.unlock();
+                }
+            }
+        }
+        catch (InterruptedException ex)
+        {
+            if (isLogLevelEnabled(LogLevel.ERROR))
+                error("Operation closeRtpSession was interrupted", ex);
+            Thread.currentThread().interrupt();
         }
     }
 

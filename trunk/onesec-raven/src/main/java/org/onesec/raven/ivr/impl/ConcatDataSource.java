@@ -183,6 +183,7 @@ public class ConcatDataSource
         {
             if (owner.isLogLevelEnabled(LogLevel.ERROR))
                 owner.getLogger().error("ConcatDataSource close operation was interrupted", e);
+            Thread.currentThread().interrupt();
         }
     }
 
@@ -201,6 +202,7 @@ public class ConcatDataSource
         {
             if (owner.isLogLevelEnabled(LogLevel.ERROR))
                 owner.getLogger().error("Error reseting audio stream. Error waiting for audio source initialization", e);
+            Thread.currentThread().interrupt();
         }
         sources.clear();
         buffers.clear();

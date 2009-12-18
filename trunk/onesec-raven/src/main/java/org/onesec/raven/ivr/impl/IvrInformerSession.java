@@ -116,34 +116,35 @@ public class IvrInformerSession implements Task, ConversationCompletionCallback
     {
         try
         {
-            try
+            boolean groupInformed = false;
+            for (Record record: records)
             {
-                informLock.lock();
-                boolean groupInformed = false;
-                for (Record record: records)
+                currentRecord = record;
+                try
                 {
-                    currentRecord = record;
-                    try
+                    statusMessage = "Starting inform abonent";
+                    Map<String, Object> bindings = new HashMap<String, Object>();
+                    bindings.put(AsyncIvrInformer.RECORD_BINDING, record);
+                    bindings.put(AsyncIvrInformer.INFORMER_BINDING, this);
+                    statusMessage = "Calling to the abonent";
+                    String abonentNumber = converter.convert(String.class, record.getValue(ABONENT_NUMBER_FIELD), null);
+                    conversationResult = null;
+                    if (groupInformed)
+                        skipRecord(record);
+                    else
                     {
-                        statusMessage = "Starting inform abonent";
-                        Map<String, Object> bindings = new HashMap<String, Object>();
-                        bindings.put(AsyncIvrInformer.RECORD_BINDING, record);
-                        bindings.put(AsyncIvrInformer.INFORMER_BINDING, this);
-                        statusMessage = "Calling to the abonent";
-                        String abonentNumber = converter.convert(String.class, record.getValue(ABONENT_NUMBER_FIELD), null);
-                        conversationResult = null;
-                        if (groupInformed)
-                            skipRecord(record);
-                        else
+                        endpoint.invite(abonentNumber, scenario, this, bindings);
+                        //разговор может завершиться не начавшись
+                        boolean restartEndpoint = false;
+                        informLock.lock();
+                        try
                         {
-                            endpoint.invite(abonentNumber, scenario, this, bindings);
-                            //разговор может завершиться не начавшись
                             if (conversationResult==null)
                             {
                                 if (maxCallDuration!=null && maxCallDuration>0)
                                 {
                                     if (!abonentInformed.await(maxCallDuration, TimeUnit.SECONDS))
-                                        restartEndpoint();
+                                        restartEndpoint = true;
                                 }
                                 else
                                     abonentInformed.await();
@@ -156,19 +157,21 @@ public class IvrInformerSession implements Task, ConversationCompletionCallback
                                 groupInformed = true;
                             }
                         }
-                        informer.sendRecordToConsumers(record);
+                        finally
+                        {
+                            informLock.unlock();
+                        }
+                        if (restartEndpoint)
+                            restartEndpoint();
                     }
-                    catch(Exception e)
-                    {
-                        if (informer.isLogLevelEnabled(LogLevel.ERROR))
-                            informer.getLogger().error(
-                                    "Error informing abonent: "+informer.getRecordInfo(record));
-                    }
+                    informer.sendRecordToConsumers(record);
                 }
-            }
-            finally
-            {
-                informLock.unlock();
+                catch(Exception e)
+                {
+                    if (informer.isLogLevelEnabled(LogLevel.ERROR))
+                        informer.getLogger().error(
+                                "Error informing abonent: "+informer.getRecordInfo(record), e);
+                }
             }
         }
         finally
