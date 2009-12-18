@@ -116,6 +116,7 @@ public class IvrActionsExecutor implements Task
                         statusMessage = "Action executor thread was interrupted";
                         if (endpoint.getOwner().isLogLevelEnabled(LogLevel.ERROR))
                             endpoint.getOwner().getLogger().error(getStatusMessage());
+                        Thread.currentThread().interrupt();
                         return;
                     }
                 }

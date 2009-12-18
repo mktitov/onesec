@@ -157,6 +157,7 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
                     if (owner.isLogLevelEnabled(LogLevel.ERROR))
                         owner.getLogger().error(
                                 "Transfer buffers to rtp session task was interrupted");
+                    Thread.currentThread().interrupt();
                 }
             }
             if (owner.isLogLevelEnabled(LogLevel.DEBUG))

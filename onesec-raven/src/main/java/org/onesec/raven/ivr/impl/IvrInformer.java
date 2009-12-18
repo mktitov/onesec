@@ -489,14 +489,17 @@ public class IvrInformer
                 bindings.put(RECORD_BINDING, currentRecord);
                 bindings.put(INFORMER_BINDING, this);
                 endpoint.invite(abonNumber, conversationScenario, this, bindings);
-                Integer _maxCallDuration = maxCallDuration;
-                if (_maxCallDuration!=null && _maxCallDuration>0)
+                if (conversationResult==null)
                 {
-                    if (!recordProcessed.await(_maxCallDuration, TimeUnit.SECONDS))
-                        restartEndpoint();
+                    Integer _maxCallDuration = maxCallDuration;
+                    if (_maxCallDuration!=null && _maxCallDuration>0)
+                    {
+                        if (!recordProcessed.await(_maxCallDuration, TimeUnit.SECONDS))
+                            restartEndpoint();
+                    }
+                    else
+                        recordProcessed.await();
                 }
-                else
-                    recordProcessed.await();
                 String status = null;
                 if (conversationResult==null)
                     currentRecord.setValue(COMPLETION_CODE_FIELD, PROCESSING_ERROR_STATUS);
