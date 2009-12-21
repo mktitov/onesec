@@ -21,6 +21,7 @@ import org.raven.annotations.Parameter;
 import org.raven.sched.Schedulable;
 import org.raven.sched.Scheduler;
 import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
+import org.raven.tree.Node;
 import org.raven.tree.impl.BaseNode;
 import org.weda.annotations.constraints.NotNull;
 
@@ -58,10 +59,20 @@ public class IvrInformerScheduler extends BaseNode implements Schedulable
 
     public void executeScheduledJob(Scheduler scheduler)
     {
-        IvrInformer informer = (IvrInformer) getParent();
-        if (START_SCHEDULER.equals(getName()))
-            informer.startProcessing();
+        Node parent = getParent();
+        if (parent instanceof IvrInformer)
+        {
+            if (START_SCHEDULER.equals(getName()))
+                ((IvrInformer)parent).startProcessing();
+            else
+                ((IvrInformer)parent).stopProcessing();
+        }
         else
-            informer.stopProcessing();
+        {
+            if (START_SCHEDULER.equals(getName()))
+                ((AsyncIvrInformer)parent).startProcessing();
+            else
+                ((AsyncIvrInformer)parent).stopProcessing();
+        }
     }
 }

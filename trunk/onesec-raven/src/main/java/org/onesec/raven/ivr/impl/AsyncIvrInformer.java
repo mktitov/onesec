@@ -25,9 +25,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import javax.script.Bindings;
 import org.onesec.raven.ivr.IvrEndpoint;
 import org.onesec.raven.ivr.IvrEndpointPool;
 import org.onesec.raven.ivr.IvrInformerStatus;
@@ -41,6 +43,7 @@ import org.raven.ds.RecordException;
 import org.raven.ds.RecordSchemaField;
 import org.raven.ds.impl.RecordSchemaNode;
 import org.raven.ds.impl.RecordSchemaValueTypeHandlerFactory;
+import org.raven.expr.impl.BindingSupportImpl;
 import org.raven.log.LogLevel;
 import org.raven.sched.impl.ExecutorServiceNode;
 import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
@@ -122,11 +125,18 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
     private int handledRecordSets;
 
     private AtomicReference<IvrInformerStatus> informerStatus;
+    private AtomicBoolean informAllowed;
+    private AtomicBoolean receivingData;
     private IvrInformerScheduler startScheduler;
     private IvrInformerScheduler stopScheduler;
     private List<Record> records;
+    private BindingSupportImpl bindingSupport;
 
 
+    @Message
+    private static String informAllowedMessage;
+    @Message
+    private static String statusMessageTitle;
     @Message
     private static String informedAbonentsMessage;
     @Message
@@ -135,6 +145,12 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
     private static String statMessage;
     @Message
     private static String sessionsMessage;
+    @Message
+    private static String terminalMessage;
+    @Message
+    private static String terminalStatusMessage;
+    @Message
+    private static String callDurationMessage;
 
     @Override
     protected void initFields()
@@ -144,6 +160,9 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         dataLock = new ReentrantReadWriteLock();
         sessionRemoved = dataLock.writeLock().newCondition();
         sessions = new HashMap<Long, IvrInformerSession>();
+        bindingSupport = new BindingSupportImpl();
+        informAllowed = new AtomicBoolean(true);
+        receivingData = new AtomicBoolean(false);
 
         informerStatus = new AtomicReference<IvrInformerStatus>(IvrInformerStatus.NOT_READY);
         resetStatFields();
@@ -173,11 +192,15 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         sessions.clear();
         generateNodes();
         informerStatus.set(IvrInformerStatus.WAITING);
+        informAllowed.set(true);
     }
 
     public void startProcessing()
     {
-        if (!informerStatus.compareAndSet(IvrInformerStatus.WAITING, IvrInformerStatus.PROCESSING))
+        informAllowed.set(true);
+
+//        if (!informerStatus.compareAndSet(IvrInformerStatus.WAITING, IvrInformerStatus.PROCESSING))
+        if (!receivingData.compareAndSet(false, true))
         {
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 debug("Informator already processing records");
@@ -189,21 +212,36 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 debug(statusMessage);
             dataSource.getDataImmediate(this, null);
-            sendDataToConsumers(null);
         }
         finally
         {
             ++handledRecordSets;
-            informerStatus.set(IvrInformerStatus.WAITING);
+            receivingData.set(false);
             statusMessage = "All records sended by data source where processed.";
         }
     }
 
     public void stopProcessing()
     {
-
-        informerStatus.compareAndSet(
-                IvrInformerStatus.PROCESSING, IvrInformerStatus.STOP_PROCESSING);
+        if (informAllowed.compareAndSet(true, false))
+        {
+            try
+            {
+                if (dataLock.writeLock().tryLock(5, TimeUnit.SECONDS))
+                {
+                    try {
+                        sessionRemoved.signal();
+                    } finally {
+                        dataLock.writeLock().unlock();
+                    }
+                }
+            }
+            catch (InterruptedException e)
+            {
+                if (isLogLevelEnabled(LogLevel.ERROR))
+                    error("Error notifying thread, that waiting for informer session, about infomer shutdown", e);
+            }
+        }
     }
 
     private void generateNodes()
@@ -228,6 +266,7 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
     {
         super.doStop();
         informerStatus.set(IvrInformerStatus.NOT_READY);
+        stopProcessing();
     }
 
     public RecordSchemaNode getRecordSchema()
@@ -278,6 +317,12 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
     public void setMaxCallDuration(Integer maxCallDuration)
     {
         this.maxCallDuration = maxCallDuration;
+    }
+
+    @Parameter(readOnly=true)
+    public Boolean getInformAllowed()
+    {
+        return informAllowed.get();
     }
 
     public IvrInformerStatus getInformerStatus()
@@ -361,8 +406,7 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
 
     public void setData(DataSource dataSource, Object data)
     {
-        if (!Status.STARTED.equals(getStatus())
-            || ObjectUtils.in(informerStatus.get(), IvrInformerStatus.STOP_PROCESSING))
+        if (!Status.STARTED.equals(getStatus()) || !informAllowed.get())
         {
             return;
         }
@@ -401,7 +445,10 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
                         }
                     }
                     else if (records!=null)
+                    {
                         recordsChain = records;
+                        records = null;
+                    }
 
                     if (recordsChain!=null)
                     {
@@ -424,6 +471,51 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
             if (isLogLevelEnabled(LogLevel.ERROR))
                 error("Error while triyng to inform abonent: "+getRecordInfo(rec), ex);
         }
+    }
+
+//    private boolean recordFilter(Record record)
+//    {
+//        if (record==null)
+//            return true;
+//        bindingSupport.put(RECORD_BINDING, record);
+//        try
+//        {
+//            Boolean _recordFilter = recordFilter;
+//            if (_recordFilter==null || !_recordFilter)
+//            {
+//                if (isLogLevelEnabled(LogLevel.DEBUG))
+//                    debug("Record ("+getRecordInfo(record)+") filtered");
+//                return false;
+//            }
+//            else
+//                return true;
+//        }
+//        finally
+//        {
+//            bindingSupport.reset();
+//        }
+//    }
+//
+//    Object postProcess(Record record)
+//    {
+//        Object res = null;
+//        bindingSupport.put(RECORD_BINDING, record);
+//        try
+//        {
+//            res = postProcess;
+//        }
+//        finally
+//        {
+//            bindingSupport.reset();
+//        }
+//        return res;
+//    }
+
+    @Override
+    public void formExpressionBindings(Bindings bindings)
+    {
+        super.formExpressionBindings(bindings);
+        bindingSupport.addTo(bindings);
     }
     
     String getRecordInfo(Record rec)
@@ -467,9 +559,9 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
     {
         List<ViewableObject> voList = new ArrayList<ViewableObject>(5);
 
-        TableImpl statTable = new TableImpl(
-                new String[]{informedAbonentsMessage, successfullyInformedAbonentsMessage});
-        statTable.addRow(new Object[]{informedAbonents, successfullyInformedAbonents});
+        TableImpl statTable = new TableImpl(new String[]{
+            informAllowedMessage, statusMessageTitle, informedAbonentsMessage, successfullyInformedAbonentsMessage});
+        statTable.addRow(new Object[]{getInformAllowed(), statusMessage, informedAbonents, successfullyInformedAbonents});
         
         voList.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, "<b>"+statMessage+"</b>:"));
         voList.add(new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, statTable));
@@ -481,28 +573,37 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
             {
                 String fieldNames = displayFields;
                 String[] fields = fieldNames==null? null : fieldNames.split("\\s*,\\s*");
-                String[] columnNames = new String[fields.length];
+                int addCols = 3;
+                String[] columnNames = new String[fields.length+addCols];
                 Map<String, RecordSchemaField> recordFields = RavenUtils.getRecordSchemaFields(recordSchema);
+                columnNames[0] = terminalMessage;
+                columnNames[1] = terminalStatusMessage;
+                columnNames[2] = callDurationMessage;
                 for (int i=0; i<fields.length; ++i)
                 {
                     RecordSchemaField recordField = recordFields.get(fields[i]);
                     if (recordField!=null)
-                        columnNames[i]=recordField.getDisplayName();
+                        columnNames[i+addCols]=recordField.getDisplayName();
                     else
-                        columnNames[i]=fields[i];
+                        columnNames[i+addCols]=fields[i];
                 }
 
-                TableImpl table = new TableImpl(fields);
+                TableImpl table = new TableImpl(columnNames);
 
                 for (IvrInformerSession session: sessions.values())
                 {
-                    Object[] row = new Object[fields.length];
+                    Object[] row = new Object[columnNames.length];
+                    row[0] = session.getEndpoint().getName();
+                    row[1] = session.getEndpoint().getEndpointState().getIdName();
+                    Record rec = session.getCurrentRecord();
+                    if (rec!=null)
+                        row[2] = new Long((System.currentTimeMillis()-((Timestamp)rec.getValue(CALL_START_TIME_FIELD)).getTime())/1000);
                     for (int i=0; i<fields.length; ++i)
                         if (recordFields.containsKey(fields[i]))
                         {
                             Record record = session.getCurrentRecord();
                             if (record!=null)
-                                row[i] = session.getCurrentRecord().getValue(fields[i]);
+                                row[i+addCols] = session.getCurrentRecord().getValue(fields[i]);
                         }
                     table.addRow(row);
                 }
@@ -660,6 +761,9 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
 
         if (sessions.size()>=maxSessionsCount)
             sessionRemoved.await();
+
+        if (!informAllowed.get())
+            return null;
 
         IvrEndpoint endpoint = endpointPool.getEndpoint(endpointWaitTimeout);
         if (endpoint==null)
