@@ -18,7 +18,6 @@
 package org.onesec.raven.ivr.impl;
 
 import java.sql.Timestamp;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,12 +25,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import org.onesec.raven.ivr.CompletionCode;
 import org.onesec.raven.ivr.ConversationCompletionCallback;
 import org.onesec.raven.ivr.ConversationResult;
 import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.IvrEndpoint;
 import org.onesec.raven.ivr.IvrEndpointState;
+import org.onesec.raven.ivr.IvrInformerStatus;
 import org.raven.ds.Record;
 import org.raven.ds.RecordException;
 import org.raven.log.LogLevel;
@@ -119,10 +118,13 @@ public class IvrInformerSession implements Task, ConversationCompletionCallback
             boolean groupInformed = false;
             for (Record record: records)
             {
-                currentRecord = record;
+                if (!informer.getInformAllowed())
+                    return;
                 try
                 {
                     statusMessage = "Starting inform abonent";
+                    record.setValue(CALL_START_TIME_FIELD, new Timestamp(System.currentTimeMillis()));
+                    currentRecord = record;
                     Map<String, Object> bindings = new HashMap<String, Object>();
                     bindings.put(AsyncIvrInformer.RECORD_BINDING, record);
                     bindings.put(AsyncIvrInformer.INFORMER_BINDING, this);
@@ -134,11 +136,11 @@ public class IvrInformerSession implements Task, ConversationCompletionCallback
                     else
                     {
                         endpoint.invite(abonentNumber, scenario, this, bindings);
-                        //разговор может завершиться не начавшись
                         boolean restartEndpoint = false;
                         informLock.lock();
                         try
                         {
+                            //разговор может завершиться не начавшись
                             if (conversationResult==null)
                             {
                                 if (maxCallDuration!=null && maxCallDuration>0)
@@ -150,9 +152,11 @@ public class IvrInformerSession implements Task, ConversationCompletionCallback
                                     abonentInformed.await();
                             }
                             handleConversationResult(record);
-                            if (ObjectUtils.in(conversationResult.getCompletionCode()
-                                    , CompletionCode.COMPLETED_BY_ENDPOINT, CompletionCode.COMPLETED_BY_OPPONENT)
-                                && conversationResult.getConversationDuration()>0)
+                            String completionCode = (String) record.getValue(COMPLETION_CODE_FIELD);
+                            Long duration = (Long) record.getValue(CONVERSATION_DURATION_FIELD);
+                            if (ObjectUtils.in(completionCode, AsyncIvrInformer.COMPLETED_BY_INFORMER_STATUS
+                                    , AsyncIvrInformer.COMPLETED_BY_ABONENT_STATUS)
+                                && duration!=null && duration>0)
                             {
                                 groupInformed = true;
                             }
