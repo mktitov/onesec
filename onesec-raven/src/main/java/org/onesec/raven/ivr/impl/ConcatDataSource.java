@@ -170,8 +170,11 @@ public class ConcatDataSource
 
     public void close() 
     {
-        reset();
+        if (stoped.get())
+            return;
         stoped.set(true);
+        sources.clear();
+        buffers.clear();
         try
         {
             while (sourceThreadRunning.get())
