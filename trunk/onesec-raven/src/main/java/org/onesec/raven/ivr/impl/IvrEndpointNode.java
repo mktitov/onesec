@@ -785,6 +785,11 @@ public class IvrEndpointNode extends BaseNode
                         rtpSession = null;
                         audioStream = null;
                     }
+                    else if (audioStream!=null)
+                    {
+                        audioStream.close();
+                        audioStream = null;
+                    }
                 }
                 finally
                 {
@@ -855,15 +860,15 @@ public class IvrEndpointNode extends BaseNode
 
             rtpSession = new RTPSession(remoteHost, remotePort, audioStream);
             rtpSession.start();
+            continueConversation(EMPTY_DTMF);
         } catch (Exception ex)
         {
             //TODO: Нужна дополнитьльная обработка? Например положить трубку
-            audioStream.close();
             if (isLogLevelEnabled(LogLevel.ERROR))
                 error("Error creating rtp session", ex);
+            stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
         }
         //Starting the conversation
-        continueConversation(EMPTY_DTMF);
     }
 
     private void stopRtpSession()
