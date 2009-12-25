@@ -180,6 +180,7 @@ public class IvrInformerSession implements Task, ConversationCompletionCallback
         }
         finally
         {
+            informer.incInformedAbonents();
             informer.removeSession(this);
         }
     }
@@ -251,7 +252,6 @@ public class IvrInformerSession implements Task, ConversationCompletionCallback
             }
             if (sucProc)
                 informer.incSuccessfullyInformedAbonents();
-            informer.incInformedAbonents();
             record.setValue(COMPLETION_CODE_FIELD, status);
             record.setValue(
                     CALL_START_TIME_FIELD, conversationResult.getCallStartTime());
