@@ -19,7 +19,6 @@ package org.onesec.core.provider.impl;
 
 import java.util.concurrent.ExecutorService;
 import javax.telephony.JtapiPeer;
-import javax.telephony.JtapiPeerFactory;
 import javax.telephony.Provider;
 import javax.telephony.ProviderObserver;
 import javax.telephony.events.ProvEv;
@@ -29,6 +28,8 @@ import javax.telephony.events.ProvShutdownEv;
 import org.onesec.core.provider.ProviderController;
 import org.onesec.core.provider.ProviderControllerState;
 import org.onesec.core.services.StateListenersCoordinator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -38,6 +39,7 @@ public class ProviderControllerImpl implements ProviderController, ProviderObser
     
     public final static String APPINFO = "OneSec server";
     public static final String OBJECT_NAME = "ProviderController";
+    public final static Logger logger = LoggerFactory.getLogger(ProviderController.class);
     
     private int id;
     private int fromNumber;
@@ -88,44 +90,27 @@ public class ProviderControllerImpl implements ProviderController, ProviderObser
 
     public ProviderControllerState connect() 
     {
-        executor.execute(new Runnable() {
-            public void run() {
-                try {
-                    state.setState(ProviderControllerState.CONNECTING);
-                    if (provider!=null)
-                    {
-                        provider.removeObserver(ProviderControllerImpl.this);
-                        provider.shutdown();
-                    }
-                    System.out.println("!!!Getting pear: "+name);
-//                    JtapiPeer jtapiPeer = JtapiPeerFactory.getJtapiPeer(null);
-                    System.out.println("!!!Getting pear: "+name+": ok");
-					
-                    System.out.println("!!!Getting provider: "+name);
-                    provider = jtapiPeer.getProvider(String.format(
-                            "%s;login=%s;passwd=%s;appinfo=%s"
-                            , host, user, password, APPINFO));
-                    provider.addObserver(ProviderControllerImpl.this);
-                    System.out.println("!!!Getting provider: "+name+": ok");
-                    password = null;
-                } catch (Exception e) {
-                    state.setState(ProviderControllerState.OUT_OF_SERVICE, e.getMessage(), e);
-                }
-            };
-        });
-        
+        executor.execute(new ProviderConnector());
         return state;
     }
 
-    public void shutdown() {
-//        if (!executor.isShutdown())
-//            executor.shutdownNow();
-        if (provider!=null) {
-            provider.removeObserver(this);
-            provider.shutdown();
-            provider = null;
+    public void shutdown()
+    {
+        if (logger.isDebugEnabled())
+            logger.debug(getLogMessage("Shutdowning..."));
+        if (provider!=null)
+        {
+            try{
+                provider.removeObserver(this);
+            }finally{
+                Provider p = provider;
+                provider = null;
+                p.shutdown();
+            }
         }
         state.setState(ProviderControllerState.STOPED);
+        if (logger.isDebugEnabled())
+            logger.debug(getLogMessage("Shutdowned!"));
     }
 
     public Provider getProvider() {
@@ -187,5 +172,35 @@ public class ProviderControllerImpl implements ProviderController, ProviderObser
 
     public String getObjectName() {
         return OBJECT_NAME;
+    }
+
+    private String getLogMessage(String message)
+    {
+        return "Provider ("+name+"). "+message;
+    }
+
+    private class ProviderConnector implements Runnable
+    {
+        public void run()
+        {
+            try
+            {
+                shutdown();
+                if (logger.isDebugEnabled())
+                    logger.debug(getLogMessage("Connecting..."));
+                state.setState(ProviderControllerState.CONNECTING);
+                provider = jtapiPeer.getProvider(String.format(
+                        "%s;login=%s;passwd=%s;appinfo=%s", host, user, password, APPINFO));
+                provider.addObserver(ProviderControllerImpl.this);
+                if (logger.isDebugEnabled())
+                    logger.debug(getLogMessage("Connected!"));
+            }
+            catch (Exception e)
+            {
+                if (logger.isErrorEnabled())
+                    logger.error(getLogMessage("Connection error."), e);
+                state.setState(ProviderControllerState.OUT_OF_SERVICE, e.getMessage(), e);
+            }
+        }
     }
 }
