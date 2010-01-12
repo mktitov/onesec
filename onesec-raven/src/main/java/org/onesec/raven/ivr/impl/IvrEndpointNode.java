@@ -689,6 +689,7 @@ public class IvrEndpointNode extends BaseNode
     {
         if (isLogLevelEnabled(LogLevel.DEBUG))
             debug("Stoping conversation");
+        closeRtpSession();
         if (endpointState.getId()==IvrEndpointState.IN_SERVICE || endpointState.getId()==IvrEndpointState.OUT_OF_SERVICE)
         {
             if (isLogLevelEnabled(LogLevel.DEBUG))
@@ -702,7 +703,6 @@ public class IvrEndpointNode extends BaseNode
             return;
         }
         boolean changeStateToInService = true;
-        closeRtpSession();
         try
         {
             try
@@ -900,7 +900,8 @@ public class IvrEndpointNode extends BaseNode
     {
         try
         {
-            terminal.unregister();
+            if (terminal!=null)
+                terminal.unregister();
         } catch (CiscoUnregistrationException e)
         {
             if (isLogLevelEnabled(LogLevel.ERROR))
