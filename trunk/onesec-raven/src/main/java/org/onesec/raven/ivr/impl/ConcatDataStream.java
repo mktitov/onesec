@@ -20,6 +20,7 @@ package org.onesec.raven.ivr.impl;
 import java.io.IOException;
 import java.util.Queue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.media.Buffer;
 import javax.media.Format;
 import javax.media.protocol.BufferTransferHandler;
@@ -35,6 +36,8 @@ import org.raven.tree.Node;
  */
 public class ConcatDataStream implements PushBufferStream, BufferTransferHandler, Task
 {
+    public static int MAX_SILENCE_BUFFER_COUNT = 1500;
+
     private final Queue<Buffer> bufferQueue;
     private final ConcatDataSource dataSource;
     private final ContentDescriptor contentDescriptor;
@@ -45,6 +48,7 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
     private String action;
     private long packetNumber;
     private long sleepTime;
+    private AtomicInteger silencePacketCount = new AtomicInteger(0);
 
     public ConcatDataStream(Queue<Buffer> bufferQueue, ConcatDataSource dataSource, Node owner)
     {
@@ -68,10 +72,14 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
             if (silentBuffer==null)
                 buffer.setDiscard(true);
             else
+            {
+                silencePacketCount.incrementAndGet();
                 buffer.copy(silentBuffer);
+            }
         }
         else
         {
+            silencePacketCount.set(0);
             if (silentBuffer==null)
             {
                 silentBuffer = new Buffer();
@@ -138,7 +146,8 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
         {
             long startTime = System.currentTimeMillis();
             packetNumber = 0;
-            while (!dataSource.isDataConcated() || !bufferQueue.isEmpty())
+            while ((!dataSource.isDataConcated() || !bufferQueue.isEmpty())
+                    && silencePacketCount.get()<MAX_SILENCE_BUFFER_COUNT)
             {
                 try
                 {
