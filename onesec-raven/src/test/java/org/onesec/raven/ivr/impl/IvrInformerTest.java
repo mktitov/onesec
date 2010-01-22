@@ -138,7 +138,7 @@ public class IvrInformerTest extends OnesecRavenTestCase
         assertTrue(dataCollector.start());
     }
 
-//    @Test()
+    @Test()
     public void test() throws Exception
     {
         createScenario();
@@ -153,7 +153,7 @@ public class IvrInformerTest extends OnesecRavenTestCase
         printRecordsInformation(recs);
     }
 
-    @Test()
+//    @Test()
     public void maxCallDurationTest() throws Exception
     {
         createScenario();

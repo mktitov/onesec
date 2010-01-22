@@ -71,6 +71,7 @@ public class ConcatDataSource
     private final int rtpPacketSize;
     private boolean started = false;
     private AtomicBoolean silenceSource;
+    private Thread thread;
 
     public ConcatDataSource(String contentType
             , ExecutorService executorService
@@ -177,8 +178,11 @@ public class ConcatDataSource
         buffers.clear();
         try
         {
-            while (sourceThreadRunning.get())
+            long stopStart = System.currentTimeMillis();
+            while (sourceThreadRunning.get() && System.currentTimeMillis()-stopStart<=5000)
                 Thread.sleep(100);
+            if (System.currentTimeMillis()-stopStart>5000 && sourceThreadRunning.get())
+                thread.interrupt();
             while (streamThreadRunning.get())
                 Thread.sleep(100);
         }
@@ -250,6 +254,7 @@ public class ConcatDataSource
         sourceThreadRunning.set(true);
         try
         {
+            thread = Thread.currentThread();
             try
             {
     //            int i=0;
@@ -364,7 +369,6 @@ public class ConcatDataSource
                         sources.poll();
                     }
                 }
-                dataConcated.set(true);
                 if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                     owner.getLogger().debug(String.format("Gathered (%s) buffers", bufferCount));
             } catch(Throwable e)
@@ -376,6 +380,7 @@ public class ConcatDataSource
         }
         finally
         {
+            dataConcated.set(true);
             sourceThreadRunning.set(false);
         }
     }
