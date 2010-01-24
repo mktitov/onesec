@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr;
 
+import org.raven.sched.ExecutorServiceException;
 import org.raven.tree.Node;
 
 /**
@@ -26,14 +27,10 @@ import org.raven.tree.Node;
 public interface IvrEndpointPool extends Node
 {
     /**
-     * Returns the endpoint acquired from the pool or null if no IN_SERVICE endpoints in the pool.
-     * @param timeout if all endpoints in the pool are busy the pool will waits this timeout (in the milliseconds)
-     *      until any endpoint will released.
+     * Send request for endpoint. When pool will found free endpoint or when
+     * {@link EndpointRequest#getWaitTimeout() timeout} will reached pool executes
+     * {@link EndpointRequest#processRequest(org.onesec.raven.ivr.IvrEndpointPool) callback method}
+     * in the async manner (in the separate thread)
      */
-    public IvrEndpoint getEndpoint(long timeout);
-    /**
-     * Releases the endpoint back to the pool
-     * @param endpoint the endpoint which must be released.
-     */
-    public void releaseEndpoint(IvrEndpoint endpoint);
+    public void requestEndpoint(EndpointRequest request) throws ExecutorServiceException;
 }
