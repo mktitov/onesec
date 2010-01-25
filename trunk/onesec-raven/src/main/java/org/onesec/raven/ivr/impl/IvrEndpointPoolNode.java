@@ -20,10 +20,10 @@ package org.onesec.raven.ivr.impl;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.LinkedList;
+import java.util.Iterator;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -39,7 +39,6 @@ import org.raven.annotations.Parameter;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.ExecutorServiceException;
-import org.raven.sched.Scheduler;
 import org.raven.sched.Task;
 import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
 import org.raven.table.TableImpl;
@@ -62,9 +61,9 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     private ReadWriteLock lock;
     private Condition newRequestCondition;
     private Condition endpointReleased;
-    private Map<Integer, IvrEndpoint> busyEndpoints;
+    private Map<Integer, RequestInfo> busyEndpoints;
     private Map<Integer, Long> usageCounters;
-    private LinkedList<RequestInfo> queue;
+    private LinkedBlockingQueue<RequestInfo> queue;
     private AtomicBoolean stopManagerTask;
     private AtomicBoolean managerThreadStoped;
     private AtomicReference<String> statusMessage;
@@ -75,9 +74,8 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     @NotNull @Parameter(valueHandlerType=SystemSchedulerValueHandlerFactory.TYPE)
     private ExecutorService executor;
 
-    @NotNull @Parameter(valueHandlerType=SystemSchedulerValueHandlerFactory.TYPE)
-    private Scheduler cleanupScheduler;
-    
+    @Message
+    private static String terminalsTableTitleMessage;
     @Message
     private static String terminalColumnMessage;
     @Message
@@ -86,6 +84,14 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     private static String terminalPoolStatusColumnMessage;
     @Message
     private static String usageCountColumnMessage;
+    @Message
+    private static String currentUsageTimeMessage;
+    @Message
+    private static String requesterNodeMessage;
+    @Message
+    private static String requesterStatusMessage;
+    @Message
+    private static String queueTableTitleMessage;
 
     @Override
     protected void initFields()
@@ -94,10 +100,9 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         lock = new ReentrantReadWriteLock();
         newRequestCondition = lock.writeLock().newCondition();
         endpointReleased = lock.writeLock().newCondition();
-        busyEndpoints = new HashMap<Integer, IvrEndpoint>();
+        busyEndpoints = new HashMap<Integer, RequestInfo>();
         usageCounters = new HashMap<Integer, Long>();
-        queue = new LinkedList<RequestInfo>();
-        stopManagerTask = new AtomicBoolean(Boolean.FALSE);
+        stopManagerTask = new AtomicBoolean(false);
         statusMessage = new AtomicReference<String>("");
         managerThreadStoped = new AtomicBoolean(true);
     }
@@ -108,9 +113,10 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         super.doStart();
         if (!managerThreadStoped.get())
             throw new Exception("Can't start pool because of manager task is still running");
-        queue.clear();
+        queue = new LinkedBlockingQueue<RequestInfo>(maxRequestQueueSize);
         busyEndpoints.clear();
         usageCounters.clear();
+        stopManagerTask.set(false);
         executor.execute(this);
     }
 
@@ -125,29 +131,23 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     {
         if (!Status.STARTED.equals(getStatus()) || stopManagerTask.get())
             request.processRequest(null);
-        lock.writeLock().lock();
-        try
+        if (isLogLevelEnabled(LogLevel.DEBUG))
+            debug("Recieved new request from ("+request.getOwner().getPath()+") to queue");
+        if (!queue.offer(new RequestInfo(request)))
         {
-            if (queue.size()<maxRequestQueueSize)
-            {
-                queue.offer(new RequestInfo(request));
-                newRequestCondition.signal();
-            }
-            else
-                request.processRequest(null);
+            if (isLogLevelEnabled(LogLevel.WARN))
+                warn(String.format(
+                        "The queue size was exceeded. The request from the (%s) was ignored."
+                        , request.getOwner().getPath()));
+            request.processRequest(null);
         }
-        finally
-        {
-            lock.writeLock().unlock();
-        }
-        
     }
 
     private void cleanupQueue()
     {
         statusMessage.set("Cleaning up queue from timeouted requests");
         RequestInfo ri;
-        ListIterator<RequestInfo> it = queue.listIterator();
+        Iterator<RequestInfo> it = queue.iterator();
         while (it.hasNext()) {
             ri = it.next();
             if (System.currentTimeMillis() - ri.startTime > ri.request.getWaitTimeout()) {
@@ -188,14 +188,6 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         return false;
     }
 
-    public Scheduler getCleanupScheduler() {
-        return cleanupScheduler;
-    }
-
-    public void setCleanupScheduler(Scheduler cleanupScheduler) {
-        this.cleanupScheduler = cleanupScheduler;
-    }
-
     public ExecutorService getExecutor() {
         return executor;
     }
@@ -214,11 +206,15 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
 
     private void releaseEndpoint(IvrEndpoint endpoint)
     {
+        if (isLogLevelEnabled(LogLevel.DEBUG))
+            debug(String.format("Realesing endpoint (%s) to the pool", endpoint.getName()));
         lock.writeLock().lock();
         try
         {
             busyEndpoints.remove(endpoint.getId());
-            newRequestCondition.signal();
+            endpointReleased.signal();
+            if (isLogLevelEnabled(LogLevel.DEBUG))
+                debug(String.format("Endpoint (%s) successfully realesed to the pool", endpoint.getName()));
         }
         finally
         {
@@ -226,22 +222,23 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         }
     }
 
-    private IvrEndpoint getAndLockFreeEndpoint()
+    private void getAndLockFreeEndpoint(RequestInfo requestInfo) throws InterruptedException
     {
         Collection<Node> childs = getChildrens();
-        if (childs!=null && !childs.isEmpty())
-            for (Node child: childs)
-                if (   child instanceof IvrEndpoint
-                    && Status.STARTED.equals(child.getStatus())
-                    && !busyEndpoints.containsKey(child.getId())
-                    && ((IvrEndpoint)child).getEndpointState().getId()==IvrEndpointState.IN_SERVICE)
-                {
-                    busyEndpoints.put(child.getId(), (IvrEndpoint)child);
+        if (childs != null && !childs.isEmpty()) {
+            for (Node child : childs) {
+                if (child instanceof IvrEndpoint
+                        && Status.STARTED.equals(child.getStatus())
+                        && !busyEndpoints.containsKey(child.getId())
+                        && ((IvrEndpoint) child).getEndpointState().getId() == IvrEndpointState.IN_SERVICE) {
+                    busyEndpoints.put(child.getId(), requestInfo);
+                    requestInfo.terminalUsageTime = System.currentTimeMillis();
+                    requestInfo.endpoint = (IvrEndpoint) child;
                     Long counter = usageCounters.get(child.getId());
-                    usageCounters.put(child.getId(), counter==null? 1 : counter+1);
-                    return (IvrEndpoint)child;
+                    usageCounters.put(child.getId(), counter == null ? 1 : counter + 1);
                 }
-        return null;
+            }
+        }
     }
 
     public Map<String, NodeAttribute> getRefreshAttributes() throws Exception
@@ -255,7 +252,8 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         TableImpl table = new TableImpl(
                 new String[]{
                     terminalColumnMessage, terminalStatusColumnMessage
-                    , terminalPoolStatusColumnMessage, usageCountColumnMessage});
+                    , terminalPoolStatusColumnMessage, usageCountColumnMessage
+                    , currentUsageTimeMessage, requesterNodeMessage, requesterStatusMessage});
 
         Collection<Node> childs = getSortedChildrens();
         if (childs!=null && !childs.isEmpty())
@@ -279,8 +277,17 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                                 statusFormat, poolStatus.equals("BUSY")? "blue" : "green", poolStatus);
                         Long counter = usageCounters.get(endpoint.getId());
                         String usageCount = counter==null? "0" : counter.toString();
+                        RequestInfo ri = busyEndpoints.get(endpoint.getId());
+                        String currentUsageTime = null; String requester = null; String requesterStatus = null;
+                        if (ri!=null)
+                        {
+                            currentUsageTime = ""+((System.currentTimeMillis()-ri.terminalUsageTime)/1000);
+                            requester = ri.getTaskNode().getPath();
+                            requesterStatus = ri.getStatusMessage();
+                        }
 
-                        table.addRow(new Object[]{name, status, poolStatus, usageCount});
+                        table.addRow(new Object[]{
+                            name, status, poolStatus, usageCount, currentUsageTime, requester, requesterStatus});
                     }
             }
             finally
@@ -314,31 +321,22 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         managerThreadStoped.set(false);
         try
         {
+            if (isLogLevelEnabled(LogLevel.DEBUG))
+                debug("Manager task started");
             try {
                 while (!stopManagerTask.get())
                 {
                     statusMessage.set("Waiting for request...");
-                    if (lock.writeLock().tryLock(1, TimeUnit.SECONDS))
+                    RequestInfo ri = queue.poll(10, TimeUnit.SECONDS);
+                    if (ri!=null)
                     {
-                        try
-                        {
-                            newRequestCondition.await(10, TimeUnit.SECONDS);
-                            RequestInfo ri = queue.poll();
-                            if (ri!=null)
-                            {
-                                lookupForEndpoint(ri);
-                                if (ri.endpoint==null)
-                                    ri.request.processRequest(null);
-                                else if (!sendResponse(ri))
-                                    queue.offer(ri);
-                            }
-                            cleanupQueue();
-                        }
-                        finally
-                        {
-                            lock.writeLock().unlock();
-                        }
+                        if (isLogLevelEnabled(LogLevel.DEBUG))
+                            debug("Processing request from ("+ri.getTaskNode().getPath()+")");
+                        lookupForEndpoint(ri);
+                        if (ri.endpoint==null || !sendResponse(ri))
+                            ri.request.processRequest(null);
                     }
+                    cleanupQueue();
                 }
                 clearQueue();
             } catch (InterruptedException interruptedException)
@@ -347,6 +345,8 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                     warn("Manager task was interrupted");
                 Thread.currentThread().interrupt();
             }
+            if (isLogLevelEnabled(LogLevel.DEBUG))
+                debug("Manager task stoped");
         }
         finally
         {
@@ -356,25 +356,44 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
 
     private void lookupForEndpoint(RequestInfo ri) throws InterruptedException
     {
+        if (isLogLevelEnabled(LogLevel.DEBUG))
+            debug("Searching for free endpoint for request from ("+ri.getTaskNode().getPath()+")");
         statusMessage.set("Looking up for endpoint for request from ("+ri.getTaskNode().getPath()+")");
-        IvrEndpoint endpoint = getAndLockFreeEndpoint();
-        if (endpoint==null)
+
+        if (lock.writeLock().tryLock(1, TimeUnit.SECONDS))
         {
-            long timeout = ri.request.getWaitTimeout()-(System.currentTimeMillis()-ri.startTime);
-            if (timeout>0)
+            try
             {
-                if (endpointReleased.await(timeout, TimeUnit.DAYS))
-                    endpoint = getAndLockFreeEndpoint();
+                getAndLockFreeEndpoint(ri);
+                if (ri.endpoint==null)
+                {
+                    long timeout = ri.request.getWaitTimeout()-(System.currentTimeMillis()-ri.startTime);
+                    if (timeout>0)
+                    {
+                        if (endpointReleased.await(timeout, TimeUnit.MILLISECONDS))
+                            getAndLockFreeEndpoint(ri);
+                    }
+                }
+                if (isLogLevelEnabled(LogLevel.DEBUG))
+                {
+                    if (ri.endpoint==null)
+                        debug("No free endpoint found in the pool");
+                    else
+                        debug("Found free endpoint ("+ri.endpoint.getName()+")");
+                }
+            }
+            finally
+            {
+                lock.writeLock().unlock();
             }
         }
-        ri.endpoint = endpoint;
     }
-        
 
     private class RequestInfo implements Task
     {
         private final EndpointRequest request;
         private final long startTime;
+        private long terminalUsageTime;
         private IvrEndpoint endpoint;
 
         public RequestInfo(EndpointRequest request)
@@ -402,7 +421,11 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         {
             try
             {
+                if (isLogLevelEnabled(LogLevel.DEBUG))
+                    debug("Executing request from ("+getTaskNode().getPath()+")");
                 request.processRequest(endpoint);
+                if (isLogLevelEnabled(LogLevel.DEBUG))
+                    debug("Request from ("+getTaskNode().getPath()+") was successfully executed");
             }
             finally
             {
