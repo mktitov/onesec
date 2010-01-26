@@ -381,12 +381,12 @@ public class IvrInformerSession implements EndpointRequest, ConversationCompleti
                                 record.setValue(COMPLETION_CODE_FIELD, AsyncIvrInformer.NUMBER_NOT_ANSWERED_STATUS);
                             }
 
-                        if (!restartEndpoint)
+                        if (!restartEndpoint && conversationResult==null)
                         {
                             if (maxCallDuration!=null)
                             {
                                 long timeout = maxCallDuration - (System.currentTimeMillis()-callStartTime)/1000;
-                                if (timeout<=0 || !abonentInformed.await(maxCallDuration, TimeUnit.SECONDS))
+                                if (timeout<=0 || !abonentInformed.await(timeout, TimeUnit.SECONDS))
                                     restartEndpoint = true;
                             }
                             else
