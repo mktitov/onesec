@@ -19,6 +19,7 @@ package org.onesec.raven.ivr.impl;
 
 import com.cisco.jtapi.extensions.CiscoAddrInServiceEv;
 import com.cisco.jtapi.extensions.CiscoAddrOutOfServiceEv;
+import com.cisco.jtapi.extensions.CiscoCall;
 import com.cisco.jtapi.extensions.CiscoMediaCapability;
 import com.cisco.jtapi.extensions.CiscoMediaTerminal;
 import com.cisco.jtapi.extensions.CiscoRTPOutputProperties;
@@ -345,6 +346,7 @@ public class IvrEndpointNode extends BaseNode
             completionCallback = callback;
             inviteBindings = bindings;
             Call call = provider.createCall();
+            CallControlCall ciscoCall = (CiscoCall) call;
             call.connect(terminal, terminalAddress, opponentNumber);
         }
         catch (Throwable e)

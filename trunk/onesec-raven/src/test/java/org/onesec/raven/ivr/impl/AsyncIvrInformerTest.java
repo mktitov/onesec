@@ -32,7 +32,6 @@ import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.impl.CCMCallOperatorNode;
 import org.onesec.raven.impl.ProviderNode;
 import org.onesec.raven.ivr.IvrEndpointState;
-import org.onesec.raven.ivr.IvrInformerStatus;
 import org.onesec.raven.ivr.actions.PauseActionNode;
 import org.onesec.raven.ivr.actions.PlayAudioActionNode;
 import org.onesec.raven.ivr.actions.StopConversationActionNode;
@@ -86,7 +85,7 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
         executor.setName("executor");
         tree.getRootNode().addAndSaveChildren(executor);
         executor.setMaximumPoolSize(15);
-        executor.setCorePoolSize(10);
+        executor.setCorePoolSize(15);
         assertTrue(executor.start());
 
         scenario = new IvrConversationScenarioNode();
@@ -97,6 +96,8 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
         pool = new IvrEndpointPoolNode();
         pool.setName("pool");
         tree.getRootNode().addAndSaveChildren(pool);
+        pool.setExecutor(executor);
+        pool.setLogLevel(LogLevel.TRACE);
         assertTrue(pool.start());
 
         createEndpoint("88013", 1234);
@@ -123,7 +124,6 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
         informer.setDataSource(dataSource);
         informer.setEndpointPool(pool);
         informer.setLogLevel(LogLevel.DEBUG);
-        informer.setExecutor(executor);
         informer.setMaxSessionsCount(1);
         informer.setEndpointWaitTimeout(2000);
         informer.setRecordSchema(schema);
@@ -325,7 +325,7 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
         assertEquals(AsyncIvrInformer.SKIPPED_STATUS, recs.get(2l).getValue(IvrInformerRecordSchemaNode.COMPLETION_CODE_FIELD));
     }
 
-    @Test(timeout=60000)
+//    @Test(timeout=60000)
     public void stopProcessingTest() throws Exception
     {
         informer.setWaitForSession(Boolean.FALSE);
@@ -370,6 +370,33 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
         assertNotNull(recs.get(1l));
         assertTrue((Long)recs.get(1l).getValue(CONVERSATION_DURATION_FIELD)>0);
     }
+
+    //Не нужно брать трубку на первый вызов
+//    @Test
+    public void inviteTimeoutTest() throws Exception
+    {
+        informer.setWaitForSession(Boolean.TRUE);
+        informer.setMaxSessionsCount(1);
+        informer.setMaxInviteDuration(20);
+        createScenario();
+        assertTrue(informer.start());
+        dataSource.pushData(createRecord(1, "abon1", "88024"));
+        dataSource.pushData(createRecord(2, "abon1", "089128672947"));
+
+        while (informer.getSessionsCount()>0)
+            TimeUnit.MILLISECONDS.sleep(500);
+
+        List dataList = dataCollector.getDataList();
+        Map<Long, Record> recs = getRecords(dataList);
+        printRecordsInformation(dataList);
+        assertEquals(4, dataList.size());
+        assertEquals(2, recs.size());
+        assertNotNull(recs.get(1l));
+        assertEquals(AsyncIvrInformer.NUMBER_NOT_ANSWERED_STATUS, recs.get(1l).getValue(IvrInformerRecordSchemaNode.COMPLETION_CODE_FIELD));
+        assertNotNull(recs.get(2l));
+        assertTrue((Long)recs.get(2l).getValue(CONVERSATION_DURATION_FIELD)>0);
+    }
+
 
     private Map<Long, Record> getRecords(List list) throws RecordException
     {
