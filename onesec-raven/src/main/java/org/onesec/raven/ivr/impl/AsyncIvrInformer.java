@@ -83,9 +83,6 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
     public final static String TRANSFER_DESTINATION_NOT_ANSWER_STATUS = "TRANSFER_DESTINATION_NOT_ANSWER";
     public final static String TRANSFER_ERROR_STATUS = "TRANSFER_ERROR";
 
-    @NotNull @Parameter(valueHandlerType=SystemSchedulerValueHandlerFactory.TYPE)
-    private ExecutorServiceNode executor;
-
     @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
     private DataSource dataSource;
 
@@ -100,6 +97,9 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
 
     @Parameter
     private Integer maxCallDuration;
+
+    @Parameter
+    private Integer maxInviteDuration;
 
     @NotNull @Parameter(defaultValue="false")
     private Boolean waitForSession;
@@ -309,6 +309,14 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         this.waitForSession = waitForSession;
     }
 
+    public Integer getMaxInviteDuration() {
+        return maxInviteDuration;
+    }
+
+    public void setMaxInviteDuration(Integer maxInviteDuration) {
+        this.maxInviteDuration = maxInviteDuration;
+    }
+
     public Integer getMaxCallDuration()
     {
         return maxCallDuration;
@@ -333,16 +341,6 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
     public void setInformerStatus(IvrInformerStatus informerStatus)
     {
         this.informerStatus.set(informerStatus);
-    }
-
-    public ExecutorServiceNode getExecutor()
-    {
-        return executor;
-    }
-
-    public void setExecutor(ExecutorServiceNode executor)
-    {
-        this.executor = executor;
     }
 
     public IvrConversationScenarioNode getConversationScenario()
@@ -473,44 +471,6 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         }
     }
 
-//    private boolean recordFilter(Record record)
-//    {
-//        if (record==null)
-//            return true;
-//        bindingSupport.put(RECORD_BINDING, record);
-//        try
-//        {
-//            Boolean _recordFilter = recordFilter;
-//            if (_recordFilter==null || !_recordFilter)
-//            {
-//                if (isLogLevelEnabled(LogLevel.DEBUG))
-//                    debug("Record ("+getRecordInfo(record)+") filtered");
-//                return false;
-//            }
-//            else
-//                return true;
-//        }
-//        finally
-//        {
-//            bindingSupport.reset();
-//        }
-//    }
-//
-//    Object postProcess(Record record)
-//    {
-//        Object res = null;
-//        bindingSupport.put(RECORD_BINDING, record);
-//        try
-//        {
-//            res = postProcess;
-//        }
-//        finally
-//        {
-//            bindingSupport.reset();
-//        }
-//        return res;
-//    }
-
     @Override
     public void formExpressionBindings(Bindings bindings)
     {
@@ -593,8 +553,12 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
                 for (IvrInformerSession session: sessions.values())
                 {
                     Object[] row = new Object[columnNames.length];
-                    row[0] = session.getEndpoint().getName();
-                    row[1] = session.getEndpoint().getEndpointState().getIdName();
+                    IvrEndpoint endpoint = session.getEndpoint();
+                    if (endpoint!=null)
+                    {
+                        row[0] = endpoint.getName();
+                        row[1] = endpoint.getEndpointState().getIdName();
+                    }
                     Record rec = session.getCurrentRecord();
                     if (rec!=null)
                         row[2] = new Long((System.currentTimeMillis()-((Timestamp)rec.getValue(CALL_START_TIME_FIELD)).getTime())/1000);
@@ -616,62 +580,6 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         {
             dataLock.readLock().unlock();
         }
-
-//        //current status
-//        viewableObjects.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE
-//                , "<b>"+currentStatusMessage+"</b>: ("+informerStatus+") "+statusMessage));
-//
-//        //endpoint status
-//        IvrEndpoint term = endpoint;
-//        String termStatus = term==null? "UNKNOWN" : term.getEndpointState().getIdName();
-//        viewableObjects.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE
-//                , "<b>"+endpointStatusMessage+"</b>: "+termStatus));
-//
-//        viewableObjects.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE
-//                , "<b>"+handledRecordSetsMessage+"</b>: "+handledRecordSets));
-//        viewableObjects.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE
-//                , "<b>"+processRecordDurationMessage+"</b>: "+getCurrentCallDuration()));
-//        viewableObjects.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE
-//                , "<b>"+currentCallDurationMessage+"</b>: "+getCurrentCallDuration()));
-//
-//        //current record
-//        viewableObjects.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE
-//                , "<b>"+currentRecordMessage+"</b>: "));
-//
-//
-//        Record rec = currentRecord;
-//        if (rec!=null)
-//        {
-//            String fieldNames = displayFields;
-//            String[] fields = fieldNames==null? null : fieldNames.split("\\s*,\\s*");
-//            Set<String> fieldsSet = new HashSet<String>();
-//            if (fields!=null)
-//                for (String name: fields)
-//                    fieldsSet.add(name);
-//            TableImpl table = new TableImpl(
-//                    new String[]{fieldNameColumnMessage, valueColumnMessage});
-//            for (RecordSchemaField field: rec.getSchema().getFields())
-//            {
-//                if (fieldsSet.isEmpty() || fieldsSet.contains(field.getName()))
-//                {
-//                    String fieldName = field.getDisplayName();
-//                    String value = converter.convert(
-//                            String.class, rec.getValue(field.getName()), field.getPattern());
-//                    table.addRow(new Object[]{fieldName, value});
-//                }
-//            }
-//            viewableObjects.add(new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, table));
-//        }
-//
-//        //statistics
-//        viewableObjects.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE
-//                , "<b>"+statisticsMessage+"</b>: "));
-//        TableImpl table = new TableImpl(
-//                new String[]{statisticNameColumnMessage, statisticValueColumnMessage});
-//        table.addRow(new Object[]{processedRecordsCountMessage, processedRecordsCount});
-//        table.addRow(new Object[]{processedAbonsCountMessage, processedAbonsCount});
-//        table.addRow(new Object[]{informedAbonsCountMessage, informedAbonsCount});
-//        viewableObjects.add(new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, table));
 
         return voList;
     }
@@ -765,22 +673,11 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         if (!informAllowed.get())
             return null;
 
-        IvrEndpoint endpoint = endpointPool.getEndpoint(endpointWaitTimeout);
-        if (endpoint==null)
-        {
-            for (Record record: records)
-            {
-                record.setValue(COMPLETION_CODE_FIELD, ERROR_NO_FREE_ENDPOINT_IN_THE_POOL);
-                sendRecordToConsumers(record);
-            }
-            return null;
-        }
-
         Long id = converter.convert(Long.class, records.iterator().next().getValue(ID_FIELD), null);
         IvrInformerSession session = new IvrInformerSession(
-                records, this, endpoint, maxCallDuration, conversationScenario);
+                records, this, maxInviteDuration, maxCallDuration, conversationScenario, endpointWaitTimeout);
         sessions.put(id, session);
-        executor.execute(session);
+        endpointPool.requestEndpoint(session);
 
         return session;
     }
@@ -790,10 +687,6 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         Record firstRecord = session.getRecords().get(0);
         try
         {
-            if (isLogLevelEnabled(LogLevel.DEBUG))
-                debug("Realising endpoint: "+session.getEndpoint().getName());
-            endpointPool.releaseEndpoint(session.getEndpoint());
-            
             Long id = converter.convert(Long.class, firstRecord.getValue(ID_FIELD), null);
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 debug("Removing session: "+id);

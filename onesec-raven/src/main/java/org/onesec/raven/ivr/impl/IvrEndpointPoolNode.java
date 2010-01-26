@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.impl;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -75,6 +76,8 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     private ExecutorService executor;
 
     @Message
+    private static String totalUsageCountMessage;
+    @Message
     private static String terminalsTableTitleMessage;
     @Message
     private static String terminalColumnMessage;
@@ -92,6 +95,10 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     private static String requesterStatusMessage;
     @Message
     private static String queueTableTitleMessage;
+    @Message
+    private static String queueTimeMessage;
+    @Message
+    private static String waitingTimeMessage;
 
     @Override
     protected void initFields()
@@ -160,15 +167,8 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     private void clearQueue() throws InterruptedException
     {
         statusMessage.set("Stoping processing requests. Clearing queue...");
-        if (lock.writeLock().tryLock(1, TimeUnit.SECONDS)) {
-            try {
-                for (RequestInfo ri : queue) {
-                    ri.request.processRequest(null);
-                }
-            } finally {
-                lock.writeLock().unlock();
-            }
-        }
+        for (RequestInfo ri : queue) 
+            ri.request.processRequest(null);
     }
 
     private boolean sendResponse(RequestInfo requestInfo)
@@ -225,17 +225,20 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     private void getAndLockFreeEndpoint(RequestInfo requestInfo) throws InterruptedException
     {
         Collection<Node> childs = getChildrens();
-        if (childs != null && !childs.isEmpty()) {
+        if (childs != null && !childs.isEmpty())
+        {
             for (Node child : childs) {
-                if (child instanceof IvrEndpoint
-                        && Status.STARTED.equals(child.getStatus())
-                        && !busyEndpoints.containsKey(child.getId())
-                        && ((IvrEndpoint) child).getEndpointState().getId() == IvrEndpointState.IN_SERVICE) {
+                if (   child instanceof IvrEndpoint
+                    && Status.STARTED.equals(child.getStatus())
+                    && !busyEndpoints.containsKey(child.getId())
+                    && ((IvrEndpoint) child).getEndpointState().getId() == IvrEndpointState.IN_SERVICE)
+                {
                     busyEndpoints.put(child.getId(), requestInfo);
                     requestInfo.terminalUsageTime = System.currentTimeMillis();
                     requestInfo.endpoint = (IvrEndpoint) child;
                     Long counter = usageCounters.get(child.getId());
                     usageCounters.put(child.getId(), counter == null ? 1 : counter + 1);
+                    return;
                 }
             }
         }
@@ -256,6 +259,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                     , currentUsageTimeMessage, requesterNodeMessage, requesterStatusMessage});
 
         Collection<Node> childs = getSortedChildrens();
+        long totalUsageCount = 0;
         if (childs!=null && !childs.isEmpty())
         {
             lock.readLock().lock();
@@ -277,6 +281,8 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                                 statusFormat, poolStatus.equals("BUSY")? "blue" : "green", poolStatus);
                         Long counter = usageCounters.get(endpoint.getId());
                         String usageCount = counter==null? "0" : counter.toString();
+                        if (counter!=null)
+                            totalUsageCount+=counter;
                         RequestInfo ri = busyEndpoints.get(endpoint.getId());
                         String currentUsageTime = null; String requester = null; String requesterStatus = null;
                         if (ri!=null)
@@ -295,10 +301,20 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                 lock.readLock().unlock();
             }
         }
+        List<ViewableObject> vos = new ArrayList<ViewableObject>(5);
+        vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, "<b>"+terminalsTableTitleMessage+"</b>"));
+        vos.add(new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, table));
+        vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, "<b>"+totalUsageCountMessage+": </b>"+totalUsageCount));
 
-        ViewableObject vo = new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, table);
-        
-        return Arrays.asList(vo);
+        TableImpl queueTable = new TableImpl(new String[]{requesterNodeMessage, waitingTimeMessage});
+        for (RequestInfo ri: queue)
+            queueTable.addRow(new Object[]{
+                ri.getTaskNode().getPath(), (System.currentTimeMillis()-ri.startTime)/1000});
+
+        vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, "<b>"+queueTableTitleMessage+"</b>"));
+        vos.add(new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, queueTable));
+
+        return vos;
     }
 
     public Boolean getAutoRefresh()
