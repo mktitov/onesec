@@ -349,8 +349,19 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                         if (isLogLevelEnabled(LogLevel.DEBUG))
                             debug("Processing request from ("+ri.getTaskNode().getPath()+")");
                         lookupForEndpoint(ri);
-                        if (ri.endpoint==null || !sendResponse(ri))
+                        if (ri.endpoint==null)
                             ri.request.processRequest(null);
+                        else
+                        {
+                            if (!sendResponse(ri))
+                            {
+                                try{
+                                    ri.request.processRequest(null);
+                                }finally{
+                                    releaseEndpoint(null);
+                                }
+                            }
+                        }
                     }
                     cleanupQueue();
                 }
