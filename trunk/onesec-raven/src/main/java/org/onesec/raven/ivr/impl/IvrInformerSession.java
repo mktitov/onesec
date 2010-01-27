@@ -33,14 +33,11 @@ import org.onesec.raven.ivr.EndpointRequest;
 import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.IvrEndpoint;
 import org.onesec.raven.ivr.IvrEndpointState;
-import org.onesec.raven.ivr.IvrInformerStatus;
 import org.raven.ds.Record;
 import org.raven.ds.RecordException;
 import org.raven.log.LogLevel;
-import org.raven.sched.Task;
 import org.raven.tree.Node;
 import org.weda.beans.ObjectUtils;
-import org.weda.internal.annotations.Message;
 import org.weda.internal.annotations.Service;
 import org.weda.services.TypeConverter;
 import static org.onesec.raven.ivr.impl.IvrInformerRecordSchemaNode.*;
@@ -130,6 +127,7 @@ public class IvrInformerSession implements EndpointRequest, ConversationCompleti
     {
         try
         {
+            statusMessage.set("Processing call request");
             this.endpoint = endpoint;
             try
             {
@@ -416,6 +414,7 @@ public class IvrInformerSession implements EndpointRequest, ConversationCompleti
 
     private void skipInforming() throws Exception
     {
+        statusMessage.set("Skiping infroming because of no free terminal in the pool");
         for (Record record: records)
         {
             record.setValue(COMPLETION_CODE_FIELD, AsyncIvrInformer.ERROR_NO_FREE_ENDPOINT_IN_THE_POOL);
