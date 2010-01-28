@@ -60,7 +60,6 @@ import org.weda.internal.annotations.Message;
 public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Viewable, Task
 {
     private ReadWriteLock lock;
-    private Condition newRequestCondition;
     private Condition endpointReleased;
     private Map<Integer, RequestInfo> busyEndpoints;
     private Map<Integer, Long> usageCounters;
@@ -105,7 +104,6 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     {
         super.initFields();
         lock = new ReentrantReadWriteLock();
-        newRequestCondition = lock.writeLock().newCondition();
         endpointReleased = lock.writeLock().newCondition();
         busyEndpoints = new HashMap<Integer, RequestInfo>();
         usageCounters = new HashMap<Integer, Long>();
@@ -120,6 +118,8 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         super.doStart();
         if (!managerThreadStoped.get())
             throw new Exception("Can't start pool because of manager task is still running");
+        lock = new ReentrantReadWriteLock();
+        endpointReleased = lock.writeLock().newCondition();
         queue = new LinkedBlockingQueue<RequestInfo>(maxRequestQueueSize);
         busyEndpoints.clear();
         usageCounters.clear();

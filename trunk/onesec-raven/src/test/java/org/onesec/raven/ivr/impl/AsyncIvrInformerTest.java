@@ -325,7 +325,7 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
         assertEquals(AsyncIvrInformer.SKIPPED_STATUS, recs.get(2l).getValue(IvrInformerRecordSchemaNode.COMPLETION_CODE_FIELD));
     }
 
-//    @Test(timeout=60000)
+    @Test(timeout=60000)
     public void stopProcessingTest() throws Exception
     {
         informer.setWaitForSession(Boolean.FALSE);
