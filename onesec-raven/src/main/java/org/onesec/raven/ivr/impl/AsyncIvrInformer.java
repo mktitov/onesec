@@ -45,8 +45,11 @@ import org.raven.ds.impl.RecordSchemaNode;
 import org.raven.ds.impl.RecordSchemaValueTypeHandlerFactory;
 import org.raven.expr.impl.BindingSupportImpl;
 import org.raven.log.LogLevel;
-import org.raven.sched.impl.ExecutorServiceNode;
+import org.raven.sched.Schedulable;
+import org.raven.sched.Scheduler;
 import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
+import org.raven.sched.impl.TimeWindowHelper;
+import org.raven.sched.impl.TimeWindowNode;
 import org.raven.table.TableImpl;
 import org.raven.tree.Node;
 import org.raven.tree.NodeAttribute;
@@ -64,8 +67,8 @@ import static org.onesec.raven.ivr.impl.IvrInformerRecordSchemaNode.*;
  *
  * @author Mikhail Titov
  */
-@NodeClass
-public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsumer, Viewable
+@NodeClass(childNodes=TimeWindowNode.class)
+public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsumer, Viewable, Schedulable
 {
     public static final String ERROR_NO_FREE_ENDPOINT_IN_THE_POOL = "ERROR_NO_FREE_ENDPOINT_IN_THE_POOL";
     public static final String ERROR_TOO_MANY_SESSIONS = "ERROR_TOO_MANY_SESSIONS";
@@ -82,6 +85,9 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
     public final static String TRANSFER_SUCCESSFULL_STATUS = "TRANSFER_SUCCESSFULL";
     public final static String TRANSFER_DESTINATION_NOT_ANSWER_STATUS = "TRANSFER_DESTINATION_NOT_ANSWER";
     public final static String TRANSFER_ERROR_STATUS = "TRANSFER_ERROR";
+
+    @Parameter(valueHandlerType=SystemSchedulerValueHandlerFactory.TYPE)
+    private Scheduler startScheduler;
 
     @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
     private DataSource dataSource;
@@ -127,8 +133,6 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
     private AtomicReference<IvrInformerStatus> informerStatus;
     private AtomicBoolean informAllowed;
     private AtomicBoolean receivingData;
-    private IvrInformerScheduler startScheduler;
-    private IvrInformerScheduler stopScheduler;
     private List<Record> records;
     private BindingSupportImpl bindingSupport;
 
@@ -181,7 +185,7 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
     protected void doInit() throws Exception
     {
         super.doInit();
-        generateNodes();
+//        generateNodes();
     }
 
     @Override
@@ -190,20 +194,30 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         super.doStart();
         resetStatFields();
         sessions.clear();
-        generateNodes();
+//        generateNodes();
         informerStatus.set(IvrInformerStatus.WAITING);
         informAllowed.set(true);
     }
 
-    public void startProcessing()
+    public void executeScheduledJob(Scheduler scheduler)
     {
-        informAllowed.set(true);
+        if (!Status.STARTED.equals(getStatus()))
+            return;
+        if (TimeWindowHelper.isCurrentDateInPeriod(this))
+            startProcessing();
+//        else
+//            stopProcessing();
+    }
+
+    void startProcessing()
+    {
+//        informAllowed.set(true);
 
 //        if (!informerStatus.compareAndSet(IvrInformerStatus.WAITING, IvrInformerStatus.PROCESSING))
         if (!receivingData.compareAndSet(false, true))
         {
-            if (isLogLevelEnabled(LogLevel.DEBUG))
-                debug("Informator already processing records");
+            if (isLogLevelEnabled(LogLevel.TRACE))
+                trace("Informator already processing records");
             return;
         }
         try
@@ -221,45 +235,43 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         }
     }
 
-    public void stopProcessing()
+    void stopProcessing()
     {
-        if (informAllowed.compareAndSet(true, false))
+        informAllowed.set(false);
+        try
         {
-            try
+            if (dataLock.writeLock().tryLock(5, TimeUnit.SECONDS))
             {
-                if (dataLock.writeLock().tryLock(5, TimeUnit.SECONDS))
-                {
-                    try {
-                        sessionRemoved.signal();
-                    } finally {
-                        dataLock.writeLock().unlock();
-                    }
+                try {
+                    sessionRemoved.signal();
+                } finally {
+                    dataLock.writeLock().unlock();
                 }
             }
-            catch (InterruptedException e)
-            {
-                if (isLogLevelEnabled(LogLevel.ERROR))
-                    error("Error notifying thread, that waiting for informer session, about infomer shutdown", e);
-            }
+        }
+        catch (InterruptedException e)
+        {
+            if (isLogLevelEnabled(LogLevel.ERROR))
+                error("Error notifying thread, that waiting for informer session, about infomer shutdown", e);
         }
     }
 
-    private void generateNodes()
-    {
-        startScheduler = (IvrInformerScheduler) getChildren(IvrInformerScheduler.START_SCHEDULER);
-        if (startScheduler==null)
-        {
-            startScheduler = new IvrInformerScheduler(IvrInformerScheduler.START_SCHEDULER);
-            addAndSaveChildren(startScheduler);
-        }
-
-        stopScheduler = (IvrInformerScheduler) getChildren(IvrInformerScheduler.STOP_SCHEDULER);
-        if (stopScheduler==null)
-        {
-            stopScheduler = new IvrInformerScheduler(IvrInformerScheduler.STOP_SCHEDULER);
-            addAndSaveChildren(stopScheduler);
-        }
-    }
+//    private void generateNodes()
+//    {
+//        startScheduler = (IvrInformerScheduler) getChildren(IvrInformerScheduler.START_SCHEDULER);
+//        if (startScheduler==null)
+//        {
+//            startScheduler = new IvrInformerScheduler(IvrInformerScheduler.START_SCHEDULER);
+//            addAndSaveChildren(startScheduler);
+//        }
+//
+//        stopScheduler = (IvrInformerScheduler) getChildren(IvrInformerScheduler.STOP_SCHEDULER);
+//        if (stopScheduler==null)
+//        {
+//            stopScheduler = new IvrInformerScheduler(IvrInformerScheduler.STOP_SCHEDULER);
+//            addAndSaveChildren(stopScheduler);
+//        }
+//    }
 
     @Override
     protected void doStop() throws Exception
@@ -353,6 +365,16 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         this.conversationScenario = conversationScenario;
     }
 
+    public Scheduler getStartScheduler()
+    {
+        return startScheduler;
+    }
+
+    public void setStartScheduler(Scheduler startScheduler)
+    {
+        this.startScheduler = startScheduler;
+    }
+
     public DataSource getDataSource()
     {
         return dataSource;
@@ -404,10 +426,9 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
 
     public void setData(DataSource dataSource, Object data)
     {
-        if (!Status.STARTED.equals(getStatus()) || !informAllowed.get())
-        {
+        if (!Status.STARTED.equals(getStatus()) || !informAllowed.get() || !TimeWindowHelper.isCurrentDateInPeriod(this))
             return;
-        }
+        
         if (data!=null && !(data instanceof Record))
             return;
         
@@ -521,7 +542,9 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
 
         TableImpl statTable = new TableImpl(new String[]{
             informAllowedMessage, statusMessageTitle, informedAbonentsMessage, successfullyInformedAbonentsMessage});
-        statTable.addRow(new Object[]{getInformAllowed(), statusMessage, informedAbonents, successfullyInformedAbonents});
+        statTable.addRow(new Object[]{
+            getInformAllowed()&&TimeWindowHelper.isCurrentDateInPeriod(this),
+            statusMessage, informedAbonents, successfullyInformedAbonents});
         
         voList.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, "<b>"+statMessage+"</b>:"));
         voList.add(new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, statTable));
