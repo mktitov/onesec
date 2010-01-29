@@ -18,8 +18,6 @@
 package org.onesec.raven.ivr.impl;
 
 import java.io.InputStream;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.onesec.raven.ivr.InputStreamSource;
 import org.raven.log.LogLevel;
 import org.raven.tree.DataFileException;
