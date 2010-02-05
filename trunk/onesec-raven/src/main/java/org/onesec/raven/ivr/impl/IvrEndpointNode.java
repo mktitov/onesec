@@ -231,6 +231,12 @@ public class IvrEndpointNode extends BaseNode
         resetStates();
     }
 
+    @Override
+    public boolean isAutoStart()
+    {
+        return false;
+    }
+
     private void removeCallObserver()
     {
         try
