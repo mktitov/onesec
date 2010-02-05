@@ -199,6 +199,11 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         informAllowed.set(true);
     }
 
+    @Override
+    public boolean isAutoStart() {
+        return false;
+    }
+
     public void executeScheduledJob(Scheduler scheduler)
     {
         if (!Status.STARTED.equals(getStatus()))
