@@ -55,7 +55,6 @@ public class ConcatDataSource
         implements AudioStream, Task, ControllerListener
 {
     public final static String SILENCE_RESOURCE_NAME = "/org/onesec/raven/ivr/silence.wav";
-    private final static int INITIAL_BUFFER_SIZE = 10;
 
     private final Queue<InputStreamSource> sources;
     private final String contentType;
@@ -69,6 +68,8 @@ public class ConcatDataSource
     private final AtomicBoolean streamThreadRunning;
     private final Format format = new AudioFormat(AudioFormat.ULAW_RTP, 8000d, 8, 1);
     private final int rtpPacketSize;
+    private final int rtpInitialBufferSize;
+    private final int rtpMaxSendAheadPacketsCount;
     private boolean started = false;
     private AtomicBoolean silenceSource;
     private Thread thread;
@@ -76,12 +77,16 @@ public class ConcatDataSource
     public ConcatDataSource(String contentType
             , ExecutorService executorService
             , int rtpPacketSize
+            , int rtpInitialBufferSize
+            , int rtpMaxSendAheadPacketsCount
             , Node owner)
     {
         this.contentType = contentType;
         this.executorService = executorService;
         this.owner = owner;
         this.rtpPacketSize = rtpPacketSize;
+        this.rtpInitialBufferSize = rtpInitialBufferSize;
+        this.rtpMaxSendAheadPacketsCount = rtpMaxSendAheadPacketsCount;
 
         sources = new ConcurrentLinkedQueue<InputStreamSource>();
         dataConcated = new AtomicBoolean(false);
@@ -90,7 +95,7 @@ public class ConcatDataSource
         streamThreadRunning = new AtomicBoolean(false);
         silenceSource = new AtomicBoolean(true);
         buffers = new ConcurrentLinkedQueue<Buffer>();
-        streams = new ConcatDataStream[]{new ConcatDataStream(buffers, this, owner)};
+        streams = new ConcatDataStream[]{new ConcatDataStream(buffers, this, owner, rtpPacketSize,rtpMaxSendAheadPacketsCount)};
         ResourceInputStreamSource silenceSource =
                 new ResourceInputStreamSource(SILENCE_RESOURCE_NAME);
         addSource(silenceSource);
@@ -261,7 +266,7 @@ public class ConcatDataSource
                 int bufferCount = 0;
     //            for (InputStreamSource source: sources)
     //            {
-                List<Buffer> initialBuffer = new ArrayList<Buffer>(INITIAL_BUFFER_SIZE);
+                List<Buffer> initialBuffer = new ArrayList<Buffer>(rtpInitialBufferSize);
                 while (!stoped.get())
                 {
                     InputStreamSource source = sources.peek();
@@ -333,7 +338,7 @@ public class ConcatDataSource
                                     if (!initialBufferInitialized)
                                     {
                                         initialBuffer.add(buffer);
-                                        if (initialBuffer.size()==INITIAL_BUFFER_SIZE)
+                                        if (initialBuffer.size()==rtpInitialBufferSize)
                                         {
                                             initialBufferInitialized = true;
                                             System.out.println("!!!>>>Flushing initial buffer: "+initialBuffer.size());

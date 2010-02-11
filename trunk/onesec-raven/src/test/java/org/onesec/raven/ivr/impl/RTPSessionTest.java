@@ -99,7 +99,7 @@ public class RTPSessionTest extends EasyMock implements ReceiveStreamListener, S
         InputStreamSource source3 = new TestInputStreamSource("src/test/wav/test.wav");
 
         ConcatDataSource dataSource =
-                new ConcatDataSource(FileTypeDescriptor.WAVE, executorService, 160, owner);
+                new ConcatDataSource(FileTypeDescriptor.WAVE, executorService, 240, 5, 5, owner);
 
 //        RTPSession session = new RTPSession("127.0.0.1", 1234, dataSource);
         
@@ -157,7 +157,7 @@ public class RTPSessionTest extends EasyMock implements ReceiveStreamListener, S
         InputStreamSource source3 = new TestInputStreamSource("src/test/wav/test.wav");
 
         ConcatDataSource dataSource =
-                new ConcatDataSource(FileTypeDescriptor.WAVE, executorService, 160, owner);
+                new ConcatDataSource(FileTypeDescriptor.WAVE, executorService, 240, 5, 5, owner);
 
         dataSource.addSource(source1);
 //        dataSource.addSource(source2);

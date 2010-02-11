@@ -81,7 +81,7 @@ public class OutgoingRtpStreamImplTest extends OnesecRavenTestCase implements Re
         InputStreamSource source3 = new TestInputStreamSource("src/test/wav/test.wav");
 
         ConcatDataSource audioSource =
-                new ConcatDataSource(FileTypeDescriptor.WAVE, executor, 160, manager);
+                new ConcatDataSource(FileTypeDescriptor.WAVE, executor, 240, 5, 5, manager);
 
         OutgoingRtpStream sendStream = manager.getOutgoingRtpStream(manager);
         Player player = Manager.createPlayer(new MediaLocator("rtp://"+localAddress.getHostAddress()+":1234/audio/1"));

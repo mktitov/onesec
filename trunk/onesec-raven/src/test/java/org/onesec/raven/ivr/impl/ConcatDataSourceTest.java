@@ -61,7 +61,7 @@ public class ConcatDataSourceTest extends EasyMock
         InputStreamSource source3 = new TestInputStreamSource("src/test/wav/test.wav");
 
         ConcatDataSource dataSource =
-                new ConcatDataSource(FileTypeDescriptor.WAVE, executorService, 160, owner);
+                new ConcatDataSource(FileTypeDescriptor.WAVE, executorService, 240, 5, 5, owner);
 
         Player player = Manager.createPlayer(dataSource);
         player.start();
