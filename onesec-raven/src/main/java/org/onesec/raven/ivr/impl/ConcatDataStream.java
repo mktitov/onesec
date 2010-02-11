@@ -42,6 +42,8 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
     private final ConcatDataSource dataSource;
     private final ContentDescriptor contentDescriptor;
     private final Node owner;
+    private final int packetLength;
+    private final int maxSendAheadPacketsCount;
     private BufferTransferHandler transferHandler;
     private Buffer silentBuffer;
     private Buffer bufferToSend;
@@ -50,12 +52,16 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
     private long sleepTime;
     private AtomicInteger silencePacketCount = new AtomicInteger(0);
 
-    public ConcatDataStream(Queue<Buffer> bufferQueue, ConcatDataSource dataSource, Node owner)
+    public ConcatDataStream(
+            Queue<Buffer> bufferQueue, ConcatDataSource dataSource, Node owner
+            , int packetSize, int maxSendAheadPacketsCount)
     {
         this.bufferQueue = bufferQueue;
         this.dataSource = dataSource;
         this.contentDescriptor = new ContentDescriptor(dataSource.getContentType());
         this.owner = owner;
+        this.packetLength = packetSize/8;
+        this.maxSendAheadPacketsCount = maxSendAheadPacketsCount;
     }
 
     public Format getFormat()
@@ -157,8 +163,8 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
                     transferData(null);
                     ++packetNumber;
                     action = "sleeping";
-                    long expectedPacketNumber = (System.currentTimeMillis()-startTime)/20;
-                    sleepTime = (packetNumber-expectedPacketNumber-(bufferToSend==null? 0 : 10))*20;
+                    long expectedPacketNumber = (System.currentTimeMillis()-startTime)/packetLength;
+                    sleepTime = (packetNumber-expectedPacketNumber-(bufferToSend==null? 0 : maxSendAheadPacketsCount))*packetLength;
                     if (sleepTime>0)
                         TimeUnit.MILLISECONDS.sleep(sleepTime);
                 }

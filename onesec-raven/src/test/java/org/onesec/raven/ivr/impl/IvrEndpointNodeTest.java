@@ -72,9 +72,13 @@ public class IvrEndpointNodeTest
         callOperator.getProvidersNode().addAndSaveChildren(provider);
         provider.setFromNumber(88013);
         provider.setToNumber(88037);
+//        provider.setFromNumber(68050);
+//        provider.setToNumber(68050);
         provider.setHost("10.16.15.1");
         provider.setPassword("cti_user1");
         provider.setUser("cti_user1");
+//        provider.setPassword("cti4zenit");
+//        provider.setUser("cti_user4zenit");
         assertTrue(provider.start());
 
         executor = new ExecutorServiceNode();
@@ -95,6 +99,7 @@ public class IvrEndpointNodeTest
         endpoint.setExecutorService(executor);
         endpoint.setConversationScenario(scenario);
         endpoint.setAddress("88013");
+//        endpoint.setAddress("68050");
         endpoint.setIp(getInterfaceAddress().getHostAddress());
         endpoint.setLogLevel(LogLevel.TRACE);
     }
@@ -153,7 +158,7 @@ public class IvrEndpointNodeTest
         Thread.sleep(1000);
     }
 
-    @Test
+//    @Test
     public void simpleConversationTest2() throws Exception
     {
         AudioFileNode audioNode1 = createAudioFileNode("audio1", "src/test/wav/test2.wav");
@@ -184,7 +189,7 @@ public class IvrEndpointNodeTest
 
     }
 
-//    @Test
+    @Test(timeout=120000)
     public void inviteTest() throws Exception
     {
         AudioFileNode audioNode1 = createAudioFileNode("audio1", "src/test/wav/test2.wav");
@@ -206,13 +211,16 @@ public class IvrEndpointNodeTest
         waitForProvider();
         assertTrue(endpoint.start());
         StateWaitResult res = endpoint.getEndpointState().waitForState(
-                new int[]{IvrEndpointState.IN_SERVICE}, 2000);
-        endpoint.invite("88024", scenario, this, null);
-//        endpoint.invite("089128672947", scenario, this, null);
+                new int[]{IvrEndpointState.IN_SERVICE}, 10000);
+        assertFalse(res.isWaitInterrupted());
+//        endpoint.invite("88024", scenario, this, null);
+        endpoint.invite("089128672947", scenario, this, null);
         res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.INVITING}, 30000);
+        assertFalse(res.isWaitInterrupted());
         res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.TALKING}, 250000);
+        assertFalse(res.isWaitInterrupted());
         res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.IN_SERVICE}, 50000);
 

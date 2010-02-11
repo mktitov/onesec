@@ -131,6 +131,15 @@ public class IvrEndpointNode extends BaseNode
     @NotNull @Parameter(defaultValue="1234")
     private Integer port;
 
+    @NotNull @Parameter(defaultValue="240")
+    private Integer rtpPacketSize;
+
+    @NotNull @Parameter(defaultValue="5")
+    private Integer rtpInitialBuffer;
+
+    @NotNull @Parameter(defaultValue="5")
+    private Integer rtpMaxSendAheadPacketsCount;
+
     private Address terminalAddress;
     private CiscoMediaTerminal terminal;
     private Call call;
@@ -482,6 +491,30 @@ public class IvrEndpointNode extends BaseNode
 
     public void setAddress(String address) {
         this.address = address;
+    }
+
+    public Integer getRtpInitialBuffer() {
+        return rtpInitialBuffer;
+    }
+
+    public void setRtpInitialBuffer(Integer rtpInitialBuffer) {
+        this.rtpInitialBuffer = rtpInitialBuffer;
+    }
+
+    public Integer getRtpMaxSendAheadPacketsCount() {
+        return rtpMaxSendAheadPacketsCount;
+    }
+
+    public void setRtpMaxSendAheadPacketsCount(Integer rtpMaxSendAheadPacketsCount) {
+        this.rtpMaxSendAheadPacketsCount = rtpMaxSendAheadPacketsCount;
+    }
+
+    public Integer getRtpPacketSize() {
+        return rtpPacketSize;
+    }
+
+    public void setRtpPacketSize(Integer rtpPacketSize) {
+        this.rtpPacketSize = rtpPacketSize;
     }
 
     public IvrConversationScenarioNode getConversationScenario()
@@ -852,7 +885,9 @@ public class IvrEndpointNode extends BaseNode
             debug(String.format(
                     "Starting rtp session: remoteHost (%s), remotePort (%s)"
                     , remoteHost, remotePort));
-        audioStream = new ConcatDataSource(FileTypeDescriptor.WAVE, executorService, 160, this);
+        audioStream = new ConcatDataSource(
+                FileTypeDescriptor.WAVE, executorService
+                , rtpPacketSize, rtpInitialBuffer, rtpMaxSendAheadPacketsCount, this);
         try
         {
             conversationState = currentConversation.createConversationState();

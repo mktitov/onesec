@@ -91,7 +91,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         conversationState.setBinding(VARS_BINDING, new HashMap(), BindingScope.CONVERSATION);
         conversationState.setBinding(
                 CONVERSATION_STATE_BINDING, conversationState, BindingScope.CONVERSATION);
-        audioStream = new ConcatDataSource(FileTypeDescriptor.WAVE, executor, 160, owner);
+        audioStream = new ConcatDataSource(FileTypeDescriptor.WAVE, executor, 240, 5, 5, owner);
         actionsExecutor = new IvrActionsExecutor(this, executor);
         this.bindingSupport = new BindingSupportImpl();
         

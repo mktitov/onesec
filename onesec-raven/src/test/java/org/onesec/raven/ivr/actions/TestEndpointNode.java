@@ -51,7 +51,7 @@ public class TestEndpointNode extends BaseNode implements IvrEndpoint
     protected void doStart() throws Exception
     {
         super.doStart();
-        audioStream = new ConcatDataSource(FileTypeDescriptor.WAVE, executorService, 160, this);
+        audioStream = new ConcatDataSource(FileTypeDescriptor.WAVE, executorService, 240, 5, 5, this);
         player = Manager.createPlayer(audioStream);
         player.start();
     }
