@@ -366,8 +366,8 @@ public class IvrEndpointNode extends BaseNode
         }
         catch (Throwable e)
         {
-            if (isLogLevelEnabled(LogLevel.ERROR))
-                error(
+            if (isLogLevelEnabled(LogLevel.DEBUG))
+                debug(
                     String.format("Error inviting opponent (%s) to conversation", opponentNumber)
                     , e);
             stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
