@@ -32,6 +32,7 @@ import org.onesec.raven.ivr.IncomingRtpStream;
 import org.onesec.raven.ivr.OutgoingRtpStream;
 import org.onesec.raven.ivr.RtpStream;
 import org.onesec.raven.ivr.RtpStreamManager;
+import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.log.LogLevel;
 import org.raven.tree.Node;
@@ -42,6 +43,7 @@ import org.weda.annotations.constraints.NotNull;
  *
  * @author Mikhail Titov
  */
+@NodeClass
 public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager
 {
     @NotNull @Parameter(defaultValue="20")
