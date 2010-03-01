@@ -94,6 +94,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         audioStream = new ConcatDataSource(FileTypeDescriptor.WAVE, executor, 240, 5, 5, owner);
         actionsExecutor = new IvrActionsExecutor(this, executor);
         this.bindingSupport = new BindingSupportImpl();
+        state = new IvrEndpointConversationStateImpl(this);
         
         state.setState(READY);
     }
@@ -285,9 +286,6 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                             , address, state.getIdName()));
                 return;
             }
-
-            
-
         }
         finally
         {
