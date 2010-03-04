@@ -18,13 +18,12 @@
 package org.onesec.raven.ivr.impl;
 
 import com.cisco.jtapi.extensions.CiscoMediaCapability;
-import com.cisco.jtapi.extensions.CiscoMediaTerminal;
 import com.cisco.jtapi.extensions.CiscoRTPInputStartedEv;
 import com.cisco.jtapi.extensions.CiscoRTPOutputProperties;
 import com.cisco.jtapi.extensions.CiscoRTPOutputStartedEv;
+import com.cisco.jtapi.extensions.CiscoRouteTerminal;
 import com.cisco.jtapi.extensions.CiscoTerminalObserver;
 import java.io.FileInputStream;
-import java.net.InetAddress;
 import java.util.concurrent.TimeUnit;
 import javax.media.ControllerEvent;
 import javax.media.ControllerListener;
@@ -53,7 +52,6 @@ import org.onesec.core.provider.ProviderController;
 import org.onesec.core.provider.ProviderControllerState;
 import org.onesec.core.services.ProviderRegistry;
 import org.onesec.raven.OnesecRavenTestCase;
-import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.actions.PauseActionNode;
 import org.onesec.raven.ivr.actions.PlayAudioActionNode;
 import org.onesec.raven.ivr.actions.StopConversationActionNode;
@@ -129,12 +127,13 @@ public class IvrEndpointConversationImplTest extends OnesecRavenTestCase
         {
             waitForProviderState(provider, Provider.IN_SERVICE);
             System.out.println("Provider in service");
-            Address address = provider.getAddress("88044");
+            Address address = provider.getAddress("88037");
             if (address==null)
                 throw new Exception("Address not found");
             System.out.println("Address: "+address.toString()+", class: "+address.getClass().getName());
             address.addObserver(listener);
-            CiscoMediaTerminal terminal = (CiscoMediaTerminal) address.getTerminals()[0];
+//            CiscoMediaTerminal terminal = (CiscoMediaTerminal) address.getTerminals()[0];
+            CiscoRouteTerminal terminal = (CiscoRouteTerminal) address.getTerminals()[0];
             if (terminal==null)
                 throw new Exception("Terminal not found");
             System.out.println("Found terminal: "+terminal.toString());
@@ -144,7 +143,9 @@ public class IvrEndpointConversationImplTest extends OnesecRavenTestCase
 //            System.out.println("Found terminal: "+terminal.toString());
             CiscoMediaCapability[] caps =
                     new CiscoMediaCapability[]{CiscoMediaCapability.G711_64K_30_MILLISECONDS};
-            terminal.register(InetAddress.getByName("10.50.1.134"), 1234, caps);
+//            terminal.register(InetAddress.getByName("10.50.1.134"), 1234, caps);
+//            terminal.register(caps);
+            terminal.register(caps, CiscoRouteTerminal.DYNAMIC_MEDIA_REGISTRATION);
             terminal.addObserver(listener);
 //            Address address = terminal.getAddresses()[0];
 //            if (address==null)

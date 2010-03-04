@@ -73,6 +73,7 @@ public class ConcatDataSource
     private boolean started = false;
     private AtomicBoolean silenceSource;
     private Thread thread;
+    private String logPrefix;
 
     public ConcatDataSource(String contentType
             , ExecutorService executorService
@@ -99,6 +100,14 @@ public class ConcatDataSource
         ResourceInputStreamSource silenceSource =
                 new ResourceInputStreamSource(SILENCE_RESOURCE_NAME);
         addSource(silenceSource);
+    }
+
+    public String getLogPrefix() {
+        return logPrefix;
+    }
+
+    public void setLogPrefix(String logPrefix) {
+        this.logPrefix = logPrefix;
     }
 
     public DataSource getDataSource()
@@ -194,7 +203,7 @@ public class ConcatDataSource
         catch (InterruptedException e)
         {
             if (owner.isLogLevelEnabled(LogLevel.ERROR))
-                owner.getLogger().error("ConcatDataSource close operation was interrupted", e);
+                owner.getLogger().error(logMess("ConcatDataSource close operation was interrupted"), e);
             Thread.currentThread().interrupt();
         }
     }
@@ -213,7 +222,7 @@ public class ConcatDataSource
         catch (InterruptedException e)
         {
             if (owner.isLogLevelEnabled(LogLevel.ERROR))
-                owner.getLogger().error("Error reseting audio stream. Error waiting for audio source initialization", e);
+                owner.getLogger().error(logMess("Error reseting audio stream. Error waiting for audio source initialization"), e);
             Thread.currentThread().interrupt();
         }
         sources.clear();
@@ -250,8 +259,7 @@ public class ConcatDataSource
 
     public String getStatusMessage()
     {
-        return String.format(
-                "Generating continuous audio stream from (%s) audio sources", sources.size());
+        return logMess("Generating continuous audio stream from (%s) audio sources", sources.size());
     }
 
     public void run()
@@ -278,7 +286,7 @@ public class ConcatDataSource
                     try
                     {
                         if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                            owner.getLogger().debug("AudioStream. Found new source. Processing...");
+                            owner.getLogger().debug(logMess("Found new source. Processing..."));
                         long ts = System.currentTimeMillis();
                         IssDataSource ids = new IssDataSource(source, contentType);
                         Processor p = Manager.createProcessor(ids);
@@ -302,9 +310,8 @@ public class ConcatDataSource
                         ds.start();
                         PushBufferStream s = ds.getStreams()[0];
                         if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                            owner.getLogger().debug(
-                                    "AudioStream. Source initialization time (ms) - "
-                                    +(System.currentTimeMillis()-ts));
+                            owner.getLogger().debug(logMess(
+                                    "Source initialization time (ms) - "+(System.currentTimeMillis()-ts)));
                         try
                         {
                             boolean eom = false;
@@ -325,8 +332,7 @@ public class ConcatDataSource
                                     silenceSource.set(false);
                                     eom = true;
                                     if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                                        owner.getLogger().debug(
-                                                "AudioStream. Silence buffer initialized");
+                                        owner.getLogger().debug(logMess("Silence buffer initialized"));
                                 }
                                 else
                                 {
@@ -341,7 +347,7 @@ public class ConcatDataSource
                                         if (initialBuffer.size()==rtpInitialBufferSize)
                                         {
                                             initialBufferInitialized = true;
-                                            System.out.println("!!!>>>Flushing initial buffer: "+initialBuffer.size());
+//                                            System.out.println("!!!>>>Flushing initial buffer: "+initialBuffer.size());
                                             buffers.addAll(initialBuffer);
     //                                        initialBuffer.clear();
                                         }
@@ -355,7 +361,7 @@ public class ConcatDataSource
                             }
                             if (!initialBufferInitialized && !initialBuffer.isEmpty())
                             {
-                                System.out.println("!!!>>>Flushing initial buffer: "+initialBuffer.size());
+//                                System.out.println("!!!>>>Flushing initial buffer: "+initialBuffer.size());
                                 initialBufferInitialized = true;
                                 buffers.addAll(initialBuffer);
     //                            initialBuffer.clear();
@@ -375,12 +381,12 @@ public class ConcatDataSource
                     }
                 }
                 if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                    owner.getLogger().debug(String.format("Gathered (%s) buffers", bufferCount));
+                    owner.getLogger().debug(logMess("Gathered (%s) buffers", bufferCount));
             } catch(Throwable e)
             {
                 e.printStackTrace();
                 if (owner.isLogLevelEnabled(LogLevel.ERROR))
-                    owner.getLogger().error("AudioStream. Error creating continuous audio stream.", e);
+                    owner.getLogger().error(logMess("Error creating continuous audio stream"), e);
             }
         }
         finally
@@ -403,5 +409,10 @@ public class ConcatDataSource
 
     public void controllerUpdate(ControllerEvent event)
     {
+    }
+
+    private String logMess(String mess, Object... args)
+    {
+        return logPrefix==null? "" : logPrefix+"AudioStream. "+String.format(mess, args);
     }
 }
