@@ -61,28 +61,30 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     private final ExecutorService executor;
     private final ConversationScenario scenario;
     private final OutgoingRtpStream rtpStream;
-    private final CallControlCall call;
+    private final CiscoCall call;
     private final IvrActionsExecutor actionsExecutor;
-    private final AudioStream audioStream;
+    private final ConcatDataSource audioStream;
     private final ConversationScenarioState conversationState;
     private final String remoteAddress;
     private final int remotePort;
     private final BindingSupportImpl bindingSupport;
+    private final String callId;
     private IvrEndpointConversationStateImpl state;
-
 
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
     public IvrEndpointConversationImpl(
             Node owner, ExecutorService executor, ConversationScenario scenario
-            , OutgoingRtpStream rtpStream, CallControlCall call, String remoteAddress, int remotePort)
+            , OutgoingRtpStream rtpStream, CallControlCall call, String remoteAddress
+            , int remotePort)
         throws Exception
     {
         this.owner = owner;
         this.executor = executor;
         this.scenario = scenario;
         this.rtpStream = rtpStream;
-        this.call = call;
+        this.call = (CiscoCall)call;
+        callId = getCallId();
         this.remoteAddress = remoteAddress;
         this.remotePort = remotePort;
         conversationState = this.scenario.createConversationState();
@@ -92,6 +94,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         conversationState.setBinding(
                 CONVERSATION_STATE_BINDING, conversationState, BindingScope.CONVERSATION);
         audioStream = new ConcatDataSource(FileTypeDescriptor.WAVE, executor, 240, 5, 5, owner);
+        audioStream.setLogPrefix(callId+" : ");
         actionsExecutor = new IvrActionsExecutor(this, executor);
         this.bindingSupport = new BindingSupportImpl();
         state = new IvrEndpointConversationStateImpl(this);
@@ -102,6 +105,15 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     public IvrEndpointConversationState startConversation()
     {
         lock.writeLock().lock();
+        if (IvrEndpointConversationState.READY!=state.getId()) {
+            if (owner.isLogLevelEnabled(LogLevel.WARN))
+                owner.getLogger().warn(callLog(
+                        "Can't start conversation. Conversation is already started or not ready. " +
+                        "Current conversation state is %s", state.getIdName()));
+            return state;
+        } else if (owner.isLogLevelEnabled(LogLevel.DEBUG)) {
+            owner.getLogger().debug(callLog("Triyng to start conversation"));
+        }
         try
         {
             int activeConnections = 0;
@@ -114,9 +126,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             if (activeConnections!=2)
             {
                 if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                    owner.getLogger().debug(String.format(
-                            "Conversation. Not all participant are ready for conversation. Ready (%s) " +
-                            "participant(s)"
+                    owner.getLogger().debug(callLog(
+                            "Not all participant are ready for conversation. Ready (%s) participant(s)"
                             , activeConnections));
                 return state;
             }
@@ -134,7 +145,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             state.setState(TALKING);
 
             if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                owner.getLogger().debug(getCallId()+". Conversation successfully started");            
+                owner.getLogger().debug(callLog("Conversation successfully started"));
 
             continueConversation(EMPTY_DTMF);
             
@@ -159,19 +170,18 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 if (dtmfChar!=EMPTY_DTMF && (validDtmfs==null || validDtmfs.indexOf(dtmfChar)<0))
                 {
                     if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                        owner.getLogger().debug(
-                                String.format("%s. Invalid dtmf (%s). Skipping", getCallId(), dtmfChar));
+                        owner.getLogger().debug(callLog("Invalid dtmf (%s). Skipping", dtmfChar));
                     return;
                 }
 
                 if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                    owner.getLogger().debug(getCallId()+". Continue conversation using dtmf ("+dtmfChar+")");
+                    owner.getLogger().debug(callLog("Continue conversation using dtmf ("+dtmfChar+")"));
                 
                 audioStream.reset();
                 conversationState.getBindings().put(DTMF_BINDING, ""+dtmfChar);
                 Collection<Node> actions = scenario.makeConversation(conversationState);
                 Collection<IvrAction> ivrActions = new ArrayList<IvrAction>(10);
-                String bindingId = owner.getId()+"_"+((CiscoCall)call).getCallID().getGlobalCallID();
+                String bindingId = owner.getId()+"_"+call.getCallID().intValue();
                 try
                 {
                     tree.addGlobalBindings(bindingId, bindingSupport);
@@ -197,8 +207,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             catch(Exception e)
             {
                 if (owner.isLogLevelEnabled(LogLevel.ERROR))
-                    owner.getLogger().error(
-                            String.format("%s. Error continue conversation using dtmf %s", getCallId(), dtmfChar));
+                    owner.getLogger().error(callLog("Error continue conversation using dtmf %s", dtmfChar));
             }
         }
         finally
@@ -216,7 +225,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 return;
             
             if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                owner.getLogger().debug(getCallId()+". Stoping the conversation");
+                owner.getLogger().debug(callLog("Stoping the conversation"));
             rtpStream.release();
             audioStream.close();
             try
@@ -226,11 +235,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             catch (InterruptedException ex)
             {
                 if (owner.isLogLevelEnabled(LogLevel.ERROR))
-                    owner.getLogger().error(
-                            String.format(
-                                "%s. Error canceling actions executor while stoping conversation"
-                                , getCallId())
-                            , ex);
+                    owner.getLogger().error(callLog("Error canceling actions executor while stoping conversation"), ex);
             }
             try
             {
@@ -240,21 +245,15 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             catch (Exception ex)
             {
                 if (owner.isLogLevelEnabled(LogLevel.ERROR))
-                    owner.getLogger().error(
-                            String.format(
-                                "%s. Error droping a call while stoping conversation"
-                                , getCallId())
-                            , ex);
+                    owner.getLogger().error(callLog("Error droping a call while stoping conversation"), ex);
             }
-            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                owner.getLogger().debug(getCallId()+". Conversation stoped");
         }
         finally
         {
             state.setState(INVALID);
             lock.writeLock().unlock();
             if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                owner.getLogger().debug(getCallId()+". Conversation stoped");
+                owner.getLogger().debug(callLog("Conversation stoped"));
         }
     }
 
@@ -281,8 +280,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             if (state.getId()!=TALKING)
             {
                 if (owner.isLogLevelEnabled(LogLevel.WARN))
-                    owner.getLogger().warn(String.format(
-                            "Conversation. Can't transfer call to the address (%s). Invalid call state (%s)"
+                    owner.getLogger().warn(callLog(
+                            "Can't transfer call to the address (%s). Invalid call state (%s)"
                             , address, state.getIdName()));
                 return;
             }
@@ -295,7 +294,12 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
 
     private String getCallId()
     {
-        return "Conversation <- "+((CiscoCall)call).getCallingAddress().getName();
+        return "[call id: "+call.getCallID().intValue()+", calling number: "+call.getCallingAddress().getName()+"]";
+    }
+
+    private String callLog(String mess, Object... args)
+    {
+        return callId+" : Conversation. "+String.format(mess, args);
     }
 
     public String getObjectName()
@@ -307,5 +311,4 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     {
         return getCallId();
     }
-
 }

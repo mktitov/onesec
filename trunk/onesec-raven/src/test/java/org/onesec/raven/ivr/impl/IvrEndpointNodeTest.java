@@ -77,8 +77,6 @@ public class IvrEndpointNodeTest
         provider.setHost("10.16.15.1");
         provider.setPassword("cti_user1");
         provider.setUser("cti_user1");
-//        provider.setPassword("cti4zenit");
-//        provider.setUser("cti_user4zenit");
         assertTrue(provider.start());
 
         executor = new ExecutorServiceNode();
@@ -124,7 +122,7 @@ public class IvrEndpointNodeTest
         assertFalse(res.isWaitInterrupted());
     }
 
-//    @Test
+    @Test
     public void simpleConversationTest() throws Exception
     {
         AudioFileNode audioFileNode = new AudioFileNode();
@@ -189,7 +187,7 @@ public class IvrEndpointNodeTest
 
     }
 
-    @Test(timeout=120000)
+//    @Test(timeout=120000)
     public void inviteTest() throws Exception
     {
         AudioFileNode audioNode1 = createAudioFileNode("audio1", "src/test/wav/test2.wav");
