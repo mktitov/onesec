@@ -78,18 +78,15 @@ public abstract class AsyncAction extends AbstractAction implements Task
             try
             {
                 if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
-                    conversation.getOwner().getLogger().debug(String.format("Action. Executing (%s)", getName()));
+                    conversation.getOwner().getLogger().debug(logMess("Executing..."));
                 doExecute(conversation);
                 if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
-                    conversation.getOwner().getLogger().debug(String.format("Action. (%s) executed", getName()));
+                    conversation.getOwner().getLogger().debug(logMess("Executed"));
             }
             catch (Exception ex)
             {
                 if (conversation.getOwner().isLogLevelEnabled(LogLevel.ERROR))
-                    conversation.getOwner().getLogger().error(
-                        String.format(
-                            "Action (%s) execution error", getName())
-                        , ex);
+                    conversation.getOwner().getLogger().error(logMess("Execution error"), ex);
             }
         }
         finally

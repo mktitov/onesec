@@ -65,10 +65,10 @@ public class SayAmountAction extends AsyncAction
             if (!(node instanceof AudioFileNode))
             {
                 if (conversation.getOwner().isLogLevelEnabled(LogLevel.ERROR))
-                    conversation.getOwner().getLogger().error(
-                            "Action. Can not say the amount because of not found " +
+                    conversation.getOwner().getLogger().error(logMess(
+                            "Can not say the amount because of not found " +
                             "the AudioFileNode (%s) node in the (%s) numbers node"
-                            , number, numbersNode.getPath());
+                            , number, numbersNode.getPath()));
                 return;
             }
             audioSources[i] = new AudioFileInputStreamSource((AudioFileNode)node, conversation.getOwner());

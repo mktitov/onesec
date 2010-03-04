@@ -44,4 +44,6 @@ public interface IvrAction
      * Return the current action status message
      */
     public String getStatusMessage();
+
+    public void setLogPrefix(String prefix);
 }

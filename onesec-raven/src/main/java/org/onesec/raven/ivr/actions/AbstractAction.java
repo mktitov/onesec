@@ -29,6 +29,7 @@ public abstract class AbstractAction implements IvrAction
     private final String actionName;
     private IvrActionStatus status;
     private String statusMessage;
+    private String logPrefix;
 
     public AbstractAction(String actionName)
     {
@@ -61,4 +62,14 @@ public abstract class AbstractAction implements IvrAction
     {
         this.statusMessage = statusMessage;
     }
+
+    public void setLogPrefix(String prefix) {
+        this.logPrefix = prefix;
+    }
+
+    protected String logMess(String mess, Object... args)
+    {
+        return logPrefix==null? "" : logPrefix+"Actions. "+actionName+". "+String.format(mess, args);
+    }
+
 }

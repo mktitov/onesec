@@ -97,6 +97,7 @@ public class ConcatDataSource
         silenceSource = new AtomicBoolean(true);
         buffers = new ConcurrentLinkedQueue<Buffer>();
         streams = new ConcatDataStream[]{new ConcatDataStream(buffers, this, owner, rtpPacketSize,rtpMaxSendAheadPacketsCount)};
+        streams[0].setLogPrefix(logPrefix);
         ResourceInputStreamSource silenceSource =
                 new ResourceInputStreamSource(SILENCE_RESOURCE_NAME);
         addSource(silenceSource);

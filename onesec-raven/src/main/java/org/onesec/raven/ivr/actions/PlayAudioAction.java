@@ -44,15 +44,15 @@ public class PlayAudioAction extends AsyncAction implements InputStreamSource
     {
         if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
             conversation.getOwner().getLogger().debug(
-                    String.format("Action. Playing audio from source (%s)", audioFile.getPath()));
+                    logMess("Playing audio from source (%s)", audioFile.getPath()));
         AudioStream stream = conversation.getAudioStream();
         stream.addSource(this);
         Thread.sleep(100);
         while (!hasCancelRequest() && stream.isPlaying())
             Thread.sleep(10);
         if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
-            conversation.getOwner().getLogger().debug(String.format(
-                    "Action. Audio source (%s) successfuly played ", audioFile.getPath()));
+            conversation.getOwner().getLogger().debug(logMess(
+                    "Audio source (%s) successfuly played ", audioFile.getPath()));
     }
 
     public InputStream getInputStream()
@@ -65,9 +65,7 @@ public class PlayAudioAction extends AsyncAction implements InputStreamSource
         {
             if (conversation.getOwner().isLogLevelEnabled(LogLevel.ERROR))
                 conversation.getOwner().getLogger().error(
-                    String.format(
-                        "Action. Error geting audio stream from audio file node (%s) ",
-                        audioFile.getPath())
+                    logMess("Error geting audio stream from audio file node (%s) ", audioFile.getPath())
                     , ex);
             return null;
         }

@@ -48,7 +48,7 @@ public class TransferCallAction extends AsyncAction
     protected void doExecute(IvrEndpointConversation conversation) throws Exception
     {
         if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
-            conversation.getOwner().getLogger().debug("Action. Transfering call to the ("+address+") address");
+            conversation.getOwner().getLogger().debug(logMess("Transfering call to the ("+address+") address"));
         conversation.transfer(address, monitorTransfer, callStartTimeout, callEndTimeout);
     }
 }

@@ -41,7 +41,7 @@ public class PauseAction extends AsyncAction
     protected void doExecute(IvrEndpointConversation conversation) throws Exception
     {
         if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
-            conversation.getOwner().getLogger().debug("Action. Pausing on "+interval+" ms");
+            conversation.getOwner().getLogger().debug(logMess("Pausing on "+interval+" ms"));
         long start = System.currentTimeMillis();
         do
         {
