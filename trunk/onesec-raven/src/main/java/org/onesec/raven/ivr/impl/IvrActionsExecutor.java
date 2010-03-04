@@ -42,6 +42,7 @@ public class IvrActionsExecutor implements Task
     private String statusMessage;
     private boolean running;
     private boolean mustCancel;
+    private String logPrefix;
 
     public IvrActionsExecutor(IvrEndpointConversation endpoint, ExecutorService executorService)
     {
@@ -49,7 +50,6 @@ public class IvrActionsExecutor implements Task
         this.executorService = executorService;
         running = false;
     }
-
 
     public synchronized void executeActions(Collection<IvrAction> actions)
             throws ExecutorServiceException, InterruptedException
@@ -79,6 +79,7 @@ public class IvrActionsExecutor implements Task
         {
             for (IvrAction action: actions)
             {
+                action.setLogPrefix(logPrefix);
                 try {
                     statusMessage = String.format("Executing action (%s)", action.getName());
                     if (endpoint.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
@@ -113,7 +114,7 @@ public class IvrActionsExecutor implements Task
                     try {
                         Thread.sleep(10);
                     } catch (InterruptedException ex) {
-                        statusMessage = "Action executor thread was interrupted";
+                        statusMessage = "Executor thread was interrupted";
                         if (endpoint.getOwner().isLogLevelEnabled(LogLevel.ERROR))
                             endpoint.getOwner().getLogger().error(getStatusMessage());
                         Thread.currentThread().interrupt();
@@ -135,6 +136,10 @@ public class IvrActionsExecutor implements Task
         }
     }
 
+    public void setLogPrefix(String logPrefix) {
+        this.logPrefix = logPrefix;
+    }
+
     public synchronized boolean isMustCancel() {
         return mustCancel;
     }
@@ -150,7 +155,11 @@ public class IvrActionsExecutor implements Task
 
     public String getStatusMessage()
     {
-        return "Actions executor. "+statusMessage;
+        return logMess(statusMessage);
     }
 
+    private String logMess(String mess, Object... args)
+    {
+        return logPrefix==null? "" : logPrefix+"Actions. <<Executor>>. "+String.format(mess, args);
+    }
 }

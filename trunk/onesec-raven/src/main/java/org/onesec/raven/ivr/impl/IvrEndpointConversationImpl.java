@@ -96,6 +96,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         audioStream = new ConcatDataSource(FileTypeDescriptor.WAVE, executor, 240, 5, 5, owner);
         audioStream.setLogPrefix(callId+" : ");
         actionsExecutor = new IvrActionsExecutor(this, executor);
+        actionsExecutor.setLogPrefix(callId+" : ");
         this.bindingSupport = new BindingSupportImpl();
         state = new IvrEndpointConversationStateImpl(this);
         

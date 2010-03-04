@@ -51,6 +51,7 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
     private long packetNumber;
     private long sleepTime;
     private AtomicInteger silencePacketCount = new AtomicInteger(0);
+    private String logPrefix;
 
     public ConcatDataStream(
             Queue<Buffer> bufferQueue, ConcatDataSource dataSource, Node owner
@@ -62,6 +63,14 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
         this.owner = owner;
         this.packetLength = packetSize/8;
         this.maxSendAheadPacketsCount = maxSendAheadPacketsCount;
+    }
+
+    public String getLogPrefix() {
+        return logPrefix;
+    }
+
+    public void setLogPrefix(String logPrefix) {
+        this.logPrefix = logPrefix;
     }
 
     public Format getFormat()
@@ -91,7 +100,7 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
                 silentBuffer = new Buffer();
                 silentBuffer.copy(bufferToSend);
                 if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                    owner.getLogger().debug("AudioStream. Silence buffer added to stream");
+                    owner.getLogger().debug(logMess("Silence buffer added to stream"));
             }
             buffer.copy(bufferToSend);
         }
@@ -140,9 +149,9 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
 
     public String getStatusMessage()
     {
-        return String.format(
+        return String.format(logMess(
                 "Transfering buffers to rtp session. Action: %s. packetCount: %s; sleepTime: %s"
-                , action, packetNumber, sleepTime);
+                , action, packetNumber, sleepTime));
     }
 
     public void run()
@@ -170,18 +179,21 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
                 }
                 catch (InterruptedException ex) {
                     if (owner.isLogLevelEnabled(LogLevel.ERROR))
-                        owner.getLogger().error(
-                                "Transfer buffers to rtp session task was interrupted");
+                        owner.getLogger().error(logMess("Transfer buffers to rtp session task was interrupted"), ex);
                     Thread.currentThread().interrupt();
                 }
             }
             if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                owner.getLogger().debug(
-                        "Transfer buffers to rtp session task was finished");
+                owner.getLogger().debug(logMess("Transfer buffers to rtp session task was finished"));
         }
         finally
         {
             dataSource.setStreamThreadRunning(false);
         }
+    }
+
+    private String logMess(String mess, Object... args)
+    {
+        return logPrefix==null? "" : logPrefix+"AudioStream. "+String.format(mess, args);
     }
 }
