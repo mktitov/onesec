@@ -114,7 +114,7 @@ public class IvrMultichannelEndpointNodeTest extends OnesecRavenTestCase
         assertFalse(res.isWaitInterrupted());
     }
 
-    @Test
+    @Test(timeout=30000)
     public void callTest() throws Exception
     {
         createSimpleConversation();
@@ -122,7 +122,11 @@ public class IvrMultichannelEndpointNodeTest extends OnesecRavenTestCase
         assertTrue(endpoint.start());
         StateWaitResult res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrMultichannelEndpointState.IN_SERVICE}, 2000);
-        TimeUnit.SECONDS.sleep(30);
+        assertTrue(endpoint.getCalls().isEmpty());
+        while (endpoint.getCalls().isEmpty())
+            TimeUnit.MILLISECONDS.sleep(500);
+        while (!endpoint.getCalls().isEmpty())
+            TimeUnit.MILLISECONDS.sleep(500);
     }
 
     private void createSimpleConversation() throws Exception

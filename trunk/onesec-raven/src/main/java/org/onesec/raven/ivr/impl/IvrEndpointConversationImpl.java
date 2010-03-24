@@ -224,37 +224,43 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         {
             if (state.getId()==INVALID)
                 return;
-            
-            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                owner.getLogger().debug(callLog("Stoping the conversation"));
-            rtpStream.release();
-            audioStream.close();
             try
             {
-                actionsExecutor.cancelActionsExecution();
+
+                if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                    owner.getLogger().debug(callLog("Stoping the conversation"));
+                rtpStream.release();
+                audioStream.close();
+                try
+                {
+                    actionsExecutor.cancelActionsExecution();
+                }
+                catch (InterruptedException ex)
+                {
+                    if (owner.isLogLevelEnabled(LogLevel.ERROR))
+                        owner.getLogger().error(callLog("Error canceling actions executor while stoping conversation"), ex);
+                }
+                try
+                {
+                    if (call.getState()==Call.ACTIVE)
+                        call.drop();
+                }
+                catch (Exception ex)
+                {
+                    if (owner.isLogLevelEnabled(LogLevel.ERROR))
+                        owner.getLogger().error(callLog("Error droping a call while stoping conversation"), ex);
+                }
             }
-            catch (InterruptedException ex)
+            finally
             {
-                if (owner.isLogLevelEnabled(LogLevel.ERROR))
-                    owner.getLogger().error(callLog("Error canceling actions executor while stoping conversation"), ex);
-            }
-            try
-            {
-                if (call.getState()==Call.ACTIVE)
-                    call.drop();
-            }
-            catch (Exception ex)
-            {
-                if (owner.isLogLevelEnabled(LogLevel.ERROR))
-                    owner.getLogger().error(callLog("Error droping a call while stoping conversation"), ex);
+                if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                    owner.getLogger().debug(callLog("Conversation stoped (%s)", completionCode));
             }
         }
         finally
         {
             state.setState(INVALID);
             lock.writeLock().unlock();
-            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                owner.getLogger().debug(callLog("Conversation stoped"));
         }
     }
 

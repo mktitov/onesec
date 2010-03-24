@@ -403,48 +403,30 @@ public class IvrMultichannelEndpointNode extends BaseNode
                 case CallCtlConnOfferedEv.ID: acceptIncomingCall((CallCtlConnOfferedEv)event); break;
                 case TermConnRingingEv.ID   : answerOnIncomingCall((TermConnRingingEv)event); break;
                 case CallCtlConnEstablishedEv.ID: startConversation((CallCtlConnEstablishedEv)event); break;
-//                case TermConnDroppedEv.ID:
-//                    stopConversation(CompletionCode.COMPLETED_BY_OPPONENT);
-//                    break;
+                case TermConnDroppedEv.ID:
+                    TermConnDroppedEv ev = (TermConnDroppedEv) event;
+                    String addr = ev.getTerminalConnection().getConnection().getAddress().getName();
+                    CompletionCode code = addr.equals(getAddress())?
+                        CompletionCode.COMPLETED_BY_ENDPOINT : CompletionCode.COMPLETED_BY_OPPONENT;
+                    stopConversation(event, code);
+                    break;
 //                case MediaTermConnDtmfEv.ID:
 //                    continueConversation(((MediaTermConnDtmfEv)event).getDtmfDigit());
 //                    break;
-//                case CallObservationEndedEv.ID:
-//                    observingCall.set(false);
-//                    break;
-//                case CallCtlConnFailedEv.ID:
-//                    if (handlingIncomingCall)
-//                    {
-//                        CallCtlConnFailedEv ev = (CallCtlConnFailedEv) event;
-//                        int cause = ev.getCallControlCause();
-//                        System.out.println("        >>> CAUSE: "+cause+" : "+ev.getCause());
-//                        CompletionCode code = CompletionCode.OPPONENT_UNKNOWN_ERROR;
-//                        switch (cause)
-//                        {
-//                            case CallCtlConnFailedEv.CAUSE_BUSY:
-//                                code = CompletionCode.OPPONENT_BUSY;
-//                                break;
-//                            case CallCtlConnFailedEv.CAUSE_CALL_NOT_ANSWERED:
-//                            case CallCtlConnFailedEv.CAUSE_NORMAL:
-//                                code = CompletionCode.OPPONENT_NO_ANSWERED;
-//                                break;
-//                        }
-//                        stopConversation(code);
-//                    }
-//                    break;
-//                case CallCtlTermConnDroppedEv.ID:
-//                    CallCtlTermConnDroppedEv ev = (CallCtlTermConnDroppedEv) event;
-//                    switch (ev.getCause())
-//                    {
-//                        case CallCtlTermConnDroppedEv.CAUSE_NORMAL :
-//                            System.out.println("    >>>> NORMAL <<<< :"+ev.getCause()); break;
-//                        case CallCtlTermConnDroppedEv.CAUSE_CALL_CANCELLED :
-//                            System.out.println("    >>>> CANCELED <<<< :"+ev.getCause()); break;
-//                        default: System.out.println("    >>>> UNKNOWN <<<< :"+ev.getCause());
-//                    }
-//                    break;
+                case CallObservationEndedEv.ID: observingCall.set(false); break;
+                case CallCtlConnFailedEv.ID:
+                    handleConnectionFailedEvent((CallCtlConnFailedEv) event);
+                    break;
+                case CallCtlTermConnDroppedEv.ID:
+                    handleCallCtlTermConnDropped((CallCtlTermConnDroppedEv) event);
+                    break;
             }
         }
+    }
+
+    Map<Integer, IvrEndpointConversationImpl> getCalls()
+    {
+        return calls;
     }
 
     private static String eventsToString(Object[] events)
@@ -512,6 +494,54 @@ public class IvrMultichannelEndpointNode extends BaseNode
         }
     }
 
+    private void stopConversation(CallEv event, CompletionCode completionCode)
+    {
+        try {
+            if (callsLock.writeLock().tryLock(LOCK_WAIT_TIMEOUT, TimeUnit.MILLISECONDS)) {
+                try {
+                    IvrEndpointConversationImpl conversation = getAndRemoveConversation(event);
+                    if (conversation!=null)
+                        conversation.stopConversation(completionCode);
+                } finally {
+                    callsLock.writeLock().unlock();
+                }
+            }
+        } catch (InterruptedException ex) {
+            if (isLogLevelEnabled(LogLevel.ERROR))
+                error(callLog(event.getCall(), "Error acquire calls read lock"), ex);
+        }
+    }
+
+    private void handleConnectionFailedEvent(CallCtlConnFailedEv event)
+    {
+        int cause = event.getCallControlCause();
+        CompletionCode code = CompletionCode.OPPONENT_UNKNOWN_ERROR;
+        switch (cause)
+        {
+            case CallCtlConnFailedEv.CAUSE_BUSY:
+                code = CompletionCode.OPPONENT_BUSY;
+                break;
+            case CallCtlConnFailedEv.CAUSE_CALL_NOT_ANSWERED:
+            case CallCtlConnFailedEv.CAUSE_NORMAL:
+                code = CompletionCode.OPPONENT_NO_ANSWERED;
+                break;
+        }
+        stopConversation(event, code);
+    }
+
+    private void handleCallCtlTermConnDropped(CallCtlTermConnDroppedEv event)
+    {
+//        CallCtlTermConnDroppedEv ev = (CallCtlTermConnDroppedEv) event;
+//        switch (ev.getCause())
+//        {
+//            case CallCtlTermConnDroppedEv.CAUSE_NORMAL :
+//                System.out.println("    >>>> NORMAL <<<< :"+ev.getCause()); break;
+//            case CallCtlTermConnDroppedEv.CAUSE_CALL_CANCELLED :
+//                System.out.println("    >>>> CANCELED <<<< :"+ev.getCause()); break;
+//            default: System.out.println("    >>>> UNKNOWN <<<< :"+ev.getCause());
+//        }
+//
+    }
 
     private void createConversation(CiscoRTPOutputStartedEv event)
     {
@@ -543,5 +573,10 @@ public class IvrMultichannelEndpointNode extends BaseNode
     private IvrEndpointConversationImpl getConversation(CallEv event)
     {
         return calls.get(((CiscoCall)event.getCall()).getCallID().intValue());
+    }
+
+    private IvrEndpointConversationImpl getAndRemoveConversation(CallEv event)
+    {
+        return calls.remove(((CiscoCall)event.getCall()).getCallID().intValue());
     }
 }
