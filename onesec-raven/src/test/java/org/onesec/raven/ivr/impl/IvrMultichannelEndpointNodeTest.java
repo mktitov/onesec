@@ -29,10 +29,15 @@ import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.impl.CCMCallOperatorNode;
 import org.onesec.raven.impl.ProviderNode;
 import org.onesec.raven.ivr.IvrMultichannelEndpointState;
+import org.onesec.raven.ivr.actions.PauseActionNode;
 import org.onesec.raven.ivr.actions.PlayAudioActionNode;
 import org.onesec.raven.ivr.actions.StopConversationActionNode;
+import org.raven.conv.ConversationScenarioPoint;
+import org.raven.conv.impl.GotoNode;
+import org.raven.expr.impl.IfNode;
 import org.raven.log.LogLevel;
 import org.raven.sched.impl.ExecutorServiceNode;
+import org.raven.tree.Node;
 
 /**
  *
@@ -114,7 +119,7 @@ public class IvrMultichannelEndpointNodeTest extends OnesecRavenTestCase
         assertFalse(res.isWaitInterrupted());
     }
 
-    @Test(timeout=30000)
+//    @Test(timeout=30000)
     public void callTest() throws Exception
     {
         createSimpleConversation();
@@ -127,6 +132,22 @@ public class IvrMultichannelEndpointNodeTest extends OnesecRavenTestCase
             TimeUnit.MILLISECONDS.sleep(500);
         while (!endpoint.getCalls().isEmpty())
             TimeUnit.MILLISECONDS.sleep(500);
+    }
+
+    @Test(timeout=60000)
+    public void callWithDtmfTest() throws Exception
+    {
+        createConversationWithDtmf();
+        waitForProvider();
+        assertTrue(endpoint.start());
+        StateWaitResult res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrMultichannelEndpointState.IN_SERVICE}, 2000);
+        assertTrue(endpoint.getCalls().isEmpty());
+        while (endpoint.getCalls().isEmpty())
+            TimeUnit.MILLISECONDS.sleep(500);
+        while (!endpoint.getCalls().isEmpty())
+            TimeUnit.MILLISECONDS.sleep(500);
+        
     }
 
     private void createSimpleConversation() throws Exception
@@ -148,6 +169,77 @@ public class IvrMultichannelEndpointNodeTest extends OnesecRavenTestCase
         stopConversationActionNode.setName("stop conversation");
         scenario.addAndSaveChildren(stopConversationActionNode);
         assertTrue(stopConversationActionNode.start());
+    }
+
+    private void createConversationWithDtmf() throws Exception
+    {
+        scenario.setValidDtmfs("1");
+        AudioFileNode audioNode1 = createAudioFileNode("audio1", "src/test/wav/test2.wav");
+        AudioFileNode audioNode2 = createAudioFileNode("audio2", "src/test/wav/test.wav");
+
+        IfNode ifNode1 = createIfNode("if1", scenario, "dtmf=='1'||repetitionCount==3");
+        IfNode ifNode2 = createIfNode("if2", scenario, "dtmf=='-'||dtmf=='#'");
+        createPlayAudioActionNode("hello", ifNode2, audioNode1);
+        createPauseActionNode(ifNode2, 5000l);
+        createGotoNode("replay", ifNode2, scenario);
+        createPlayAudioActionNode("bye", ifNode1, audioNode2);
+
+        StopConversationActionNode stopConversationActionNode = new StopConversationActionNode();
+        stopConversationActionNode.setName("stop conversation");
+        ifNode1.addAndSaveChildren(stopConversationActionNode);
+        assertTrue(stopConversationActionNode.start());
+    }
+
+    private PlayAudioActionNode createPlayAudioActionNode(
+            String name, Node owner, AudioFileNode audioFileNode)
+    {
+        PlayAudioActionNode playAudioActionNode = new PlayAudioActionNode();
+        playAudioActionNode.setName("Play audio");
+        owner.addAndSaveChildren(playAudioActionNode);
+        playAudioActionNode.setAudioFile(audioFileNode);
+        assertTrue(playAudioActionNode.start());
+        return playAudioActionNode;
+    }
+
+    private void createGotoNode(String name, Node owner, ConversationScenarioPoint point)
+    {
+        GotoNode gotoNode = new GotoNode();
+        gotoNode.setName(name);
+        owner.addAndSaveChildren(gotoNode);
+        gotoNode.setConversationPoint(point);
+        assertTrue(gotoNode.start());
+    }
+
+    private PauseActionNode createPauseActionNode(Node owner, Long interval)
+    {
+        PauseActionNode pauseAction = new PauseActionNode();
+        pauseAction.setName("pause");
+        owner.addAndSaveChildren(pauseAction);
+        pauseAction.setInterval(interval);
+        assertTrue(pauseAction.start());
+        return pauseAction;
+    }
+
+    private IfNode createIfNode(String name, Node owner, String expression) throws Exception
+    {
+        IfNode ifNode = new IfNode();
+        ifNode.setName(name);
+        owner.addAndSaveChildren(ifNode);
+        ifNode.setUsedInTemplate(Boolean.FALSE);
+        ifNode.getNodeAttribute(IfNode.EXPRESSION_ATTRIBUTE).setValue(expression);
+        assertTrue(ifNode.start());
+        return ifNode;
+    }
+
+    private AudioFileNode createAudioFileNode(String nodeName, String filename) throws Exception
+    {
+        AudioFileNode audioFileNode = new AudioFileNode();
+        audioFileNode.setName(nodeName);
+        tree.getRootNode().addAndSaveChildren(audioFileNode);
+        FileInputStream is = new FileInputStream(filename);
+        audioFileNode.getAudioFile().setDataStream(is);
+        assertTrue(audioFileNode.start());
+        return audioFileNode;
     }
 
     private void waitForProvider() throws Exception

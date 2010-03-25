@@ -17,17 +17,23 @@
 
 package org.onesec.raven.ivr.impl;
 
+import com.cisco.jtapi.CiscoMediaOpenLogicalChannelEvImpl;
 import com.cisco.jtapi.extensions.CiscoAddrInServiceEv;
 import com.cisco.jtapi.extensions.CiscoAddrOutOfServiceEv;
 import com.cisco.jtapi.extensions.CiscoCall;
+import com.cisco.jtapi.extensions.CiscoConnection;
 import com.cisco.jtapi.extensions.CiscoMediaCapability;
+import com.cisco.jtapi.extensions.CiscoMediaOpenLogicalChannelEv;
 import com.cisco.jtapi.extensions.CiscoRTPOutputProperties;
 import com.cisco.jtapi.extensions.CiscoRTPOutputStartedEv;
+import com.cisco.jtapi.extensions.CiscoRTPParams;
 import com.cisco.jtapi.extensions.CiscoRouteTerminal;
 import com.cisco.jtapi.extensions.CiscoTermInServiceEv;
 import com.cisco.jtapi.extensions.CiscoTermOutOfServiceEv;
+import com.cisco.jtapi.extensions.CiscoTerminalConnection;
 import com.cisco.jtapi.extensions.CiscoTerminalObserver;
 import com.cisco.jtapi.extensions.CiscoUnregistrationException;
+import java.net.InetAddress;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -38,7 +44,10 @@ import java.util.logging.Logger;
 import javax.telephony.Address;
 import javax.telephony.AddressObserver;
 import javax.telephony.Call;
+import javax.telephony.Connection;
+import javax.telephony.InvalidArgumentException;
 import javax.telephony.InvalidStateException;
+import javax.telephony.PrivilegeViolationException;
 import javax.telephony.Provider;
 import javax.telephony.Terminal;
 import javax.telephony.callcontrol.CallControlCall;
@@ -367,7 +376,10 @@ public class IvrMultichannelEndpointNode extends BaseNode
             {
                 case CiscoTermInServiceEv.ID: terminalInService = true; checkStatus(); break;
                 case CiscoTermOutOfServiceEv.ID: terminalInService = false; checkStatus(); break;
-                case CiscoRTPOutputStartedEv.ID: createConversation((CiscoRTPOutputStartedEv)event); break;
+                case CiscoMediaOpenLogicalChannelEv.ID: 
+                    openLogicalChannel((CiscoMediaOpenLogicalChannelEv)event);
+                    break;
+                case CiscoRTPOutputStartedEv.ID: initConversation((CiscoRTPOutputStartedEv)event); break;
 //                case CiscoRTPOutputStoppedEv.ID: closeRtpSession(); break;
                 case TermObservationEndedEv.ID: observingTerminal.set(false); break;
             }
@@ -404,15 +416,11 @@ public class IvrMultichannelEndpointNode extends BaseNode
                 case TermConnRingingEv.ID   : answerOnIncomingCall((TermConnRingingEv)event); break;
                 case CallCtlConnEstablishedEv.ID: startConversation((CallCtlConnEstablishedEv)event); break;
                 case TermConnDroppedEv.ID:
-                    TermConnDroppedEv ev = (TermConnDroppedEv) event;
-                    String addr = ev.getTerminalConnection().getConnection().getAddress().getName();
-                    CompletionCode code = addr.equals(getAddress())?
-                        CompletionCode.COMPLETED_BY_ENDPOINT : CompletionCode.COMPLETED_BY_OPPONENT;
-                    stopConversation(event, code);
+                    stopConversation(event, CompletionCode.COMPLETED_BY_OPPONENT);
                     break;
-//                case MediaTermConnDtmfEv.ID:
-//                    continueConversation(((MediaTermConnDtmfEv)event).getDtmfDigit());
-//                    break;
+                case MediaTermConnDtmfEv.ID:
+                    continueConversation(((MediaTermConnDtmfEv)event));
+                    break;
                 case CallObservationEndedEv.ID: observingCall.set(false); break;
                 case CallCtlConnFailedEv.ID:
                     handleConnectionFailedEvent((CallCtlConnFailedEv) event);
@@ -480,13 +488,14 @@ public class IvrMultichannelEndpointNode extends BaseNode
     {
         try {
             if (callsLock.readLock().tryLock(LOCK_WAIT_TIMEOUT, TimeUnit.MILLISECONDS)) {
+                IvrEndpointConversationImpl conversation = null;
                 try {
-                    IvrEndpointConversationImpl conversation = getConversation(event);
-                    if (conversation!=null)
-                        conversation.startConversation();
+                    conversation = getConversation(event);
                 } finally {
                     callsLock.readLock().unlock();
                 }
+                if (conversation!=null)
+                    conversation.startConversation();
             }
         } catch (InterruptedException ex) {
             if (isLogLevelEnabled(LogLevel.ERROR))
@@ -498,13 +507,33 @@ public class IvrMultichannelEndpointNode extends BaseNode
     {
         try {
             if (callsLock.writeLock().tryLock(LOCK_WAIT_TIMEOUT, TimeUnit.MILLISECONDS)) {
+                IvrEndpointConversationImpl conversation = null;
                 try {
-                    IvrEndpointConversationImpl conversation = getAndRemoveConversation(event);
-                    if (conversation!=null)
-                        conversation.stopConversation(completionCode);
+                    conversation = getAndRemoveConversation(event);
                 } finally {
                     callsLock.writeLock().unlock();
                 }
+                if (conversation!=null)
+                    conversation.stopConversation(completionCode);
+            }
+        } catch (InterruptedException ex) {
+            if (isLogLevelEnabled(LogLevel.ERROR))
+                error(callLog(event.getCall(), "Error acquire calls read lock"), ex);
+        }
+    }
+
+    private void continueConversation(MediaTermConnDtmfEv event)
+    {
+        try {
+            if (callsLock.readLock().tryLock(LOCK_WAIT_TIMEOUT, TimeUnit.MILLISECONDS)) {
+                IvrEndpointConversationImpl conversation = null;
+                try {
+                    conversation = getConversation(event);
+                } finally {
+                    callsLock.readLock().unlock();
+                }
+                if (conversation!=null)
+                    conversation.continueConversation(event.getDtmfDigit());
             }
         } catch (InterruptedException ex) {
             if (isLogLevelEnabled(LogLevel.ERROR))
@@ -543,25 +572,29 @@ public class IvrMultichannelEndpointNode extends BaseNode
 //
     }
 
-    private void createConversation(CiscoRTPOutputStartedEv event)
+    private void initConversation(CiscoRTPOutputStartedEv event)
     {
         if (isLogLevelEnabled(LogLevel.DEBUG))
             debug(callLog(event.getCallID().getCall(), "Creating conversation"));
         try {
             if (callsLock.writeLock().tryLock(LOCK_WAIT_TIMEOUT, TimeUnit.MILLISECONDS)) {
+                IvrEndpointConversationImpl conversation = null;
                 try {
-                    CiscoRTPOutputProperties props = event.getRTPOutputProperties();
-                    IvrEndpointConversationImpl conversation = new IvrEndpointConversationImpl(
-                                    this, executorService, conversationScenario
-                                    , rtpStreamManager.getOutgoingRtpStream(this)
-                                    , event.getCallID().getCall()
-                                    , props.getRemoteAddress().getHostAddress(), props.getRemotePort());
+                    Integer id = getCallLegId(event.getCallID().getCall());
+                    conversation = calls.remove(id);
                     calls.put(event.getCallID().intValue(), conversation);
-                    if (isLogLevelEnabled(LogLevel.DEBUG))
-                        debug(callLog(event.getCallID().getCall(), "Conversation created"));
-                    conversation.startConversation();
                 } finally {
                     callsLock.writeLock().unlock();
+                }
+                if (conversation!=null)
+                {
+                    CiscoRTPOutputProperties props = event.getRTPOutputProperties();
+                    conversation.init(
+                            event.getCallID().getCall()
+                            , props.getRemoteAddress().getHostAddress(), props.getRemotePort());
+                    if (isLogLevelEnabled(LogLevel.DEBUG))
+                        debug(callLog(event.getCallID().getCall(), "Conversation initialized"));
+                    conversation.startConversation();
                 }
             }
         } catch (Exception ex) {
@@ -570,13 +603,56 @@ public class IvrMultichannelEndpointNode extends BaseNode
         }
     }
 
+    private Integer getCallLegId(CiscoCall call)
+    {
+        Connection[] connections = call.getConnections();
+        Integer id = null;
+        if (connections!=null)
+            for (Connection connection: connections)
+                if (connection.getAddress().getName().equals(getAddress()))
+                    id = ((CiscoConnection)connection).getConnectionID().intValue();
+        return id;
+    }
+
     private IvrEndpointConversationImpl getConversation(CallEv event)
     {
-        return calls.get(((CiscoCall)event.getCall()).getCallID().intValue());
+        return getConversation((CiscoCall)event.getCall());
+    }
+
+    private IvrEndpointConversationImpl getConversation(CiscoCall call)
+    {
+        return calls.get(call.getCallID().intValue());
     }
 
     private IvrEndpointConversationImpl getAndRemoveConversation(CallEv event)
     {
         return calls.remove(((CiscoCall)event.getCall()).getCallID().intValue());
+    }
+
+    private void openLogicalChannel(CiscoMediaOpenLogicalChannelEv event)
+    {
+        if (isLogLevelEnabled(LogLevel.DEBUG))
+            debug("Creating conversation");
+        try {
+            if (callsLock.writeLock().tryLock(LOCK_WAIT_TIMEOUT, TimeUnit.MILLISECONDS)) {
+                try {
+                    IvrEndpointConversationImpl conversation = new IvrEndpointConversationImpl(
+                                    this, executorService, conversationScenario
+                                    , rtpStreamManager);
+                    CiscoRTPParams params = new CiscoRTPParams(
+                            conversation.getIncomingRtpStream().getAddress()
+                            , conversation.getIncomingRtpStream().getPort());
+                    calls.put(event.getCiscoRTPHandle().getHandle(), conversation);
+                    if (isLogLevelEnabled(LogLevel.DEBUG))
+                        debug("Conversation created. Call id - {}", event.getCiscoRTPHandle().getHandle());
+                    terminal.setRTPParams(event.getCiscoRTPHandle(), params);
+                } finally {
+                    callsLock.writeLock().unlock();
+                }
+            }
+        } catch (Exception ex) {
+            if (isLogLevelEnabled(LogLevel.ERROR))
+                error("Error creating conversation", ex);
+        }
     }
 }

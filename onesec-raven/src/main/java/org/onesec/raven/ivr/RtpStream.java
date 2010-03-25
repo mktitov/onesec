@@ -50,4 +50,6 @@ public interface RtpStream
      * Return the port of the stream
      */
     public int getPort();
+    
+    public void setLogPrefix(String prefix);
 }
