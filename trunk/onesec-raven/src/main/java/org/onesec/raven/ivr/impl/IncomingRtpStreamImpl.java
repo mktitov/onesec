@@ -29,7 +29,7 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream implements Incoming
 
     public IncomingRtpStreamImpl(InetAddress address, int port)
     {
-        super(address, port);
+        super(address, port, "Incoming RTP");
     }
 
     public long getHandledBytes()

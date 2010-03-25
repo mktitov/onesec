@@ -31,16 +31,19 @@ public abstract class AbstractRtpStream implements RtpStream
 {
     protected final InetAddress address;
     protected final int port;
+    private final String streamType;
 
     private AtomicLong handledPackets;
     private AtomicLong handledBytes;
     private RtpStreamManagerNode manager;
     protected Node owner;
+    private String logPrefix;
 
-    public AbstractRtpStream(InetAddress address, int port)
+    public AbstractRtpStream(InetAddress address, int port, String streamType)
     {
         this.address = address;
         this.port = port;
+        this.streamType = streamType;
 
         handledBytes = new AtomicLong();
         handledPackets = new AtomicLong();
@@ -71,6 +74,14 @@ public abstract class AbstractRtpStream implements RtpStream
         this.manager = manager;
     }
 
+    public String getLogPrefix() {
+        return logPrefix;
+    }
+
+    public void setLogPrefix(String logPrefix) {
+        this.logPrefix = logPrefix;
+    }
+
     protected void incHandledPacketsBy(long packets)
     {
         handledPackets.addAndGet(packets);
@@ -88,13 +99,22 @@ public abstract class AbstractRtpStream implements RtpStream
         manager.releaseStream(this);
         try
         {
+            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                owner.getLogger().debug(logMess("Releasing stream..."));
             doRelease();
+            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                owner.getLogger().debug(logMess("Stream realeased"));
         }
         catch(Exception e)
         {
             if (owner.isLogLevelEnabled(LogLevel.ERROR))
                 owner.getLogger().error("Error releasing RTP stream", e);
         }
+    }
+    
+    protected String logMess(String mess, Object... args)
+    {
+        return (logPrefix==null? "" : logPrefix)+streamType+". "+String.format(mess, args);
     }
 
     public abstract void doRelease() throws Exception;

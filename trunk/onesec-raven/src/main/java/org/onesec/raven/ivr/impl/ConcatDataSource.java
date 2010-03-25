@@ -96,7 +96,8 @@ public class ConcatDataSource
         streamThreadRunning = new AtomicBoolean(false);
         silenceSource = new AtomicBoolean(true);
         buffers = new ConcurrentLinkedQueue<Buffer>();
-        streams = new ConcatDataStream[]{new ConcatDataStream(buffers, this, owner, rtpPacketSize,rtpMaxSendAheadPacketsCount)};
+        streams = new ConcatDataStream[]{
+            new ConcatDataStream(buffers, this, owner, rtpPacketSize,rtpMaxSendAheadPacketsCount)};
         streams[0].setLogPrefix(logPrefix);
         ResourceInputStreamSource silenceSource =
                 new ResourceInputStreamSource(SILENCE_RESOURCE_NAME);
@@ -414,6 +415,6 @@ public class ConcatDataSource
 
     private String logMess(String mess, Object... args)
     {
-        return logPrefix==null? "" : logPrefix+"AudioStream. "+String.format(mess, args);
+        return (logPrefix==null? "" : logPrefix)+"AudioStream. "+String.format(mess, args);
     }
 }

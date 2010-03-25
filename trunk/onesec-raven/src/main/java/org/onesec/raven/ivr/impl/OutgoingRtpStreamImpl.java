@@ -43,7 +43,7 @@ public class OutgoingRtpStreamImpl extends AbstractRtpStream implements Outgoing
 
     public OutgoingRtpStreamImpl(InetAddress address, int portNumber)
     {
-        super(address, portNumber);
+        super(address, portNumber, "Outgoing RTP");
     }
 
     public long getHandledBytes()
@@ -63,8 +63,8 @@ public class OutgoingRtpStreamImpl extends AbstractRtpStream implements Outgoing
             this.remoteHost = remoteHost;
             this.remotePort = remotePort;
             if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                owner.getLogger().debug(String.format(
-                        "Outgoing RTP. Trying to open RTP stream to the remote host (%s) using port (%s)"
+                owner.getLogger().debug(logMess(
+                        "Trying to open RTP stream to the remote host (%s) using port (%s)"
                         , remoteHost, remotePort));
             this.audioStream = audioStream;
             SessionAddress destAddress = new SessionAddress(InetAddress.getByName(remoteHost), remotePort);
@@ -77,8 +77,8 @@ public class OutgoingRtpStreamImpl extends AbstractRtpStream implements Outgoing
             control.setMinimumThreshold(60);
             control.setBufferLength(60);
             if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                owner.getLogger().debug(String.format(
-                        "Outgoing RTP. RTP stream was successfully opened to the remote host (%s) using port (%s)"
+                owner.getLogger().debug(logMess(
+                        "RTP stream was successfully opened to the remote host (%s) using port (%s)"
                         , remoteHost, remotePort));
         }
         catch(Exception e)
@@ -112,7 +112,11 @@ public class OutgoingRtpStreamImpl extends AbstractRtpStream implements Outgoing
     {
         try 
         {
+            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                owner.getLogger().debug(logMess("Starting rtp packets transmission..."));
             sendStream.start();
+            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                owner.getLogger().debug(logMess("Rtp packets transmission started"));
         }
         catch (IOException ex)
         {

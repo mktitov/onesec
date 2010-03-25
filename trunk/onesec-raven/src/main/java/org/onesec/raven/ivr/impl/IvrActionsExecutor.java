@@ -160,6 +160,6 @@ public class IvrActionsExecutor implements Task
 
     private String logMess(String mess, Object... args)
     {
-        return logPrefix==null? "" : logPrefix+"Actions. <<Executor>>. "+String.format(mess, args);
+        return (logPrefix==null? "" : logPrefix)+"Actions. <<Executor>>. "+String.format(mess, args);
     }
 }

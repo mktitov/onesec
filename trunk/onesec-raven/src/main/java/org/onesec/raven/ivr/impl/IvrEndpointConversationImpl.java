@@ -29,6 +29,7 @@ import javax.telephony.Connection;
 import javax.telephony.callcontrol.CallControlCall;
 import org.onesec.raven.ivr.AudioStream;
 import org.onesec.raven.ivr.CompletionCode;
+import org.onesec.raven.ivr.IncomingRtpStream;
 import org.onesec.raven.ivr.IvrAction;
 import org.onesec.raven.ivr.IvrActionNode;
 import org.onesec.raven.ivr.IvrConversationScenarioPoint;
@@ -40,6 +41,7 @@ import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.tree.Node;
 import org.onesec.raven.ivr.IvrEndpointConversationState;
+import org.onesec.raven.ivr.RtpStreamManager;
 import org.onesec.raven.ivr.actions.ContinueConversationAction;
 import org.raven.conv.BindingScope;
 import org.raven.conv.ConversationScenarioState;
@@ -60,34 +62,49 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     private final Node owner;
     private final ExecutorService executor;
     private final ConversationScenario scenario;
-    private final OutgoingRtpStream rtpStream;
-    private final CiscoCall call;
-    private final IvrActionsExecutor actionsExecutor;
-    private final ConcatDataSource audioStream;
-    private final ConversationScenarioState conversationState;
-    private final String remoteAddress;
-    private final int remotePort;
-    private final BindingSupportImpl bindingSupport;
-    private final String callId;
+    private final RtpStreamManager streamManager;
+
+    private OutgoingRtpStream outgoingRtpStream;
+    private IncomingRtpStream incomingRtpStream;
+    private ConversationScenarioState conversationState;
+    private IvrActionsExecutor actionsExecutor;
+    private ConcatDataSource audioStream;
+    private CiscoCall call;
+    private String remoteAddress;
+    private int remotePort;
+    private String callId;
+    private BindingSupportImpl bindingSupport;
     private IvrEndpointConversationStateImpl state;
 
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
-    public IvrEndpointConversationImpl(
-            Node owner, ExecutorService executor, ConversationScenario scenario
-            , OutgoingRtpStream rtpStream, CallControlCall call, String remoteAddress
-            , int remotePort)
+    public IvrEndpointConversationImpl(Node owner, ExecutorService executor
+            , ConversationScenario scenario, RtpStreamManager streamManager)
         throws Exception
     {
         this.owner = owner;
         this.executor = executor;
         this.scenario = scenario;
-        this.rtpStream = rtpStream;
-        this.call = (CiscoCall)call;
-        callId = getCallId();
+        this.streamManager = streamManager;
+
+        incomingRtpStream = streamManager.getIncomingRtpStream(owner);
+        
+        state = new IvrEndpointConversationStateImpl(this);
+        state.setState(INVALID);
+    }
+
+    public void init(CallControlCall call, String remoteAddress, int remotePort)
+            throws Exception
+    {
         this.remoteAddress = remoteAddress;
         this.remotePort = remotePort;
-        conversationState = this.scenario.createConversationState();
+        this.call = (CiscoCall)call;
+        callId = getCallId();
+
+        outgoingRtpStream = streamManager.getOutgoingRtpStream(owner);
+        outgoingRtpStream.setLogPrefix(callId+" : ");
+        incomingRtpStream.setLogPrefix(callId+" : ");
+        conversationState = scenario.createConversationState();
         conversationState.setBinding(DTMF_BINDING, "-", BindingScope.REQUEST);
         conversationState.setBindingDefaultValue(DTMF_BINDING, "-");
         conversationState.setBinding(VARS_BINDING, new HashMap(), BindingScope.CONVERSATION);
@@ -98,8 +115,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         actionsExecutor = new IvrActionsExecutor(this, executor);
         actionsExecutor.setLogPrefix(callId+" : ");
         this.bindingSupport = new BindingSupportImpl();
-        state = new IvrEndpointConversationStateImpl(this);
-        
+
         state.setState(READY);
     }
 
@@ -135,8 +151,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
 
             try
             {
-                rtpStream.open(remoteAddress, remotePort, audioStream);
-                rtpStream.start();
+                outgoingRtpStream.open(remoteAddress, remotePort, audioStream);
+                outgoingRtpStream.start();
             }
             catch (RtpStreamException ex)
             {
@@ -222,6 +238,10 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         lock.writeLock().lock();
         try
         {
+            if (incomingRtpStream!=null){
+                incomingRtpStream.release();
+                incomingRtpStream=null;
+            }
             if (state.getId()==INVALID)
                 return;
             try
@@ -229,7 +249,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
 
                 if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                     owner.getLogger().debug(callLog("Stoping the conversation"));
-                rtpStream.release();
+                outgoingRtpStream.release();
                 audioStream.close();
                 try
                 {
@@ -277,6 +297,11 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     public AudioStream getAudioStream() 
     {
         return audioStream;
+    }
+
+    public IncomingRtpStream getIncomingRtpStream()
+    {
+        return incomingRtpStream;
     }
 
     public void transfer(String address, boolean monitorTransfer, long callStartTimeout, long callEndTimeout)
