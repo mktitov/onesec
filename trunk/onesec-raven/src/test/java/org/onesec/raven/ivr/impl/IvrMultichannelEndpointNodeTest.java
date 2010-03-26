@@ -32,6 +32,7 @@ import org.onesec.raven.ivr.IvrMultichannelEndpointState;
 import org.onesec.raven.ivr.actions.PauseActionNode;
 import org.onesec.raven.ivr.actions.PlayAudioActionNode;
 import org.onesec.raven.ivr.actions.StopConversationActionNode;
+import org.onesec.raven.ivr.actions.TransferCallActionNode;
 import org.raven.conv.ConversationScenarioPoint;
 import org.raven.conv.impl.GotoNode;
 import org.raven.expr.impl.IfNode;
@@ -183,6 +184,31 @@ public class IvrMultichannelEndpointNodeTest extends OnesecRavenTestCase
         createPauseActionNode(ifNode2, 5000l);
         createGotoNode("replay", ifNode2, scenario);
         createPlayAudioActionNode("bye", ifNode1, audioNode2);
+
+        StopConversationActionNode stopConversationActionNode = new StopConversationActionNode();
+        stopConversationActionNode.setName("stop conversation");
+        ifNode1.addAndSaveChildren(stopConversationActionNode);
+        assertTrue(stopConversationActionNode.start());
+    }
+
+    private void createConversationWithTransfer() throws Exception
+    {
+        scenario.setValidDtmfs("1");
+        AudioFileNode audioNode1 = createAudioFileNode("audio1", "src/test/wav/test2.wav");
+        AudioFileNode audioNode2 = createAudioFileNode("audio2", "src/test/wav/test.wav");
+
+        IfNode ifNode1 = createIfNode("if1", scenario, "dtmf=='1'||repetitionCount==3");
+        IfNode ifNode2 = createIfNode("if2", scenario, "dtmf=='-'||dtmf=='#'");
+        createPlayAudioActionNode("hello", ifNode2, audioNode1);
+        createPauseActionNode(ifNode2, 5000l);
+        createGotoNode("replay", ifNode2, scenario);
+//        createPlayAudioActionNode("bye", ifNode1, audioNode2);
+
+        TransferCallActionNode transfer = new TransferCallActionNode();
+        transfer.setName("transfer");
+        ifNode1.addAndSaveChildren(transfer);
+        transfer.setAddress("089128672947");
+        assertTrue(transfer.start());
 
         StopConversationActionNode stopConversationActionNode = new StopConversationActionNode();
         stopConversationActionNode.setName("stop conversation");
