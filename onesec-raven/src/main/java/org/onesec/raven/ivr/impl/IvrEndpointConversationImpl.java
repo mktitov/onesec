@@ -23,9 +23,17 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.media.protocol.FileTypeDescriptor;
 import javax.telephony.Call;
 import javax.telephony.Connection;
+import javax.telephony.InvalidArgumentException;
+import javax.telephony.InvalidPartyException;
+import javax.telephony.InvalidStateException;
+import javax.telephony.MethodNotSupportedException;
+import javax.telephony.PrivilegeViolationException;
+import javax.telephony.ResourceUnavailableException;
 import javax.telephony.callcontrol.CallControlCall;
 import org.onesec.raven.ivr.AudioStream;
 import org.onesec.raven.ivr.CompletionCode;
@@ -316,6 +324,23 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                             "Can't transfer call to the address (%s). Invalid call state (%s)"
                             , address, state.getIdName()));
                 return;
+            }
+            try
+            {
+                audioStream.reset();
+                try {
+                    call.transfer(address);
+                } catch (Exception ex)
+                {
+                    if (owner.isLogLevelEnabled(LogLevel.ERROR))
+                        owner.getLogger().error(
+                                callLog("Error transferring call to the address %s", address)
+                                , ex);
+                } 
+            }
+            finally
+            {
+                stopConversation(CompletionCode.COMPLETED_BY_OPPONENT);
             }
         }
         finally
