@@ -182,7 +182,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         catch(ExecutorServiceException e)
         {
             if (isLogLevelEnabled(LogLevel.ERROR))
-                error("Error executing task for ("+requestInfo.getTaskNode().getPath()+")");
+                error("Error executing task for ("+requestInfo.getTaskNode().getPath()+")", e);
         }
 
         return false;
@@ -214,7 +214,8 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
             busyEndpoints.remove(endpoint.getId());
             endpointReleased.signal();
             if (isLogLevelEnabled(LogLevel.DEBUG))
-                debug(String.format("Endpoint (%s) successfully realesed to the pool", endpoint.getName()));
+                debug(String.format("Endpoint (%s) successfully realesed to the pool"
+                        , endpoint.getName()));
         }
         finally
         {
