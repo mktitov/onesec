@@ -17,12 +17,17 @@
 
 package org.onesec.raven.ivr.impl;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import org.onesec.raven.ivr.IvrAction;
 import org.onesec.raven.ivr.IvrActionException;
 import org.onesec.raven.ivr.IvrActionStatus;
 import org.onesec.raven.ivr.IvrEndpoint;
 import org.onesec.raven.ivr.IvrEndpointConversation;
+import org.onesec.raven.ivr.actions.DtmfProcessPointAction;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.ExecutorServiceException;
@@ -43,11 +48,15 @@ public class IvrActionsExecutor implements Task
     private boolean running;
     private boolean mustCancel;
     private String logPrefix;
+    private Set<Character> defferedDtmfs;
+    private List<Character> collectedDtmfs;
 
     public IvrActionsExecutor(IvrEndpointConversation endpoint, ExecutorService executorService)
     {
         this.endpoint = endpoint;
         this.executorService = executorService;
+        defferedDtmfs = new HashSet<Character>();
+        collectedDtmfs = new ArrayList<Character>();
         running = false;
     }
 
@@ -55,16 +64,32 @@ public class IvrActionsExecutor implements Task
             throws ExecutorServiceException, InterruptedException
     {
         cancelActionsExecution();
+        for (IvrAction action: actions)
+            if (action instanceof DtmfProcessPointAction)
+                for (char c: ((DtmfProcessPointAction)action).getDtmfs().toCharArray())
+                    defferedDtmfs.add(c);
         this.actions = actions;
         mustCancel = false;
         running = true;
         executorService.execute(this);
     }
 
+    public synchronized boolean hasDtmfProcessPoint(char dtmf){
+        collectedDtmfs.add(dtmf);
+        return defferedDtmfs.contains(dtmf);
+    }
+
+    public List<Character> getCollectedDtmfs() {
+        return collectedDtmfs;
+    }
+
     public synchronized void cancelActionsExecution() throws InterruptedException
     {
-        if (running)
+        defferedDtmfs.clear();
+        collectedDtmfs.clear();
+        if (running){
             cancel();
+        }
     }
 
     private synchronized void cancel() throws InterruptedException
@@ -80,11 +105,31 @@ public class IvrActionsExecutor implements Task
             for (IvrAction action: actions)
             {
                 action.setLogPrefix(logPrefix);
+                boolean executeAction = true;
                 try {
                     statusMessage = String.format("Executing action (%s)", action.getName());
                     if (endpoint.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
                         endpoint.getOwner().getLogger().debug(getStatusMessage());
-                    action.execute(endpoint);
+                    if (action instanceof DtmfProcessPointAction)
+                        synchronized(this){
+                            boolean hasValidDtmf = false;
+                            for (char c: ((DtmfProcessPointAction)action).getDtmfs().toCharArray()){
+                                if (!hasValidDtmf && defferedDtmfs.contains(c))
+                                    hasValidDtmf = true;
+                                defferedDtmfs.remove(c);
+                            }
+                            executeAction = hasValidDtmf;
+                            if (hasValidDtmf)
+                                endpoint.getConversationScenarioState().getBindings().put(
+                                        IvrEndpointConversation.DTMFS_BINDING, collectedDtmfs);
+                        }
+                    if (executeAction)
+                        action.execute(endpoint);
+                    else {
+                        statusMessage = String.format("Skipping execution of action (%s)", action.getName());
+                        if (endpoint.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
+                            endpoint.getOwner().getLogger().debug(statusMessage);
+                    }
                 } catch (IvrActionException ex) {
                     statusMessage = String.format("Action (%s) execution error", action.getName());
                     if (endpoint.getOwner().isLogLevelEnabled(LogLevel.ERROR))
@@ -92,7 +137,7 @@ public class IvrActionsExecutor implements Task
                     return;
                 }
                 boolean canceling = false;
-                while (action.getStatus()!=IvrActionStatus.EXECUTED)
+                while (executeAction && action.getStatus()!=IvrActionStatus.EXECUTED)
                 {
                     if (!canceling && isMustCancel())
                     {

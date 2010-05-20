@@ -292,6 +292,10 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         }
     }
 
+    public ConversationScenarioState getConversationScenarioState() {
+        return conversationState;
+    }
+
     public Node getOwner()
     {
         return owner;

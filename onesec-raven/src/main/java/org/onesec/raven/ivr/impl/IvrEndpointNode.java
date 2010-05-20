@@ -694,6 +694,8 @@ public class IvrEndpointNode extends BaseNode
             }
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 debug(String.format("Continue conversation with dtmf (%s)", dtmfChar));
+            if (actionsExecutor.hasDtmfProcessPoint(dtmfChar))
+                return;
             audioStream.reset();
             conversationState.getBindings().put(DTMF_BINDING, ""+dtmfChar);
             Collection<Node> actions = currentConversation.makeConversation(conversationState);
@@ -702,7 +704,7 @@ public class IvrEndpointNode extends BaseNode
             {
                 tree.addGlobalBindings(getId()+"", bindingSupport);
                 bindingSupport.putAll(conversationState.getBindings());
-                bindingSupport.put(DTMF_BINDING, ""+dtmfChar);
+//                bindingSupport.put(DTMF_BINDING, ""+dtmfChar);
                 for (Node node: actions)
                     if (node instanceof IvrActionNode)
                     {
@@ -754,7 +756,8 @@ public class IvrEndpointNode extends BaseNode
                     {
                         if (isLogLevelEnabled(LogLevel.DEBUG))
                             debug("Canceling actions execution");
-                        actionsExecutor.cancelActionsExecution();
+                        if (actionsExecutor!=null)
+                            actionsExecutor.cancelActionsExecution();
                     }
                     finally
                     {
@@ -805,6 +808,10 @@ public class IvrEndpointNode extends BaseNode
                 endpointState.setState(IvrEndpointState.IN_SERVICE);
             }
         }
+    }
+
+    public ConversationScenarioState getConversationScenarioState() {
+        return conversationState;
     }
 
     private void closeRtpSession()
@@ -892,6 +899,7 @@ public class IvrEndpointNode extends BaseNode
         {
             conversationState = currentConversation.createConversationState();
             conversationState.setBinding(DTMF_BINDING, "-", BindingScope.REQUEST);
+            conversationState.setBinding(DTMFS_BINDING, new ArrayList<Character>(), BindingScope.REQUEST);
             conversationState.setBindingDefaultValue(DTMF_BINDING, "-");
             conversationState.setBinding(VARS_BINDING, new HashMap(), BindingScope.CONVERSATION);
             conversationState.setBinding(

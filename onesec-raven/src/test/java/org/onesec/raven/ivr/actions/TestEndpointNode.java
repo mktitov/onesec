@@ -30,6 +30,7 @@ import org.onesec.raven.ivr.IvrEndpointException;
 import org.onesec.raven.ivr.IvrEndpointState;
 import org.onesec.raven.ivr.impl.ConcatDataSource;
 import org.raven.annotations.Parameter;
+import org.raven.conv.ConversationScenarioState;
 import org.raven.sched.ExecutorService;
 import org.raven.tree.Node;
 import org.raven.tree.impl.BaseNode;
@@ -112,6 +113,10 @@ public class TestEndpointNode extends BaseNode implements IvrEndpoint
     }
 
     public void continueConversation(char dtmfChar) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public ConversationScenarioState getConversationScenarioState() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

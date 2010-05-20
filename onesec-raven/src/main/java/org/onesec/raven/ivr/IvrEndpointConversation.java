@@ -18,6 +18,7 @@
 package org.onesec.raven.ivr;
 
 import org.onesec.core.ObjectDescription;
+import org.raven.conv.ConversationScenarioState;
 import org.raven.sched.ExecutorService;
 import org.raven.tree.Node;
 
@@ -29,6 +30,7 @@ public interface IvrEndpointConversation extends ObjectDescription
 {
     public final static char EMPTY_DTMF = '-';
     public final static String DTMF_BINDING = "dtmf";
+    public final static String DTMFS_BINDING = "dtmfs";
     public final static String CONVERSATION_STATE_BINDING = "conversationState";
     public final static String VARS_BINDING = "vars";
     /**
@@ -52,6 +54,10 @@ public interface IvrEndpointConversation extends ObjectDescription
      * Stops the current conversation
      */
     public void stopConversation(CompletionCode completionCode);
+    /**
+     * Returns the conversation scenario state
+     */
+    public ConversationScenarioState getConversationScenarioState();
     /**
      * Transfers current call to the address passed in the parameter.
      * @param address The destination telephone address string to where the Call is being
