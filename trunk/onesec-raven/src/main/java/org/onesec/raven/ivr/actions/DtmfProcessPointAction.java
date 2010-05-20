@@ -17,10 +17,6 @@
 
 package org.onesec.raven.ivr.actions;
 
-import java.util.List;
-import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.raven.conv.ConversationScenarioState;
-
 /**
  *
  * @author Mikhail Titov

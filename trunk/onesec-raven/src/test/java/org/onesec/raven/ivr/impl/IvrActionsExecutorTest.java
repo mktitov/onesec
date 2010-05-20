@@ -60,7 +60,7 @@ public class IvrActionsExecutorTest extends RavenCoreTestCase
         tree.getRootNode().addAndSaveChildren(endpointNode);
     }
 
-    @Test
+//    @Test
     public void executeTest() throws ExecutorServiceException, InterruptedException
     {
         List<IvrAction> actions = Arrays.asList(
@@ -72,7 +72,7 @@ public class IvrActionsExecutorTest extends RavenCoreTestCase
         assertEquals(IvrActionStatus.EXECUTED, actions.get(1).getStatus());
     }
 
-    @Test
+//    @Test
     public void cancelTest() throws Exception
     {
         List<IvrAction> actions = Arrays.asList(
@@ -94,14 +94,21 @@ public class IvrActionsExecutorTest extends RavenCoreTestCase
     @Test
     public void dtmfProcessPointTest() throws Exception
     {
-        IvrEndpointConversation endpoint = createMock(IvrEndpointConversation.class);
-        Node owner = createMock(Node.class);
-        ConversationScenarioState state = createMock(ConversationScenarioState.class);
-        Bindings bindings = createMock(Bindings.class);
+        executor.setMaximumPoolSize(10);
+        executor.setCorePoolSize(10);
+        executor.stop();
+        executor.start();
+        
+        IvrEndpointConversation endpoint = createMock("endpoint", IvrEndpointConversation.class);
+        Node owner = createMock("ownerNode", Node.class);
+        ConversationScenarioState state = createMock("conversationState", ConversationScenarioState.class);
+        Bindings bindings = createMock("bindings", Bindings.class);
 
         endpoint.continueConversation('-');
         expect(endpoint.getOwner()).andReturn(owner).anyTimes();
+        expect(endpoint.getExecutorService()).andReturn(executor).anyTimes();
         expect(owner.isLogLevelEnabled((LogLevel)anyObject())).andReturn(Boolean.FALSE).anyTimes();
+        expect(owner.getPath()).andReturn("endpoint");
 
         expect(endpoint.getConversationScenarioState()).andReturn(state).once();
         expect(state.getBindings()).andReturn(bindings).once();
@@ -118,7 +125,7 @@ public class IvrActionsExecutorTest extends RavenCoreTestCase
         actionsExecutor.executeActions(actions);
         assertTrue(actionsExecutor.hasDtmfProcessPoint('1'));
         assertTrue(actionsExecutor.hasDtmfProcessPoint('2'));
-        Thread.sleep(1100);
+        Thread.sleep(110000);
         assertFalse(actionsExecutor.hasDtmfProcessPoint('1'));
         
         verify(endpoint, owner, state, bindings);
