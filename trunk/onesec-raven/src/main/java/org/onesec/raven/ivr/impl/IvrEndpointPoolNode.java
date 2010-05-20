@@ -18,7 +18,6 @@
 package org.onesec.raven.ivr.impl;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -164,11 +163,45 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         }
     }
 
-    private void clearQueue() throws InterruptedException
+    private void clearQueue() 
     {
         statusMessage.set("Stoping processing requests. Clearing queue...");
         for (RequestInfo ri : queue) 
             ri.request.processRequest(null);
+    }
+
+    private void processRequest() throws InterruptedException
+    {
+        try {
+            try{
+                statusMessage.set("Waiting for request...");
+                RequestInfo ri = queue.poll(10, TimeUnit.SECONDS);
+                if (ri != null) {
+                    if (isLogLevelEnabled(LogLevel.DEBUG))
+                        debug("Processing request from (" + ri.getTaskNode().getPath() + ")");
+                    lookupForEndpoint(ri);
+                    if (ri.endpoint == null)
+                        ri.request.processRequest(null);
+                    else {
+                        if (!sendResponse(ri)) {
+                            try {
+                                ri.request.processRequest(null);
+                            } finally {
+                                releaseEndpoint(null);
+                            }
+                        }
+                    }
+                }
+            }finally{
+                cleanupQueue();
+            }
+        } catch (Throwable e) {
+            if (e instanceof InterruptedException) {
+                throw (InterruptedException) e;
+            } else if (isLogLevelEnabled(LogLevel.ERROR)) {
+                getLogger().error("Error processing request", e);
+            }
+        }
     }
 
     private boolean sendResponse(RequestInfo requestInfo)
@@ -343,30 +376,8 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
             try {
                 while (!stopManagerTask.get())
                 {
-                    statusMessage.set("Waiting for request...");
-                    RequestInfo ri = queue.poll(10, TimeUnit.SECONDS);
-                    if (ri!=null)
-                    {
-                        if (isLogLevelEnabled(LogLevel.DEBUG))
-                            debug("Processing request from ("+ri.getTaskNode().getPath()+")");
-                        lookupForEndpoint(ri);
-                        if (ri.endpoint==null)
-                            ri.request.processRequest(null);
-                        else
-                        {
-                            if (!sendResponse(ri))
-                            {
-                                try{
-                                    ri.request.processRequest(null);
-                                }finally{
-                                    releaseEndpoint(null);
-                                }
-                            }
-                        }
-                    }
-                    cleanupQueue();
+                    processRequest();
                 }
-                clearQueue();
             } catch (InterruptedException interruptedException)
             {
                 if (isLogLevelEnabled(LogLevel.WARN))
@@ -378,6 +389,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         }
         finally
         {
+            clearQueue();
             managerThreadStoped.set(true);
         }
     }

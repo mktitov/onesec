@@ -14,7 +14,6 @@
  *  limitations under the License.
  *  under the License.
  */
-
 package org.onesec.raven.ivr.actions;
 
 import org.onesec.raven.ivr.IvrActionStatus;
@@ -24,17 +23,19 @@ import org.onesec.raven.ivr.IvrEndpointConversation;
  *
  * @author Mikhail Titov
  */
-public class ContinueConversationAction extends AsyncAction
-    {
-        public ContinueConversationAction()
-        {
-            super("Continue conversation action");
-        }
+public class ContinueConversationAction extends AsyncAction {
 
-        @Override
-        protected void doExecute(IvrEndpointConversation conversation) throws Exception
-        {
-            setStatus(IvrActionStatus.EXECUTED);
-            conversation.continueConversation(IvrEndpointConversation.EMPTY_DTMF);
-        }
+    public ContinueConversationAction() {
+        super("Continue conversation action");
     }
+
+    public ContinueConversationAction(String actionName) {
+        super(actionName);
+    }
+
+    @Override
+    protected void doExecute(IvrEndpointConversation conversation) throws Exception {
+        setStatus(IvrActionStatus.EXECUTED);
+        conversation.continueConversation(IvrEndpointConversation.EMPTY_DTMF);
+    }
+}
