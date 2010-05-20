@@ -130,7 +130,7 @@ public class IvrActionsExecutor implements Task
                         if (endpoint.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
                             endpoint.getOwner().getLogger().debug(statusMessage);
                     }
-                } catch (IvrActionException ex) {
+                } catch (Throwable ex) {
                     statusMessage = String.format("Action (%s) execution error", action.getName());
                     if (endpoint.getOwner().isLogLevelEnabled(LogLevel.ERROR))
                         endpoint.getOwner().getLogger().error(getStatusMessage(), ex);
