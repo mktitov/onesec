@@ -69,7 +69,7 @@ public abstract class AbstractAction implements IvrAction
 
     protected String logMess(String mess, Object... args)
     {
-        return logPrefix==null? "" : logPrefix+"Actions. "+actionName+". "+String.format(mess, args);
+        return (logPrefix==null? "" : logPrefix)+"Actions. "+actionName+". "+String.format(mess, args);
     }
 
 }

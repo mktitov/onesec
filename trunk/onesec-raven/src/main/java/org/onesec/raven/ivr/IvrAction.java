@@ -17,6 +17,8 @@
 
 package org.onesec.raven.ivr;
 
+import org.onesec.raven.ivr.impl.IvrActionsExecutor;
+
 /**
  *
  * @author Mikhail Titov
@@ -27,6 +29,11 @@ public interface IvrAction
      * Returns the action name.
      */
     public String getName();
+    /**
+     * If returns true then {@link IvrActionsExecutor actions executor} stops executing actions following
+     * this action
+     */
+    public boolean isFlowControlAction();
     /**
      * Executes action for passed in the parameter endpoint
      * @throws IvrActionException

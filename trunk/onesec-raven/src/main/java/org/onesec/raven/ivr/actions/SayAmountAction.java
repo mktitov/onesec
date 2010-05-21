@@ -47,6 +47,10 @@ public class SayAmountAction extends AsyncAction
         this.pauseBetweenWords = pauseBetweenWords;
     }
 
+    public boolean isFlowControlAction() {
+        return false;
+    }
+
     @Override
     protected void doExecute(IvrEndpointConversation conversation) throws Exception
     {

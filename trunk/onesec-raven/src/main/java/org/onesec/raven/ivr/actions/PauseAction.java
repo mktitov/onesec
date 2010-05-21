@@ -37,6 +37,10 @@ public class PauseAction extends AsyncAction
         setStatusMessage("Pausing");
     }
 
+    public boolean isFlowControlAction() {
+        return false;
+    }
+
     @Override
     protected void doExecute(IvrEndpointConversation conversation) throws Exception
     {

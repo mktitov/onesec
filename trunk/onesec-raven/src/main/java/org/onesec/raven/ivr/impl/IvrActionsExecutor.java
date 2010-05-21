@@ -74,9 +74,13 @@ public class IvrActionsExecutor implements Task
         executorService.execute(this);
     }
 
-    public synchronized boolean hasDtmfProcessPoint(char dtmf){
-        collectedDtmfs.add(dtmf);
-        return defferedDtmfs.contains(dtmf);
+    public synchronized boolean hasDtmfProcessPoint(char dtmf)
+    {
+        if (defferedDtmfs.contains(dtmf)){
+            collectedDtmfs.add(dtmf);
+            return true;
+        }else
+            return false;
     }
 
     public List<Character> getCollectedDtmfs() {
@@ -113,22 +117,25 @@ public class IvrActionsExecutor implements Task
                     if (action instanceof DtmfProcessPointAction)
                         synchronized(this){
                             boolean hasValidDtmf = false;
+                            List dtmfs = new ArrayList(collectedDtmfs.size());
                             for (char c: ((DtmfProcessPointAction)action).getDtmfs().toCharArray()){
-                                if (!hasValidDtmf && defferedDtmfs.contains(c))
+                                if (collectedDtmfs.contains(c)){
                                     hasValidDtmf = true;
+                                    dtmfs.add(c);
+                                }
                                 defferedDtmfs.remove(c);
                             }
                             executeAction = hasValidDtmf;
                             if (hasValidDtmf)
                                 endpoint.getConversationScenarioState().getBindings().put(
-                                        IvrEndpointConversation.DTMFS_BINDING, collectedDtmfs);
+                                        IvrEndpointConversation.DTMFS_BINDING, dtmfs);
                         }
                     if (executeAction)
                         action.execute(endpoint);
                     else {
                         statusMessage = String.format("Skipping execution of action (%s)", action.getName());
                         if (endpoint.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
-                            endpoint.getOwner().getLogger().debug(statusMessage);
+                            endpoint.getOwner().getLogger().debug(getStatusMessage());
                     }
                 } catch (Throwable ex) {
                     statusMessage = String.format("Action (%s) execution error", action.getName());
@@ -166,7 +173,7 @@ public class IvrActionsExecutor implements Task
                         return;
                     }
                 }
-                if (isMustCancel())
+                if (isMustCancel() || (executeAction && action.isFlowControlAction()))
                     return;
             }
         }

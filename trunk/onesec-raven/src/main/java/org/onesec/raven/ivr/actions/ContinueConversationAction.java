@@ -33,6 +33,10 @@ public class ContinueConversationAction extends AsyncAction {
         super(actionName);
     }
 
+    public boolean isFlowControlAction() {
+        return true;
+    }
+
     @Override
     protected void doExecute(IvrEndpointConversation conversation) throws Exception {
         setStatus(IvrActionStatus.EXECUTED);
