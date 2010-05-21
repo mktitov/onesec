@@ -25,7 +25,6 @@ import java.util.Set;
 import org.onesec.raven.ivr.IvrAction;
 import org.onesec.raven.ivr.IvrActionException;
 import org.onesec.raven.ivr.IvrActionStatus;
-import org.onesec.raven.ivr.IvrEndpoint;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.actions.DtmfProcessPointAction;
 import org.raven.log.LogLevel;
@@ -116,17 +115,15 @@ public class IvrActionsExecutor implements Task
                         endpoint.getOwner().getLogger().debug(getStatusMessage());
                     if (action instanceof DtmfProcessPointAction)
                         synchronized(this){
-                            boolean hasValidDtmf = false;
                             List dtmfs = new ArrayList(collectedDtmfs.size());
-                            for (char c: ((DtmfProcessPointAction)action).getDtmfs().toCharArray()){
-                                if (collectedDtmfs.contains(c)){
-                                    hasValidDtmf = true;
+                            String validDtmfs = ((DtmfProcessPointAction)action).getDtmfs();
+                            for (char c: collectedDtmfs)
+                                if (validDtmfs.indexOf(c)>=0)
                                     dtmfs.add(c);
-                                }
+                            for (char c: validDtmfs.toCharArray())
                                 defferedDtmfs.remove(c);
-                            }
-                            executeAction = hasValidDtmf;
-                            if (hasValidDtmf)
+                            executeAction = dtmfs.size()>0;
+                            if (executeAction)
                                 endpoint.getConversationScenarioState().getBindings().put(
                                         IvrEndpointConversation.DTMFS_BINDING, dtmfs);
                         }
