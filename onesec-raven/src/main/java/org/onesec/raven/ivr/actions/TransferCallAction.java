@@ -44,6 +44,10 @@ public class TransferCallAction extends AsyncAction
         setStatusMessage("Transfering call to the ("+address+") address");
     }
 
+    public boolean isFlowControlAction() {
+        return false;
+    }
+
     @Override
     protected void doExecute(IvrEndpointConversation conversation) throws Exception
     {

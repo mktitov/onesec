@@ -39,6 +39,10 @@ public class PlayAudioAction extends AsyncAction implements InputStreamSource
         this.audioFile = audioFile;
     }
 
+    public boolean isFlowControlAction() {
+        return false;
+    }
+
     @Override
     protected void doExecute(IvrEndpointConversation conversation) throws Exception
     {

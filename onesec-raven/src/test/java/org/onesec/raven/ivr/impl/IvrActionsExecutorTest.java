@@ -108,11 +108,11 @@ public class IvrActionsExecutorTest extends RavenCoreTestCase
         expect(endpoint.getOwner()).andReturn(owner).anyTimes();
         expect(endpoint.getExecutorService()).andReturn(executor).anyTimes();
         expect(owner.isLogLevelEnabled((LogLevel)anyObject())).andReturn(Boolean.FALSE).anyTimes();
-        expect(owner.getPath()).andReturn("endpoint");
+        expect(owner.getPath()).andReturn("endpoint").anyTimes();
 
         expect(endpoint.getConversationScenarioState()).andReturn(state).once();
         expect(state.getBindings()).andReturn(bindings).once();
-        expect(bindings.put(eq(IvrEndpointConversation.DTMFS_BINDING), eq(Arrays.asList("1", "2")))).andReturn(null).once();
+        expect(bindings.put(eq(IvrEndpointConversation.DTMFS_BINDING), eq(Arrays.asList('1', '2')))).andReturn(null).once();
 
         replay(endpoint, owner, state, bindings);
 
@@ -125,7 +125,8 @@ public class IvrActionsExecutorTest extends RavenCoreTestCase
         actionsExecutor.executeActions(actions);
         assertTrue(actionsExecutor.hasDtmfProcessPoint('1'));
         assertTrue(actionsExecutor.hasDtmfProcessPoint('2'));
-        Thread.sleep(110000);
+        assertFalse(actionsExecutor.hasDtmfProcessPoint('-'));
+        Thread.sleep(1100);
         assertFalse(actionsExecutor.hasDtmfProcessPoint('1'));
         
         verify(endpoint, owner, state, bindings);

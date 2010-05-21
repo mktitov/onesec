@@ -33,6 +33,7 @@ import org.onesec.raven.impl.ProviderNode;
 import org.onesec.raven.ivr.ConversationCompletionCallback;
 import org.onesec.raven.ivr.ConversationResult;
 import org.onesec.raven.ivr.IvrEndpointState;
+import org.onesec.raven.ivr.actions.DtmfProcessPointActionNode;
 import org.onesec.raven.ivr.actions.PauseActionNode;
 import org.onesec.raven.ivr.actions.PlayAudioActionNode;
 import org.onesec.raven.ivr.actions.StopConversationActionNode;
@@ -122,7 +123,7 @@ public class IvrEndpointNodeTest
         assertFalse(res.isWaitInterrupted());
     }
 
-    @Test
+//    @Test
     public void simpleConversationTest() throws Exception
     {
         AudioFileNode audioFileNode = new AudioFileNode();
@@ -211,8 +212,8 @@ public class IvrEndpointNodeTest
         StateWaitResult res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.IN_SERVICE}, 10000);
         assertFalse(res.isWaitInterrupted());
-//        endpoint.invite("88024", scenario, this, null);
-        endpoint.invite("089128672947", scenario, this, null);
+        endpoint.invite("88024", scenario, this, null);
+//        endpoint.invite("089128672947", scenario, this, null);
         res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.INVITING}, 30000);
         assertFalse(res.isWaitInterrupted());
@@ -235,6 +236,50 @@ public class IvrEndpointNodeTest
                 new int[]{IvrEndpointState.IN_SERVICE}, 50000);
 
         Thread.sleep(1000);
+        assertEquals(new Integer(0), executor.getExecutingTaskCount());
+    }
+
+    @Test(timeout=120000)
+    public void dtmfProcessPointTest() throws Exception
+    {
+        AudioFileNode audioNode1 = createAudioFileNode("audio1", "src/test/wav/test2.wav");
+        AudioFileNode audioNode2 = createAudioFileNode("audio2", "src/test/wav/test.wav");
+
+        scenario.setValidDtmfs("123#");
+        IfNode ifNode1 = createIfNode("if1", scenario, "if (dtmfs) println 'DTMFS:'+dtmfs.join(','); dtmfs==[(char)'1',(char)'2',(char)'3']||repetitionCount==5");
+        IfNode ifNode2 = createIfNode("if2", scenario, "dtmf=='-'||dtmf=='#'");
+        createPlayAudioActionNode("hello", ifNode2, audioNode1);
+        DtmfProcessPointActionNode dtmfProcessPoint = new DtmfProcessPointActionNode();
+        dtmfProcessPoint.setName("dtmf process point");
+        ifNode2.addAndSaveChildren(dtmfProcessPoint);
+        dtmfProcessPoint.setDtmfs("123");
+        assertTrue(dtmfProcessPoint.start());
+
+//        createPauseActionNode(ifNode2, 5000l);
+        createGotoNode("replay", ifNode2, scenario);
+        createPlayAudioActionNode("bye", ifNode1, audioNode2);
+
+        StopConversationActionNode stopConversationActionNode = new StopConversationActionNode();
+        stopConversationActionNode.setName("stop conversation");
+        ifNode1.addAndSaveChildren(stopConversationActionNode);
+        assertTrue(stopConversationActionNode.start());
+
+        waitForProvider();
+        assertTrue(endpoint.start());
+        StateWaitResult res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.IN_SERVICE}, 10000);
+        assertFalse(res.isWaitInterrupted());
+        endpoint.invite("88024", scenario, this, null);
+//        endpoint.invite("089128672947", scenario, this, null);
+        res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.INVITING}, 30000);
+        assertFalse(res.isWaitInterrupted());
+        res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.TALKING}, 250000);
+        assertFalse(res.isWaitInterrupted());
+        res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.IN_SERVICE}, 50000);
+
         assertEquals(new Integer(0), executor.getExecutingTaskCount());
     }
 

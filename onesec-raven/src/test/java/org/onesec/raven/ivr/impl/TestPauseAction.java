@@ -40,6 +40,10 @@ public class TestPauseAction implements IvrAction
         return canceled;
     }
 
+    public boolean isFlowControlAction() {
+        return false;
+    }
+
     public void execute(IvrEndpointConversation conversation) throws IvrActionException
     {
         setStatus(IvrActionStatus.EXECUTING);
