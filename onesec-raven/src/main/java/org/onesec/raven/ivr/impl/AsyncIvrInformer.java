@@ -643,6 +643,22 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         }
     }
 
+    public IvrInformerSession getSessionByAbonentNumber(String abonentNumber) throws RecordException
+    {
+        dataLock.readLock().lock();
+        try
+        {
+            for (IvrInformerSession session: sessions.values())
+                if (session.containsAbonentNumber(abonentNumber))
+                    return session;
+            return null;
+        }
+        finally
+        {
+            dataLock.readLock().unlock();
+        }
+    }
+    
     private void initFields(Record rec) throws RecordException
     {
         rec.setValue(CALL_START_TIME_FIELD, new Timestamp(System.currentTimeMillis()));
