@@ -94,6 +94,8 @@ public class OutgoingRtpStreamImpl extends AbstractRtpStream implements Outgoing
     @Override
     public void doRelease() throws Exception
     {
+        if (sendStream==null)
+            return;
         TransmissionStats stats = sendStream.getSourceTransmissionStats();
         incHandledBytesBy(stats.getBytesTransmitted());
         incHandledPacketsBy(stats.getPDUTransmitted());
