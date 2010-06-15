@@ -17,7 +17,6 @@
 
 package org.onesec.raven.ivr.impl;
 
-import com.cisco.jtapi.CiscoMediaOpenLogicalChannelEvImpl;
 import com.cisco.jtapi.extensions.CiscoAddrInServiceEv;
 import com.cisco.jtapi.extensions.CiscoAddrOutOfServiceEv;
 import com.cisco.jtapi.extensions.CiscoCall;
@@ -30,27 +29,19 @@ import com.cisco.jtapi.extensions.CiscoRTPParams;
 import com.cisco.jtapi.extensions.CiscoRouteTerminal;
 import com.cisco.jtapi.extensions.CiscoTermInServiceEv;
 import com.cisco.jtapi.extensions.CiscoTermOutOfServiceEv;
-import com.cisco.jtapi.extensions.CiscoTerminalConnection;
 import com.cisco.jtapi.extensions.CiscoTerminalObserver;
 import com.cisco.jtapi.extensions.CiscoUnregistrationException;
-import java.net.InetAddress;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.telephony.Address;
 import javax.telephony.AddressObserver;
 import javax.telephony.Call;
 import javax.telephony.Connection;
-import javax.telephony.InvalidArgumentException;
-import javax.telephony.InvalidStateException;
-import javax.telephony.PrivilegeViolationException;
 import javax.telephony.Provider;
 import javax.telephony.Terminal;
-import javax.telephony.callcontrol.CallControlCall;
 import javax.telephony.callcontrol.CallControlCallObserver;
 import javax.telephony.callcontrol.CallControlConnection;
 import javax.telephony.callcontrol.events.CallCtlConnEstablishedEv;
@@ -74,6 +65,7 @@ import org.onesec.raven.ivr.CompletionCode;
 import org.onesec.raven.ivr.IvrEndpointState;
 import org.onesec.raven.ivr.IvrMultichannelEndpoint;
 import org.onesec.raven.ivr.IvrMultichannelEndpointState;
+import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
@@ -87,6 +79,7 @@ import org.weda.internal.annotations.Service;
  *
  * @author Mikhail Titiov
  */
+@NodeClass
 public class IvrMultichannelEndpointNode extends BaseNode 
         implements IvrMultichannelEndpoint, CiscoTerminalObserver, AddressObserver
             , CallControlCallObserver, MediaCallObserver
