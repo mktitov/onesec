@@ -33,6 +33,7 @@ import org.onesec.raven.ivr.EndpointRequest;
 import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.IvrEndpoint;
 import org.onesec.raven.ivr.IvrEndpointState;
+import org.raven.ds.DataContext;
 import org.raven.ds.Record;
 import org.raven.ds.RecordException;
 import org.raven.log.LogLevel;
@@ -60,6 +61,7 @@ public class IvrInformerSession implements EndpointRequest, ConversationCompleti
     private final Condition abonentInformed;
     private final Lock informLock;
     private final long endpointWaitTimeout;
+    private final DataContext dataContext;
 
     private AtomicReference<String> statusMessage;
     private ConversationResult conversationResult;
@@ -69,7 +71,7 @@ public class IvrInformerSession implements EndpointRequest, ConversationCompleti
     public IvrInformerSession(
             List<Record> records, AsyncIvrInformer informer
             , Integer maxInviteDuration, Integer maxCallDuration
-            , IvrConversationScenario scenario, long endpointWaitTimeout)
+            , IvrConversationScenario scenario, long endpointWaitTimeout, DataContext dataContext)
     {
         this.records = records;
         this.informer = informer;
@@ -77,6 +79,7 @@ public class IvrInformerSession implements EndpointRequest, ConversationCompleti
         this.maxCallDuration = maxCallDuration;
         this.scenario = scenario;
         this.endpointWaitTimeout = endpointWaitTimeout;
+        this.dataContext = dataContext;
 
         this.statusMessage = new AtomicReference<String>("Queued (waiting for terminal)");
         
@@ -408,7 +411,7 @@ public class IvrInformerSession implements EndpointRequest, ConversationCompleti
                 if (restartEndpoint)
                     restartEndpoint(endpoint, record);
             }
-            informer.sendRecordToConsumers(record);
+            informer.sendRecordToConsumers(record, dataContext);
         }
     }
 
@@ -418,7 +421,7 @@ public class IvrInformerSession implements EndpointRequest, ConversationCompleti
         for (Record record: records)
         {
             record.setValue(COMPLETION_CODE_FIELD, AsyncIvrInformer.ERROR_NO_FREE_ENDPOINT_IN_THE_POOL);
-            informer.sendRecordToConsumers(record);
+            informer.sendRecordToConsumers(record, dataContext);
         }
     }
 }

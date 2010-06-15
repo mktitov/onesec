@@ -39,10 +39,12 @@ import org.onesec.raven.ivr.IvrInformerStatus;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.ds.DataConsumer;
+import org.raven.ds.DataContext;
 import org.raven.ds.DataSource;
 import org.raven.ds.Record;
 import org.raven.ds.RecordException;
 import org.raven.ds.RecordSchemaField;
+import org.raven.ds.impl.DataContextImpl;
 import org.raven.log.LogLevel;
 import org.raven.table.TableImpl;
 import org.raven.tree.Node;
@@ -291,8 +293,7 @@ public class IvrInformer
         this.displayFields = displayFields;
     }
 
-    public boolean getDataImmediate(
-            DataConsumer dataConsumer, Collection<NodeAttribute> sessionAttributes)
+    public boolean getDataImmediate(DataConsumer dataConsumer, DataContext context)
     {
         return false;
     }
@@ -329,8 +330,9 @@ public class IvrInformer
             statusMessage = "Requesting records from "+dataSource.getPath();
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 debug(statusMessage);
-            dataSource.getDataImmediate(this, null);
-            sendDataToConsumers(null);
+            DataContext context = new DataContextImpl();
+            dataSource.getDataImmediate(this, context);
+            sendDataToConsumers(null, context);
         }
         finally
         {
@@ -349,7 +351,7 @@ public class IvrInformer
                 IvrInformerStatus.PROCESSING, IvrInformerStatus.STOP_PROCESSING);
     }
 
-    public void setData(DataSource dataSource, Object data)
+    public void setData(DataSource dataSource, Object data, DataContext context)
     {
         if (!Status.STARTED.equals(getStatus()) 
             || !IvrInformerStatus.PROCESSING.equals(informerStatus.get()))
@@ -382,8 +384,8 @@ public class IvrInformer
                         skipRecord();
                     else
                         informAbonent();
-                    sendDataToConsumers(currentRecord);
-                    sendDataToConsumers(null);
+                    sendDataToConsumers(currentRecord, context);
+                    sendDataToConsumers(null, context);
                     statusMessage = String.format(
                             "Abonent informed (%s). Waiting for new record", getRecordShortDesc());
                 }
@@ -578,13 +580,13 @@ public class IvrInformer
         }
     }
 
-    private void sendDataToConsumers(Object data)
+    private void sendDataToConsumers(Object data, DataContext context)
     {
         Collection<Node> depNodes = getDependentNodes();
         if (depNodes!=null && !depNodes.isEmpty())
             for (Node dep: depNodes)
                 if (dep instanceof DataConsumer && Status.STARTED.equals(dep.getStatus()))
-                    ((DataConsumer)dep).setData(this, data);
+                    ((DataConsumer)dep).setData(this, data, context);
     }
 
     public Map<String, NodeAttribute> getRefreshAttributes() throws Exception

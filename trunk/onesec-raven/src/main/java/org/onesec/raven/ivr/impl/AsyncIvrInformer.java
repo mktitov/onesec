@@ -37,10 +37,12 @@ import org.raven.RavenUtils;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.ds.DataConsumer;
+import org.raven.ds.DataContext;
 import org.raven.ds.DataSource;
 import org.raven.ds.Record;
 import org.raven.ds.RecordException;
 import org.raven.ds.RecordSchemaField;
+import org.raven.ds.impl.DataContextImpl;
 import org.raven.ds.impl.RecordSchemaNode;
 import org.raven.ds.impl.RecordSchemaValueTypeHandlerFactory;
 import org.raven.expr.impl.BindingSupportImpl;
@@ -230,7 +232,7 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
             statusMessage = "Requesting records from "+dataSource.getPath();
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 debug(statusMessage);
-            dataSource.getDataImmediate(this, null);
+            dataSource.getDataImmediate(this, new DataContextImpl());
         }
         finally
         {
@@ -418,8 +420,7 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         this.displayFields = displayFields;
     }
 
-    public boolean getDataImmediate(
-            DataConsumer dataConsumer, Collection<NodeAttribute> sessionAttributes)
+    public boolean getDataImmediate(DataConsumer dataConsumer, DataContext context)
     {
         return false;
     }
@@ -429,7 +430,7 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         return null;
     }
 
-    public void setData(DataSource dataSource, Object data)
+    public void setData(DataSource dataSource, Object data, DataContext context)
     {
         if (!Status.STARTED.equals(getStatus()) || !informAllowed.get() || !TimeWindowHelper.isCurrentDateInPeriod(this))
             return;
@@ -479,7 +480,7 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
                         try{
                             for (Record record: recordsChain)
                                 initFields(record);
-                            createSession(recordsChain);
+                            createSession(recordsChain, context);
                         }finally{
                             recordsChain = null;
                         }
@@ -526,13 +527,13 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         return null;
     }
 
-    void sendDataToConsumers(Object data)
+    void sendDataToConsumers(Object data, DataContext context)
     {
         Collection<Node> depNodes = getDependentNodes();
         if (depNodes!=null && !depNodes.isEmpty())
             for (Node dep: depNodes)
                 if (dep instanceof DataConsumer && Status.STARTED.equals(dep.getStatus()))
-                    ((DataConsumer)dep).setData(this, data);
+                    ((DataConsumer)dep).setData(this, data, context);
     }
 
     public Map<String, NodeAttribute> getRefreshAttributes() throws Exception
@@ -680,7 +681,7 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         return false;
     }
 
-    private IvrInformerSession createSession(List<Record> records) throws Exception
+    private IvrInformerSession createSession(List<Record> records, DataContext context) throws Exception
     {
         boolean alreadyInforming = false;
         for (Record record: records)
@@ -696,7 +697,7 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
             for (Record record: records)
             {
                 record.setValue(COMPLETION_CODE_FIELD, ALREADY_INFORMING);
-                sendRecordToConsumers(record);
+                sendRecordToConsumers(record, context);
             }
             return null;
         }
@@ -706,7 +707,7 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
             for (Record record: records)
             {
                 record.setValue(COMPLETION_CODE_FIELD, ERROR_TOO_MANY_SESSIONS);
-                sendRecordToConsumers(record);
+                sendRecordToConsumers(record, context);
             }
             return null;
         }
@@ -718,8 +719,8 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
             return null;
 
         Long id = converter.convert(Long.class, records.iterator().next().getValue(ID_FIELD), null);
-        IvrInformerSession session = new IvrInformerSession(
-                records, this, maxInviteDuration, maxCallDuration, conversationScenario, endpointWaitTimeout);
+        IvrInformerSession session = new IvrInformerSession(records, this, maxInviteDuration
+                , maxCallDuration, conversationScenario, endpointWaitTimeout, context);
         sessions.put(id, session);
         endpointPool.requestEndpoint(session);
 
@@ -759,10 +760,10 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         }
     }
 
-    void sendRecordToConsumers(Record record)
+    void sendRecordToConsumers(Record record, DataContext context)
     {
-        sendDataToConsumers(record);
-        sendDataToConsumers(null);
+        sendDataToConsumers(record, context);
+        sendDataToConsumers(null, context);
     }
 
     void incSuccessfullyInformedAbonents()

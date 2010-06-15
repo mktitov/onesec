@@ -18,10 +18,10 @@
 package org.onesec.raven.impl;
 
 import java.util.Collection;
-import java.util.Map;
 import org.onesec.core.services.Operator;
 import org.raven.annotations.NodeClass;
 import org.raven.ds.DataConsumer;
+import org.raven.ds.DataContext;
 import org.raven.ds.impl.AbstractDataSource;
 import org.raven.log.LogLevel;
 import org.raven.tree.NodeAttribute;
@@ -47,9 +47,9 @@ public class CheckOperatorNumberNode extends AbstractDataSource
 
     @Override
     public boolean gatherDataForConsumer(
-            DataConsumer dataConsumer, Map<String, NodeAttribute> attributes) throws Exception
+            DataConsumer dataConsumer, DataContext context) throws Exception
     {
-        NodeAttribute attr = attributes.get(PHONENUMBER_ATTRIBUTE);
+        NodeAttribute attr = context.getSessionAttributes().get(PHONENUMBER_ATTRIBUTE);
         boolean result = false;
         String phoneNumber = null;
         if (attr==null || attr.getValue()==null)
@@ -63,9 +63,9 @@ public class CheckOperatorNumberNode extends AbstractDataSource
             result = operator.isOperatorNumber(phoneNumber);
         }
         if (result)
-            dataConsumer.setData(this, phoneNumber);
+            dataConsumer.setData(this, phoneNumber, context);
         else
-            dataConsumer.setData(this, null);
+            dataConsumer.setData(this, null, context);
 
         return true;
     }
