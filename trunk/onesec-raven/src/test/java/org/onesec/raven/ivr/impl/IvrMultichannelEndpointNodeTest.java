@@ -148,7 +148,25 @@ public class IvrMultichannelEndpointNodeTest extends OnesecRavenTestCase
             TimeUnit.MILLISECONDS.sleep(500);
         while (!endpoint.getCalls().isEmpty())
             TimeUnit.MILLISECONDS.sleep(500);
-        
+
+        Thread.sleep(120000);
+    }
+
+//    @Test(timeout=60000)
+    public void callWithTransferTest() throws Exception
+    {
+        createConversationWithTransfer();
+        waitForProvider();
+        assertTrue(endpoint.start());
+        StateWaitResult res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrMultichannelEndpointState.IN_SERVICE}, 2000);
+        assertTrue(endpoint.getCalls().isEmpty());
+        while (endpoint.getCalls().isEmpty())
+            TimeUnit.MILLISECONDS.sleep(500);
+        while (!endpoint.getCalls().isEmpty())
+            TimeUnit.MILLISECONDS.sleep(500);
+
+        Thread.sleep(120000);
     }
 
     private void createSimpleConversation() throws Exception
@@ -207,7 +225,7 @@ public class IvrMultichannelEndpointNodeTest extends OnesecRavenTestCase
         TransferCallActionNode transfer = new TransferCallActionNode();
         transfer.setName("transfer");
         ifNode1.addAndSaveChildren(transfer);
-        transfer.setAddress("089128672947");
+        transfer.setAddress("88024");
         assertTrue(transfer.start());
 
         StopConversationActionNode stopConversationActionNode = new StopConversationActionNode();

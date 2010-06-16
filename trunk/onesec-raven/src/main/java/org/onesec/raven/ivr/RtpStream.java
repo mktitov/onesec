@@ -50,6 +50,14 @@ public interface RtpStream
      * Return the port of the stream
      */
     public int getPort();
+    /**
+     * Returns the address of the remote side
+     */
+    public String getRemoteHost();
+    /**
+     * Returns the port on the remote side
+     */
+    public int getRemotePort();
     
     public void setLogPrefix(String prefix);
 }

@@ -306,7 +306,7 @@ public class ConcatDataSource
                         p.realize();
                         waitForState(p, Processor.Realized);
                         p.start();
-        //                waitForState(p, Processor.Started);
+                        waitForState(p, Processor.Started);
 
                         PushBufferDataSource ds = (PushBufferDataSource) p.getDataOutput();
                         ds.start();
@@ -413,7 +413,7 @@ public class ConcatDataSource
     {
     }
 
-    private String logMess(String mess, Object... args)
+    String logMess(String mess, Object... args)
     {
         return (logPrefix==null? "" : logPrefix)+"AudioStream. "+String.format(mess, args);
     }

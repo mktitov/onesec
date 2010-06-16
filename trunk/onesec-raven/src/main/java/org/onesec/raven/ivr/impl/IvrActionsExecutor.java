@@ -88,11 +88,12 @@ public class IvrActionsExecutor implements Task
 
     public synchronized void cancelActionsExecution() throws InterruptedException
     {
+        if (endpoint.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
+            endpoint.getOwner().getLogger().debug(logMess("Canceling actions executing"));
         defferedDtmfs.clear();
         collectedDtmfs.clear();
-        if (running){
+        if (running)
             cancel();
-        }
     }
 
     private synchronized void cancel() throws InterruptedException

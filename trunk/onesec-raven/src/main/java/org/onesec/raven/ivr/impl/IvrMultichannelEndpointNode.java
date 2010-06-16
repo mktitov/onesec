@@ -31,10 +31,13 @@ import com.cisco.jtapi.extensions.CiscoTermInServiceEv;
 import com.cisco.jtapi.extensions.CiscoTermOutOfServiceEv;
 import com.cisco.jtapi.extensions.CiscoTerminalObserver;
 import com.cisco.jtapi.extensions.CiscoUnregistrationException;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.telephony.Address;
 import javax.telephony.AddressObserver;
@@ -70,9 +73,16 @@ import org.raven.annotations.Parameter;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
+import org.raven.table.TableImpl;
+import org.raven.tree.NodeAttribute;
+import org.raven.tree.Viewable;
+import org.raven.tree.ViewableObject;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
+import org.raven.tree.impl.ViewableObjectImpl;
+import org.raven.util.OperationStatistic;
 import org.weda.annotations.constraints.NotNull;
+import org.weda.internal.annotations.Message;
 import org.weda.internal.annotations.Service;
 
 /**
@@ -82,7 +92,7 @@ import org.weda.internal.annotations.Service;
 @NodeClass
 public class IvrMultichannelEndpointNode extends BaseNode 
         implements IvrMultichannelEndpoint, CiscoTerminalObserver, AddressObserver
-            , CallControlCallObserver, MediaCallObserver
+            , CallControlCallObserver, MediaCallObserver, Viewable
 {
     public static final int LOCK_WAIT_TIMEOUT = 500;
     @Service
@@ -123,6 +133,12 @@ public class IvrMultichannelEndpointNode extends BaseNode
     private AtomicBoolean observingTerminal;
     private boolean terminalInService;
     private boolean terminalAddressInService;
+    private AtomicInteger callsCount;
+
+    @Message private static String callIdColumnMessage;
+    @Message private static String callInfoColumnMessage;
+    @Message private static String endpointBusyMessage;
+    @Message private static String callsCountMessage;
 
     @Override
     protected void initFields()
@@ -135,6 +151,7 @@ public class IvrMultichannelEndpointNode extends BaseNode
         callsLock = new ReentrantReadWriteLock();
         resetStates();
         stateListenersCoordinator.addListenersToState(endpointState);
+        callsCount = new AtomicInteger();
     }
 
     public void resetStates()
@@ -152,6 +169,7 @@ public class IvrMultichannelEndpointNode extends BaseNode
     protected void doStart() throws Exception
     {
         super.doStart();
+        callsCount = new AtomicInteger();
         initializeEndpoint();
     }
 
@@ -172,6 +190,35 @@ public class IvrMultichannelEndpointNode extends BaseNode
     public boolean isAutoStart()
     {
         return false;
+    }
+
+    public Boolean getAutoRefresh() {
+        return Boolean.TRUE;
+    }
+
+    public Map<String, NodeAttribute> getRefreshAttributes() throws Exception {
+        return null;
+    }
+
+    public List<ViewableObject> getViewableObjects(Map<String, NodeAttribute> refreshAttributes) 
+            throws Exception
+    {
+        ViewableObject obj = null;
+        if (callsLock.readLock().tryLock(500, TimeUnit.MILLISECONDS)){
+            try{
+                TableImpl table = new TableImpl(new String[]{callIdColumnMessage, callInfoColumnMessage});
+                for (Map.Entry entry: calls.entrySet())
+                    table.addRow(new Object[]{entry.getKey().toString(), entry.getValue().toString()});
+                obj = new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, table);
+            }finally{
+                callsLock.readLock().unlock();
+            }
+        } else {
+            obj = new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, endpointBusyMessage);
+        }
+        ViewableObject callsCountText = new ViewableObjectImpl(
+                Viewable.RAVEN_TEXT_MIMETYPE, String.format(callsCountMessage, callsCount));
+        return Arrays.asList(obj, callsCountText);
     }
 
     private void removeCallObserver()
@@ -503,6 +550,7 @@ public class IvrMultichannelEndpointNode extends BaseNode
                 IvrEndpointConversationImpl conversation = null;
                 try {
                     conversation = getAndRemoveConversation(event);
+                    callsCount.incrementAndGet();
                 } finally {
                     callsLock.writeLock().unlock();
                 }

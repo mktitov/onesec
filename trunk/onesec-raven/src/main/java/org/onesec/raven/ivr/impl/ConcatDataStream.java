@@ -195,6 +195,7 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
 
     private String logMess(String mess, Object... args)
     {
-        return (logPrefix==null? "" : logPrefix)+"AudioStream. "+String.format(mess, args);
+        return dataSource.logMess(mess, args);
+//        return (logPrefix==null? "" : logPrefix)+"AudioStream. "+String.format(mess, args);
     }
 }

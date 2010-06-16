@@ -38,8 +38,7 @@ public class OutgoingRtpStreamImpl extends AbstractRtpStream implements Outgoing
     private AudioStream audioStream;
     private RTPManager rtpManager;
     private SendStream sendStream;
-    private String remoteHost;
-    private int remotePort;
+    private SessionAddress destAddress;
 
     public OutgoingRtpStreamImpl(InetAddress address, int portNumber)
     {
@@ -67,7 +66,7 @@ public class OutgoingRtpStreamImpl extends AbstractRtpStream implements Outgoing
                         "Trying to open RTP stream to the remote host (%s) using port (%s)"
                         , remoteHost, remotePort));
             this.audioStream = audioStream;
-            SessionAddress destAddress = new SessionAddress(InetAddress.getByName(remoteHost), remotePort);
+            destAddress = new SessionAddress(InetAddress.getByName(remoteHost), remotePort);
             rtpManager = RTPManager.newInstance();
             rtpManager.initialize(new SessionAddress(address, port));
             rtpManager.addTarget(destAddress);
@@ -99,13 +98,18 @@ public class OutgoingRtpStreamImpl extends AbstractRtpStream implements Outgoing
         TransmissionStats stats = sendStream.getSourceTransmissionStats();
         incHandledBytesBy(stats.getBytesTransmitted());
         incHandledPacketsBy(stats.getPDUTransmitted());
-        try
-        {
-            audioStream.close();
-        }
-        finally
-        {
-            sendStream.close();
+        try{
+            try{
+                try {
+                    audioStream.close();
+                } finally {
+                    sendStream.close();
+                }
+            }finally{
+                rtpManager.removeTarget(destAddress, "disconnected");
+            }
+        }finally{
+            rtpManager.dispose();
         }
         
     }

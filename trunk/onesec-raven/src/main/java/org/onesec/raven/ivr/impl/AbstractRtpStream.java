@@ -33,6 +33,9 @@ public abstract class AbstractRtpStream implements RtpStream
     protected final int port;
     private final String streamType;
 
+    protected String remoteHost;
+    protected int remotePort;
+
     private AtomicLong handledPackets;
     private AtomicLong handledBytes;
     private RtpStreamManagerNode manager;
@@ -67,6 +70,14 @@ public abstract class AbstractRtpStream implements RtpStream
     public int getPort()
     {
         return port;
+    }
+
+    public String getRemoteHost() {
+        return remoteHost;
+    }
+
+    public int getRemotePort() {
+        return remotePort;
     }
 
     void setManager(RtpStreamManagerNode manager)
