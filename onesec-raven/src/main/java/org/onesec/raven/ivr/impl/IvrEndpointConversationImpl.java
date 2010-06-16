@@ -153,19 +153,21 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             {
                 outgoingRtpStream.open(remoteAddress, remotePort, audioStream);
                 outgoingRtpStream.start();
+                
+                state.setState(TALKING);
+
+                if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                    owner.getLogger().debug(callLog("Conversation successfully started"));
+
+                continueConversation(EMPTY_DTMF);
             }
             catch (RtpStreamException ex)
             {
+                if (owner.isLogLevelEnabled(LogLevel.ERROR))
+                    owner.getLogger().error(ex.getMessage(), ex);
                 stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
             }
 
-            state.setState(TALKING);
-
-            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                owner.getLogger().debug(callLog("Conversation successfully started"));
-
-            continueConversation(EMPTY_DTMF);
-            
             return state;
         }
         finally
@@ -262,8 +264,11 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 }
                 try
                 {
-                    if (call.getState()==Call.ACTIVE)
+                    if (call.getState()==Call.ACTIVE){
+                        if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                            owner.getLogger().debug(callLog("Droping the call"));
                         call.drop();
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -363,5 +368,10 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     public String getObjectDescription()
     {
         return getCallId();
+    }
+
+    @Override
+    public String toString() {
+        return callId;
     }
 }

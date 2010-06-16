@@ -23,9 +23,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.onesec.raven.ivr.IncomingRtpStream;
@@ -36,6 +38,9 @@ import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.log.LogLevel;
 import org.raven.tree.Node;
+import org.raven.tree.NodeAttribute;
+import org.raven.tree.Viewable;
+import org.raven.tree.ViewableObject;
 import org.raven.tree.impl.BaseNode;
 import org.weda.annotations.constraints.NotNull;
 
@@ -44,7 +49,7 @@ import org.weda.annotations.constraints.NotNull;
  * @author Mikhail Titov
  */
 @NodeClass
-public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager
+public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, Viewable
 {
     @NotNull @Parameter(defaultValue="20")
     private Integer maxStreamCount;
@@ -86,6 +91,38 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager
         super.doStop();
 
         releaseStreams(streams);
+    }
+
+    public Boolean getAutoRefresh() {
+        return true;
+    }
+
+    public Map<String, NodeAttribute> getRefreshAttributes() throws Exception {
+        return null;
+    }
+
+    public List<ViewableObject> getViewableObjects(Map<String, NodeAttribute> refreshAttributes) 
+            throws Exception
+    {
+        if (!Status.STARTED.equals(getStatus()))
+            return null;
+        if (streamsLock.readLock().tryLock(500, TimeUnit.MILLISECONDS)){
+            try {
+                List<RtpStream> inStreams = new ArrayList<RtpStream>();
+                List<RtpStream> outStreams = new ArrayList<RtpStream>();
+                for (Map.Entry<InetAddress, NavigableMap<Integer, RtpStream>> addr: streams.entrySet()){
+                    NavigableMap<Integer, RtpStream> ports = addr.getValue();
+                    if (ports!=null)
+                        for (RtpStream stream: ports.values())
+                            if (stream instanceof OutgoingRtpStream)
+                                outStreams.add(stream);
+                            else
+                                inStreams.add(stream);
+                }
+            } finally {
+                streamsLock.readLock().unlock();
+            }
+        }
     }
 
     public Integer getMaxStreamCount()
