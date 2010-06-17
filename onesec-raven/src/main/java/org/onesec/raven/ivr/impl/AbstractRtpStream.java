@@ -32,6 +32,7 @@ public abstract class AbstractRtpStream implements RtpStream
     protected final InetAddress address;
     protected final int port;
     private final String streamType;
+    protected final long creationTime;
 
     protected String remoteHost;
     protected int remotePort;
@@ -47,9 +48,15 @@ public abstract class AbstractRtpStream implements RtpStream
         this.address = address;
         this.port = port;
         this.streamType = streamType;
+        this.creationTime = System.currentTimeMillis();
 
         handledBytes = new AtomicLong();
         handledPackets = new AtomicLong();
+    }
+
+    public long getCreationTime()
+    {
+        return creationTime;
     }
 
     Node getOwner()

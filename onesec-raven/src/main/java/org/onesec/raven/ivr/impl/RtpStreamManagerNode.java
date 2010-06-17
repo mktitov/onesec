@@ -19,9 +19,11 @@ package org.onesec.raven.ivr.impl;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,12 +39,15 @@ import org.onesec.raven.ivr.RtpStreamManager;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.log.LogLevel;
+import org.raven.table.TableImpl;
 import org.raven.tree.Node;
 import org.raven.tree.NodeAttribute;
 import org.raven.tree.Viewable;
 import org.raven.tree.ViewableObject;
 import org.raven.tree.impl.BaseNode;
+import org.raven.tree.impl.ViewableObjectImpl;
 import org.weda.annotations.constraints.NotNull;
+import org.weda.internal.annotations.Message;
 
 /**
  *
@@ -55,13 +60,31 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
     private Integer maxStreamCount;
 
     private Map<InetAddress, NavigableMap<Integer, RtpStream>> streams;
-
     private ReentrantReadWriteLock streamsLock;
 
     private AtomicLong sendedBytes;
     private AtomicLong recievedBytes;
     private AtomicLong sendedPackets;
     private AtomicLong recievedPackets;
+    private AtomicLong rejectedStreamCreations;
+    private AtomicLong streamCreations;
+
+    @Message private static String statMessage;
+    @Message private static String sendedBytesMessage;
+    @Message private static String sendedPacketsMessage;
+    @Message private static String recievedBytesMessage;
+    @Message private static String recievedPacketsMessage;
+    @Message private static String createdStreamsMessage;
+    @Message private static String rejectedStreamsMessage;
+    @Message private static String incomingStreamMessage ;
+    @Message private static String outgoingStreamMessage ;
+    @Message private static String localAddressMessage;
+    @Message private static String localPortMessage;
+    @Message private static String remoteAddressMessage;
+    @Message private static String remotePortMessage;
+    @Message private static String creationTimeMessage;
+    @Message private static String durationMessage;
+    @Message private static String managerBusyMessage;
 
     @Override
     protected void initFields()
@@ -73,6 +96,8 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
         recievedBytes = new AtomicLong();
         recievedPackets = new AtomicLong();
         sendedPackets = new AtomicLong();
+        rejectedStreamCreations = new AtomicLong();
+        streamCreations = new AtomicLong();
     }
 
     @Override
@@ -83,13 +108,14 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
         recievedBytes.set(0);
         sendedPackets.set(0);
         recievedPackets.set(0);
+        rejectedStreamCreations.set(0);
+        streamCreations.set(0);
     }
 
     @Override
     protected void doStop() throws Exception
     {
         super.doStop();
-
         releaseStreams(streams);
     }
 
@@ -106,23 +132,54 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
     {
         if (!Status.STARTED.equals(getStatus()))
             return null;
+        
+        List<ViewableObject> vos = new ArrayList<ViewableObject>();
         if (streamsLock.readLock().tryLock(500, TimeUnit.MILLISECONDS)){
             try {
-                List<RtpStream> inStreams = new ArrayList<RtpStream>();
-                List<RtpStream> outStreams = new ArrayList<RtpStream>();
+                TableImpl statTable = new TableImpl(new String[]{
+                    createdStreamsMessage, rejectedStreamsMessage, sendedBytesMessage, sendedPacketsMessage,
+                    recievedBytesMessage, recievedPacketsMessage});
+                statTable.addRow(new Object[]{streamCreations, rejectedStreamCreations,
+                    sendedBytes, sendedPackets, recievedBytes, recievedPackets});
+
+                String[] colnames = {
+                    localAddressMessage, localPortMessage, remoteAddressMessage, remotePortMessage,
+                    creationTimeMessage, durationMessage};
+                TableImpl inStreams = new TableImpl(colnames);
+                TableImpl outStreams = new TableImpl(colnames);
+                SimpleDateFormat fmt = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
                 for (Map.Entry<InetAddress, NavigableMap<Integer, RtpStream>> addr: streams.entrySet()){
                     NavigableMap<Integer, RtpStream> ports = addr.getValue();
                     if (ports!=null)
                         for (RtpStream stream: ports.values())
                             if (stream instanceof OutgoingRtpStream)
-                                outStreams.add(stream);
+                                outStreams.addRow(createRowFromStream(stream, fmt));
                             else
-                                inStreams.add(stream);
+                                inStreams.addRow(createRowFromStream(stream, fmt));
                 }
+                vos = new ArrayList<ViewableObject>();
+                vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, statMessage));
+                vos.add(new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, statTable));
+                vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, outgoingStreamMessage));
+                vos.add(new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, outStreams));
+                vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, incomingStreamMessage));
+                vos.add(new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, inStreams));
             } finally {
                 streamsLock.readLock().unlock();
             }
-        }
+        } else
+            vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, managerBusyMessage));
+        
+        return vos;
+    }
+
+    private Object[] createRowFromStream(RtpStream stream, SimpleDateFormat fmt)
+    {
+        return new Object[]{
+            stream.getAddress().toString(), stream.getPort(),
+            stream.getRemoteHost(), stream.getRemotePort(),
+            fmt.format(new Date(stream.getCreationTime())),
+            (System.currentTimeMillis()-stream.getCreationTime())/1000};
     }
 
     public Integer getMaxStreamCount()
@@ -249,6 +306,8 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
                 ((AbstractRtpStream)stream).setOwner(owner);
                 portStreams.put(portNumber, stream);
 
+                streamCreations.incrementAndGet();
+
                 return stream;
             }
             finally
@@ -258,6 +317,7 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
         }
         catch (Exception e)
         {
+            rejectedStreamCreations.incrementAndGet();
             if (isLogLevelEnabled(LogLevel.ERROR))
                 error(
                     String.format(
