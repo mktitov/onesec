@@ -75,6 +75,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     private String callId;
     private BindingSupportImpl bindingSupport;
     private IvrEndpointConversationStateImpl state;
+    private String callingNumber;
 
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
@@ -99,6 +100,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         this.remoteAddress = remoteAddress;
         this.remotePort = remotePort;
         this.call = (CiscoCall)call;
+        this.callingNumber = call.getCallingAddress().getName();
         callId = getCallId();
 
         outgoingRtpStream = streamManager.getOutgoingRtpStream(owner);
@@ -108,8 +110,9 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         conversationState.setBinding(DTMF_BINDING, "-", BindingScope.REQUEST);
         conversationState.setBindingDefaultValue(DTMF_BINDING, "-");
         conversationState.setBinding(VARS_BINDING, new HashMap(), BindingScope.CONVERSATION);
-        conversationState.setBinding(
-                CONVERSATION_STATE_BINDING, conversationState, BindingScope.CONVERSATION);
+        conversationState.setBinding(CONVERSATION_STATE_BINDING, conversationState, BindingScope.CONVERSATION);
+        conversationState.setBinding(NUMBER_BINDING, callingNumber, BindingScope.CONVERSATION);
+
         audioStream = new ConcatDataSource(FileTypeDescriptor.WAVE, executor, 240, 5, 5, owner);
         audioStream.setLogPrefix(callId+" : ");
         actionsExecutor = new IvrActionsExecutor(this, executor);

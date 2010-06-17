@@ -33,6 +33,7 @@ public interface IvrEndpointConversation extends ObjectDescription
     public final static String DTMFS_BINDING = "dtmfs";
     public final static String CONVERSATION_STATE_BINDING = "conversationState";
     public final static String VARS_BINDING = "vars";
+    public final static String NUMBER_BINDING = "number";
     /**
      * Returns the node owned by this conversation.
      */

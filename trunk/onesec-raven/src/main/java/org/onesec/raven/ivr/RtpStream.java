@@ -58,6 +58,10 @@ public interface RtpStream
      * Returns the port on the remote side
      */
     public int getRemotePort();
+    /**
+     * Returns the stream creation time
+     */
+    public long getCreationTime();
     
     public void setLogPrefix(String prefix);
 }
