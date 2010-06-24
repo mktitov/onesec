@@ -56,6 +56,7 @@ import org.easymock.EasyMock;
 import org.easymock.IArgumentMatcher;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.InputStreamSource;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
@@ -104,8 +105,8 @@ public class RTPSessionTest extends EasyMock implements ReceiveStreamListener, S
         InputStreamSource source2 = new TestInputStreamSource("src/test/wav/test_16.wav");
         InputStreamSource source3 = new TestInputStreamSource("src/test/wav/test_16.wav");
 
-        ConcatDataSource dataSource =
-                new ConcatDataSource(FileTypeDescriptor.WAVE, executorService, 240, 5, 0, owner);
+        ConcatDataSource dataSource = new ConcatDataSource(
+                FileTypeDescriptor.WAVE, executorService, Codec.G711_MU_LAW, 240, 5, 0, owner);
 
 //        RTPSession session = new RTPSession("127.0.0.1", 1234, dataSource);
         
@@ -162,8 +163,8 @@ public class RTPSessionTest extends EasyMock implements ReceiveStreamListener, S
         InputStreamSource source2 = new TestInputStreamSource("src/test/wav/test.wav");
         InputStreamSource source3 = new TestInputStreamSource("src/test/wav/test.wav");
 
-        ConcatDataSource dataSource =
-                new ConcatDataSource(FileTypeDescriptor.WAVE, executorService, 240, 5, 5, owner);
+        ConcatDataSource dataSource = new ConcatDataSource(
+                FileTypeDescriptor.WAVE, executorService, Codec.G711_MU_LAW, 240, 5, 5, owner);
 
         dataSource.addSource(source1);
 //        dataSource.addSource(source2);

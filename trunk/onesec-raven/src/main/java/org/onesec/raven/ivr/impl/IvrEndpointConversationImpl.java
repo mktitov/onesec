@@ -64,7 +64,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     private final ExecutorService executor;
     private final ConversationScenario scenario;
     private final RtpStreamManager streamManager;
-    private final Codec codec;
+    private Codec codec;
 
     private OutgoingRtpStream outgoingRtpStream;
     private IncomingRtpStream incomingRtpStream;
@@ -83,14 +83,13 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
 
     public IvrEndpointConversationImpl(
             Node owner, ExecutorService executor
-            , ConversationScenario scenario, RtpStreamManager streamManager, Codec codec)
+            , ConversationScenario scenario, RtpStreamManager streamManager)
         throws Exception
     {
         this.owner = owner;
         this.executor = executor;
         this.scenario = scenario;
         this.streamManager = streamManager;
-        this.codec = codec;
 
         incomingRtpStream = streamManager.getIncomingRtpStream(owner);
         
@@ -98,8 +97,9 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         state.setState(INVALID);
     }
 
-    public void init(CallControlCall call, String remoteAddress, int remotePort, int packetSize)
-            throws Exception
+    public void init(CallControlCall call, String remoteAddress, int remotePort, int packetSize,
+            int initialBufferSize, int maxSendAheadPacketsCount, Codec codec)
+        throws Exception
     {
         this.remoteAddress = remoteAddress;
         this.remotePort = remotePort;
@@ -117,7 +117,9 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         conversationState.setBinding(CONVERSATION_STATE_BINDING, conversationState, BindingScope.CONVERSATION);
         conversationState.setBinding(NUMBER_BINDING, callingNumber, BindingScope.CONVERSATION);
 
-        audioStream = new ConcatDataSource(FileTypeDescriptor.WAVE, executor, codec, packetSize, 5, 5, owner);
+        audioStream = new ConcatDataSource(
+                FileTypeDescriptor.WAVE, executor, codec, packetSize, initialBufferSize
+                , maxSendAheadPacketsCount, owner);
         audioStream.setLogPrefix(callId+" : ");
         actionsExecutor = new IvrActionsExecutor(this, executor);
         actionsExecutor.setLogPrefix(callId+" : ");

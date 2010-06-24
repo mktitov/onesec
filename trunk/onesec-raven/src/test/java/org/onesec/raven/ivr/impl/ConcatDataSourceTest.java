@@ -24,6 +24,7 @@ import javax.media.protocol.FileTypeDescriptor;
 import org.easymock.EasyMock;
 import org.easymock.IArgumentMatcher;
 import org.junit.Test;
+import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.InputStreamSource;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
@@ -60,8 +61,8 @@ public class ConcatDataSourceTest extends EasyMock
         InputStreamSource source2 = new TestInputStreamSource("src/test/wav/test.wav");
         InputStreamSource source3 = new TestInputStreamSource("src/test/wav/test.wav");
 
-        ConcatDataSource dataSource =
-                new ConcatDataSource(FileTypeDescriptor.WAVE, executorService, 240, 5, 5, owner);
+        ConcatDataSource dataSource = new ConcatDataSource(
+                FileTypeDescriptor.WAVE, executorService, Codec.G711_A_LAW, 240, 5, 5, owner);
 
         Player player = Manager.createPlayer(dataSource);
         player.start();

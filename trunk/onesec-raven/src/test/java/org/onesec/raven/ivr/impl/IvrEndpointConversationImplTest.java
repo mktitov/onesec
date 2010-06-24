@@ -52,6 +52,7 @@ import org.onesec.core.provider.ProviderController;
 import org.onesec.core.provider.ProviderControllerState;
 import org.onesec.core.services.ProviderRegistry;
 import org.onesec.raven.OnesecRavenTestCase;
+import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.actions.PauseActionNode;
 import org.onesec.raven.ivr.actions.PlayAudioActionNode;
 import org.onesec.raven.ivr.actions.StopConversationActionNode;
@@ -277,7 +278,9 @@ public class IvrEndpointConversationImplTest extends OnesecRavenTestCase
                             conversation = new IvrEndpointConversationImpl(
                                     conversationOwner, executor, scenario
                                     , manager);
-                            conversation.init(call, props.getRemoteAddress().getHostAddress(), props.getRemotePort());
+                            conversation.init(
+                                    call, props.getRemoteAddress().getHostAddress(), props.getRemotePort()
+                                    , props.getPacketSize()*8, 5, 0, Codec.G711_MU_LAW);
                         }
 
                         conversation.startConversation();

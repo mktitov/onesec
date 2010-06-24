@@ -55,9 +55,11 @@ import javax.telephony.callcontrol.CallControlCall;
 import javax.telephony.callcontrol.CallControlCallObserver;
 import javax.telephony.callcontrol.CallControlConnection;
 import javax.telephony.callcontrol.events.CallCtlConnEstablishedEv;
+import javax.telephony.callcontrol.events.CallCtlConnFailedEv;
 import javax.telephony.callcontrol.events.CallCtlConnOfferedEv;
 import javax.telephony.events.AddrEv;
 import javax.telephony.events.CallEv;
+import javax.telephony.events.ConnFailedEv;
 import javax.telephony.events.ProvEv;
 import javax.telephony.events.TermConnRingingEv;
 import javax.telephony.events.TermEv;
@@ -69,6 +71,7 @@ import org.onesec.raven.codec.AlawAudioFormat;
 import org.onesec.raven.codec.UlawPacketizer;
 import org.onesec.raven.codec.AlawPacketizer;
 import org.onesec.raven.codec.AlawEncoder;
+import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.InputStreamSource;
 
 /**
@@ -170,7 +173,7 @@ public class RTPTest
         //        fail();
     }
 
-    @Test
+//    @Test
     public void rtpTest3() throws Exception
     {
         InputStreamSource source = new TestInputStreamSource("src/test/wav/test.wav");
@@ -217,7 +220,7 @@ public class RTPTest
         TimeUnit.SECONDS.sleep(10);
     }
 
-//    @Test
+    @Test
     public void callTest() throws Exception
     {
         CListener listener = new CListener();
@@ -235,36 +238,21 @@ public class RTPTest
             System.out.println("Address: "+address.toString()+", class: "+address.getClass().getName());
             address.addObserver(listener);
             CiscoMediaTerminal terminal = (CiscoMediaTerminal) address.getTerminals()[0];
-//            CiscoRouteTerminal terminal = (CiscoRouteTerminal) address.getTerminals()[0];
             if (terminal==null)
                 throw new Exception("Terminal not found");
             System.out.println("Found terminal: "+terminal.toString());
-//            CiscoMediaTerminal terminal = (CiscoMediaTerminal) provider.getTerminal("CTI_InfoPort");
-//            if (terminal==null)
-//                throw new Exception("Terminal not found");
-//            System.out.println("Found terminal: "+terminal.toString());
-            CiscoMediaCapability[] caps =
-                    new CiscoMediaCapability[]{CiscoMediaCapability.G711_64K_30_MILLISECONDS};
-            terminal.register(InetAddress.getByName("10.50.1.134"), 1234, caps);
-//            terminal.register(caps);
-//            terminal.register(caps, CiscoRouteTerminal.DYNAMIC_MEDIA_REGISTRATION);
+            CiscoMediaCapability cap = new CiscoMediaCapability(2, 30);
+//            cap.
+//            CiscoMediaCapability[] caps = new CiscoMediaCapability[]{Codec.G711_MU_LAW.getCiscoMediaCapability()};
+            terminal.register(InetAddress.getByName("10.50.1.134"), 1234, Codec.AUTO.getCiscoMediaCapabilities());
             terminal.addObserver(listener);
-//            Address address = terminal.getAddresses()[0];
-//            if (address==null)
-//                throw new Exception("Address not found");
-//            System.out.println("Address: "+address.toString());
             address.addCallObserver(listener);
 
-//            TimeUnit.SECONDS.sleep(2);
+            TimeUnit.SECONDS.sleep(2);
             Call call = provider.createCall();
-            call.connect(terminal, address, "089128672947");
-//            terminal.
-//            TimeUnit.SECONDS.sleep(20);
-//            dataSource.addSource(source3);
-            TimeUnit.SECONDS.sleep(30);
-
-//            System.out.println("   Press the Enter key to exit");
-//            System.in.read();
+//            call.connect(terminal, address, "88024");
+            call.connect(terminal, address, "09989128672947");
+            TimeUnit.SECONDS.sleep(60);
         }
         finally
         {
@@ -349,7 +337,16 @@ public class RTPTest
         public void callChangedEvent(CallEv[] events)
         {
             System.out.println("Address call events: "+eventsToString(events));
-            for (CallEv event: events)
+            for (CallEv event: events){
+                switch (event.getID()){
+                    case ConnFailedEv.ID: {
+                        ConnFailedEv ev = (ConnFailedEv) event;
+                        System.out.println("FAILED cause: "+ev.getCause());
+                        break;}
+                    case CallCtlConnFailedEv.ID:
+                        CallCtlConnFailedEv ev = (CallCtlConnFailedEv) event;
+                        System.out.println("CallCtl FAILED cause: "+event.getCause());
+                }
                 if (event instanceof CallCtlConnOfferedEv)
                 {
                     CallCtlConnOfferedEv offEvent = (CallCtlConnOfferedEv)event;
@@ -383,11 +380,19 @@ public class RTPTest
                     System.out.println("DTMF: "+((MediaTermConnDtmfEv)event).getDtmfDigit());
 //                    conversation.continueConversation(((MediaTermConnDtmfEv)event).getDtmfDigit());
                 }
+            }
+
         }
 
         public void addressChangedEvent(AddrEv[] events)
         {
             System.out.println("Address events: "+eventsToString(events));
+            for (AddrEv event: events){
+                switch (event.getID()){
+                    case ConnFailedEv.ID:
+                    case CallCtlConnFailedEv.ID: System.out.println("FAILED: "+event.toString());
+                }
+            }
         }
 
         private String eventsToString(Object[] events)
@@ -400,6 +405,9 @@ public class RTPTest
 
         private void startRtp(CiscoRTPOutputProperties props) throws Exception
         {
+            System.out.println("PAYLOAD: "+props.getPayloadType());
+            Codec codec = Codec.getCodecByCiscoPayload(props.getPayloadType());
+            System.out.println("USING codec: "+codec);
             InputStreamSource source = new TestInputStreamSource("src/test/wav/test.wav");
             IssDataSource dataSource = new IssDataSource(source, FileTypeDescriptor.WAVE);
 
@@ -407,10 +415,12 @@ public class RTPTest
             //        processor.addControllerListener(this);
             processor.configure();
             waitForState(processor, Processor.Configured);
-    //        Format format = new AudioFormat(AudioFormat.ULAW_RTP, 8000d, 8, 1);
+//            Format format = new AudioFormat(AudioFormat.ULAW_RTP, 8000d, 8, 1);
     //        Format format = new AudioFormat(Constants.ALAW_RTP, 8000d, 8, 1);
-            Format format = new AudioFormat(AlawAudioFormat.ALAW_RTP, 8000d, 8, 1);
+//            Format format = new AudioFormat(AlawAudioFormat.ALAW_RTP, 8000d, 8, 1);
             TrackControl[] tracks = processor.getTrackControls();
+            Format format = codec.getAudioFormat();
+            System.out.println("USING audio format: "+format);
             tracks[0].setFormat(format);
             processor.setContentDescriptor(new ContentDescriptor(ContentDescriptor.RAW_RTP));
             processor.realize();

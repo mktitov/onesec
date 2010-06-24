@@ -22,6 +22,7 @@ import javax.media.Manager;
 import javax.media.Player;
 import javax.media.protocol.FileTypeDescriptor;
 import org.onesec.raven.ivr.AudioStream;
+import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.CompletionCode;
 import org.onesec.raven.ivr.ConversationCompletionCallback;
 import org.onesec.raven.ivr.IvrConversationScenario;
@@ -52,7 +53,8 @@ public class TestEndpointNode extends BaseNode implements IvrEndpoint
     protected void doStart() throws Exception
     {
         super.doStart();
-        audioStream = new ConcatDataSource(FileTypeDescriptor.WAVE, executorService, 240, 5, 5, this);
+        audioStream = new ConcatDataSource(
+                FileTypeDescriptor.WAVE, executorService, Codec.G711_A_LAW, 240, 5, 5, this);
         player = Manager.createPlayer(audioStream);
         player.start();
     }

@@ -26,8 +26,10 @@ import javax.media.rtp.SessionAddress;
 import javax.media.rtp.TransmissionStats;
 import org.onesec.raven.ivr.AudioStream;
 import org.onesec.raven.ivr.OutgoingRtpStream;
+import org.onesec.raven.ivr.RTPManagerService;
 import org.onesec.raven.ivr.RtpStreamException;
 import org.raven.log.LogLevel;
+import org.weda.internal.annotations.Service;
 
 /**
  *
@@ -35,6 +37,9 @@ import org.raven.log.LogLevel;
  */
 public class OutgoingRtpStreamImpl extends AbstractRtpStream implements OutgoingRtpStream
 {
+    @Service
+    private static RTPManagerService rtpManagerService;
+
     private AudioStream audioStream;
     private RTPManager rtpManager;
     private SendStream sendStream;
@@ -67,7 +72,7 @@ public class OutgoingRtpStreamImpl extends AbstractRtpStream implements Outgoing
                         , remoteHost, remotePort));
             this.audioStream = audioStream;
             destAddress = new SessionAddress(InetAddress.getByName(remoteHost), remotePort);
-            rtpManager = RTPManager.newInstance();
+            rtpManager = rtpManagerService.createRtpManager();
             rtpManager.initialize(new SessionAddress(address, port));
             rtpManager.addTarget(destAddress);
             sendStream = rtpManager.createSendStream(audioStream.getDataSource(), 0);

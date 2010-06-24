@@ -33,12 +33,10 @@ import javax.media.Processor;
 import javax.media.Time;
 import javax.media.control.PacketSizeControl;
 import javax.media.control.TrackControl;
-import javax.media.format.AudioFormat;
 import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.DataSource;
 import javax.media.protocol.PushBufferDataSource;
 import javax.media.protocol.PushBufferStream;
-import org.onesec.raven.codec.AlawAudioFormat;
 import org.onesec.raven.ivr.AudioStream;
 import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.InputStreamSource;
@@ -93,10 +91,7 @@ public class ConcatDataSource
         this.rtpInitialBufferSize = rtpInitialBufferSize;
         this.rtpMaxSendAheadPacketsCount = rtpMaxSendAheadPacketsCount;
 
-        if (codec==Codec.G711_A_LAW)
-            format = new AudioFormat(AlawAudioFormat.ALAW_RTP, 8000d, 8, 1);
-        else
-            format = new AudioFormat(AudioFormat.ULAW_RTP, 8000d, 8, 1);
+        format = codec.getAudioFormat();
 
         sources = new ConcurrentLinkedQueue<InputStreamSource>();
         dataConcated = new AtomicBoolean(false);

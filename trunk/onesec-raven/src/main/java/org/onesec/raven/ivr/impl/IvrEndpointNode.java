@@ -132,7 +132,7 @@ public class IvrEndpointNode extends BaseNode
     @NotNull @Parameter(defaultValue="1234")
     private Integer port;
 
-    @NotNull @Parameter(defaultValue="G711_A_LAW")
+    @NotNull @Parameter(defaultValue="AUTO")
     private Codec codec;
 
     @Parameter
@@ -141,7 +141,7 @@ public class IvrEndpointNode extends BaseNode
     @NotNull @Parameter(defaultValue="5")
     private Integer rtpInitialBuffer;
 
-    @NotNull @Parameter(defaultValue="5")
+    @NotNull @Parameter(defaultValue="0")
     private Integer rtpMaxSendAheadPacketsCount;
 
     private Address terminalAddress;
@@ -164,6 +164,7 @@ public class IvrEndpointNode extends BaseNode
     private String remoteAddress;
     private int remotePort;
     private int packetSize;
+    private int payloadType;
     private int connected;
     private boolean rtpInitialized;
     private ConversationResultImpl conversationResult;
@@ -318,14 +319,14 @@ public class IvrEndpointNode extends BaseNode
                         "(CTI_Port on the CCM side)"
                         , terminals[0].getName(), CiscoMediaTerminal.class.getName()));
             terminal = (CiscoMediaTerminal) terminals[0];
-            CiscoMediaCapability[] caps =
-                    new CiscoMediaCapability[]{CiscoMediaCapability.G711_64K_30_MILLISECONDS};
+//            CiscoMediaCapability[] caps =
+//                    new CiscoMediaCapability[]{CiscoMediaCapability.G711_64K_30_MILLISECONDS};
 
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 debug(String.format(
                         "Registering terminal using local ip (%s) and local port (%s)..."
                         , ip, port));
-            terminal.register(InetAddress.getByName(ip), port, caps);
+            terminal.register(InetAddress.getByName(ip), port, codec.getCiscoMediaCapabilities());
 
             terminal.addObserver(this);
             observingTerminal.set(true);
@@ -556,8 +557,9 @@ public class IvrEndpointNode extends BaseNode
                     remoteAddress = props.getRemoteAddress().getHostAddress();
                     remotePort = props.getRemotePort();
                     packetSize = props.getPacketSize()*8;
+                    payloadType = props.getPayloadType();
                     rtpInitialized = true;
-                    startRtpSession(remoteAddress, remotePort, packetSize);
+                    startRtpSession(remoteAddress, remotePort, packetSize, payloadType);
                     break;
                 case CiscoRTPOutputStoppedEv.ID: closeRtpSession(); break;
                 case TermObservationEndedEv.ID: observingTerminal.set(false); break;
@@ -602,7 +604,7 @@ public class IvrEndpointNode extends BaseNode
                     CallCtlConnEstablishedEv e = (CallCtlConnEstablishedEv) event;
                     ++connected;
                     call = event.getCall();
-                    startRtpSession(remoteAddress, remotePort, packetSize);
+                    startRtpSession(remoteAddress, remotePort, packetSize, payloadType);
                     break;
                 case TermConnDroppedEv.ID:
                     stopConversation(CompletionCode.COMPLETED_BY_OPPONENT);
@@ -890,7 +892,8 @@ public class IvrEndpointNode extends BaseNode
         this.executorService = executorService;
     }
 
-    private synchronized void startRtpSession(String remoteHost, int remotePort, int packetSize)
+    private synchronized void startRtpSession(
+            String remoteHost, int remotePort, int packetSize, int payloadType)
     {
         if (connected<2 || !rtpInitialized)
         {
@@ -902,18 +905,27 @@ public class IvrEndpointNode extends BaseNode
         endpointState.setState(IvrEndpointState.TALKING);
         if (handlingIncomingCall)
             conversationResult.setConversationStartTime(System.currentTimeMillis());
-        if (isLogLevelEnabled(LogLevel.DEBUG))
+        if (isLogLevelEnabled(LogLevel.DEBUG)){
             debug(String.format(
                     "Starting rtp session: remoteHost (%s), remotePort (%s)"
                     , remoteHost, remotePort));
+            debug("Proposed RTP params: packetSize ({}), payloadType ({})", packetSize, payloadType);
+        }
         Integer psize = rtpPacketSize;
         if (psize==null)
             psize = packetSize;
-        audioStream = new ConcatDataSource(
-                FileTypeDescriptor.WAVE, executorService, codec
-                , psize, rtpInitialBuffer, rtpMaxSendAheadPacketsCount, this);
         try
         {
+            Codec streamCodec = Codec.getCodecByCiscoPayload(payloadType);
+            if (streamCodec==null)
+                throw new Exception(String.format("Not supported payload type (%s)", payloadType));
+            if (isLogLevelEnabled(LogLevel.DEBUG))
+                debug(String.format(
+                        "Choosed RTP params: packetSize (%s), codec (%s), audioFormat (%s)"
+                        , psize, streamCodec, streamCodec.getAudioFormat()));
+            audioStream = new ConcatDataSource(
+                    FileTypeDescriptor.WAVE, executorService, streamCodec
+                    , psize, rtpInitialBuffer, rtpMaxSendAheadPacketsCount, this);
             conversationState = currentConversation.createConversationState();
             conversationState.setBinding(DTMF_BINDING, "-", BindingScope.REQUEST);
             conversationState.setBinding(DTMFS_BINDING, new ArrayList<Character>(), BindingScope.REQUEST);
