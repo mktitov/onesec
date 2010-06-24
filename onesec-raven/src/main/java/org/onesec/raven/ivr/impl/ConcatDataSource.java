@@ -25,20 +25,22 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.media.Buffer;
-import javax.media.Codec;
 import javax.media.ControllerEvent;
 import javax.media.ControllerListener;
 import javax.media.Format;
 import javax.media.Manager;
 import javax.media.Processor;
 import javax.media.Time;
+import javax.media.control.PacketSizeControl;
 import javax.media.control.TrackControl;
 import javax.media.format.AudioFormat;
 import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.DataSource;
 import javax.media.protocol.PushBufferDataSource;
 import javax.media.protocol.PushBufferStream;
+import org.onesec.raven.codec.AlawAudioFormat;
 import org.onesec.raven.ivr.AudioStream;
+import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.InputStreamSource;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
@@ -66,7 +68,8 @@ public class ConcatDataSource
     private final AtomicBoolean stoped;
     private final AtomicBoolean sourceThreadRunning;
     private final AtomicBoolean streamThreadRunning;
-    private final Format format = new AudioFormat(AudioFormat.ULAW_RTP, 8000d, 8, 1);
+//    private final Format FORMAT = new AudioFormat(AudioFormat.ULAW_RTP, 8000d, 8, 1);
+    public final Format format;
     private final int rtpPacketSize;
     private final int rtpInitialBufferSize;
     private final int rtpMaxSendAheadPacketsCount;
@@ -77,6 +80,7 @@ public class ConcatDataSource
 
     public ConcatDataSource(String contentType
             , ExecutorService executorService
+            , Codec codec
             , int rtpPacketSize
             , int rtpInitialBufferSize
             , int rtpMaxSendAheadPacketsCount
@@ -88,6 +92,11 @@ public class ConcatDataSource
         this.rtpPacketSize = rtpPacketSize;
         this.rtpInitialBufferSize = rtpInitialBufferSize;
         this.rtpMaxSendAheadPacketsCount = rtpMaxSendAheadPacketsCount;
+
+        if (codec==Codec.G711_A_LAW)
+            format = new AudioFormat(AlawAudioFormat.ALAW_RTP, 8000d, 8, 1);
+        else
+            format = new AudioFormat(AudioFormat.ULAW_RTP, 8000d, 8, 1);
 
         sources = new ConcurrentLinkedQueue<InputStreamSource>();
         dataConcated = new AtomicBoolean(false);
@@ -297,14 +306,24 @@ public class ConcatDataSource
                         waitForState(p, Processor.Configured);
                         TrackControl[] tracks = p.getTrackControls();
                         tracks[0].setFormat(format);
-                        Codec codec[] = new Codec[3];
-                        codec[0] = new com.ibm.media.codec.audio.rc.RCModule();
-                        codec[1] = new com.ibm.media.codec.audio.ulaw.JavaEncoder();
-                        codec[2] = new com.sun.media.codec.audio.ulaw.Packetizer();
-                        ((com.sun.media.codec.audio.ulaw.Packetizer)codec[2]).setPacketSize(rtpPacketSize);
-                        tracks[0].setCodecChain(codec);
+//                        Codec codec[] = new Codec[3];
+//                        codec[0] = new com.ibm.media.codec.audio.rc.RCModule();
+//                        codec[1] = new com.ibm.media.codec.audio.ulaw.JavaEncoder();
+//                        codec[2] = new com.sun.media.codec.audio.ulaw.Packetizer();
+//                        codec[1] = new net.sf.fmj.media.codec.audio.alaw.Encoder();
+//                        codec[2] = new net.sf.fmj.media.codec.audio.alaw.Packetizer();
+//                        codec[0] = new org.onesec.raven.codec.alaw.Encoder();
+//                        codec[1] = new org.onesec.raven.codec.alaw.Packetizer();
+//                        ((net.sf.fmj.media.codec.audio.alaw.Packetizer)codec[2]).setPacketSize(rtpPacketSize);
+//                        tracks[0].setCodecChain(codec);
+                        p.setContentDescriptor(new ContentDescriptor(ContentDescriptor.RAW_RTP));
                         p.realize();
                         waitForState(p, Processor.Realized);
+
+                        PacketSizeControl packetSizeControl =
+                                (PacketSizeControl) p.getControl(PacketSizeControl.class.getName());
+                        packetSizeControl.setPacketSize(rtpPacketSize);
+                        
                         p.start();
                         waitForState(p, Processor.Started);
 

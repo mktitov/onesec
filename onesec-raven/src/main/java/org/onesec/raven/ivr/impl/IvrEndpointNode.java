@@ -73,6 +73,7 @@ import org.onesec.core.provider.ProviderController;
 import org.onesec.core.services.Operator;
 import org.onesec.core.services.ProviderRegistry;
 import org.onesec.core.services.StateListenersCoordinator;
+import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.CompletionCode;
 import org.onesec.raven.ivr.ConversationCompletionCallback;
 import org.onesec.raven.ivr.IvrAction;
@@ -131,7 +132,10 @@ public class IvrEndpointNode extends BaseNode
     @NotNull @Parameter(defaultValue="1234")
     private Integer port;
 
-    @NotNull @Parameter(defaultValue="240")
+    @NotNull @Parameter(defaultValue="G711_A_LAW")
+    private Codec codec;
+
+    @Parameter
     private Integer rtpPacketSize;
 
     @NotNull @Parameter(defaultValue="5")
@@ -159,6 +163,7 @@ public class IvrEndpointNode extends BaseNode
     private Provider provider;
     private String remoteAddress;
     private int remotePort;
+    private int packetSize;
     private int connected;
     private boolean rtpInitialized;
     private ConversationResultImpl conversationResult;
@@ -509,6 +514,14 @@ public class IvrEndpointNode extends BaseNode
         this.rtpMaxSendAheadPacketsCount = rtpMaxSendAheadPacketsCount;
     }
 
+    public Codec getCodec() {
+        return codec;
+    }
+
+    public void setCodec(Codec codec) {
+        this.codec = codec;
+    }
+
     public Integer getRtpPacketSize() {
         return rtpPacketSize;
     }
@@ -542,8 +555,9 @@ public class IvrEndpointNode extends BaseNode
                     CiscoRTPOutputProperties props = rtpOutput.getRTPOutputProperties();
                     remoteAddress = props.getRemoteAddress().getHostAddress();
                     remotePort = props.getRemotePort();
+                    packetSize = props.getPacketSize()*8;
                     rtpInitialized = true;
-                    startRtpSession(remoteAddress, remotePort);
+                    startRtpSession(remoteAddress, remotePort, packetSize);
                     break;
                 case CiscoRTPOutputStoppedEv.ID: closeRtpSession(); break;
                 case TermObservationEndedEv.ID: observingTerminal.set(false); break;
@@ -588,7 +602,7 @@ public class IvrEndpointNode extends BaseNode
                     CallCtlConnEstablishedEv e = (CallCtlConnEstablishedEv) event;
                     ++connected;
                     call = event.getCall();
-                    startRtpSession(remoteAddress, remotePort);
+                    startRtpSession(remoteAddress, remotePort, packetSize);
                     break;
                 case TermConnDroppedEv.ID:
                     stopConversation(CompletionCode.COMPLETED_BY_OPPONENT);
@@ -876,7 +890,7 @@ public class IvrEndpointNode extends BaseNode
         this.executorService = executorService;
     }
 
-    private synchronized void startRtpSession(String remoteHost, int remotePort)
+    private synchronized void startRtpSession(String remoteHost, int remotePort, int packetSize)
     {
         if (connected<2 || !rtpInitialized)
         {
@@ -892,9 +906,12 @@ public class IvrEndpointNode extends BaseNode
             debug(String.format(
                     "Starting rtp session: remoteHost (%s), remotePort (%s)"
                     , remoteHost, remotePort));
+        Integer psize = rtpPacketSize;
+        if (psize==null)
+            psize = packetSize;
         audioStream = new ConcatDataSource(
-                FileTypeDescriptor.WAVE, executorService
-                , rtpPacketSize, rtpInitialBuffer, rtpMaxSendAheadPacketsCount, this);
+                FileTypeDescriptor.WAVE, executorService, codec
+                , psize, rtpInitialBuffer, rtpMaxSendAheadPacketsCount, this);
         try
         {
             conversationState = currentConversation.createConversationState();

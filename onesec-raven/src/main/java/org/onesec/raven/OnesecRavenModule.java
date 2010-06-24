@@ -19,11 +19,15 @@ package org.onesec.raven;
 
 import org.apache.tapestry5.ioc.Configuration;
 import org.apache.tapestry5.ioc.ServiceBinder;
+import org.apache.tapestry5.ioc.annotations.EagerLoad;
 import org.onesec.core.StateListenerConfiguration;
 import org.onesec.core.impl.StateListenerConfigurationImpl;
 import org.onesec.raven.impl.RavenProviderConfiguratorImpl;
 import org.onesec.core.services.ProviderConfiguratorListeners;
 import org.onesec.raven.impl.StateToNodeLoggerImpl;
+import org.onesec.raven.ivr.RTPManagerService;
+import org.onesec.raven.ivr.impl.RTPManagerServiceImpl;
+import org.slf4j.Logger;
 
 /**
  *
@@ -40,6 +44,12 @@ public class OnesecRavenModule
             ProviderConfiguratorListeners listeners)
     {
         return new RavenProviderConfiguratorImpl(listeners);
+    }
+
+    @EagerLoad
+    public RTPManagerService buildRTPManagerService(Logger logger)
+    {
+        return new RTPManagerServiceImpl(logger);
     }
 
     public static void contributeStateListenersCoordinator(

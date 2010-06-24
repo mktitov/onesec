@@ -63,6 +63,16 @@ public class IvrEndpointNodeTest
     @Before
     public void prepare() throws Exception
     {
+//        PlugInManager.addPlugIn(Encoder.class.getName()
+//                , new Format[] {new AudioFormat(AudioFormat.LINEAR, -1.0, 16, 1, -1, AudioFormat.SIGNED, 16, -1.0, Format.byteArray)}
+//				, new Format[] {new AudioFormat(AudioFormat.ALAW, -1.0, 8, 1, -1, AudioFormat.SIGNED, 8, -1.0, Format.byteArray)}
+//                , PlugInManager.CODEC);
+//        PlugInManager.addPlugIn(Packetizer.class.getName()
+//                , new Format[] {new AudioFormat(AudioFormat.ALAW, -1.0, 8, 1, -1, -1, 8, -1.0, Format.byteArray)}
+//				, new Format[] {new AudioFormat(BonusAudioFormatEncodings.ALAW_RTP, -1.0, 8, 1, -1, -1, 8, -1.0, Format.byteArray)}
+//                , PlugInManager.CODEC);
+//        PlugInManager.commit();
+
         CCMCallOperatorNode callOperator = new CCMCallOperatorNode();
         callOperator.setName("call operator");
         tree.getRootNode().addAndSaveChildren(callOperator);
@@ -98,6 +108,7 @@ public class IvrEndpointNodeTest
         endpoint.setExecutorService(executor);
         endpoint.setConversationScenario(scenario);
         endpoint.setAddress("88013");
+        endpoint.setRtpPacketSize(240);
 //        endpoint.setAddress("68050");
         endpoint.setIp(getInterfaceAddress().getHostAddress());
         endpoint.setLogLevel(LogLevel.TRACE);
