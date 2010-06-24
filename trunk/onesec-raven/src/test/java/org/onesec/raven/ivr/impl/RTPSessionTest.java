@@ -28,11 +28,7 @@ import java.net.InetAddress;
 import java.util.concurrent.TimeUnit;
 import javax.media.ControllerEvent;
 import javax.media.ControllerListener;
-import javax.media.Manager;
-import javax.media.MediaLocator;
-import javax.media.Player;
 import javax.media.protocol.FileTypeDescriptor;
-import javax.media.rtp.RTPManager;
 import javax.media.rtp.ReceiveStreamListener;
 import javax.media.rtp.SessionAddress;
 import javax.media.rtp.SessionListener;
@@ -77,6 +73,16 @@ public class RTPSessionTest extends EasyMock implements ReceiveStreamListener, S
     @Test 
     public void test() throws Exception
     {
+//        PlugInManager.addPlugIn(Encoder.class.getName()
+//                , new Format[] {new AudioFormat(AudioFormat.LINEAR, -1.0, 16, 1, -1, AudioFormat.SIGNED, 16, -1.0, Format.byteArray)}
+//				, new Format[] {new AudioFormat(AudioFormat.ALAW, -1.0, 8, 1, -1, AudioFormat.SIGNED, 8, -1.0, Format.byteArray)}
+//                , PlugInManager.CODEC);
+//        PlugInManager.addPlugIn(Packetizer.class.getName()
+//                , new Format[] {new AudioFormat(AudioFormat.ALAW, -1.0, 8, 1, -1, -1, 8, -1.0, Format.byteArray)}
+//				, new Format[] {new AudioFormat(BonusAudioFormatEncodings.ALAW_RTP, -1.0, 8, 1, -1, -1, 8, -1.0, Format.byteArray)}
+//                , PlugInManager.CODEC);
+//        PlugInManager.commit();
+
         Node owner = createMock(Node.class);
         ExecutorService executorService = createMock(ExecutorService.class);
         Logger logger = createMock(Logger.class);
@@ -94,26 +100,26 @@ public class RTPSessionTest extends EasyMock implements ReceiveStreamListener, S
 
         replay(owner, executorService, logger);
 
-        InputStreamSource source1 = new TestInputStreamSource("src/test/wav/test.wav");
-        InputStreamSource source2 = new TestInputStreamSource("src/test/wav/test.wav");
-        InputStreamSource source3 = new TestInputStreamSource("src/test/wav/test.wav");
+        InputStreamSource source1 = new TestInputStreamSource("src/test/wav/test_16.wav");
+        InputStreamSource source2 = new TestInputStreamSource("src/test/wav/test_16.wav");
+        InputStreamSource source3 = new TestInputStreamSource("src/test/wav/test_16.wav");
 
         ConcatDataSource dataSource =
-                new ConcatDataSource(FileTypeDescriptor.WAVE, executorService, 240, 5, 5, owner);
+                new ConcatDataSource(FileTypeDescriptor.WAVE, executorService, 240, 5, 0, owner);
 
 //        RTPSession session = new RTPSession("127.0.0.1", 1234, dataSource);
         
-        final Player player = Manager.createPlayer(new MediaLocator("rtp://10.50.1.9:1234/audio/1"));
-        new Thread(new Runnable()
-        {
-            public void run() {
-                player.start();
-            }
-        }).start();
+//        final Player player = Manager.createPlayer(new MediaLocator("rtp://10.50.1.9:1234/audio/1"));
+//        new Thread(new Runnable()
+//        {
+//            public void run() {
+//                player.start();
+//            }
+//        }).start();
 //        createRtpSessionManager(1234, 1236);
         Thread.sleep(2000);
 
-        RTPSession session = new RTPSession("10.50.1.9", 1234, dataSource);
+        RTPSession session = new RTPSession("10.50.1.85", 1234, dataSource);
         session.start();
 //        Player player = Manager.createPlayer(dataSource);
 //        player.start();

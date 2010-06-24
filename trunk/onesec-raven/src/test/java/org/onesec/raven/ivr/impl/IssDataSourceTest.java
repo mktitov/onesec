@@ -41,15 +41,15 @@ public class IssDataSourceTest implements ControllerListener
     @Test
     public void test() throws Exception
     {
-//        InputStreamSource source = new TestInputStreamSource("src/test/wav/test.wav");
-        InputStreamSource source = new TestInputStreamSource("/home/tim/tmp/sound/silence.wav");
+        InputStreamSource source = new TestInputStreamSource("src/test/wav/test.wav");
+//        InputStreamSource source = new TestInputStreamSource("/home/tim/tmp/sound/silence.wav");
         IssDataSource dataSource = new IssDataSource(source, FileTypeDescriptor.WAVE);
 
         Processor processor = Manager.createProcessor(dataSource);
         processor.addControllerListener(this);
         processor.configure();
         waitForState(processor, Processor.Configured);
-        Format format = new AudioFormat(AudioFormat.ULAW, 8000d, 8, 1);
+        Format format = new AudioFormat("ALAW", 8000d, 8, 1);
         TrackControl[] tracks = processor.getTrackControls();
         tracks[0].setFormat(format);
         processor.realize();

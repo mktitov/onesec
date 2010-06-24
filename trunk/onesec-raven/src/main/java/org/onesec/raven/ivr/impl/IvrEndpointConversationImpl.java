@@ -28,6 +28,7 @@ import javax.telephony.Call;
 import javax.telephony.Connection;
 import javax.telephony.callcontrol.CallControlCall;
 import org.onesec.raven.ivr.AudioStream;
+import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.CompletionCode;
 import org.onesec.raven.ivr.IncomingRtpStream;
 import org.onesec.raven.ivr.IvrAction;
@@ -63,6 +64,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     private final ExecutorService executor;
     private final ConversationScenario scenario;
     private final RtpStreamManager streamManager;
+    private final Codec codec;
 
     private OutgoingRtpStream outgoingRtpStream;
     private IncomingRtpStream incomingRtpStream;
@@ -79,14 +81,16 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
 
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
-    public IvrEndpointConversationImpl(Node owner, ExecutorService executor
-            , ConversationScenario scenario, RtpStreamManager streamManager)
+    public IvrEndpointConversationImpl(
+            Node owner, ExecutorService executor
+            , ConversationScenario scenario, RtpStreamManager streamManager, Codec codec)
         throws Exception
     {
         this.owner = owner;
         this.executor = executor;
         this.scenario = scenario;
         this.streamManager = streamManager;
+        this.codec = codec;
 
         incomingRtpStream = streamManager.getIncomingRtpStream(owner);
         
@@ -94,7 +98,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         state.setState(INVALID);
     }
 
-    public void init(CallControlCall call, String remoteAddress, int remotePort)
+    public void init(CallControlCall call, String remoteAddress, int remotePort, int packetSize)
             throws Exception
     {
         this.remoteAddress = remoteAddress;
@@ -113,7 +117,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         conversationState.setBinding(CONVERSATION_STATE_BINDING, conversationState, BindingScope.CONVERSATION);
         conversationState.setBinding(NUMBER_BINDING, callingNumber, BindingScope.CONVERSATION);
 
-        audioStream = new ConcatDataSource(FileTypeDescriptor.WAVE, executor, 240, 5, 5, owner);
+        audioStream = new ConcatDataSource(FileTypeDescriptor.WAVE, executor, codec, packetSize, 5, 5, owner);
         audioStream.setLogPrefix(callId+" : ");
         actionsExecutor = new IvrActionsExecutor(this, executor);
         actionsExecutor.setLogPrefix(callId+" : ");

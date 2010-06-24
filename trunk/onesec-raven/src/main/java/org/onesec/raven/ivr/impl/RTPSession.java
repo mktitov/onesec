@@ -23,6 +23,8 @@ import javax.media.control.BufferControl;
 import javax.media.rtp.RTPManager;
 import javax.media.rtp.SendStream;
 import javax.media.rtp.SessionAddress;
+import org.onesec.raven.ivr.RTPManagerService;
+import org.weda.internal.annotations.Service;
 
 /**
  *
@@ -36,11 +38,14 @@ public class RTPSession
     private final SendStream sendStream;
     private final SessionAddress destAddress;
 
+    @Service
+    private static RTPManagerService rtpManagerService;
+
     public RTPSession(String host, int port, ConcatDataSource source) throws Exception
     {
         this.source = source;
         destAddress = new SessionAddress(InetAddress.getByName(host), port);
-        rtpManager = RTPManager.newInstance();
+        rtpManager = rtpManagerService.createRtpManager();
         rtpManager.initialize(new SessionAddress());
         rtpManager.addTarget(destAddress);
         sendStream = rtpManager.createSendStream(source, 0);
@@ -52,9 +57,6 @@ public class RTPSession
                 , control.getMinimumThreshold()));
         control.setMinimumThreshold(60);
         control.setBufferLength(60);
-        
-//        session = Manager.createDataSink(
-//                source, new MediaLocator("rtp://"+host+":"+port+"/audio/1"));
     }
 
     public void start() throws IOException
