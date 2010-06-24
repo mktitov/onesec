@@ -63,16 +63,6 @@ public class IvrEndpointNodeTest
     @Before
     public void prepare() throws Exception
     {
-//        PlugInManager.addPlugIn(Encoder.class.getName()
-//                , new Format[] {new AudioFormat(AudioFormat.LINEAR, -1.0, 16, 1, -1, AudioFormat.SIGNED, 16, -1.0, Format.byteArray)}
-//				, new Format[] {new AudioFormat(AudioFormat.ALAW, -1.0, 8, 1, -1, AudioFormat.SIGNED, 8, -1.0, Format.byteArray)}
-//                , PlugInManager.CODEC);
-//        PlugInManager.addPlugIn(Packetizer.class.getName()
-//                , new Format[] {new AudioFormat(AudioFormat.ALAW, -1.0, 8, 1, -1, -1, 8, -1.0, Format.byteArray)}
-//				, new Format[] {new AudioFormat(BonusAudioFormatEncodings.ALAW_RTP, -1.0, 8, 1, -1, -1, 8, -1.0, Format.byteArray)}
-//                , PlugInManager.CODEC);
-//        PlugInManager.commit();
-
         CCMCallOperatorNode callOperator = new CCMCallOperatorNode();
         callOperator.setName("call operator");
         tree.getRootNode().addAndSaveChildren(callOperator);
@@ -108,7 +98,8 @@ public class IvrEndpointNodeTest
         endpoint.setExecutorService(executor);
         endpoint.setConversationScenario(scenario);
         endpoint.setAddress("88013");
-        endpoint.setRtpPacketSize(240);
+        endpoint.setRtpMaxSendAheadPacketsCount(0);
+//        endpoint.setRtpPacketSize(240);
 //        endpoint.setAddress("68050");
         endpoint.setIp(getInterfaceAddress().getHostAddress());
         endpoint.setLogLevel(LogLevel.TRACE);
@@ -199,7 +190,7 @@ public class IvrEndpointNodeTest
 
     }
 
-//    @Test(timeout=120000)
+    @Test(timeout=120000)
     public void inviteTest() throws Exception
     {
         AudioFileNode audioNode1 = createAudioFileNode("audio1", "src/test/wav/test2.wav");
@@ -223,7 +214,7 @@ public class IvrEndpointNodeTest
         StateWaitResult res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.IN_SERVICE}, 10000);
         assertFalse(res.isWaitInterrupted());
-        endpoint.invite("88024", scenario, this, null);
+        endpoint.invite("09989128672947", scenario, this, null);
 //        endpoint.invite("089128672947", scenario, this, null);
         res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.INVITING}, 30000);
@@ -238,7 +229,7 @@ public class IvrEndpointNodeTest
         assertEquals(new Integer(0), executor.getExecutingTaskCount());
         
         Thread.sleep(3000);
-        endpoint.invite("089128672947", scenario, this, null);
+        endpoint.invite("00189128672947", scenario, this, null);
         res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.INVITING}, 30000);
         res = endpoint.getEndpointState().waitForState(
@@ -250,7 +241,7 @@ public class IvrEndpointNodeTest
         assertEquals(new Integer(0), executor.getExecutingTaskCount());
     }
 
-    @Test(timeout=120000)
+//    @Test(timeout=120000)
     public void dtmfProcessPointTest() throws Exception
     {
         AudioFileNode audioNode1 = createAudioFileNode("audio1", "src/test/wav/test2.wav");

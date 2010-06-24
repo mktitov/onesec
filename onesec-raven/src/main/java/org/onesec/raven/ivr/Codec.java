@@ -17,10 +17,59 @@
 
 package org.onesec.raven.ivr;
 
+import com.cisco.jtapi.extensions.CiscoMediaCapability;
+import javax.media.format.AudioFormat;
+import org.onesec.raven.codec.AlawAudioFormat;
+
 /**
  *
  * @author Mikhail Titov
  */
-public enum Codec {
-    G711_MU_LAW, G711_A_LAW
+public enum Codec
+{
+    AUTO(-1), G711_MU_LAW(0), G711_A_LAW(8);
+
+    private final int payload;
+    private final AudioFormat audioFormat;
+    private final CiscoMediaCapability[] ciscoMediaCapabilities;
+
+    private Codec(int payload)
+    {
+        this.payload = payload;
+        switch (payload){
+            case 8 :
+                ciscoMediaCapabilities = new CiscoMediaCapability[]{new CiscoMediaCapability(2, 60)};
+                audioFormat = new AudioFormat(AlawAudioFormat.ALAW_RTP, 8000d, 8, 1);
+                break;
+            case -1 :
+                ciscoMediaCapabilities = new CiscoMediaCapability[]{
+                    new CiscoMediaCapability(2, 60), new CiscoMediaCapability(4, 60)};
+                audioFormat = null;
+                break;
+            default : 
+                ciscoMediaCapabilities = new CiscoMediaCapability[]{new CiscoMediaCapability(4, 60)};
+                audioFormat = new AudioFormat(AudioFormat.ULAW_RTP, 8000d, 8, 1);
+                break;
+        }
+    }
+
+    public int getPayload() {
+        return payload;
+    }
+
+    public AudioFormat getAudioFormat() {
+        return audioFormat;
+    }
+
+    public CiscoMediaCapability[] getCiscoMediaCapabilities() {
+        return ciscoMediaCapabilities;
+    }
+
+    public static Codec getCodecByCiscoPayload(int ciscoPayload)
+    {
+        for (Codec codec: values())
+            if (AUTO!=codec && codec.getCiscoMediaCapabilities()[0].getPayloadType()==ciscoPayload)
+                return codec;
+        return null;
+    }
 }

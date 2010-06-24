@@ -64,6 +64,7 @@ import javax.telephony.media.events.MediaTermConnDtmfEv;
 import org.onesec.core.provider.ProviderController;
 import org.onesec.core.services.ProviderRegistry;
 import org.onesec.core.services.StateListenersCoordinator;
+import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.CompletionCode;
 import org.onesec.raven.ivr.IvrEndpointState;
 import org.onesec.raven.ivr.IvrMultichannelEndpoint;
@@ -80,7 +81,6 @@ import org.raven.tree.ViewableObject;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
 import org.raven.tree.impl.ViewableObjectImpl;
-import org.raven.util.OperationStatistic;
 import org.weda.annotations.constraints.NotNull;
 import org.weda.internal.annotations.Message;
 import org.weda.internal.annotations.Service;
@@ -113,13 +113,16 @@ public class IvrMultichannelEndpointNode extends BaseNode
     @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
     private IvrConversationScenarioNode conversationScenario;
 
-    @NotNull @Parameter(defaultValue="240")
+    @NotNull @Parameter(defaultValue="AUTO")
+    private Codec codec;
+
+    @Parameter
     private Integer rtpPacketSize;
 
     @NotNull @Parameter(defaultValue="5")
     private Integer rtpInitialBuffer;
 
-    @NotNull @Parameter(defaultValue="5")
+    @NotNull @Parameter(defaultValue="0")
     private Integer rtpMaxSendAheadPacketsCount;
 
     private Map<Integer, IvrEndpointConversationImpl> calls;
@@ -382,6 +385,14 @@ public class IvrMultichannelEndpointNode extends BaseNode
         this.rtpMaxSendAheadPacketsCount = rtpMaxSendAheadPacketsCount;
     }
 
+    public Codec getCodec() {
+        return codec;
+    }
+
+    public void setCodec(Codec codec) {
+        this.codec = codec;
+    }
+
     public Integer getRtpPacketSize() {
         return rtpPacketSize;
     }
@@ -630,9 +641,28 @@ public class IvrMultichannelEndpointNode extends BaseNode
                 if (conversation!=null)
                 {
                     CiscoRTPOutputProperties props = event.getRTPOutputProperties();
+                    if (isLogLevelEnabled(LogLevel.DEBUG)){
+                        debug("Initializing conversation");
+                        debug(String.format(
+                                "Proposed RTP params: remoteHost (%s), remotePort (%s), packetSize (%s), " +
+                                "payloadType (%s), bitrate (%s)"
+                                , props.getRemoteAddress().toString(), props.getRemotePort()
+                                , props.getPacketSize()*8, props.getPayloadType(), props.getBitRate()));
+                    }
+                    Integer psize = rtpPacketSize;
+                    if (psize==null)
+                        psize = props.getPacketSize()*8;
+                    Codec streamCodec = Codec.getCodecByCiscoPayload(props.getPayloadType());
+                    if (streamCodec==null)
+                        throw new Exception(String.format("Not supported payload type (%s)", props.getPayloadType()));
+                    if (isLogLevelEnabled(LogLevel.DEBUG))
+                        debug(String.format(
+                                "Choosed RTP params: packetSize (%s), codec (%s), audioFormat (%s)"
+                                , psize, streamCodec, streamCodec.getAudioFormat()));
                     conversation.init(
                             event.getCallID().getCall()
-                            , props.getRemoteAddress().getHostAddress(), props.getRemotePort());
+                            , props.getRemoteAddress().getHostAddress(), props.getRemotePort()
+                            , psize, rtpInitialBuffer, rtpMaxSendAheadPacketsCount, streamCodec);
                     if (isLogLevelEnabled(LogLevel.DEBUG))
                         debug(callLog(event.getCallID().getCall(), "Conversation initialized"));
                     conversation.startConversation();
@@ -678,8 +708,7 @@ public class IvrMultichannelEndpointNode extends BaseNode
             if (callsLock.writeLock().tryLock(LOCK_WAIT_TIMEOUT, TimeUnit.MILLISECONDS)) {
                 try {
                     IvrEndpointConversationImpl conversation = new IvrEndpointConversationImpl(
-                                    this, executorService, conversationScenario
-                                    , rtpStreamManager);
+                                    this, executorService, conversationScenario, rtpStreamManager);
                     CiscoRTPParams params = new CiscoRTPParams(
                             conversation.getIncomingRtpStream().getAddress()
                             , conversation.getIncomingRtpStream().getPort());
