@@ -626,8 +626,9 @@ public class IvrMultichannelEndpointNode extends BaseNode
 
     private void initConversation(CiscoRTPOutputStartedEv event)
     {
+        Call call = event.getCallID().getCall();
         if (isLogLevelEnabled(LogLevel.DEBUG))
-            debug(callLog(event.getCallID().getCall(), "Creating conversation"));
+            debug(callLog(call, "Creating conversation"));
         try {
             if (callsLock.writeLock().tryLock(LOCK_WAIT_TIMEOUT, TimeUnit.MILLISECONDS)) {
                 IvrEndpointConversationImpl conversation = null;
@@ -642,8 +643,8 @@ public class IvrMultichannelEndpointNode extends BaseNode
                 {
                     CiscoRTPOutputProperties props = event.getRTPOutputProperties();
                     if (isLogLevelEnabled(LogLevel.DEBUG)){
-                        debug("Initializing conversation");
-                        debug(String.format(
+                        debug(callLog(call, "Initializing conversation"));
+                        debug(callLog(call,
                                 "Proposed RTP params: remoteHost (%s), remotePort (%s), packetSize (%s), " +
                                 "payloadType (%s), bitrate (%s)"
                                 , props.getRemoteAddress().toString(), props.getRemotePort()
@@ -656,7 +657,7 @@ public class IvrMultichannelEndpointNode extends BaseNode
                     if (streamCodec==null)
                         throw new Exception(String.format("Not supported payload type (%s)", props.getPayloadType()));
                     if (isLogLevelEnabled(LogLevel.DEBUG))
-                        debug(String.format(
+                        debug(callLog(call,
                                 "Choosed RTP params: packetSize (%s), codec (%s), audioFormat (%s)"
                                 , psize, streamCodec, streamCodec.getAudioFormat()));
                     conversation.init(

@@ -46,6 +46,7 @@ public class RTPSession
         this.source = source;
         destAddress = new SessionAddress(InetAddress.getByName(host), port);
         rtpManager = rtpManagerService.createRtpManager();
+//        rtpManager = RTPManager.newInstance();
         rtpManager.initialize(new SessionAddress());
         rtpManager.addTarget(destAddress);
         sendStream = rtpManager.createSendStream(source, 0);

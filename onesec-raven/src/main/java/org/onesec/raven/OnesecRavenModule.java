@@ -47,7 +47,7 @@ public class OnesecRavenModule
     }
 
     @EagerLoad
-    public RTPManagerService buildRTPManagerService(Logger logger)
+    public RTPManagerService buildRTPManagerService(Logger logger) throws Exception
     {
         return new RTPManagerServiceImpl(logger);
     }

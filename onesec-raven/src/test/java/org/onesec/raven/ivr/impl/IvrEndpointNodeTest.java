@@ -30,6 +30,7 @@ import org.onesec.core.services.ProviderRegistry;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.impl.CCMCallOperatorNode;
 import org.onesec.raven.impl.ProviderNode;
+import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.ConversationCompletionCallback;
 import org.onesec.raven.ivr.ConversationResult;
 import org.onesec.raven.ivr.IvrEndpointState;
@@ -98,9 +99,11 @@ public class IvrEndpointNodeTest
         endpoint.setExecutorService(executor);
         endpoint.setConversationScenario(scenario);
         endpoint.setAddress("88013");
-        endpoint.setRtpMaxSendAheadPacketsCount(0);
+//        endpoint.setRtpMaxSendAheadPacketsCount(0);
 //        endpoint.setRtpPacketSize(240);
+        endpoint.setRtpMaxSendAheadPacketsCount(5);
 //        endpoint.setAddress("68050");
+//        endpoint.setCodec(Codec.G711_A_LAW);
         endpoint.setIp(getInterfaceAddress().getHostAddress());
         endpoint.setLogLevel(LogLevel.TRACE);
     }
@@ -125,7 +128,7 @@ public class IvrEndpointNodeTest
         assertFalse(res.isWaitInterrupted());
     }
 
-//    @Test
+    @Test
     public void simpleConversationTest() throws Exception
     {
         AudioFileNode audioFileNode = new AudioFileNode();
@@ -190,11 +193,13 @@ public class IvrEndpointNodeTest
 
     }
 
-    @Test(timeout=120000)
+//    @Test(timeout=120000)
     public void inviteTest() throws Exception
     {
-        AudioFileNode audioNode1 = createAudioFileNode("audio1", "src/test/wav/test2.wav");
-        AudioFileNode audioNode2 = createAudioFileNode("audio2", "src/test/wav/test.wav");
+        AudioFileNode audioNode1 = createAudioFileNode("audio1", "/home/tim/Documents/raven/зенит 2/судья_resampled.wav");
+//        AudioFileNode audioNode1 = createAudioFileNode("audio1", "src/test/wav/test2.wav");
+//        AudioFileNode audioNode2 = createAudioFileNode("audio2", "src/test/wav/test.wav");
+        AudioFileNode audioNode2 = createAudioFileNode("audio2", "/home/tim/Documents/raven/зенит 2/судья_resampled.wav");
 
         scenario.setValidDtmfs("1#");
         IfNode ifNode1 = createIfNode("if1", scenario, "dtmf=='1'||repetitionCount==5");
@@ -214,7 +219,7 @@ public class IvrEndpointNodeTest
         StateWaitResult res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.IN_SERVICE}, 10000);
         assertFalse(res.isWaitInterrupted());
-        endpoint.invite("09989128672947", scenario, this, null);
+        endpoint.invite("88024", scenario, this, null);
 //        endpoint.invite("089128672947", scenario, this, null);
         res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.INVITING}, 30000);
