@@ -101,7 +101,7 @@ public class ConcatDataSource
         silenceSource = new AtomicBoolean(true);
         buffers = new ConcurrentLinkedQueue<Buffer>();
         streams = new ConcatDataStream[]{
-            new ConcatDataStream(buffers, this, owner, rtpPacketSize,rtpMaxSendAheadPacketsCount)};
+            new ConcatDataStream(buffers, this, owner, rtpPacketSize, rtpMaxSendAheadPacketsCount)};
         streams[0].setLogPrefix(logPrefix);
         ResourceInputStreamSource silenceSource =
                 new ResourceInputStreamSource(SILENCE_RESOURCE_NAME);
@@ -276,10 +276,7 @@ public class ConcatDataSource
             thread = Thread.currentThread();
             try
             {
-    //            int i=0;
                 int bufferCount = 0;
-    //            for (InputStreamSource source: sources)
-    //            {
                 List<Buffer> initialBuffer = new ArrayList<Buffer>(rtpInitialBufferSize);
                 while (!stoped.get())
                 {
@@ -301,29 +298,16 @@ public class ConcatDataSource
                         waitForState(p, Processor.Configured);
                         TrackControl[] tracks = p.getTrackControls();
                         tracks[0].setFormat(format);
-//                        Codec codec[] = new Codec[3];
-//                        codec[0] = new com.ibm.media.codec.audio.rc.RCModule();
-//                        codec[1] = new com.ibm.media.codec.audio.ulaw.JavaEncoder();
-//                        codec[2] = new com.sun.media.codec.audio.ulaw.Packetizer();
-//                        codec[1] = new net.sf.fmj.media.codec.audio.alaw.Encoder();
-//                        codec[2] = new net.sf.fmj.media.codec.audio.alaw.Packetizer();
-//                        codec[0] = new org.onesec.raven.codec.alaw.Encoder();
-//                        codec[1] = new org.onesec.raven.codec.alaw.Packetizer();
-//                        ((net.sf.fmj.media.codec.audio.alaw.Packetizer)codec[2]).setPacketSize(rtpPacketSize);
-//                        tracks[0].setCodecChain(codec);
-                        p.setContentDescriptor(new ContentDescriptor(ContentDescriptor.RAW_RTP));
                         p.realize();
                         waitForState(p, Processor.Realized);
 
                         PacketSizeControl packetSizeControl =
                                 (PacketSizeControl) p.getControl(PacketSizeControl.class.getName());
                         packetSizeControl.setPacketSize(rtpPacketSize);
-                        
-                        p.start();
-                        waitForState(p, Processor.Started);
 
                         PushBufferDataSource ds = (PushBufferDataSource) p.getDataOutput();
-                        ds.start();
+                        p.start();
+                        waitForState(p, Processor.Started);
                         PushBufferStream s = ds.getStreams()[0];
                         if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                             owner.getLogger().debug(logMess(
@@ -417,7 +401,7 @@ public class ConcatDataSource
         long startTime = System.currentTimeMillis();
         while (p.getState()!=state)
         {
-            TimeUnit.MILLISECONDS.sleep(2);
+            TimeUnit.MILLISECONDS.sleep(5);
             if (System.currentTimeMillis()-startTime>2000)
                 throw new Exception("Processor state wait timeout");
         }

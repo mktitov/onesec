@@ -18,6 +18,7 @@
 package org.onesec.raven.ivr.impl;
 
 import com.sun.media.codec.audio.ulaw.Packetizer;
+import java.io.IOException;
 import javax.media.Format;
 import javax.media.PlugInManager;
 import javax.media.rtp.RTPManager;
@@ -36,7 +37,7 @@ public class RTPManagerServiceImpl implements RTPManagerService
     private final Logger logger;
     private final Format alawRtpFormat;
 
-    public RTPManagerServiceImpl(Logger logger)
+    public RTPManagerServiceImpl(Logger logger) throws IOException
     {
         this.logger = logger;
 
@@ -47,24 +48,27 @@ public class RTPManagerServiceImpl implements RTPManagerService
                 , up.getSupportedInputFormats(), up.getSupportedOutputFormats(null)
                 , PlugInManager.CODEC);
         logger.debug("New ULAW packetizier codec ({}) successfully added", UlawPacketizer.class.getName());
-        
+
         AlawEncoder en = new AlawEncoder();
         PlugInManager.addPlugIn(AlawEncoder.class.getName()
                 , en.getSupportedInputFormats()
 				, en.getSupportedOutputFormats(null)
                 , PlugInManager.CODEC);
         logger.debug("ALAW codec ({}) successfully added", AlawEncoder.class.getName());
-        
+
         AlawPacketizer p = new AlawPacketizer();
         PlugInManager.addPlugIn(AlawPacketizer.class.getName()
                 , p.getSupportedInputFormats()
 				, p.getSupportedOutputFormats(null)
                 , PlugInManager.CODEC);
         logger.debug("ALAW packetizer codec ({}) successfully added", AlawPacketizer.class.getName());
-
-        RTPManager tempManager = RTPManager.newInstance();
+//
+//        RTPManager tempManager = RTPManager.newInstance();
         alawRtpFormat = p.getSupportedOutputFormats(null)[0];
-        tempManager.addFormat(alawRtpFormat, 8);
+//        tempManager.addFormat(alawRtpFormat, 8);
+//        tempManager.dispose();
+//
+        PlugInManager.commit();
     }
 
     public RTPManager createRtpManager()

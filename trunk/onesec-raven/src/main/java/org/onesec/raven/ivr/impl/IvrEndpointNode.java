@@ -319,14 +319,15 @@ public class IvrEndpointNode extends BaseNode
                         "(CTI_Port on the CCM side)"
                         , terminals[0].getName(), CiscoMediaTerminal.class.getName()));
             terminal = (CiscoMediaTerminal) terminals[0];
-//            CiscoMediaCapability[] caps =
-//                    new CiscoMediaCapability[]{CiscoMediaCapability.G711_64K_30_MILLISECONDS};
+            CiscoMediaCapability[] caps =
+                    new CiscoMediaCapability[]{CiscoMediaCapability.G711_64K_30_MILLISECONDS};
 
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 debug(String.format(
                         "Registering terminal using local ip (%s) and local port (%s)..."
                         , ip, port));
             terminal.register(InetAddress.getByName(ip), port, codec.getCiscoMediaCapabilities());
+//            terminal.register(InetAddress.getByName(ip), port, caps);
 
             terminal.addObserver(this);
             observingTerminal.set(true);
@@ -652,31 +653,32 @@ public class IvrEndpointNode extends BaseNode
 
     private synchronized void acceptIncomingCall(CallCtlConnOfferedEv event)
     {
-        if (isLogLevelEnabled(LogLevel.DEBUG))
-            debug("Accepting incoming call");
         CallCtlConnOfferedEv offEvent = (CallCtlConnOfferedEv)event;
         CallControlConnection conn = (CallControlConnection) offEvent.getConnection();
-        try
-        {
-            currentConversation = conversationScenario;
-            if (currentConversation==null)
+        if (conn.getAddress().getName().equals(address) && conn.getCallControlState()==CallControlConnection.OFFERED)
+            try
+            {
+                if (isLogLevelEnabled(LogLevel.DEBUG))
+                    debug("Accepting incoming call");
+                currentConversation = conversationScenario;
+                if (currentConversation==null)
+                {
+                    if (isLogLevelEnabled(LogLevel.ERROR))
+                        error(
+                            "Can not make conversation because of does not have conversation scenario");
+                    conn.disconnect();
+                }
+                else
+                {
+                    conn.accept();
+                    endpointState.setState(IvrEndpointState.ACCEPTING_CALL);
+                }
+            }
+            catch (Exception ex)
             {
                 if (isLogLevelEnabled(LogLevel.ERROR))
-                    error(
-                        "Can not make conversation because of does not have conversation scenario");
-                conn.disconnect();
+                    error("Error accepting call", ex);
             }
-            else
-            {
-                conn.accept();
-                endpointState.setState(IvrEndpointState.ACCEPTING_CALL);
-            }
-        }
-        catch (Exception ex)
-        {
-            if (isLogLevelEnabled(LogLevel.ERROR))
-                error("Error accepting call", ex);
-        }
     }
         
     private synchronized void answerOnIncomingCall(TermConnRingingEv event)
