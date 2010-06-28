@@ -31,7 +31,6 @@ import org.onesec.raven.impl.ProviderNode;
 import org.onesec.raven.ivr.EndpointRequest;
 import org.onesec.raven.ivr.IvrEndpointState;
 import org.raven.log.LogLevel;
-import org.raven.sched.ExecutorService;
 import org.raven.sched.impl.ExecutorServiceNode;
 import org.raven.tree.Node;
 import org.raven.tree.impl.ContainerNode;
@@ -93,7 +92,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         
     }
 
-    @Test
+//    @Test
     public void simpleTest() throws InterruptedException
     {
         EndpointRequest req = createMock(EndpointRequest.class);
@@ -107,7 +106,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         verify(req);
     }
 
-    @Test(timeout=25000)
+//    @Test(timeout=25000)
     public void endpointRealeseTest() throws Exception
     {
         EndpointRequest req = createMock(EndpointRequest.class);
@@ -124,7 +123,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         verify(req);
     }
 
-    @Test(timeout=25000)
+//    @Test(timeout=25000)
     public void endpointTimeoutTest() throws Exception
     {
         EndpointRequest req = createMock(EndpointRequest.class);
@@ -151,7 +150,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         verify(req, req2);
     }
 
-    @Test(timeout=25000)
+//    @Test(timeout=25000)
     public void asyncTest() throws Exception
     {
         createEndpoint("88014", 1236);
@@ -177,6 +176,26 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         TimeUnit.MILLISECONDS.sleep(2100);
 
         verify(req, req2);
+    }
+
+    @Test(timeout=20000)
+    public void watchdogTest() throws Exception
+    {
+        EndpointRequest req = createMock(EndpointRequest.class);
+
+        expect(req.getOwner()).andReturn(requestOwner).anyTimes();
+        expect(req.getWaitTimeout()).andReturn(60000l).anyTimes();
+        req.processRequest(endpoint);
+
+        replay(req);
+
+        endpoint.stop();
+        pool.requestEndpoint(req);
+        TimeUnit.SECONDS.sleep(1);
+        pool.executeScheduledJob(null);
+        TimeUnit.SECONDS.sleep(6);
+
+        verify(req);
     }
 
     private void waitForProvider() throws Exception
