@@ -32,7 +32,6 @@ import org.weda.internal.annotations.Service;
  */
 public class RTPSession
 {
-//    private final DataSink session;
     private final ConcatDataSource source;
     private final RTPManager rtpManager;
     private final SendStream sendStream;
@@ -46,7 +45,6 @@ public class RTPSession
         this.source = source;
         destAddress = new SessionAddress(InetAddress.getByName(host), port);
         rtpManager = rtpManagerService.createRtpManager();
-//        rtpManager = RTPManager.newInstance();
         rtpManager.initialize(new SessionAddress());
         rtpManager.addTarget(destAddress);
         sendStream = rtpManager.createSendStream(source, 0);
@@ -63,8 +61,6 @@ public class RTPSession
     public void start() throws IOException
     {
         sendStream.start();
-//        session.open();
-//        session.start();
     }
 
     public void stop() throws Exception

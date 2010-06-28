@@ -128,7 +128,7 @@ public class IvrEndpointNodeTest
         assertFalse(res.isWaitInterrupted());
     }
 
-    @Test
+//    @Test
     public void simpleConversationTest() throws Exception
     {
         AudioFileNode audioFileNode = new AudioFileNode();
@@ -193,7 +193,7 @@ public class IvrEndpointNodeTest
 
     }
 
-//    @Test(timeout=120000)
+    @Test(timeout=120000)
     public void inviteTest() throws Exception
     {
         AudioFileNode audioNode1 = createAudioFileNode("audio1", "/home/tim/Documents/raven/зенит 2/судья_resampled.wav");
@@ -219,8 +219,8 @@ public class IvrEndpointNodeTest
         StateWaitResult res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.IN_SERVICE}, 10000);
         assertFalse(res.isWaitInterrupted());
-        endpoint.invite("88024", scenario, this, null);
-//        endpoint.invite("089128672947", scenario, this, null);
+//        endpoint.invite("88024", scenario, this, null);
+        endpoint.invite("089128672947", scenario, this, null);
         res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.INVITING}, 30000);
         assertFalse(res.isWaitInterrupted());
@@ -234,7 +234,7 @@ public class IvrEndpointNodeTest
         assertEquals(new Integer(0), executor.getExecutingTaskCount());
         
         Thread.sleep(3000);
-        endpoint.invite("00189128672947", scenario, this, null);
+        endpoint.invite("00489128672947", scenario, this, null);
         res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.INVITING}, 30000);
         res = endpoint.getEndpointState().waitForState(

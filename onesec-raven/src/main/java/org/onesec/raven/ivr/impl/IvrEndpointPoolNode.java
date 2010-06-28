@@ -17,6 +17,9 @@
 
 package org.onesec.raven.ivr.impl;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -39,6 +42,8 @@ import org.raven.annotations.Parameter;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.ExecutorServiceException;
+import org.raven.sched.Schedulable;
+import org.raven.sched.Scheduler;
 import org.raven.sched.Task;
 import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
 import org.raven.table.TableImpl;
@@ -56,8 +61,21 @@ import org.weda.internal.annotations.Message;
  * @author Mikhail Titov
  */
 @NodeClass(childNodes=IvrEndpointNode.class)
-public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Viewable, Task
+public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Viewable, Task, Schedulable
 {
+    public static final int LOADAVERAGE_INTERVAL = 300000;
+    @NotNull @Parameter(defaultValue="100")
+    private Integer maxRequestQueueSize;
+
+    @NotNull @Parameter(valueHandlerType=SystemSchedulerValueHandlerFactory.TYPE)
+    private ExecutorService executor;
+
+    @Parameter(valueHandlerType=SystemSchedulerValueHandlerFactory.TYPE)
+    private Scheduler watchdogScheduler;
+
+    @Parameter(readOnly=true)
+    private Double loadAverage;
+
     private ReadWriteLock lock;
     private Condition endpointReleased;
     private Map<Integer, RequestInfo> busyEndpoints;
@@ -66,12 +84,8 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     private AtomicBoolean stopManagerTask;
     private AtomicBoolean managerThreadStoped;
     private AtomicReference<String> statusMessage;
-
-    @NotNull @Parameter(defaultValue="100")
-    private Integer maxRequestQueueSize;
-
-    @NotNull @Parameter(valueHandlerType=SystemSchedulerValueHandlerFactory.TYPE)
-    private ExecutorService executor;
+    private long timePeriod;
+    private long duration;
 
     @Message
     private static String totalUsageCountMessage;
@@ -109,6 +123,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         stopManagerTask = new AtomicBoolean(false);
         statusMessage = new AtomicReference<String>("");
         managerThreadStoped = new AtomicBoolean(true);
+        timePeriod = 0;
     }
 
     @Override
@@ -187,7 +202,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                             try {
                                 ri.request.processRequest(null);
                             } finally {
-                                releaseEndpoint(null);
+                                releaseEndpoint(null, 0);
                             }
                         }
                     }
@@ -229,6 +244,14 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         this.executor = executor;
     }
 
+    public Scheduler getWatchdogScheduler() {
+        return watchdogScheduler;
+    }
+
+    public void setWatchdogScheduler(Scheduler watchdogScheduler) {
+        this.watchdogScheduler = watchdogScheduler;
+    }
+
     public Integer getMaxRequestQueueSize() {
         return maxRequestQueueSize;
     }
@@ -237,13 +260,32 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         this.maxRequestQueueSize = maxRequestQueueSize;
     }
 
-    private void releaseEndpoint(IvrEndpoint endpoint)
+    public Double getLoadAverage() {
+        return loadAverage;
+    }
+
+    private synchronized void addDuration(long dur)
+    {
+        long currTimePeriod = System.currentTimeMillis()/LOADAVERAGE_INTERVAL;
+        if (currTimePeriod>timePeriod){
+            timePeriod = currTimePeriod;
+            if (timePeriod>0){
+                loadAverage = duration*100./getChildrenCount()*LOADAVERAGE_INTERVAL;
+                loadAverage = new BigDecimal(loadAverage).setScale(2, RoundingMode.HALF_UP).doubleValue();
+            }
+            duration = dur;
+        }else
+            duration+=dur;
+    }
+
+    private void releaseEndpoint(IvrEndpoint endpoint, long duration)
     {
         if (isLogLevelEnabled(LogLevel.DEBUG))
             debug(String.format("Realesing endpoint (%s) to the pool", endpoint.getName()));
         lock.writeLock().lock();
         try
         {
+            addDuration(duration);
             busyEndpoints.remove(endpoint.getId());
             endpointReleased.signal();
             if (isLogLevelEnabled(LogLevel.DEBUG))
@@ -366,6 +408,45 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         return statusMessage.get();
     }
 
+    public void executeScheduledJob(Scheduler scheduler)
+    {
+        try {
+            if (lock.writeLock().tryLock(500, TimeUnit.MILLISECONDS)) {
+                try {
+                    Collection<Node> childs = getSortedChildrens();
+                    if (childs!=null) {
+                        int restartedEndpoints = 0;
+                        for (Node child: childs)
+                            if (   child instanceof IvrEndpoint
+                                && !busyEndpoints.containsKey(child.getId())
+                                && Status.INITIALIZED==child.getStatus())
+                            {
+                                if (isLogLevelEnabled(LogLevel.DEBUG))
+                                    debug("Watchdog task. Restarting endpoint ({})", child.getName());
+                                if (child.start())
+                                    ++restartedEndpoints;
+                            }
+                        if (restartedEndpoints>0)
+                        {
+                            //giving some time for terminals to be IN_SERVICE
+                            TimeUnit.SECONDS.sleep(5);
+                            endpointReleased.signal();
+                            if (isLogLevelEnabled(LogLevel.INFO))
+                                info("Watchdog task. Successfully restarted ({}) endpoints", restartedEndpoints);
+                        }
+                    }
+                } finally {
+                    lock.writeLock().unlock();
+                }
+            }else if (isLogLevelEnabled(LogLevel.WARN))
+                warn("Error executing watchdog task. Timeout acquiring read lock");
+
+        } catch (InterruptedException ex) {
+            if (isLogLevelEnabled(LogLevel.WARN))
+                warn("Wait for read lock was interrupted", ex);
+        }
+    }
+
     public void run()
     {
         managerThreadStoped.set(false);
@@ -459,6 +540,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
 
         public void run()
         {
+            long durStartTime = System.currentTimeMillis();
             try
             {
                 if (isLogLevelEnabled(LogLevel.DEBUG))
@@ -469,7 +551,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
             }
             finally
             {
-                releaseEndpoint(endpoint);
+                releaseEndpoint(endpoint, System.currentTimeMillis()-durStartTime);
             }
         }
     }

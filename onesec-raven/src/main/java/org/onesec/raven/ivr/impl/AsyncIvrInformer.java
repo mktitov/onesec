@@ -29,6 +29,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.script.Bindings;
 import org.onesec.raven.ivr.IvrEndpoint;
 import org.onesec.raven.ivr.IvrEndpointPool;
@@ -229,6 +231,25 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         }
         try
         {
+            try {
+                if (dataLock.readLock().tryLock(500, TimeUnit.MILLISECONDS)) {
+                    try {
+                        if (!sessions.isEmpty()) {
+                            if (isLogLevelEnabled(LogLevel.DEBUG)) {
+                                debug("Can not start processing. Queue is not empty");
+                            }
+                            return;
+                        }
+                    } finally {
+                        dataLock.readLock().unlock();
+                    }
+                } else {
+                    return;
+                }
+            } catch (InterruptedException ex) {
+                return;
+            }
+
             statusMessage = "Requesting records from "+dataSource.getPath();
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 debug(statusMessage);
@@ -239,6 +260,8 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
             ++handledRecordSets;
             receivingData.set(false);
             statusMessage = "All records sended by data source where processed.";
+            if (isLogLevelEnabled(LogLevel.DEBUG))
+                debug(statusMessage);
         }
     }
 

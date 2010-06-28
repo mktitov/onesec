@@ -286,7 +286,7 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
         assertEquals(AsyncIvrInformer.SKIPPED_STATUS, recs.get(2l).getValue(IvrInformerRecordSchemaNode.COMPLETION_CODE_FIELD));
     }
 
-//    @Test(timeout=60000)
+    @Test(timeout=60000)
     public void startProcessingTest() throws Exception
     {
         informer.setWaitForSession(Boolean.FALSE);
@@ -308,7 +308,7 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
             }
         }.start();
 
-        Thread.sleep(500);
+        Thread.sleep(1500);
 //        assertEquals(IvrInformerStatus.PROCESSING, informer.getInformerStatus());
 
         while (informer.getSessionsCount()>0)
@@ -325,7 +325,7 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
         assertEquals(AsyncIvrInformer.SKIPPED_STATUS, recs.get(2l).getValue(IvrInformerRecordSchemaNode.COMPLETION_CODE_FIELD));
     }
 
-    @Test(timeout=60000)
+//    @Test(timeout=60000)
     public void stopProcessingTest() throws Exception
     {
         informer.setWaitForSession(Boolean.FALSE);
