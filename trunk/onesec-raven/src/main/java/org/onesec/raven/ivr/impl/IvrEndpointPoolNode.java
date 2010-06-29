@@ -18,15 +18,15 @@
 package org.onesec.raven.ivr.impl;
 
 import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -80,7 +80,8 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     private Condition endpointReleased;
     private Map<Integer, RequestInfo> busyEndpoints;
     private Map<Integer, Long> usageCounters;
-    private LinkedBlockingQueue<RequestInfo> queue;
+//    private LinkedBlockingQueue<RequestInfo> queue;
+    private PriorityBlockingQueue<RequestInfo> queue;
     private AtomicBoolean stopManagerTask;
     private AtomicBoolean managerThreadStoped;
     private AtomicReference<String> statusMessage;
@@ -134,7 +135,8 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
             throw new Exception("Can't start pool because of manager task is still running");
         lock = new ReentrantReadWriteLock();
         endpointReleased = lock.writeLock().newCondition();
-        queue = new LinkedBlockingQueue<RequestInfo>(maxRequestQueueSize);
+//        queue = new LinkedBlockingQueue<RequestInfo>(maxRequestQueueSize);
+        queue = new PriorityBlockingQueue<RequestInfo>(maxRequestQueueSize, new RequestComparator());
         busyEndpoints.clear();
         usageCounters.clear();
         stopManagerTask.set(false);
@@ -153,7 +155,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         if (!Status.STARTED.equals(getStatus()) || stopManagerTask.get())
             request.processRequest(null);
         if (isLogLevelEnabled(LogLevel.DEBUG))
-            debug("Recieved new request from ("+request.getOwner().getPath()+") to queue");
+            debug("New request added to the queue from ({})", request.getOwner().getPath());
         if (!queue.offer(new RequestInfo(request)))
         {
             if (isLogLevelEnabled(LogLevel.WARN))
@@ -553,6 +555,13 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
             {
                 releaseEndpoint(endpoint, System.currentTimeMillis()-durStartTime);
             }
+        }
+    }
+
+    private class RequestComparator implements Comparator<RequestInfo>
+    {
+        public int compare(RequestInfo o1, RequestInfo o2) {
+            return new Integer(o1.request.getPriority()).compareTo(o2.request.getPriority());
         }
     }
 }

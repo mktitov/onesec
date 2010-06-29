@@ -29,8 +29,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.script.Bindings;
 import org.onesec.raven.ivr.IvrEndpoint;
 import org.onesec.raven.ivr.IvrEndpointPool;
@@ -48,6 +46,7 @@ import org.raven.ds.impl.DataContextImpl;
 import org.raven.ds.impl.RecordSchemaNode;
 import org.raven.ds.impl.RecordSchemaValueTypeHandlerFactory;
 import org.raven.expr.impl.BindingSupportImpl;
+import org.raven.expr.impl.ScriptAttributeValueHandlerFactory;
 import org.raven.log.LogLevel;
 import org.raven.sched.Schedulable;
 import org.raven.sched.Scheduler;
@@ -78,6 +77,7 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
     public static final String ERROR_TOO_MANY_SESSIONS = "ERROR_TOO_MANY_SESSIONS";
     public static final String INFORMER_BINDING = "informer";
     public final static String NOT_PROCESSED_STATUS = "NOT_PROCESSED";
+    public static final String NUMBER_BINDING = "number";
     public final static String PROCESSING_ERROR_STATUS = "PROCESSING_ERROR";
     public static final String RECORD_BINDING = "record";
     public final static String SKIPPED_STATUS = "SKIPPED";
@@ -125,6 +125,15 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
 
     @Parameter
     private String groupField;
+
+    @Parameter(valueHandlerType=ScriptAttributeValueHandlerFactory.TYPE)
+    private String numberTranslation;
+
+    @NotNull @Parameter(defaultValue="false")
+    private Boolean useNumberTranslation;
+
+    @NotNull @Parameter(defaultValue="10")
+    private Integer priority;
 
     private ReentrantReadWriteLock dataLock;
     private Map<Long, IvrInformerSession> sessions;
@@ -229,15 +238,16 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
                 trace("Informator already processing records");
             return;
         }
+        boolean sessionsEmpty = false;
         try
         {
             try {
                 if (dataLock.readLock().tryLock(500, TimeUnit.MILLISECONDS)) {
                     try {
                         if (!sessions.isEmpty()) {
-                            if (isLogLevelEnabled(LogLevel.DEBUG)) {
+                            if (isLogLevelEnabled(LogLevel.DEBUG)) 
                                 debug("Can not start processing. Queue is not empty");
-                            }
+                            sessionsEmpty = true;
                             return;
                         }
                     } finally {
@@ -257,11 +267,13 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         }
         finally
         {
-            ++handledRecordSets;
             receivingData.set(false);
-            statusMessage = "All records sended by data source where processed.";
-            if (isLogLevelEnabled(LogLevel.DEBUG))
-                debug(statusMessage);
+            if (!sessionsEmpty){
+                ++handledRecordSets;
+                statusMessage = "All records sended by data source where processed.";
+                if (isLogLevelEnabled(LogLevel.DEBUG))
+                    debug(statusMessage);
+            }
         }
     }
 
@@ -441,6 +453,30 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
     public void setDisplayFields(String displayFields)
     {
         this.displayFields = displayFields;
+    }
+
+    public String getNumberTranslation() {
+        return numberTranslation;
+    }
+
+    public void setNumberTranslation(String numberTranslation) {
+        this.numberTranslation = numberTranslation;
+    }
+
+    public Boolean getUseNumberTranslation() {
+        return useNumberTranslation;
+    }
+
+    public void setUseNumberTranslation(Boolean useNumberTranslation) {
+        this.useNumberTranslation = useNumberTranslation;
+    }
+
+    public Integer getPriority() {
+        return priority;
+    }
+
+    public void setPriority(Integer priority) {
+        this.priority = priority;
     }
 
     public boolean getDataImmediate(DataConsumer dataConsumer, DataContext context)
@@ -743,7 +779,7 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
 
         Long id = converter.convert(Long.class, records.iterator().next().getValue(ID_FIELD), null);
         IvrInformerSession session = new IvrInformerSession(records, this, maxInviteDuration
-                , maxCallDuration, conversationScenario, endpointWaitTimeout, context);
+                , maxCallDuration, conversationScenario, endpointWaitTimeout, context, priority);
         sessions.put(id, session);
         endpointPool.requestEndpoint(session);
 
@@ -799,4 +835,19 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         ++informedAbonents;
     }
 
+    String translateNumber(String number, Record record)
+    {
+        if (!useNumberTranslation)
+            return number;
+        try {
+            bindingSupport.put(NUMBER_BINDING, number);
+            bindingSupport.put(RECORD_BINDING, record);
+            String translatedNumber = numberTranslation;
+            if (isLogLevelEnabled(LogLevel.DEBUG))
+                debug("Number ({}) was translated to ({})", number, translatedNumber);
+            return translatedNumber;
+        } finally {
+            bindingSupport.reset();
+        }
+    }
 }

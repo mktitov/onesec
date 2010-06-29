@@ -62,6 +62,7 @@ public class IvrInformerSession implements EndpointRequest, ConversationCompleti
     private final Lock informLock;
     private final long endpointWaitTimeout;
     private final DataContext dataContext;
+    private final int requestPriority;
 
     private AtomicReference<String> statusMessage;
     private ConversationResult conversationResult;
@@ -71,7 +72,8 @@ public class IvrInformerSession implements EndpointRequest, ConversationCompleti
     public IvrInformerSession(
             List<Record> records, AsyncIvrInformer informer
             , Integer maxInviteDuration, Integer maxCallDuration
-            , IvrConversationScenario scenario, long endpointWaitTimeout, DataContext dataContext)
+            , IvrConversationScenario scenario, long endpointWaitTimeout, DataContext dataContext
+            , int requestPriority)
     {
         this.records = records;
         this.informer = informer;
@@ -80,11 +82,17 @@ public class IvrInformerSession implements EndpointRequest, ConversationCompleti
         this.scenario = scenario;
         this.endpointWaitTimeout = endpointWaitTimeout;
         this.dataContext = dataContext;
+        this.requestPriority = requestPriority;
 
         this.statusMessage = new AtomicReference<String>("Queued (waiting for terminal)");
         
         informLock = new ReentrantLock();
         abonentInformed = informLock.newCondition();
+    }
+
+    public int getPriority()
+    {
+        return requestPriority;
     }
 
     public IvrEndpoint getEndpoint()
@@ -360,6 +368,7 @@ public class IvrInformerSession implements EndpointRequest, ConversationCompleti
             bindings.put(AsyncIvrInformer.INFORMER_BINDING, this);
             statusMessage.set("Calling to the abonent");
             String abonentNumber = converter.convert(String.class, record.getValue(ABONENT_NUMBER_FIELD), null);
+            abonentNumber = informer.translateNumber(abonentNumber, record);
             conversationResult = null;
             if (groupInformed)
                 skipRecord(record);
