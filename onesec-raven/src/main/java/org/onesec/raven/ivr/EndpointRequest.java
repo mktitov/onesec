@@ -44,4 +44,8 @@ public interface EndpointRequest
      * Returns the current processing status message.
      */
     public String getStatusMessage();
+    /**
+     * Returns the request priority. The request with lower priority will processed faster.
+     */
+    public int getPriority();
 }

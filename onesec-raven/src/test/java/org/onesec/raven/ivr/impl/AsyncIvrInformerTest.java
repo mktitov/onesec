@@ -42,6 +42,7 @@ import org.raven.ds.RecordException;
 import org.raven.expr.impl.IfNode;
 import org.raven.log.LogLevel;
 import org.raven.sched.impl.ExecutorServiceNode;
+import org.raven.sched.impl.TimeWindowNode;
 import org.raven.test.DataCollector;
 import org.raven.test.PushDataSource;
 import org.raven.test.PushOnDemandDataSource;
@@ -127,6 +128,11 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
         informer.setMaxSessionsCount(1);
         informer.setEndpointWaitTimeout(2000);
         informer.setRecordSchema(schema);
+        TimeWindowNode timeWindow = new TimeWindowNode();
+        timeWindow.setName("timeWindow");
+        informer.addAndSaveChildren(timeWindow);
+        timeWindow.setTimePeriods("0-23");
+        assertTrue(timeWindow.start());
 
         dataCollector = new DataCollector();
         dataCollector.setName("dataCollector");
@@ -286,7 +292,7 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
         assertEquals(AsyncIvrInformer.SKIPPED_STATUS, recs.get(2l).getValue(IvrInformerRecordSchemaNode.COMPLETION_CODE_FIELD));
     }
 
-    @Test(timeout=60000)
+//    @Test(timeout=60000)
     public void startProcessingTest() throws Exception
     {
         informer.setWaitForSession(Boolean.FALSE);
@@ -323,6 +329,85 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
         assertTrue((Long)recs.get(1l).getValue(CONVERSATION_DURATION_FIELD)>0);
         assertNotNull(recs.get(2l));
         assertEquals(AsyncIvrInformer.SKIPPED_STATUS, recs.get(2l).getValue(IvrInformerRecordSchemaNode.COMPLETION_CODE_FIELD));
+    }
+
+//    @Test(timeout=60000)
+    public void startProcessingOnNotEmptySessionsTest() throws Exception
+    {
+        informer.setWaitForSession(Boolean.FALSE);
+        informer.setMaxSessionsCount(2);
+        informer.setDataSource(pullDataSource);
+
+        createScenario();
+        assertTrue(informer.start());
+        pullDataSource.addDataPortion(createRecord(1, "abon1", "88024"));
+        pullDataSource.addDataPortion(null);
+
+        Thread startProcessing = new Thread(){
+            @Override
+            public void run() {
+                informer.startProcessing();
+            }
+        };
+        
+        Thread startProcessing2 = new Thread(){
+            @Override
+            public void run() {
+                informer.startProcessing();
+            }
+        };
+
+        startProcessing.start();
+        Thread.sleep(500);
+        startProcessing2.start();
+        Thread.sleep(500);
+//        assertEquals(IvrInformerStatus.PROCESSING, informer.getInformerStatus());
+
+        while (informer.getSessionsCount()>0)
+            TimeUnit.MILLISECONDS.sleep(500);
+
+        List dataList = dataCollector.getDataList();
+        Map<Long, Record> recs = getRecords(dataList);
+        printRecordsInformation(dataList);
+        assertEquals(2, dataList.size());
+        assertEquals(1, recs.size());
+        assertNotNull(recs.get(1l));
+        assertTrue((Long)recs.get(1l).getValue(CONVERSATION_DURATION_FIELD)>0);
+    }
+
+    @Test(timeout=60000)
+    public void numberTranslatingTest() throws Exception
+    {
+        informer.setWaitForSession(Boolean.FALSE);
+        informer.setMaxSessionsCount(2);
+        informer.setDataSource(pullDataSource);
+        informer.setUseNumberTranslation(Boolean.TRUE);
+        informer.setNumberTranslation("number.replace('x',record['ABONENT_ID']).replace('y','4')");
+
+        createScenario();
+        assertTrue(informer.start());
+        pullDataSource.addDataPortion(createRecord(1, "2", "880xy"));
+        pullDataSource.addDataPortion(null);
+
+        new Thread(){
+            @Override
+            public void run() {
+                informer.startProcessing();
+            }
+        }.start();
+
+        Thread.sleep(500);
+
+        while (informer.getSessionsCount()>0)
+            TimeUnit.MILLISECONDS.sleep(500);
+
+        List dataList = dataCollector.getDataList();
+        Map<Long, Record> recs = getRecords(dataList);
+        printRecordsInformation(dataList);
+        assertEquals(2, dataList.size());
+        assertEquals(1, recs.size());
+        assertNotNull(recs.get(1l));
+        assertTrue((Long)recs.get(1l).getValue(CONVERSATION_DURATION_FIELD)>0);
     }
 
 //    @Test(timeout=60000)

@@ -17,8 +17,13 @@
 
 package org.onesec.raven.ivr.impl;
 
+import java.util.List;
+import java.util.ArrayList;
+import org.onesec.raven.ivr.IvrEndpoint;
+import org.easymock.IMocksControl;
 import java.util.concurrent.TimeUnit;
 import org.easymock.IAnswer;
+import org.easymock.IArgumentMatcher;
 import org.junit.Before;
 import org.junit.Test;
 import org.onesec.core.StateWaitResult;
@@ -178,7 +183,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         verify(req, req2);
     }
 
-    @Test(timeout=20000)
+//    @Test(timeout=20000)
     public void watchdogTest() throws Exception
     {
         EndpointRequest req = createMock(EndpointRequest.class);
@@ -197,6 +202,63 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
 
         verify(req);
     }
+
+    @Test
+    public void priorityTest() throws InterruptedException
+    {
+        pool.setLogLevel(LogLevel.ERROR);
+        endpoint.stop();
+        IMocksControl control = createControl();
+        EndpointRequest req = control.createMock("req", EndpointRequest.class);
+        EndpointRequest req1 = control.createMock("req1", EndpointRequest.class);
+        EndpointRequest req2 = control.createMock("req2", EndpointRequest.class);
+        expect(req.getOwner()).andReturn(requestOwner).anyTimes();
+        expect(req1.getOwner()).andReturn(requestOwner).anyTimes();
+        expect(req2.getOwner()).andReturn(requestOwner).anyTimes();
+        expect(req1.getPriority()).andReturn(10).anyTimes();
+        expect(req2.getPriority()).andReturn(1).anyTimes();
+        expect(req.getWaitTimeout()).andReturn(1000l).anyTimes();
+        expect(req1.getWaitTimeout()).andReturn(5000l).anyTimes();
+        expect(req2.getWaitTimeout()).andReturn(5000l).anyTimes();
+        List<String> order = new ArrayList<String>(3);
+//        req.processRequest(checkEndpoint(order, "req"));
+        req.processRequest(null);
+        req2.processRequest(checkEndpoint(order, "req2"));
+        req1.processRequest(checkEndpoint(order, "req1"));
+
+        control.replay();
+
+        pool.requestEndpoint(req);
+        TimeUnit.MILLISECONDS.sleep(500);
+        pool.requestEndpoint(req1);
+        pool.requestEndpoint(req2);
+//        TimeUnit.MILLISECONDS.sleep(501);
+        endpoint.start();
+        TimeUnit.SECONDS.sleep(5);
+
+        control.verify();
+
+        assertEquals("req2", order.get(0));
+        assertEquals("req1", order.get(1));
+    }
+
+    public static IvrEndpoint checkEndpoint(final List<String> order, final String req)
+    {
+        reportMatcher(new IArgumentMatcher() {
+            public boolean matches(Object argument) {
+                try {
+                    order.add(req);
+                    Thread.sleep(500);
+                } catch (InterruptedException ex) {
+                }
+                return true;
+            }
+            public void appendTo(StringBuffer buffer) {
+            }
+        });
+        return null;
+    }
+
 
     private void waitForProvider() throws Exception
     {
