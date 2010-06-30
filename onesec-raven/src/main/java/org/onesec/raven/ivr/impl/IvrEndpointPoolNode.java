@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -52,6 +53,7 @@ import org.raven.tree.NodeAttribute;
 import org.raven.tree.Viewable;
 import org.raven.tree.ViewableObject;
 import org.raven.tree.impl.BaseNode;
+import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
 import org.raven.tree.impl.ViewableObjectImpl;
 import org.weda.annotations.constraints.NotNull;
 import org.weda.internal.annotations.Message;
@@ -73,8 +75,14 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     @Parameter(valueHandlerType=SystemSchedulerValueHandlerFactory.TYPE)
     private Scheduler watchdogScheduler;
 
+    @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
+    private IvrEndpointPool auxiliaryPool;
+
     @Parameter(readOnly=true)
     private Double loadAverage;
+
+    @Parameter(readOnly=true)
+    private AtomicInteger auxiliaryPoolUsageCount;
 
     private ReadWriteLock lock;
     private Condition endpointReleased;
@@ -125,6 +133,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         statusMessage = new AtomicReference<String>("");
         managerThreadStoped = new AtomicBoolean(true);
         timePeriod = 0;
+        auxiliaryPoolUsageCount = new AtomicInteger(0);
     }
 
     @Override
@@ -197,14 +206,20 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                     if (isLogLevelEnabled(LogLevel.DEBUG))
                         debug("Processing request from (" + ri.getTaskNode().getPath() + ")");
                     lookupForEndpoint(ri);
-                    if (ri.endpoint == null)
-                        ri.request.processRequest(null);
-                    else {
+                    if (ri.endpoint == null) {
+                        IvrEndpointPool _auxiliaryPool = auxiliaryPool;
+                        if (_auxiliaryPool==null)
+                            ri.request.processRequest(null);
+                        else{
+                            auxiliaryPoolUsageCount.incrementAndGet();
+                            _auxiliaryPool.requestEndpoint(ri.request);
+                        }
+                    } else {
                         if (!sendResponse(ri)) {
                             try {
                                 ri.request.processRequest(null);
                             } finally {
-                                releaseEndpoint(null, 0);
+                                releaseEndpoint(ri.endpoint, 0);
                             }
                         }
                     }
@@ -262,8 +277,20 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         this.maxRequestQueueSize = maxRequestQueueSize;
     }
 
+    public IvrEndpointPool getAuxiliaryPool() {
+        return auxiliaryPool;
+    }
+
+    public void setAuxiliaryPool(IvrEndpointPool auxiliaryPool) {
+        this.auxiliaryPool = auxiliaryPool;
+    }
+
     public Double getLoadAverage() {
         return loadAverage;
+    }
+
+    public AtomicInteger getAuxiliaryPoolUsageCount() {
+        return auxiliaryPoolUsageCount;
     }
 
     private synchronized void addDuration(long dur)
@@ -488,7 +515,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
             try
             {
                 getAndLockFreeEndpoint(ri);
-                if (ri.endpoint==null)
+                if (ri.endpoint==null && auxiliaryPool==null)
                 {
                     long timeout = ri.request.getWaitTimeout()-(System.currentTimeMillis()-ri.startTime);
                     if (timeout>0)

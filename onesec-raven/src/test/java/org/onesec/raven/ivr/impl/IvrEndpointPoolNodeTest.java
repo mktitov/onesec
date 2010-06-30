@@ -31,8 +31,6 @@ import org.onesec.core.provider.ProviderController;
 import org.onesec.core.provider.ProviderControllerState;
 import org.onesec.core.services.ProviderRegistry;
 import org.onesec.raven.OnesecRavenTestCase;
-import org.onesec.raven.impl.CCMCallOperatorNode;
-import org.onesec.raven.impl.ProviderNode;
 import org.onesec.raven.ivr.EndpointRequest;
 import org.onesec.raven.ivr.IvrEndpointState;
 import org.raven.log.LogLevel;
@@ -49,29 +47,13 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
 {
     private IvrEndpointPoolNode pool;
     private ExecutorServiceNode executor;
-    private IvrEndpointNode endpoint;
+    private TestIvrEndpoint endpoint;
     private Node requestOwner;
     private Node requestOwner2;
 
     @Before
     public void prepare() throws Exception
     {
-        CCMCallOperatorNode callOperator = new CCMCallOperatorNode();
-        callOperator.setName("call operator");
-        tree.getRootNode().addAndSaveChildren(callOperator);
-        assertTrue(callOperator.start());
-
-        ProviderNode provider = new ProviderNode();
-        provider.setName("88013 provider");
-        callOperator.getProvidersNode().addAndSaveChildren(provider);
-        provider.setFromNumber(88013);
-        provider.setToNumber(88024);
-        provider.setHost("10.16.15.1");
-        provider.setPassword("cti_user1");
-        provider.setUser("cti_user1");
-        assertTrue(provider.start());
-        waitForProvider();
-
         requestOwner = new ContainerNode("requestOwner");
         tree.getRootNode().addAndSaveChildren(requestOwner);
         assertTrue(requestOwner.start());
@@ -93,7 +75,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         pool.setLogLevel(LogLevel.TRACE);
         assertTrue(pool.start());
 
-        endpoint = createEndpoint("88013", 1234);
+        endpoint = createEndpoint("88013");
         
     }
 
@@ -106,7 +88,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         replay(req);
 
         pool.requestEndpoint(req);
-        TimeUnit.SECONDS.sleep(1);
+        TimeUnit.SECONDS.sleep(2);
 
         verify(req);
     }
@@ -123,7 +105,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         pool.requestEndpoint(req);
         TimeUnit.SECONDS.sleep(1);
         pool.requestEndpoint(req);
-        TimeUnit.SECONDS.sleep(1);
+        TimeUnit.SECONDS.sleep(2);
 
         verify(req);
     }
@@ -158,13 +140,13 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
 //    @Test(timeout=25000)
     public void asyncTest() throws Exception
     {
-        createEndpoint("88014", 1236);
+        createEndpoint("88014");
 
         EndpointRequest req = createMock(EndpointRequest.class);
         EndpointRequest req2 = createMock(EndpointRequest.class);
         expect(req.getOwner()).andReturn(requestOwner).anyTimes();
         expect(req2.getOwner()).andReturn(requestOwner2).anyTimes();
-        req.processRequest(isA(IvrEndpointNode.class));
+        req.processRequest(isA(IvrEndpoint.class));
         expectLastCall().andAnswer(new IAnswer<Object>()
         {
             public Object answer() throws Throwable {
@@ -172,7 +154,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
                 return null;
             }
         });
-        req2.processRequest(isA(IvrEndpointNode.class));
+        req2.processRequest(isA(IvrEndpoint.class));
         replay(req, req2);
 
         pool.requestEndpoint(req);
@@ -203,7 +185,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         verify(req);
     }
 
-    @Test
+//    @Test
     public void priorityTest() throws InterruptedException
     {
         pool.setLogLevel(LogLevel.ERROR);
@@ -242,6 +224,41 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         assertEquals("req1", order.get(1));
     }
 
+    @Test
+    public void auxiliaryPoolTest() throws Exception
+    {
+        IvrEndpointPoolNode pool2 = new IvrEndpointPoolNode();
+        pool2.setName("pool2");
+        tree.getRootNode().addAndSaveChildren(pool2);
+        pool2.setExecutor(executor);
+        pool2.setLogLevel(LogLevel.TRACE);
+        TestIvrEndpoint endpoint2 = createEndpoint(pool2, "88014");
+        assertTrue(pool2.start());
+        pool.setAuxiliaryPool(pool2);
+
+        EndpointRequest req1 = createMock("req1", EndpointRequest.class);
+        EndpointRequest req2 = createMock("req2", EndpointRequest.class);
+        expect(req1.getOwner()).andReturn(requestOwner).anyTimes();
+        expect(req2.getOwner()).andReturn(requestOwner).anyTimes();
+        req1.processRequest(endpoint);
+        expectLastCall().andAnswer(new IAnswer<Object>() {
+            public Object answer() throws Throwable {
+                Thread.sleep(1000);
+                return null;
+            }
+        });
+        req2.processRequest(endpoint2);
+
+        replay(req1, req2);
+
+        pool.requestEndpoint(req1);
+        Thread.sleep(100);
+        pool.requestEndpoint(req2);
+        Thread.sleep(1000);
+
+        verify(req1, req2);
+    }
+
     public static IvrEndpoint checkEndpoint(final List<String> order, final String req)
     {
         reportMatcher(new IArgumentMatcher() {
@@ -272,20 +289,19 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         assertFalse(res.isWaitInterrupted());
     }
 
-    private IvrEndpointNode createEndpoint(String number, int port)
+    private TestIvrEndpoint createEndpoint(IvrEndpointPoolNode pool, String number)
     {
-        IvrEndpointNode endpoint = new IvrEndpointNode();
+        TestIvrEndpoint endpoint = new TestIvrEndpoint();
         endpoint.setName(number);
         pool.addAndSaveChildren(endpoint);
-        endpoint.setExecutorService(executor);
-        endpoint.setAddress(number);
-        endpoint.setIp("10.50.1.134");
-        endpoint.setPort(port);
         endpoint.setLogLevel(LogLevel.TRACE);
         assertTrue(endpoint.start());
 
-        StateWaitResult res = endpoint.getEndpointState().waitForState(
-            new int[]{IvrEndpointState.IN_SERVICE}, 2000);
        return endpoint;
+    }
+    
+    private TestIvrEndpoint createEndpoint(String number)
+    {
+        return createEndpoint(pool, number);
     }
 }
