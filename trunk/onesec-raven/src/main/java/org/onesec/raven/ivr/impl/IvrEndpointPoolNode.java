@@ -299,7 +299,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         if (currTimePeriod>timePeriod){
             timePeriod = currTimePeriod;
             if (timePeriod>0){
-                loadAverage = duration*100./getChildrenCount()*LOADAVERAGE_INTERVAL;
+                loadAverage = duration*100./(getChildrenCount()*LOADAVERAGE_INTERVAL);
                 loadAverage = new BigDecimal(loadAverage).setScale(2, RoundingMode.HALF_UP).doubleValue();
             }
             duration = dur;

@@ -865,8 +865,8 @@ public class IvrEndpointNode extends BaseNode
         }
         catch (InterruptedException ex)
         {
-            if (isLogLevelEnabled(LogLevel.ERROR))
-                error("Operation closeRtpSession was interrupted", ex);
+            if (isLogLevelEnabled(LogLevel.DEBUG))
+                debug("Operation closeRtpSession was interrupted", ex);
             Thread.currentThread().interrupt();
         }
     }
