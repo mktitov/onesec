@@ -68,6 +68,7 @@ public class IvrInformerSession implements EndpointRequest, ConversationCompleti
     private ConversationResult conversationResult;
     private Record currentRecord;
     private IvrEndpoint endpoint;
+    private String abonentNumber;
 
     public IvrInformerSession(
             List<Record> records, AsyncIvrInformer informer
@@ -131,7 +132,8 @@ public class IvrInformerSession implements EndpointRequest, ConversationCompleti
 
     public String getStatusMessage()
     {
-        return statusMessage+" ("+informer.getRecordInfo(currentRecord)+")";
+        return statusMessage+" ("+informer.getRecordInfo(currentRecord)
+                +(abonentNumber==null?"":", translated number - "+abonentNumber)+")";
     }
 
     public void processRequest(IvrEndpoint endpoint)
@@ -367,7 +369,7 @@ public class IvrInformerSession implements EndpointRequest, ConversationCompleti
             bindings.put(AsyncIvrInformer.RECORD_BINDING, record);
             bindings.put(AsyncIvrInformer.INFORMER_BINDING, this);
             statusMessage.set("Calling to the abonent");
-            String abonentNumber = converter.convert(String.class, record.getValue(ABONENT_NUMBER_FIELD), null);
+            abonentNumber = converter.convert(String.class, record.getValue(ABONENT_NUMBER_FIELD), null);
             abonentNumber = informer.translateNumber(abonentNumber, record);
             conversationResult = null;
             if (groupInformed)
@@ -420,6 +422,7 @@ public class IvrInformerSession implements EndpointRequest, ConversationCompleti
                 if (restartEndpoint)
                     restartEndpoint(endpoint, record);
             }
+            abonentNumber = null;
             informer.sendRecordToConsumers(record, dataContext);
         }
     }

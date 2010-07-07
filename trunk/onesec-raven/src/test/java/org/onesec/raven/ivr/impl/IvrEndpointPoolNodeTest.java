@@ -32,7 +32,6 @@ import org.onesec.core.provider.ProviderControllerState;
 import org.onesec.core.services.ProviderRegistry;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.ivr.EndpointRequest;
-import org.onesec.raven.ivr.IvrEndpointState;
 import org.raven.log.LogLevel;
 import org.raven.sched.impl.ExecutorServiceNode;
 import org.raven.tree.Node;

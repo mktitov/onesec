@@ -55,6 +55,7 @@ import org.raven.tree.ViewableObject;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
 import org.raven.tree.impl.ViewableObjectImpl;
+import org.raven.util.LoadAverageStatistic;
 import org.weda.annotations.constraints.NotNull;
 import org.weda.internal.annotations.Message;
 
@@ -79,7 +80,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     private IvrEndpointPool auxiliaryPool;
 
     @Parameter(readOnly=true)
-    private Double loadAverage;
+    private LoadAverageStatistic loadAverage;
 
     @Parameter(readOnly=true)
     private AtomicInteger auxiliaryPoolUsageCount;
@@ -93,8 +94,6 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     private AtomicBoolean stopManagerTask;
     private AtomicBoolean managerThreadStoped;
     private AtomicReference<String> statusMessage;
-    private long timePeriod;
-    private long duration;
 
     @Message
     private static String totalUsageCountMessage;
@@ -102,6 +101,8 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     private static String terminalsTableTitleMessage;
     @Message
     private static String terminalColumnMessage;
+    @Message
+    private static String terminalPortMessage;
     @Message
     private static String terminalStatusColumnMessage;
     @Message
@@ -132,7 +133,6 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         stopManagerTask = new AtomicBoolean(false);
         statusMessage = new AtomicReference<String>("");
         managerThreadStoped = new AtomicBoolean(true);
-        timePeriod = 0;
         auxiliaryPoolUsageCount = new AtomicInteger(0);
     }
 
@@ -150,6 +150,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         usageCounters.clear();
         stopManagerTask.set(false);
         executor.execute(this);
+        loadAverage = new LoadAverageStatistic(LOADAVERAGE_INTERVAL, getChildrenCount());
     }
 
     @Override
@@ -285,26 +286,12 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         this.auxiliaryPool = auxiliaryPool;
     }
 
-    public Double getLoadAverage() {
+    public LoadAverageStatistic getLoadAverage() {
         return loadAverage;
     }
 
     public AtomicInteger getAuxiliaryPoolUsageCount() {
         return auxiliaryPoolUsageCount;
-    }
-
-    private synchronized void addDuration(long dur)
-    {
-        long currTimePeriod = System.currentTimeMillis()/LOADAVERAGE_INTERVAL;
-        if (currTimePeriod>timePeriod){
-            timePeriod = currTimePeriod;
-            if (timePeriod>0){
-                loadAverage = duration*100./(getChildrenCount()*LOADAVERAGE_INTERVAL);
-                loadAverage = new BigDecimal(loadAverage).setScale(2, RoundingMode.HALF_UP).doubleValue();
-            }
-            duration = dur;
-        }else
-            duration+=dur;
     }
 
     private void releaseEndpoint(IvrEndpoint endpoint, long duration)
@@ -314,7 +301,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         lock.writeLock().lock();
         try
         {
-            addDuration(duration);
+            loadAverage.addDuration(duration);
             busyEndpoints.remove(endpoint.getId());
             endpointReleased.signal();
             if (isLogLevelEnabled(LogLevel.DEBUG))
@@ -359,7 +346,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     {
         TableImpl table = new TableImpl(
                 new String[]{
-                    terminalColumnMessage, terminalStatusColumnMessage
+                    terminalColumnMessage, terminalPortMessage, terminalStatusColumnMessage
                     , terminalPoolStatusColumnMessage, usageCountColumnMessage
                     , currentUsageTimeMessage, requesterNodeMessage, requesterStatusMessage});
 
@@ -378,6 +365,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                         String name = endpoint.getName();
                         if (!Status.STARTED.equals(endpoint.getStatus()))
                             name = "<span style=\"color: yellow\">"+name+"</span>";
+                        int port = ((IvrEndpointNode)endpoint).getPort();
                         String status = endpoint.getEndpointState().getIdName();
                         status = String.format(
                                 statusFormat, status.equals("IN_SERVICE")? "green" : "blue", status);
@@ -398,7 +386,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                         }
 
                         table.addRow(new Object[]{
-                            name, status, poolStatus, usageCount, currentUsageTime, requester, requesterStatus});
+                            name, port, status, poolStatus, usageCount, currentUsageTime, requester, requesterStatus});
                     }
             }
             finally
