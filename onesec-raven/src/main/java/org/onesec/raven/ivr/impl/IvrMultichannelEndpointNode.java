@@ -499,12 +499,14 @@ public class IvrMultichannelEndpointNode extends BaseNode
     private void acceptIncomingCall(CallCtlConnOfferedEv event)
     {
         CiscoCall call = (CiscoCall) event.getCall();
+        CallControlConnection con = (CallControlConnection) event.getConnection();
         if (isLogLevelEnabled(LogLevel.DEBUG))
-            debug(callLog(call, "Accepting call"));
+            debug(callLog(call, "Accepting call. Provider stated - %s, Connection state - %s"
+                    , call.getProvider().getState()), con.getCallControlState());
         try{
-            ((CallControlConnection) event.getConnection()).accept();
+            con.accept();
             if (isLogLevelEnabled(LogLevel.DEBUG))
-            debug(callLog(call, "Call accpeted"));
+                debug(callLog(call, "Call accpeted"));
         }catch(Exception e){
             if (isLogLevelEnabled(LogLevel.ERROR))
                 error(callLog(call, "Error accepting call"), e);

@@ -114,6 +114,9 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
     @NotNull @Parameter(defaultValue="false")
     private Boolean waitForSession;
 
+    @NotNull @Parameter(defaultValue="false")
+    private Boolean autoStart;
+
     @NotNull @Parameter
     private Integer maxSessionsCount;
 
@@ -210,11 +213,6 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
 //        generateNodes();
         informerStatus.set(IvrInformerStatus.WAITING);
         informAllowed.set(true);
-    }
-
-    @Override
-    public boolean isAutoStart() {
-        return false;
     }
 
     public void executeScheduledJob(Scheduler scheduler)
@@ -361,6 +359,14 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
     public void setWaitForSession(Boolean waitForSession)
     {
         this.waitForSession = waitForSession;
+    }
+
+    public Boolean getAutoStart() {
+        return autoStart;
+    }
+
+    public void setAutoStart(Boolean autoStart) {
+        this.autoStart = autoStart;
     }
 
     public Integer getMaxInviteDuration() {
