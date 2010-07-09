@@ -17,8 +17,6 @@
 
 package org.onesec.raven.ivr.impl;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -66,7 +64,7 @@ import org.weda.internal.annotations.Message;
 @NodeClass(childNodes=IvrEndpointNode.class)
 public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Viewable, Task, Schedulable
 {
-    public static final int LOADAVERAGE_INTERVAL = 300000;
+    public static final int LOADAVERAGE_INTERVAL = 60000;
     @NotNull @Parameter(defaultValue="100")
     private Integer maxRequestQueueSize;
 
@@ -430,6 +428,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         try {
             if (lock.writeLock().tryLock(500, TimeUnit.MILLISECONDS)) {
                 try {
+                    loadAverage.addDuration(0);
                     Collection<Node> childs = getSortedChildrens();
                     if (childs!=null) {
                         int restartedEndpoints = 0;
