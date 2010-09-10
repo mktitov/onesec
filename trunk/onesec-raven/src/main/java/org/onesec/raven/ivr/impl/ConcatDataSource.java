@@ -384,13 +384,13 @@ public class ConcatDataSource
                     owner.getLogger().debug(logMess("Gathered (%s) buffers", bufferCount));
             } catch(Throwable e)
             {
-                e.printStackTrace();
                 if (owner.isLogLevelEnabled(LogLevel.ERROR))
                     owner.getLogger().error(logMess("Error creating continuous audio stream"), e);
             }
         }
         finally
         {
+            silenceSource.set(false);
             dataConcated.set(true);
             sourceThreadRunning.set(false);
         }
