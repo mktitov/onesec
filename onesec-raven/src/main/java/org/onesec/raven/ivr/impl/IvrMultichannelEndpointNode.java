@@ -504,6 +504,7 @@ public class IvrMultichannelEndpointNode extends BaseNode
             debug(callLog(call, "Accepting call. Provider stated - %s, Connection state - %s"
                     , call.getProvider().getState()), con.getCallControlState());
         try{
+//            Thread.sleep(100);
             con.accept();
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 debug(callLog(call, "Call accpeted"));

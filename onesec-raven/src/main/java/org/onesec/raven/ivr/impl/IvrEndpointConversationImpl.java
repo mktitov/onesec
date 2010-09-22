@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.impl;
 
+import javax.telephony.TerminalConnection;
 import com.cisco.jtapi.extensions.CiscoCall;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -276,7 +277,11 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                     if (call.getState()==Call.ACTIVE){
                         if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                             owner.getLogger().debug(callLog("Droping the call"));
-                        call.drop();
+                        Connection[] connections = call.getConnections();
+                        if (connections!=null && connections.length>0)
+                            for (Connection connection: connections)
+                                connection.disconnect();
+//                        call.drop();
                     }
                 }
                 catch (Exception ex)

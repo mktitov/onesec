@@ -50,10 +50,12 @@ public class PlayAudioAction extends AsyncAction implements InputStreamSource
             conversation.getOwner().getLogger().debug(
                     logMess("Playing audio from source (%s)", audioFile.getPath()));
         AudioStream stream = conversation.getAudioStream();
-        stream.addSource(this);
-        Thread.sleep(100);
-        while (!hasCancelRequest() && stream.isPlaying())
-            Thread.sleep(10);
+        if (stream!=null){
+            stream.addSource(this);
+            Thread.sleep(100);
+            while (!hasCancelRequest() && stream.isPlaying())
+                Thread.sleep(10);
+        }
         if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
             conversation.getOwner().getLogger().debug(logMess(
                     "Audio source (%s) successfuly played ", audioFile.getPath()));
