@@ -184,7 +184,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         verify(req);
     }
 
-//    @Test
+    @Test
     public void priorityTest() throws InterruptedException
     {
         pool.setLogLevel(LogLevel.ERROR);
@@ -193,19 +193,24 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         EndpointRequest req = control.createMock("req", EndpointRequest.class);
         EndpointRequest req1 = control.createMock("req1", EndpointRequest.class);
         EndpointRequest req2 = control.createMock("req2", EndpointRequest.class);
+        EndpointRequest req3 = control.createMock("req3", EndpointRequest.class);
         expect(req.getOwner()).andReturn(requestOwner).anyTimes();
         expect(req1.getOwner()).andReturn(requestOwner).anyTimes();
         expect(req2.getOwner()).andReturn(requestOwner).anyTimes();
+        expect(req3.getOwner()).andReturn(requestOwner).anyTimes();
         expect(req1.getPriority()).andReturn(10).anyTimes();
         expect(req2.getPriority()).andReturn(1).anyTimes();
+        expect(req3.getPriority()).andReturn(10).anyTimes();
         expect(req.getWaitTimeout()).andReturn(1000l).anyTimes();
         expect(req1.getWaitTimeout()).andReturn(5000l).anyTimes();
         expect(req2.getWaitTimeout()).andReturn(5000l).anyTimes();
+        expect(req3.getWaitTimeout()).andReturn(5000l).anyTimes();
         List<String> order = new ArrayList<String>(3);
 //        req.processRequest(checkEndpoint(order, "req"));
         req.processRequest(null);
         req2.processRequest(checkEndpoint(order, "req2"));
         req1.processRequest(checkEndpoint(order, "req1"));
+        req3.processRequest(checkEndpoint(order, "req3"));
 
         control.replay();
 
@@ -213,7 +218,8 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         TimeUnit.MILLISECONDS.sleep(500);
         pool.requestEndpoint(req1);
         pool.requestEndpoint(req2);
-//        TimeUnit.MILLISECONDS.sleep(501);
+        pool.requestEndpoint(req3);
+        TimeUnit.MILLISECONDS.sleep(1550);
         endpoint.start();
         TimeUnit.SECONDS.sleep(5);
 
@@ -221,9 +227,10 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
 
         assertEquals("req2", order.get(0));
         assertEquals("req1", order.get(1));
+        assertEquals("req3", order.get(2));
     }
 
-    @Test
+//    @Test
     public void auxiliaryPoolTest() throws Exception
     {
         IvrEndpointPoolNode pool2 = new IvrEndpointPoolNode();
