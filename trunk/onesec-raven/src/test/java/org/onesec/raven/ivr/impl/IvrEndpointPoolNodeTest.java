@@ -72,10 +72,10 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         tree.getRootNode().addAndSaveChildren(pool);
         pool.setExecutor(executor);
         pool.setLogLevel(LogLevel.TRACE);
-        assertTrue(pool.start());
 
         endpoint = createEndpoint("88013");
         
+        assertTrue(pool.start());
     }
 
 //    @Test
@@ -164,7 +164,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         verify(req, req2);
     }
 
-//    @Test(timeout=20000)
+    @Test(timeout=20000)
     public void watchdogTest() throws Exception
     {
         EndpointRequest req = createMock(EndpointRequest.class);
@@ -184,7 +184,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         verify(req);
     }
 
-    @Test
+//    @Test
     public void priorityTest() throws InterruptedException
     {
         pool.setLogLevel(LogLevel.ERROR);
