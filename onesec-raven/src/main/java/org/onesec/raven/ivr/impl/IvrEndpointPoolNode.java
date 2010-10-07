@@ -433,14 +433,20 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                     if (childs!=null) {
                         int restartedEndpoints = 0;
                         for (Node child: childs)
-                            if (   child instanceof IvrEndpoint
-                                && !busyEndpoints.containsKey(child.getId())
-                                && Status.INITIALIZED==child.getStatus())
+                            if (child instanceof IvrEndpoint && !busyEndpoints.containsKey(child.getId()))
                             {
-                                if (isLogLevelEnabled(LogLevel.DEBUG))
-                                    debug("Watchdog task. Restarting endpoint ({})", child.getName());
-                                if (child.start())
-                                    ++restartedEndpoints;
+                                IvrEndpoint endpoint = (IvrEndpoint) child;
+                                if (   Status.INITIALIZED==child.getStatus()
+                                    || (   Status.STARTED==child.getStatus()
+                                        && endpoint.getEndpointState().getId()!=IvrEndpointState.IN_SERVICE))
+                                {
+                                    if (isLogLevelEnabled(LogLevel.DEBUG))
+                                        debug("Watchdog task. Restarting endpoint ({})", child.getName());
+                                    if (Status.STARTED==child.getStatus())
+                                        child.stop();
+                                    if (child.start())
+                                        ++restartedEndpoints;
+                                }
                             }
                         if (restartedEndpoints>0)
                         {
