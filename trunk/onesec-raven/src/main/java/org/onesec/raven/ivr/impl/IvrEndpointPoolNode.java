@@ -548,7 +548,6 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
             this.request = request;
             startTime = System.currentTimeMillis();
             id = requestSeq.incrementAndGet();
-            System.out.println("added id: "+id);
         }
 
         public void setEndpoint(IvrEndpoint endpoint)
@@ -589,7 +588,6 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         public int compare(RequestInfo o1, RequestInfo o2) {
             int res = new Integer(o1.request.getPriority()).compareTo(o2.request.getPriority());
             if (res==0 && o1!=o2){
-                System.out.println("o1.id="+o1.id+"; o2.id="+o2.id);
                 res = new Long(o1.id).compareTo(o2.id);
             }
             return res;
