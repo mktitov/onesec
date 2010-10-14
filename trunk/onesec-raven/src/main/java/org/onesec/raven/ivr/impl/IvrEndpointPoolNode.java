@@ -28,6 +28,7 @@ import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -92,6 +93,8 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     private AtomicBoolean stopManagerTask;
     private AtomicBoolean managerThreadStoped;
     private AtomicReference<String> statusMessage;
+    private final static AtomicLong requestSeq = new AtomicLong();
+
 
     @Message
     private static String totalUsageCountMessage;
@@ -538,11 +541,14 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         private final long startTime;
         private long terminalUsageTime;
         private IvrEndpoint endpoint;
+        private long id;
 
         public RequestInfo(EndpointRequest request)
         {
             this.request = request;
             startTime = System.currentTimeMillis();
+            id = requestSeq.incrementAndGet();
+            System.out.println("added id: "+id);
         }
 
         public void setEndpoint(IvrEndpoint endpoint)
@@ -581,7 +587,12 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     private class RequestComparator implements Comparator<RequestInfo>
     {
         public int compare(RequestInfo o1, RequestInfo o2) {
-            return o1.request.getPriority()>=o2.request.getPriority()? 1 : -1;
+            int res = new Integer(o1.request.getPriority()).compareTo(o2.request.getPriority());
+            if (res==0 && o1!=o2){
+                System.out.println("o1.id="+o1.id+"; o2.id="+o2.id);
+                res = new Long(o1.id).compareTo(o2.id);
+            }
+            return res;
         }
     }
 }
