@@ -164,7 +164,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         verify(req, req2);
     }
 
-    @Test(timeout=20000)
+//    @Test(timeout=20000)
     public void watchdogTest() throws Exception
     {
         EndpointRequest req = createMock(EndpointRequest.class);
@@ -184,43 +184,48 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         verify(req);
     }
 
-//    @Test
+    @Test
     public void priorityTest() throws InterruptedException
     {
-        pool.setLogLevel(LogLevel.ERROR);
+        pool.setLogLevel(LogLevel.DEBUG);
         endpoint.stop();
         IMocksControl control = createControl();
         EndpointRequest req = control.createMock("req", EndpointRequest.class);
         EndpointRequest req1 = control.createMock("req1", EndpointRequest.class);
         EndpointRequest req2 = control.createMock("req2", EndpointRequest.class);
         EndpointRequest req3 = control.createMock("req3", EndpointRequest.class);
+        EndpointRequest req4 = control.createMock("req4", EndpointRequest.class);
         expect(req.getOwner()).andReturn(requestOwner).anyTimes();
         expect(req1.getOwner()).andReturn(requestOwner).anyTimes();
         expect(req2.getOwner()).andReturn(requestOwner).anyTimes();
         expect(req3.getOwner()).andReturn(requestOwner).anyTimes();
+        expect(req4.getOwner()).andReturn(requestOwner).anyTimes();
         expect(req1.getPriority()).andReturn(10).anyTimes();
         expect(req2.getPriority()).andReturn(1).anyTimes();
         expect(req3.getPriority()).andReturn(10).anyTimes();
+        expect(req4.getPriority()).andReturn(10).anyTimes();
         expect(req.getWaitTimeout()).andReturn(1000l).anyTimes();
         expect(req1.getWaitTimeout()).andReturn(5000l).anyTimes();
         expect(req2.getWaitTimeout()).andReturn(5000l).anyTimes();
         expect(req3.getWaitTimeout()).andReturn(5000l).anyTimes();
-        List<String> order = new ArrayList<String>(3);
+        expect(req4.getWaitTimeout()).andReturn(5000l).anyTimes();
+        List<String> order = new ArrayList<String>(4);
 //        req.processRequest(checkEndpoint(order, "req"));
         req.processRequest(null);
         req2.processRequest(checkEndpoint(order, "req2"));
         req1.processRequest(checkEndpoint(order, "req1"));
         req3.processRequest(checkEndpoint(order, "req3"));
+        req4.processRequest(checkEndpoint(order, "req4"));
 
         control.replay();
 
         pool.requestEndpoint(req);
         TimeUnit.MILLISECONDS.sleep(500);
+        endpoint.start();
         pool.requestEndpoint(req1);
         pool.requestEndpoint(req2);
         pool.requestEndpoint(req3);
-        TimeUnit.MILLISECONDS.sleep(1550);
-        endpoint.start();
+        pool.requestEndpoint(req4);
         TimeUnit.SECONDS.sleep(5);
 
         control.verify();
@@ -228,6 +233,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         assertEquals("req2", order.get(0));
         assertEquals("req1", order.get(1));
         assertEquals("req3", order.get(2));
+        assertEquals("req4", order.get(3));
     }
 
 //    @Test
@@ -268,8 +274,10 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
     public static IvrEndpoint checkEndpoint(final List<String> order, final String req)
     {
         reportMatcher(new IArgumentMatcher() {
-            public boolean matches(Object argument) {
+            public boolean matches(Object obj) {
                 try {
+                    String className = obj==null? "null" : obj.getClass().getName();
+                    System.out.println("req: "+req+"; class: "+className);
                     order.add(req);
                     Thread.sleep(500);
                 } catch (InterruptedException ex) {
