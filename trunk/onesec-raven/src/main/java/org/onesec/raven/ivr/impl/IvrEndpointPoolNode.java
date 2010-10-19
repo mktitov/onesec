@@ -585,11 +585,11 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
 
     private class RequestComparator implements Comparator<RequestInfo>
     {
-        public int compare(RequestInfo o1, RequestInfo o2) {
+        public int compare(RequestInfo o1, RequestInfo o2)
+        {
             int res = new Integer(o1.request.getPriority()).compareTo(o2.request.getPriority());
-            if (res==0 && o1!=o2){
+            if (res==0 && o1!=o2)
                 res = new Long(o1.id).compareTo(o2.id);
-            }
             return res;
         }
     }
