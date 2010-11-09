@@ -100,6 +100,7 @@ public class ConcatDataSource
         streamThreadRunning = new AtomicBoolean(false);
         silenceSource = new AtomicBoolean(true);
         buffers = new ConcurrentLinkedQueue<Buffer>();
+//        rtpPacketSize = 160;
         streams = new ConcatDataStream[]{
             new ConcatDataStream(buffers, this, owner, rtpPacketSize, rtpMaxSendAheadPacketsCount)};
         streams[0].setLogPrefix(logPrefix);
@@ -303,7 +304,8 @@ public class ConcatDataSource
 
                         PacketSizeControl packetSizeControl =
                                 (PacketSizeControl) p.getControl(PacketSizeControl.class.getName());
-                        packetSizeControl.setPacketSize(rtpPacketSize);
+                        if (packetSizeControl!=null)
+                            packetSizeControl.setPacketSize(rtpPacketSize);
 
                         PushBufferDataSource ds = (PushBufferDataSource) p.getDataOutput();
                         p.start();

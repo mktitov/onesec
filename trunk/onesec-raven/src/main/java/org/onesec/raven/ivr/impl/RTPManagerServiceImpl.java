@@ -21,10 +21,12 @@ import com.sun.media.codec.audio.ulaw.Packetizer;
 import java.io.IOException;
 import javax.media.Format;
 import javax.media.PlugInManager;
+import javax.media.format.AudioFormat;
 import javax.media.rtp.RTPManager;
 import org.onesec.raven.codec.AlawEncoder;
 import org.onesec.raven.codec.AlawPacketizer;
 import org.onesec.raven.codec.UlawPacketizer;
+import org.onesec.raven.codec.g729.G729Encoder;
 import org.onesec.raven.ivr.RTPManagerService;
 import org.slf4j.Logger;
 
@@ -36,6 +38,7 @@ public class RTPManagerServiceImpl implements RTPManagerService
 {
     private final Logger logger;
     private final Format alawRtpFormat;
+    private final Format g729RtpFormat;
 
     public RTPManagerServiceImpl(Logger logger) throws IOException
     {
@@ -62,9 +65,19 @@ public class RTPManagerServiceImpl implements RTPManagerService
 				, p.getSupportedOutputFormats(null)
                 , PlugInManager.CODEC);
         logger.debug("ALAW packetizer codec ({}) successfully added", AlawPacketizer.class.getName());
+
+        G729Encoder g = new G729Encoder();
+        PlugInManager.addPlugIn(G729Encoder.class.getName()
+                , g.getSupportedInputFormats()
+                , g.getSupportedOutputFormats(null)
+                , PlugInManager.CODEC);
+        logger.debug("G729 encoder/packetizer ({}) successfully added", G729Encoder.class.getName());
+
 //
 //        RTPManager tempManager = RTPManager.newInstance();
         alawRtpFormat = p.getSupportedOutputFormats(null)[0];
+        g729RtpFormat = g.getSupportedOutputFormats(null)[0];
+        System.out.println("G729 computed duration: "+((AudioFormat)g729RtpFormat).computeDuration(100));
 //        tempManager.addFormat(alawRtpFormat, 8);
 //        tempManager.dispose();
 //
@@ -77,6 +90,7 @@ public class RTPManagerServiceImpl implements RTPManagerService
             logger.debug("Creating new RTPManager");
         RTPManager manager = RTPManager.newInstance();
         manager.addFormat(alawRtpFormat, 8);
+        manager.addFormat(g729RtpFormat, 8);
 
         return manager;
     }

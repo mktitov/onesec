@@ -98,7 +98,8 @@ public class IvrEndpointNodeTest
         tree.getRootNode().addAndSaveChildren(endpoint);
         endpoint.setExecutorService(executor);
         endpoint.setConversationScenario(scenario);
-        endpoint.setAddress("88013");
+//        endpoint.setAddress("88013");
+        endpoint.setAddress("88014");
 //        endpoint.setRtpMaxSendAheadPacketsCount(0);
 //        endpoint.setRtpPacketSize(240);
         endpoint.setRtpMaxSendAheadPacketsCount(5);
