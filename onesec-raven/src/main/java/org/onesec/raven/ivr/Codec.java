@@ -27,7 +27,7 @@ import org.onesec.raven.codec.AlawAudioFormat;
  */
 public enum Codec
 {
-    AUTO(-1), G711_MU_LAW(0), G711_A_LAW(8);
+    AUTO(-1), G711_MU_LAW(0), G711_A_LAW(8), G729(11);
 
     private final int payload;
     private final AudioFormat audioFormat;
@@ -37,13 +37,17 @@ public enum Codec
     {
         this.payload = payload;
         switch (payload){
+            case 11 :
+                ciscoMediaCapabilities = new CiscoMediaCapability[]{new CiscoMediaCapability(11, 60)};
+                audioFormat = new AudioFormat(AudioFormat.G729_RTP, 8000d, 8, 1);
+                break;
             case 8 :
                 ciscoMediaCapabilities = new CiscoMediaCapability[]{new CiscoMediaCapability(2, 60)};
                 audioFormat = new AudioFormat(AlawAudioFormat.ALAW_RTP, 8000d, 8, 1);
                 break;
             case -1 :
                 ciscoMediaCapabilities = new CiscoMediaCapability[]{
-                    new CiscoMediaCapability(2, 60), new CiscoMediaCapability(4, 60)};
+                    new CiscoMediaCapability(2, 60), new CiscoMediaCapability(4, 60), new CiscoMediaCapability(11, 60)};
                 audioFormat = null;
                 break;
             default : 
