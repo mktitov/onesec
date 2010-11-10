@@ -19,15 +19,11 @@ package org.onesec.raven.ivr.impl;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.util.Collection;
 import javax.media.control.BufferControl;
 import javax.media.rtp.RTPManager;
-import javax.media.rtp.RemoteListener;
 import javax.media.rtp.SendStream;
 import javax.media.rtp.SessionAddress;
-import javax.media.rtp.event.ReceiverReportEvent;
 import javax.media.rtp.event.RemoteEvent;
-import javax.media.rtp.rtcp.Feedback;
 import org.onesec.raven.ivr.RTPManagerService;
 import org.weda.internal.annotations.Service;
 
@@ -53,25 +49,25 @@ public class RTPSession
         rtpManager.initialize(new SessionAddress());
         rtpManager.addTarget(destAddress);
         sendStream = rtpManager.createSendStream(source, 0);
-        rtpManager.addRemoteListener(new RemoteListener() {
-            public void update(RemoteEvent event) {
-                System.out.println("!!! RECIEVED REPORT: "+event.toString());
-                if (event instanceof ReceiverReportEvent){
-                    Collection<Feedback> feedbacks = ((ReceiverReportEvent)event).getReport().getFeedbackReports();
-                    if (feedbacks!=null)
-                        for (Feedback f: feedbacks)
-                            System.out.println(String.format(
-                                "FEEDBACK: DLSR=%s; FractionLost=%s; Jitter=%s; LSR=%s; NumLost=%s"
-                                , f.getDLSR(), f.getFractionLost(), f.getJitter(), f.getLSR(), f.getNumLost()));
-                }
-            }
-        });
+//        rtpManager.addRemoteListener(new RemoteListener() {
+//            public void update(RemoteEvent event) {
+//                System.out.println("!!! RECIEVED REPORT: "+event.toString());
+//                if (event instanceof ReceiverReportEvent){
+//                    Collection<Feedback> feedbacks = ((ReceiverReportEvent)event).getReport().getFeedbackReports();
+//                    if (feedbacks!=null)
+//                        for (Feedback f: feedbacks)
+//                            System.out.println(String.format(
+//                                "FEEDBACK: DLSR=%s; FractionLost=%s; Jitter=%s; LSR=%s; NumLost=%s"
+//                                , f.getDLSR(), f.getFractionLost(), f.getJitter(), f.getLSR(), f.getNumLost()));
+//                }
+//            }
+//        });
         sendStream.setBitRate(1);
         BufferControl control = (BufferControl)rtpManager.getControl(BufferControl.class.getName());
-        System.out.println(String.format(
-                "!!! Buffer control length: %s, threshold enabled: %s, minimum threshold: %s"
-                , control.getBufferLength(), control.getEnabledThreshold()
-                , control.getMinimumThreshold()));
+//        System.out.println(String.format(
+//                "!!! Buffer control length: %s, threshold enabled: %s, minimum threshold: %s"
+//                , control.getBufferLength(), control.getEnabledThreshold()
+//                , control.getMinimumThreshold()));
         control.setMinimumThreshold(60);
         control.setBufferLength(60);
     }

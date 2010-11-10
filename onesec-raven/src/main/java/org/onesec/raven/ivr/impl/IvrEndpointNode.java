@@ -621,7 +621,7 @@ public class IvrEndpointNode extends BaseNode
                     {
                         CallCtlConnFailedEv ev = (CallCtlConnFailedEv) event;
                         int cause = ev.getCallControlCause();
-                        System.out.println("        >>> CAUSE: "+cause+" : "+ev.getCause());
+//                        System.out.println("        >>> CAUSE: "+cause+" : "+ev.getCause());
                         CompletionCode code = CompletionCode.OPPONENT_UNKNOWN_ERROR;
                         switch (cause)
                         {
@@ -638,14 +638,14 @@ public class IvrEndpointNode extends BaseNode
                     break;
                 case CallCtlTermConnDroppedEv.ID:
                     CallCtlTermConnDroppedEv ev = (CallCtlTermConnDroppedEv) event;
-                    switch (ev.getCause())
-                    {
-                        case CallCtlTermConnDroppedEv.CAUSE_NORMAL :
-                            System.out.println("    >>>> NORMAL <<<< :"+ev.getCause()); break;
-                        case CallCtlTermConnDroppedEv.CAUSE_CALL_CANCELLED :
-                            System.out.println("    >>>> CANCELED <<<< :"+ev.getCause()); break;
-                        default: System.out.println("    >>>> UNKNOWN <<<< :"+ev.getCause());
-                    }
+//                    switch (ev.getCause())
+//                    {
+//                        case CallCtlTermConnDroppedEv.CAUSE_NORMAL :
+//                            System.out.println("    >>>> NORMAL <<<< :"+ev.getCause()); break;
+//                        case CallCtlTermConnDroppedEv.CAUSE_CALL_CANCELLED :
+//                            System.out.println("    >>>> CANCELED <<<< :"+ev.getCause()); break;
+//                        default: System.out.println("    >>>> UNKNOWN <<<< :"+ev.getCause());
+//                    }
                     break;
             }
         }

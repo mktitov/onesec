@@ -6,15 +6,17 @@
  */
 package org.onesec.raven.codec.g729;
 
+import java.awt.Component;
 import java.util.*;
 
 import javax.media.*;
+import javax.media.control.PacketSizeControl;
 import javax.media.format.*;
 
 /**
  * @author Lubomir Marinov
  */
-public class G729Encoder extends AbstractCodecExt
+public class G729Encoder extends AbstractCodecExt implements PacketSizeControl
 {
     private static final short BIT_1 = Ld8k.BIT_1;
 
@@ -26,12 +28,15 @@ public class G729Encoder extends AbstractCodecExt
 
     private static final int INPUT_FRAME_SIZE_IN_BYTES = 2 * L_FRAME;
 
-//    private static final int OUTPUT_FRAME_SIZE_IN_BYTES = L_FRAME / 8;
-    private static final int OUTPUT_FRAME_SIZE_IN_BYTES = 20;
+    private static final int OUTPUT_FRAME_SIZE_IN_BYTES = L_FRAME / 8;
+//    private static final int OUTPUT_FRAME_SIZE_IN_BYTES = 20;
+
+    private int packetSize = 160;
+    private int frameCount = packetSize/80;
+    private int currentFrame;
 
     private Coder coder;
 
-    private int outputFrameCount;
 
     /**
      * The previous input if it was less than the input frame size and which is
@@ -56,54 +61,14 @@ public class G729Encoder extends AbstractCodecExt
      */
     public G729Encoder()
     {
-        super(
-            "G.729 Encoder",
-            AudioFormat.class,
-            new AudioFormat[]
-                    {
-//                        new AudioFormat(AudioFormat.G729_RTP, -1.0D, 8, 1, -1, -1, 8, -1.0D, Format.byteArray)
-                        new AudioFormat(AudioFormat.G729_RTP, 8000, AudioFormat.NOT_SPECIFIED, 1)
-                    });
+        super("G.729 Encoder", AudioFormat.class
+            , new AudioFormat[]{new AudioFormat(AudioFormat.G729_RTP, 8000, AudioFormat.NOT_SPECIFIED, 1)});
 
-        supportedInputFormats
-            = new AudioFormat[]
-                    {
-//                        new AudioFormat(AudioFormat.LINEAR, Format.NOT_SPECIFIED, 16, 1, Format.NOT_SPECIFIED, Format.NOT_SPECIFIED)
-                        new AudioFormat(AudioFormat.LINEAR, 8000, 16, 1, AudioFormat.LITTLE_ENDIAN, AudioFormat.SIGNED)
-                    };
-    }
+        supportedInputFormats = new AudioFormat[]{
+            new AudioFormat(AudioFormat.LINEAR, 8000, 16, 1, AudioFormat.LITTLE_ENDIAN, AudioFormat.SIGNED)
+        };
 
-    @Override
-    protected Format[] getMatchingOutputFormats(Format inputFormat)
-    {
-        System.out.println("!!!!getMatchingOutputFormats inputFormat: "+inputFormat);
-        Format[] res =  super.getMatchingOutputFormats(inputFormat);
-        System.out.println("!!!!getMatchingOutputFormats supported? : "+(res.length!=0));
-        if (res.length>0)
-            System.out.println("!!!!getMatchingOutputFormats out format : "+(res[0]));
-        return res;
-    }
-
-    @Override
-    public Format[] getSupportedInputFormats()
-    {
-        Format[] res = super.getSupportedInputFormats();
-        System.out.println("!!!!getSupportedInputFormats supported? : "+(res.length!=0));
-        for (Format format: res)
-            System.out.println("!!!!getSupportedInputFormats out format : "+(format));
-
-        return res;
-    }
-
-    @Override
-    public Format[] getSupportedOutputFormats(Format inputFormat)
-    {
-        Format[] res = super.getSupportedOutputFormats(inputFormat);
-        System.out.println("!!!! inputFormat: "+inputFormat);
-        System.out.println("!!!! supported? : "+(res!=null && res.length!=0));
-        if (res!=null && res.length>0)
-            System.out.println("!!!! out format : "+(res[0]));
-        return res;
+        this.controls = new Object[]{this};
     }
 
     @Override
@@ -119,7 +84,7 @@ public class G729Encoder extends AbstractCodecExt
     {
         super.discardOutputBuffer(outputBuffer);
 
-        outputFrameCount = 0;
+        currentFrame = 0;
     }
 
     /*
@@ -148,7 +113,7 @@ public class G729Encoder extends AbstractCodecExt
         serial = new short[SERIAL_SIZE];
         coder = new Coder();
 
-        outputFrameCount = 0;
+        currentFrame = 0;
     }
 
     /*
@@ -191,14 +156,14 @@ public class G729Encoder extends AbstractCodecExt
 
         coder.process(sp16, serial);
 
+//        byte[] output = validateByteArraySize(
+//                    outputBuffer,
+//                    outputBuffer.getOffset() + 2 * OUTPUT_FRAME_SIZE_IN_BYTES);
         byte[] output = validateByteArraySize(
                     outputBuffer,
-                    outputBuffer.getOffset() + 2 * OUTPUT_FRAME_SIZE_IN_BYTES);
+                    outputBuffer.getOffset() + frameCount * OUTPUT_FRAME_SIZE_IN_BYTES);
 
-        packetize(
-            serial,
-            output,
-            outputBuffer.getOffset() + OUTPUT_FRAME_SIZE_IN_BYTES * outputFrameCount);
+        packetize(serial, output, outputBuffer.getOffset() + OUTPUT_FRAME_SIZE_IN_BYTES * currentFrame);
         
         outputBuffer.setLength(outputBuffer.getLength() + OUTPUT_FRAME_SIZE_IN_BYTES);
 
@@ -206,11 +171,11 @@ public class G729Encoder extends AbstractCodecExt
 
         int processResult = BUFFER_PROCESSED_OK;
 
-        if (outputFrameCount == 1)
-            outputFrameCount = 0;
+        if (currentFrame == (frameCount-1))
+            currentFrame = 0;
         else
         {
-            outputFrameCount = 1;
+            ++currentFrame;
             processResult |= OUTPUT_BUFFER_NOT_FILLED;
         }
         if (inputLength > 0)
@@ -218,16 +183,9 @@ public class G729Encoder extends AbstractCodecExt
         return processResult;
     }
 
-    private void packetize(
-        short[] serial,
-        byte[] outputFrame,
-        int outputFrameOffset)
+    private void packetize(short[] serial, byte[] outputFrame, int outputFrameOffset)
     {
-        Arrays.fill(
-            outputFrame,
-            outputFrameOffset,
-            outputFrameOffset + L_FRAME / 8,
-            (byte) 0);
+        Arrays.fill(outputFrame, outputFrameOffset, outputFrameOffset + L_FRAME / 8, (byte) 0);
 
         for (int s = 0; s < L_FRAME; s++)
             if (BIT_1 == serial[2 + s])
@@ -245,5 +203,22 @@ public class G729Encoder extends AbstractCodecExt
         for (int o=outputOffset, i=inputOffset; o<outputLength; o++, i+=2)
             output[o] = ArrayIOUtils.readShort(input, i);
         return outputLength;
+    }
+
+    public int setPacketSize(int numBytes)
+    {
+        packetSize = numBytes;
+        frameCount = packetSize/80;
+        return packetSize;
+    }
+
+    public int getPacketSize() 
+    {
+        return packetSize;
+    }
+
+    public Component getControlComponent()
+    {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 }
