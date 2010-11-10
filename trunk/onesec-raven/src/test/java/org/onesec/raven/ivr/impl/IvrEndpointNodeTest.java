@@ -30,7 +30,6 @@ import org.onesec.core.services.ProviderRegistry;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.impl.CCMCallOperatorNode;
 import org.onesec.raven.impl.ProviderNode;
-import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.ConversationCompletionCallback;
 import org.onesec.raven.ivr.ConversationResult;
 import org.onesec.raven.ivr.IvrEndpointState;
@@ -221,7 +220,7 @@ public class IvrEndpointNodeTest
                 new int[]{IvrEndpointState.IN_SERVICE}, 10000);
         assertFalse(res.isWaitInterrupted());
 //        endpoint.invite("88024", scenario, this, null);
-        endpoint.invite("88024", scenario, this, null);
+        endpoint.invite("089128672947", scenario, this, null);
         res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.INVITING}, 30000);
         assertFalse(res.isWaitInterrupted());

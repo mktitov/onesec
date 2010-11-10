@@ -77,7 +77,6 @@ public class RTPManagerServiceImpl implements RTPManagerService
 //        RTPManager tempManager = RTPManager.newInstance();
         alawRtpFormat = p.getSupportedOutputFormats(null)[0];
         g729RtpFormat = g.getSupportedOutputFormats(null)[0];
-        System.out.println("G729 computed duration: "+((AudioFormat)g729RtpFormat).computeDuration(100));
 //        tempManager.addFormat(alawRtpFormat, 8);
 //        tempManager.dispose();
 //

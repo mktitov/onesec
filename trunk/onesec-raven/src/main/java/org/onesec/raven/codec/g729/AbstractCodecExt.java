@@ -58,7 +58,7 @@ public abstract class AbstractCodecExt extends com.ibm.media.codec.audio.AudioCo
     @Override
     protected Format[] getMatchingOutputFormats(Format inputFormat)
     {
-        System.out.println("   >>>> getMatchingOutputFormats: "+inputFormat);
+//        System.out.println("   >>>> getMatchingOutputFormats: "+inputFormat);
         if (suppOutputFormats != null)
             return suppOutputFormats.clone();
         this.supportedInputFormats = (AudioFormat[]) suppOutputFormats;
@@ -136,18 +136,18 @@ public abstract class AbstractCodecExt extends com.ibm.media.codec.audio.AudioCo
     @Override
     public Format setInputFormat(Format format)
     {
-        System.out.println("-------setInputFormat: "+format);
+//        System.out.println("-------setInputFormat: "+format);
         Format res = null;
 //        if (!formatClass.isInstance(format) || (null == matches(format, inputFormats))){
         if (!formatClass.isInstance(format) || (null == matches(format, supportedInputFormats))){
-            System.out.println("  not matches: ");
-            System.out.println("  instance of AudioFormat: "+(formatClass.isInstance(format)));
-            System.out.println("  inputFormats length: "+supportedInputFormats.length);
+//            System.out.println("  not matches: ");
+//            System.out.println("  instance of AudioFormat: "+(formatClass.isInstance(format)));
+//            System.out.println("  inputFormats length: "+supportedInputFormats.length);
             return null;
         }
 
         res = super.setInputFormat(format);
-        System.out.println("  format: "+res);
+//        System.out.println("  format: "+res);
         return res;
     }
 
