@@ -101,7 +101,7 @@ public class IvrEndpointNodeTest
         endpoint.setAddress("88014");
 //        endpoint.setRtpMaxSendAheadPacketsCount(0);
 //        endpoint.setRtpPacketSize(240);
-        endpoint.setRtpMaxSendAheadPacketsCount(5);
+//        endpoint.setRtpMaxSendAheadPacketsCount(5);
 //        endpoint.setAddress("68050");
 //        endpoint.setCodec(Codec.G711_A_LAW);
         endpoint.setIp(getInterfaceAddress().getHostAddress());
