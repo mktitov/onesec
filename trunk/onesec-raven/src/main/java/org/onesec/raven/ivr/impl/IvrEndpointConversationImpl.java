@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.impl;
 
+import com.cisco.jtapi.extensions.CiscoAddress;
 import javax.telephony.TerminalConnection;
 import com.cisco.jtapi.extensions.CiscoCall;
 import java.util.ArrayList;
@@ -279,9 +280,18 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                             owner.getLogger().debug(callLog("Droping the call"));
                         Connection[] connections = call.getConnections();
                         if (connections!=null && connections.length>0)
-                            for (Connection connection: connections)
-                                connection.disconnect();
-//                        call.drop();
+                            for (Connection connection: connections){
+                                if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                                    owner.getLogger().debug(callLog(
+                                            "Disconnecting connection for address (%s)",
+                                            connection.getAddress().getName()));
+                                if ( ((CiscoAddress)connection.getAddress()).getState()==CiscoAddress.IN_SERVICE)
+                                    connection.disconnect();
+                                else if (owner.getLogger().isDebugEnabled())
+                                    owner.getLogger().debug(callLog(
+                                            "Can't disconnect address not IN_SERVICE"));
+
+                            }
                     }
                 }
                 catch (Exception ex)

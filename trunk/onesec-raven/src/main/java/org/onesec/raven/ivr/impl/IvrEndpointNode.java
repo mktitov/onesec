@@ -319,8 +319,8 @@ public class IvrEndpointNode extends BaseNode
                         "(CTI_Port on the CCM side)"
                         , terminals[0].getName(), CiscoMediaTerminal.class.getName()));
             terminal = (CiscoMediaTerminal) terminals[0];
-            CiscoMediaCapability[] caps =
-                    new CiscoMediaCapability[]{CiscoMediaCapability.G711_64K_30_MILLISECONDS};
+//            CiscoMediaCapability[] caps =
+//                    new CiscoMediaCapability[]{CiscoMediaCapability.G711_64K_30_MILLISECONDS};
 
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 debug(String.format(
