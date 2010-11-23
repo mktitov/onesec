@@ -305,13 +305,13 @@ public class IvrMultichannelEndpointNode extends BaseNode
                         "(CTI_Port on the CCM side)"
                         , terminals[0].getName(), CiscoRouteTerminal.class.getName()));
             terminal = (CiscoRouteTerminal) terminals[0];
-            CiscoMediaCapability[] caps =
-                    new CiscoMediaCapability[]{CiscoMediaCapability.G711_64K_30_MILLISECONDS};
+//            CiscoMediaCapability[] caps =
+//                    new CiscoMediaCapability[]{CiscoMediaCapability.G711_64K_30_MILLISECONDS};
 
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 debug(String.format(
                         "Registering terminal (%s)...", address));
-            terminal.register(caps, CiscoRouteTerminal.DYNAMIC_MEDIA_REGISTRATION);
+            terminal.register(codec.getCiscoMediaCapabilities(), CiscoRouteTerminal.DYNAMIC_MEDIA_REGISTRATION);
 
             terminal.addObserver(this);
             observingTerminal.set(true);
@@ -498,19 +498,19 @@ public class IvrMultichannelEndpointNode extends BaseNode
 
     private void acceptIncomingCall(CallCtlConnOfferedEv event)
     {
-        CiscoCall call = (CiscoCall) event.getCall();
-        CallControlConnection con = (CallControlConnection) event.getConnection();
         if (isLogLevelEnabled(LogLevel.DEBUG))
-            debug(callLog(call, "Accepting call. Provider stated - %s, Connection state - %s"
-                    , call.getProvider().getState()), con.getCallControlState());
+            getLogger().debug("Accepting incoming call from ({})", event.getCallingAddress().getName());
+//        CiscoCall call = (CiscoCall) event.getCall();
+        CallControlConnection con = (CallControlConnection) event.getConnection();
         try{
 //            Thread.sleep(100);
             con.accept();
+            CiscoCall call = (CiscoCall) event.getCall();
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 debug(callLog(call, "Call accpeted"));
         }catch(Exception e){
-            if (isLogLevelEnabled(LogLevel.ERROR))
-                error(callLog(call, "Error accepting call"), e);
+//            if (isLogLevelEnabled(LogLevel.ERROR))
+//                error(callLog(call, "Error accepting call"), e);
         }
     }
 
@@ -524,7 +524,7 @@ public class IvrMultichannelEndpointNode extends BaseNode
         if (isLogLevelEnabled(LogLevel.DEBUG))
             debug(callLog(call, "Answering on call"));
         try{
-            event.getTerminalConnection().answer();
+//            event.getTerminalConnection().answer();
             if (isLogLevelEnabled(LogLevel.DEBUG))
             debug(callLog(call, "Answered"));
         }catch(Exception e){
