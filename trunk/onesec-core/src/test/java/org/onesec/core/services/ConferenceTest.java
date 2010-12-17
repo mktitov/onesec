@@ -62,7 +62,7 @@ public class ConferenceTest extends ServiceTestCase implements CallObserver, Ter
         
         CallControlTerminalConnection connection = (CallControlTerminalConnection) 
                 callControl.getCallingTerminal().getTerminalConnections()[0];
-        
+
         connection.hold();
         
         state = operator.call("88025", "089128672947");
