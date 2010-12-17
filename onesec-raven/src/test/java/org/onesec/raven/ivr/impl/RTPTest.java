@@ -232,7 +232,7 @@ public class RTPTest
         {
             waitForProviderState(provider, Provider.IN_SERVICE);
             System.out.println("Provider in service");
-            Address address = provider.getAddress("88013");
+            Address address = provider.getAddress("88014");
             if (address==null)
                 throw new Exception("Address not found");
             System.out.println("Address: "+address.toString()+", class: "+address.getClass().getName());
@@ -248,10 +248,10 @@ public class RTPTest
             terminal.addObserver(listener);
             address.addCallObserver(listener);
 
-            TimeUnit.SECONDS.sleep(2);
+            TimeUnit.SECONDS.sleep(5);
             Call call = provider.createCall();
-//            call.connect(terminal, address, "88024");
-            call.connect(terminal, address, "09989128672947");
+            call.connect(terminal, address, "88024");
+//            call.connect(terminal, address, "09989128672947");
             TimeUnit.SECONDS.sleep(60);
         }
         finally

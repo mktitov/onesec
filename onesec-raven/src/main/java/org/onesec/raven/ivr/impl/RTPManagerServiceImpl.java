@@ -21,7 +21,6 @@ import com.sun.media.codec.audio.ulaw.Packetizer;
 import java.io.IOException;
 import javax.media.Format;
 import javax.media.PlugInManager;
-import javax.media.format.AudioFormat;
 import javax.media.rtp.RTPManager;
 import org.onesec.raven.codec.AlawEncoder;
 import org.onesec.raven.codec.AlawPacketizer;

@@ -68,7 +68,7 @@ public class OutgoingRtpStreamImpl extends AbstractRtpStream implements Outgoing
             this.remotePort = remotePort;
             if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                 owner.getLogger().debug(logMess(
-                        "Trying to open RTP stream to the remote host (%s) using port (%s)"
+                        "Trying to open outgoing RTP stream to the remote host (%s) using port (%s)"
                         , remoteHost, remotePort));
             this.audioStream = audioStream;
             destAddress = new SessionAddress(InetAddress.getByName(remoteHost), remotePort);
