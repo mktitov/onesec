@@ -12,8 +12,7 @@ import javax.media.format.*;
 /**
  * @author Lubomir Marinov
  */
-public class G729Decoder
-    extends AbstractCodecExt
+public class G729Decoder extends AbstractCodecExt
 {
     private static final short BIT_0 = Ld8k.BIT_0;
 
@@ -42,29 +41,13 @@ public class G729Decoder
      */
     public G729Decoder()
     {
-        super(
-            "G.729 Decoder",
-            AudioFormat.class,
-            new AudioFormat[]
-                    {
-                        new AudioFormat(
-                                AudioFormat.LINEAR,
-                                8000,
-                                16,
-                                1,
-                                AudioFormat.LITTLE_ENDIAN,
-                                AudioFormat.SIGNED)
-                    });
+        super("G.729 Decoder", AudioFormat.class
+            , new AudioFormat[] {new AudioFormat(
+                    AudioFormat.LINEAR, 8000, 16,1, AudioFormat.LITTLE_ENDIAN, AudioFormat.SIGNED)
+            });
 
-        inputFormats
-            = new AudioFormat[]
-                    {
-                        new AudioFormat(
-                                AudioFormat.G729_RTP,
-                                8000,
-                                AudioFormat.NOT_SPECIFIED,
-                                1)
-                    };
+        supportedInputFormats = new AudioFormat[] {
+            new AudioFormat(AudioFormat.G729_RTP, 8000, AudioFormat.NOT_SPECIFIED, 1)};
     }
 
     private void depacketize(

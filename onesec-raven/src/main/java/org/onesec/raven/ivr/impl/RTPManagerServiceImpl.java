@@ -25,6 +25,7 @@ import javax.media.rtp.RTPManager;
 import org.onesec.raven.codec.AlawEncoder;
 import org.onesec.raven.codec.AlawPacketizer;
 import org.onesec.raven.codec.UlawPacketizer;
+import org.onesec.raven.codec.g729.G729Decoder;
 import org.onesec.raven.codec.g729.G729Encoder;
 import org.onesec.raven.ivr.RTPManagerService;
 import org.slf4j.Logger;
@@ -71,6 +72,13 @@ public class RTPManagerServiceImpl implements RTPManagerService
                 , g.getSupportedOutputFormats(null)
                 , PlugInManager.CODEC);
         logger.debug("G729 encoder/packetizer ({}) successfully added", G729Encoder.class.getName());
+
+        G729Decoder d = new G729Decoder();
+        PlugInManager.addPlugIn(G729Decoder.class.getName()
+                , d.getSupportedInputFormats()
+                , d.getSupportedOutputFormats(null)
+                , PlugInManager.CODEC);
+        logger.debug("G729 decoder/depacketizer ({}) successfully added", G729Decoder.class.getName());
 
 //
 //        RTPManager tempManager = RTPManager.newInstance();
