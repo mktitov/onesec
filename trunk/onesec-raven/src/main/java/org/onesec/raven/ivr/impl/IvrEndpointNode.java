@@ -145,8 +145,8 @@ public class IvrEndpointNode extends BaseNode
     private Integer rtpMaxSendAheadPacketsCount;
 
     private Address terminalAddress;
-    private CiscoMediaTerminal terminal;
-    private Call call;
+    CiscoMediaTerminal terminal;
+    Call call;
 
     private boolean terminalInService;
     private boolean terminalAddressInService;

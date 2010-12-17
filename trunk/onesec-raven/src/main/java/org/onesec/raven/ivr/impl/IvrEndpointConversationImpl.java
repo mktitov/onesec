@@ -18,7 +18,6 @@
 package org.onesec.raven.ivr.impl;
 
 import com.cisco.jtapi.extensions.CiscoAddress;
-import javax.telephony.TerminalConnection;
 import com.cisco.jtapi.extensions.CiscoCall;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -99,6 +98,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         state.setState(INVALID);
     }
 
+//    public void initIncomingRtpProperties(String remote)
+
     public void init(CallControlCall call, String remoteAddress, int remotePort, int packetSize,
             int initialBufferSize, int maxSendAheadPacketsCount, Codec codec)
         throws Exception
@@ -164,6 +165,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             {
                 outgoingRtpStream.open(remoteAddress, remotePort, audioStream);
                 outgoingRtpStream.start();
+                incomingRtpStream.open(remoteAddress, -1);
                 
                 state.setState(TALKING);
 

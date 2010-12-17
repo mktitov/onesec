@@ -19,9 +19,8 @@ package org.onesec.raven;
 
 import java.net.InetAddress;
 import java.net.NetworkInterface;
-import java.net.SocketException;
 import java.util.Enumeration;
-import org.apache.tapestry5.ioc.RegistryBuilder;
+import java.util.Set;
 import org.onesec.core.services.OnesecCoreModule;
 import org.raven.test.RavenCoreTestCase;
 
@@ -32,7 +31,7 @@ import org.raven.test.RavenCoreTestCase;
 public class OnesecRavenTestCase extends RavenCoreTestCase
 {
     @Override
-    protected void configureRegistry(RegistryBuilder builder)
+    protected void configureRegistry(Set<Class> builder)
     {
         super.configureRegistry(builder);
         builder.add(OnesecCoreModule.class);

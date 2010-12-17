@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.impl;
 
+import com.cisco.jtapi.extensions.CiscoCall;
 import java.io.FileInputStream;
 import java.util.Date;
 import java.util.HashMap;
@@ -193,7 +194,7 @@ public class IvrEndpointNodeTest
 
     }
 
-    @Test(timeout=120000)
+//    @Test(timeout=120000)
     public void inviteTest() throws Exception
     {
         AudioFileNode audioNode1 = createAudioFileNode("audio1", "/home/tim/Documents/raven/зенит 2/судья_resampled.wav");
@@ -233,17 +234,78 @@ public class IvrEndpointNodeTest
         Thread.sleep(1000);
         assertEquals(new Integer(0), executor.getExecutingTaskCount());
         
-        Thread.sleep(3000);
-        endpoint.invite("00489128672947", scenario, this, null);
+//        Thread.sleep(3000);
+//        endpoint.invite("00489128672947", scenario, this, null);
+//        res = endpoint.getEndpointState().waitForState(
+//                new int[]{IvrEndpointState.INVITING}, 30000);
+//        res = endpoint.getEndpointState().waitForState(
+//                new int[]{IvrEndpointState.TALKING}, 250000);
+//        res = endpoint.getEndpointState().waitForState(
+//                new int[]{IvrEndpointState.IN_SERVICE}, 50000);
+//
+//        Thread.sleep(1000);
+//        assertEquals(new Integer(0), executor.getExecutingTaskCount());
+    }
+
+    @Test(timeout=120000)
+    public void transfer2Test() throws Exception
+    {
+        AudioFileNode audioNode1 = createAudioFileNode("audio1", "/home/tim/Documents/raven/зенит 2/судья_resampled.wav");
+//        AudioFileNode audioNode1 = createAudioFileNode("audio1", "src/test/wav/test2.wav");
+//        AudioFileNode audioNode2 = createAudioFileNode("audio2", "src/test/wav/test.wav");
+        AudioFileNode audioNode2 = createAudioFileNode("audio2", "/home/tim/Documents/raven/зенит 2/судья_resampled.wav");
+
+        scenario.setValidDtmfs("1#");
+        IfNode ifNode1 = createIfNode("if1", scenario, "dtmf=='1'||repetitionCount==5");
+        IfNode ifNode2 = createIfNode("if2", scenario, "dtmf=='-'||dtmf=='#'");
+        createPlayAudioActionNode("hello", ifNode2, audioNode1);
+//        createPauseActionNode(ifNode2, 5000l);
+        createGotoNode("replay", ifNode2, scenario);
+        createPlayAudioActionNode("bye", ifNode1, audioNode2);
+
+        StopConversationActionNode stopConversationActionNode = new StopConversationActionNode();
+        stopConversationActionNode.setName("stop conversation");
+        ifNode1.addAndSaveChildren(stopConversationActionNode);
+        assertTrue(stopConversationActionNode.start());
+
+        waitForProvider();
+        assertTrue(endpoint.start());
+        StateWaitResult res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.IN_SERVICE}, 10000);
+        assertFalse(res.isWaitInterrupted());
+//        endpoint.invite("88024", scenario, this, null);
+        endpoint.invite("089128672947", scenario, this, null);
         res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.INVITING}, 30000);
+        assertFalse(res.isWaitInterrupted());
         res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.TALKING}, 250000);
-        res = endpoint.getEndpointState().waitForState(
-                new int[]{IvrEndpointState.IN_SERVICE}, 50000);
+        assertFalse(res.isWaitInterrupted());
+        
+        Thread.sleep(5000);
+        CiscoCall call = (CiscoCall) endpoint.call;
+        ProviderRegistry providerRegistry = registry.getService(ProviderRegistry.class);
+        CiscoCall newCall = (CiscoCall) providerRegistry.getProviderController(endpoint.getAddress()).getProvider().createCall();
+        newCall.consult(endpoint.terminal.getTerminalConnections()[0], "88024");
+        Thread.sleep(10000);
+        call.transfer(newCall);
+//        res = endpoint.getEndpointState().waitForState(
+//                new int[]{IvrEndpointState.IN_SERVICE}, 50000);
 
         Thread.sleep(1000);
         assertEquals(new Integer(0), executor.getExecutingTaskCount());
+
+//        Thread.sleep(3000);
+//        endpoint.invite("00489128672947", scenario, this, null);
+//        res = endpoint.getEndpointState().waitForState(
+//                new int[]{IvrEndpointState.INVITING}, 30000);
+//        res = endpoint.getEndpointState().waitForState(
+//                new int[]{IvrEndpointState.TALKING}, 250000);
+//        res = endpoint.getEndpointState().waitForState(
+//                new int[]{IvrEndpointState.IN_SERVICE}, 50000);
+//
+//        Thread.sleep(1000);
+//        assertEquals(new Integer(0), executor.getExecutingTaskCount());
     }
 
 //    @Test(timeout=120000)

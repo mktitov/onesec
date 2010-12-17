@@ -21,8 +21,9 @@ import com.cisco.jtapi.extensions.CiscoAddrInServiceEv;
 import com.cisco.jtapi.extensions.CiscoAddrOutOfServiceEv;
 import com.cisco.jtapi.extensions.CiscoCall;
 import com.cisco.jtapi.extensions.CiscoConnection;
-import com.cisco.jtapi.extensions.CiscoMediaCapability;
 import com.cisco.jtapi.extensions.CiscoMediaOpenLogicalChannelEv;
+import com.cisco.jtapi.extensions.CiscoRTPInputProperties;
+import com.cisco.jtapi.extensions.CiscoRTPInputStartedEv;
 import com.cisco.jtapi.extensions.CiscoRTPOutputProperties;
 import com.cisco.jtapi.extensions.CiscoRTPOutputStartedEv;
 import com.cisco.jtapi.extensions.CiscoRTPParams;
@@ -430,6 +431,7 @@ public class IvrMultichannelEndpointNode extends BaseNode
                 case CiscoMediaOpenLogicalChannelEv.ID: 
                     openLogicalChannel((CiscoMediaOpenLogicalChannelEv)event);
                     break;
+                case CiscoRTPInputStartedEv.ID: initConversation((CiscoRTPInputStartedEv)event); break;
                 case CiscoRTPOutputStartedEv.ID: initConversation((CiscoRTPOutputStartedEv)event); break;
 //                case CiscoRTPOutputStoppedEv.ID: closeRtpSession(); break;
                 case TermObservationEndedEv.ID: observingTerminal.set(false); break;
@@ -524,7 +526,7 @@ public class IvrMultichannelEndpointNode extends BaseNode
         if (isLogLevelEnabled(LogLevel.DEBUG))
             debug(callLog(call, "Answering on call"));
         try{
-//            event.getTerminalConnection().answer();
+            event.getTerminalConnection().answer();
             if (isLogLevelEnabled(LogLevel.DEBUG))
             debug(callLog(call, "Answered"));
         }catch(Exception e){
@@ -625,6 +627,39 @@ public class IvrMultichannelEndpointNode extends BaseNode
 //            default: System.out.println("    >>>> UNKNOWN <<<< :"+ev.getCause());
 //        }
 //
+    }
+
+    private void initConversation(CiscoRTPInputStartedEv event)
+    {
+        Call call = event.getCallID().getCall();
+        if (isLogLevelEnabled(LogLevel.DEBUG))
+            debug(callLog(call, "Initializing incoming rtp properties in the conversation"));
+        try
+        {
+            if (callsLock.writeLock().tryLock(LOCK_WAIT_TIMEOUT, TimeUnit.MILLISECONDS)) {
+                IvrEndpointConversationImpl conversation = null;
+                try {
+                    Integer id = getCallLegId(event.getCallID().getCall());
+                    conversation = calls.get(id);
+                } finally {
+                    callsLock.writeLock().unlock();
+                }
+                if (conversation!=null)
+                {
+                    CiscoRTPInputProperties props = event.getRTPInputProperties();
+//                    props.
+                    if (isLogLevelEnabled(LogLevel.DEBUG))
+                        debug(callLog(call
+                                , "Incoming RTP properties: host - (%s), port - (%s)"
+                                , props.getLocalAddress().toString(), props.getLocalPort()));
+                }
+            }
+        } catch (Exception ex) {
+            if (isLogLevelEnabled(LogLevel.ERROR))
+                error(callLog(
+                    event.getCallID().getCall()
+                    , "Error initializing incoming rtp properties in the conversation"), ex);
+        }
     }
 
     private void initConversation(CiscoRTPOutputStartedEv event)
