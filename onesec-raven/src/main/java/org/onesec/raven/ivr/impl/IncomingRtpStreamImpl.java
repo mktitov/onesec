@@ -17,21 +17,20 @@
 
 package org.onesec.raven.ivr.impl;
 
-import com.sun.media.rtp.RTPSessionMgr;
-import com.sun.media.ui.PlayerWindow;
-import java.io.File;
 import java.net.InetAddress;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import javax.media.Controller;
 import javax.media.DataSink;
 import javax.media.MediaLocator;
-import javax.media.Player;
 import javax.media.Processor;
 import javax.media.format.AudioFormat;
 import javax.media.protocol.DataSource;
 import javax.media.protocol.FileTypeDescriptor;
 import javax.media.protocol.SourceCloneable;
-import javax.media.rtp.Participant;
 import javax.media.rtp.RTPControl;
 import javax.media.rtp.RTPManager;
 import javax.media.rtp.ReceiveStream;
@@ -40,6 +39,7 @@ import javax.media.rtp.SessionAddress;
 import javax.media.rtp.event.NewReceiveStreamEvent;
 import javax.media.rtp.event.ReceiveStreamEvent;
 import org.onesec.raven.ivr.IncomingRtpStream;
+import org.onesec.raven.ivr.IncomingRtpStreamDataSourceListener;
 import org.onesec.raven.ivr.RTPManagerService;
 import org.onesec.raven.ivr.RtpStreamException;
 import org.raven.log.LogLevel;
@@ -56,12 +56,17 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
     private static RTPManagerService rtpManagerService;
 
     private RTPManager rtpManager;
-    private RTPSessionMgr sessionManager;
     private SessionAddress destAddress;
+    private ReceiveStream stream;
+    private DataSource source;
+    private List<Consumer> consumers;
+    private Lock lock;
 
     public IncomingRtpStreamImpl(InetAddress address, int port)
     {
         super(address, port, "Incoming RTP");
+        consumers = new LinkedList<Consumer>();
+        lock = new ReentrantLock();
     }
 
     public long getHandledBytes()
@@ -77,8 +82,12 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
     @Override
     public void doRelease() throws Exception
     {
-        rtpManager.removeTargets("Closing");
-        rtpManager.dispose();
+//        stream.getDataSource().stop();
+        try{
+            rtpManager.removeTargets("Disconnected");
+        }finally{
+            rtpManager.dispose();
+        }
     }
 
     public void open(String remoteHost, int remotePort) throws RtpStreamException
@@ -99,30 +108,6 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
             destAddress = new SessionAddress(dest, SessionAddress.ANY_PORT);
             rtpManager.addTarget(destAddress);
 
-//            sessionManager = new RTPSessionMgr();
-//            sessionManager.addReceiveStreamListener(this);
-//
-//            SessionAddress localAddress = new SessionAddress(address, port);
-//            InetAddress dest = InetAddress.getByName(remoteHost);
-////            destAddress = new SessionAddress(dest, remotePort, dest, remotePort+1);
-//            destAddress = new SessionAddress(dest, SessionAddress.ANY_PORT);
-//
-//            SourceDescription[] userdesclist = new SourceDescription[]{
-//                new SourceDescription(SourceDescription.SOURCE_DESC_EMAIL, "raven@some.com", 1, false)
-//                , new SourceDescription(SourceDescription.SOURCE_DESC_NAME, "Raven", 1, false)
-//                , new SourceDescription(SourceDescription.SOURCE_DESC_CNAME, sessionManager.generateCNAME(), 1, false)
-//                , new SourceDescription(SourceDescription.SOURCE_DESC_TOOL, "JMF RTP Player v2.0", 1, false)
-//            };
-//
-//            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-//                owner.getLogger().debug(logMess("Initializing session"));
-//            sessionManager.initSession(
-//                    localAddress, sessionManager.generateSSRC(), userdesclist, 0.05, 0.25);
-//            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-//                owner.getLogger().debug(logMess("Starting session"));
-//            sessionManager.startSession(destAddress, 1, null);
-
-
         }
         catch(Exception e)
         {
@@ -134,79 +119,88 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
         }
     }
 
-    public void start()
+    public void addDataSourceListener(IncomingRtpStreamDataSourceListener listener)
     {
-        throw new UnsupportedOperationException("Not supported yet.");
+        try{
+            if (lock.tryLock(100, TimeUnit.MICROSECONDS)){
+                try{
+
+                }finally{
+                    lock.unlock();
+                }
+            }
+            consumers.add(new Consumer(listener));
+        }catch(InterruptedException e){
+            owner.getLogger().error("Error adding listener", e);
+        }
     }
 
-    public void update(ReceiveStreamEvent event)
+    public void update(final ReceiveStreamEvent event)
     {
         if (owner.isLogLevelEnabled(LogLevel.DEBUG))
             owner.getLogger().debug(logMess("Received stream event (%s)", event.getClass().getName()));
 
-        ReceiveStream stream = event.getReceiveStream();
-        Participant participant = event.getParticipant();
-
         if (event instanceof NewReceiveStreamEvent)
         {
+            stream = event.getReceiveStream();
             if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                 owner.getLogger().debug(logMess("Received new stream"));
-            
-            DataSource ds = stream.getDataSource();
-            
-            RTPControl ctl = (RTPControl)ds.getControl("javax.media.rtp.RTPControl");
-            if (ctl!=null) 
-                if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                    owner.getLogger().debug(logMess("The format of the stream: %s", ctl.getFormat()));
 
-            if (participant!=null)
-                if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                    owner.getLogger().debug(logMess("Stream comes from: %s", participant.getCNAME()));
-            // create a player by passing datasource to the Media Manager
-            try{
-                Processor p = javax.media.Manager.createProcessor(ds);
-                p.configure();
-                waitForState(p, Processor.Configured);
-                p.getTrackControls()[0].setFormat(new AudioFormat(
-                    AudioFormat.LINEAR, 8000, 16,1, AudioFormat.LITTLE_ENDIAN, AudioFormat.SIGNED));
-                p.setContentDescriptor(new FileTypeDescriptor(FileTypeDescriptor.WAVE));
-                p.realize();
-                waitForState(p, Processor.Realized);
-                DataSource lds = p.getDataOutput();
-                lds = javax.media.Manager.createCloneableDataSource(lds);
-                SourceCloneable cloneable = (SourceCloneable) lds;
-//                lds.
-                DataSink fileWriter = javax.media.Manager.createDataSink(
-                        lds, new MediaLocator("file:///home/tim/tmp/test2.wav"));
-                fileWriter.open();
-//                Player pl = javax.media.Manager.createPlayer(cloneable.createClone());
-//                pl.realize();
-//                waitForState(pl, Player.Realized);
-//                pl.start();
-                
-//                Thread.sleep(2000);
-                DataSource clone = cloneable.createClone();
-                DataSink fileWriter2 = javax.media.Manager.createDataSink(
-                        clone, new MediaLocator("file:///home/tim/tmp/test3.wav"));
-                clone.connect();
-                clone.start();
-                fileWriter2.open();
-                p.start();
-                fileWriter.start();
-                fileWriter2.start();
+            new Thread(){
+                @Override
+                public void run(){
+                    try{
+                        Thread.sleep(4000);
+                        DataSource ds = stream.getDataSource();
 
-                Thread.sleep(10000);
-                fileWriter.stop();
-                fileWriter.close();
-                fileWriter2.stop();
-                fileWriter2.close();
-//                pl.close();
-            }
-            catch(Exception e){
-                    owner.getLogger().error(logMess("Error."), e);
-            }
+                        RTPControl ctl = (RTPControl)ds.getControl("javax.media.rtp.RTPControl");
+                        if (ctl!=null)
+                            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                                owner.getLogger().debug(logMess("The format of the stream: %s", ctl.getFormat()));
 
+                        // create a player by passing datasource to the Media Manager
+
+                        ds = javax.media.Manager.createCloneableDataSource(ds);
+                        SourceCloneable cloneable = (SourceCloneable) ds;
+                        saveToFile(ds,"test.wav", 10000);
+                        Thread.sleep(5000);
+                        saveToFile(cloneable.createClone(),"test2.wav", 5000);
+                    }
+                    catch(Exception e){
+                            owner.getLogger().error(logMess("Error."), e);
+                    }
+                }
+            }.start();
         }
+    }
+
+    private void saveToFile(DataSource ds, String filename, final long closeAfter) throws Exception
+    {
+        Processor p = javax.media.Manager.createProcessor(ds);
+        p.configure();
+        waitForState(p, Processor.Configured);
+        p.getTrackControls()[0].setFormat(new AudioFormat(
+                AudioFormat.LINEAR, 8000, 16, 1, AudioFormat.LITTLE_ENDIAN, AudioFormat.SIGNED));
+        p.setContentDescriptor(new FileTypeDescriptor(FileTypeDescriptor.WAVE));
+        p.realize();
+        waitForState(p, Processor.Realized);
+        final DataSink fileWriter = javax.media.Manager.createDataSink(
+                p.getDataOutput(), new MediaLocator("file:///home/tim/tmp/"+filename));
+        fileWriter.open();
+        p.start();
+        fileWriter.start();
+        new Thread(){
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(closeAfter);
+                    fileWriter.stop();
+                    fileWriter.close();
+                } catch(Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }.start();
     }
 
     private static void waitForState(Controller p, int state) throws Exception
@@ -217,6 +211,16 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
             TimeUnit.MILLISECONDS.sleep(5);
             if (System.currentTimeMillis()-startTime>2000)
                 throw new Exception("Processor state wait timeout");
+        }
+    }
+
+    private class Consumer
+    {
+        private IncomingRtpStreamDataSourceListener listener;
+        private boolean createEventFired = false;
+
+        public Consumer(IncomingRtpStreamDataSourceListener listener) {
+            this.listener = listener;
         }
     }
 
