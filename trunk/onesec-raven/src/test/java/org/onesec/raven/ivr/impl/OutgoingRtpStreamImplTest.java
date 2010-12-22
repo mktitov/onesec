@@ -38,10 +38,12 @@ import javax.media.rtp.rtcp.SourceDescription;
 import org.junit.Before;
 import org.junit.Test;
 import org.onesec.raven.OnesecRavenTestCase;
+import org.onesec.raven.RtpPlayer;
 import org.onesec.raven.ivr.AudioStream;
 import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.InputStreamSource;
 import org.onesec.raven.ivr.OutgoingRtpStream;
+import org.onesec.raven.ivr.RTPManagerService;
 import org.raven.sched.impl.ExecutorServiceNode;
 
 /**
@@ -82,15 +84,16 @@ public class OutgoingRtpStreamImplTest extends OnesecRavenTestCase implements Re
         InputStreamSource source3 = new TestInputStreamSource("src/test/wav/test.wav");
 
         ConcatDataSource audioSource =
-                new ConcatDataSource(FileTypeDescriptor.WAVE, executor, Codec.G711_A_LAW, 240, 5, 5, manager);
+                new ConcatDataSource(FileTypeDescriptor.WAVE, executor, Codec.G711_MU_LAW, 240, 5, 5, manager);
 
         OutgoingRtpStream sendStream = manager.getOutgoingRtpStream(manager);
-        Player player = Manager.createPlayer(new MediaLocator("rtp://"+localAddress.getHostAddress()+":1234/audio/1"));
+//        Player player = Manager.createPlayer(new MediaLocator("rtp://"+localAddress.getHostAddress()+":1234/audio/1"));
         Thread.sleep(2000);
         try
         {
             assertEquals(new Integer(1), manager.getStreamsCount());
             sendStream.open(localAddress.getHostAddress(), 1234, audioSource);
+            RtpPlayer player = new RtpPlayer(localAddress.getHostAddress());
             player.start();
             sendStream.start();
             audioSource.addSource(source1);
@@ -103,7 +106,7 @@ public class OutgoingRtpStreamImplTest extends OnesecRavenTestCase implements Re
         finally
         {
             sendStream.release();
-            player.stop();
+//            player.stop();
         }
         assertEquals(new Integer(0), manager.getStreamsCount());
     }
