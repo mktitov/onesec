@@ -17,7 +17,7 @@
 
 package org.onesec.raven.ivr;
 
-import javax.media.protocol.DataSource;
+import javax.media.protocol.ContentDescriptor;
 
 /**
  *
@@ -32,5 +32,7 @@ public interface IncomingRtpStream extends RtpStream
      * @throws RtpStreamException
      */
     public void open(String remoteHost, int remotePort) throws RtpStreamException;
-    public void addDataSourceListener(IncomingRtpStreamDataSourceListener listener);
+    public boolean addDataSourceListener(
+            IncomingRtpStreamDataSourceListener listener, ContentDescriptor desc)
+        throws RtpStreamException;
 }
