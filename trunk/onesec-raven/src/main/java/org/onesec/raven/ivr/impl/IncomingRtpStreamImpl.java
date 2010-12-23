@@ -37,6 +37,7 @@ import javax.media.rtp.RTPManager;
 import javax.media.rtp.ReceiveStream;
 import javax.media.rtp.ReceiveStreamListener;
 import javax.media.rtp.SessionAddress;
+import javax.media.rtp.event.ByeEvent;
 import javax.media.rtp.event.NewReceiveStreamEvent;
 import javax.media.rtp.event.ReceiveStreamEvent;
 import org.onesec.raven.ivr.IncomingRtpStream;
@@ -106,12 +107,11 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
         }
     }
 
-    public void open(String remoteHost, int remotePort) throws RtpStreamException
+    public void open(String remoteHost) throws RtpStreamException
     {
         try
         {
             this.remoteHost = remoteHost;
-            this.remotePort = remotePort;
             if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                 owner.getLogger().debug(logMess(
                         "Trying to open incoming RTP stream to the remote host (%s) using port (%s)"
@@ -143,11 +143,12 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
                 try{
                     if (status==Status.CLOSED)
                         return false;
-                    else if (status==Status.OPENED){
+                    else if (status==Status.OPENED || status==Status.INITIALIZING){
                         Consumer consumer = new Consumer(listener, contentDescriptor);
                         consumers.add(consumer);
-                        consumer.fireDataSourceCreatedEvent();
-                    }
+                        if (status==Status.OPENED)
+                            consumer.fireDataSourceCreatedEvent();
+                    } 
                 }finally{
                     lock.unlock();
                 }
@@ -178,6 +179,19 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
             if (ctl!=null)
                 if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                     owner.getLogger().debug(logMess("The format of the stream: %s", ctl.getFormat()));
+
+            lock.lock();
+            try{
+                if (!consumers.isEmpty())
+                    for (Consumer consumer: consumers)
+                        consumer.fireDataSourceCreatedEvent();
+            }finally{
+                lock.unlock();
+            }
+        }
+        else if (event instanceof ByeEvent)
+        {
+            release();
         }
     }
 

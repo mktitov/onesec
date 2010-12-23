@@ -23,7 +23,6 @@ import java.net.InetAddress;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.media.Manager;
-import javax.media.MediaLocator;
 import javax.media.NoPlayerException;
 import javax.media.Player;
 import javax.media.protocol.FileTypeDescriptor;
@@ -38,12 +37,10 @@ import javax.media.rtp.rtcp.SourceDescription;
 import org.junit.Before;
 import org.junit.Test;
 import org.onesec.raven.OnesecRavenTestCase;
-import org.onesec.raven.RtpPlayer;
 import org.onesec.raven.ivr.AudioStream;
 import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.InputStreamSource;
 import org.onesec.raven.ivr.OutgoingRtpStream;
-import org.onesec.raven.ivr.RTPManagerService;
 import org.raven.sched.impl.ExecutorServiceNode;
 
 /**
@@ -88,13 +85,15 @@ public class OutgoingRtpStreamImplTest extends OnesecRavenTestCase implements Re
 
         OutgoingRtpStream sendStream = manager.getOutgoingRtpStream(manager);
 //        Player player = Manager.createPlayer(new MediaLocator("rtp://"+localAddress.getHostAddress()+":1234/audio/1"));
+//        waitForState()
         Thread.sleep(2000);
         try
         {
             assertEquals(new Integer(1), manager.getStreamsCount());
             sendStream.open(localAddress.getHostAddress(), 1234, audioSource);
-            RtpPlayer player = new RtpPlayer(localAddress.getHostAddress());
-            player.start();
+//            sendStream.open("10.50.1.85", 1234, audioSource);
+//            RtpPlayer player = new RtpPlayer(localAddress.getHostAddress());
+//            player.start();
             sendStream.start();
             audioSource.addSource(source1);
             Thread.sleep(2000);
@@ -121,6 +120,7 @@ public class OutgoingRtpStreamImplTest extends OnesecRavenTestCase implements Re
 
         return addr;
     }
+
     private void createRtpSessionManager(int port, int port2) throws Exception
     {
         RTPSessionMgr manager = new RTPSessionMgr();

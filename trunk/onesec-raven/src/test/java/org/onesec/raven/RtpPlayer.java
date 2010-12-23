@@ -24,6 +24,7 @@ import javax.media.Manager;
 import javax.media.Player;
 import javax.media.Processor;
 import javax.media.format.AudioFormat;
+import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.DataSource;
 import javax.media.rtp.RTPControl;
 import javax.media.rtp.RTPManager;
@@ -93,11 +94,12 @@ public class RtpPlayer implements ReceiveStreamListener
                         waitForState(p, Processor.Configured);
                         p.getTrackControls()[0].setFormat(new AudioFormat(
                                 AudioFormat.LINEAR, 8000, 16, 1, AudioFormat.LITTLE_ENDIAN, AudioFormat.SIGNED));
-                //        p.setContentDescriptor(new FileTypeDescriptor(FileTypeDescriptor.WAVE));
+                        p.setContentDescriptor(new ContentDescriptor(ContentDescriptor.RAW));
                         p.realize();
                         waitForState(p, Processor.Realized);
                         p.start();
                         Player player = Manager.createPlayer(p.getDataOutput());
+                        waitForState(player, Player.Realized);
                         player.start();
                     }
                     catch(Exception e){
@@ -115,7 +117,7 @@ public class RtpPlayer implements ReceiveStreamListener
         while (p.getState()!=state)
         {
             TimeUnit.MILLISECONDS.sleep(5);
-            if (System.currentTimeMillis()-startTime>200)
+            if (System.currentTimeMillis()-startTime>1000)
                 throw new Exception("Processor state wait timeout");
         }
     }
