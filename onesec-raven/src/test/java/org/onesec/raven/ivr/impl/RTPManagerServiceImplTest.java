@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.impl;
 
+import java.util.Collection;
 import java.util.Vector;
 import javax.media.PlugInManager;
 import javax.media.format.AudioFormat;
@@ -30,6 +31,8 @@ import org.onesec.raven.codec.UlawPacketizer;
 import org.onesec.raven.codec.g729.G729Decoder;
 import org.onesec.raven.codec.g729.G729Encoder;
 import org.onesec.raven.ivr.RTPManagerService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -37,7 +40,20 @@ import org.onesec.raven.ivr.RTPManagerService;
  */
 public class RTPManagerServiceImplTest extends OnesecRavenTestCase
 {
+    private static final Logger logger = LoggerFactory.getLogger(RTPManagerServiceImplTest.class);
+
     @Test
+    public void printFormats()
+    {
+        AudioFormat inFormat = new AudioFormat(
+                AudioFormat.LINEAR, 8000, 16, 1, AudioFormat.LITTLE_ENDIAN, AudioFormat.SIGNED);
+        Collection plugins = PlugInManager.getPlugInList(inFormat, null, PlugInManager.RENDERER);
+        assertNotNull(plugins);
+        for (Object plugin: plugins)
+            logger.info("PLUGIN: {}", plugin.toString());
+    }
+
+//    @Test
     public void codecsTest()
     {
         checkCodec(AudioFormat.ULAW, AudioFormat.ULAW_RTP, UlawPacketizer.class);

@@ -31,7 +31,14 @@ public interface IncomingRtpStream extends RtpStream
      * @param remotePort the port from which
      * @throws RtpStreamException
      */
-    public void open(String remoteHost, int remotePort) throws RtpStreamException;
+    public void open(String remoteHost) throws RtpStreamException;
+    /**
+     * 
+     * @param listener
+     * @param desc
+     * @return
+     * @throws RtpStreamException
+     */
     public boolean addDataSourceListener(
             IncomingRtpStreamDataSourceListener listener, ContentDescriptor desc)
         throws RtpStreamException;
