@@ -289,7 +289,7 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
         {
             try{
                 try{
-                    inDataSource = firstConsumerAdded? source : ((SourceCloneable)source).createClone();
+                    inDataSource = !firstConsumerAdded? source : ((SourceCloneable)source).createClone();
                     firstConsumerAdded = true;
 
                     processor = Manager.createProcessor(inDataSource);
@@ -301,7 +301,7 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
                     waitForState(processor, Processor.Realized);
                     outDataSource = processor.getDataOutput();
                     processor.start();
-                    waitForState(processor, Processor.Started);
+//                    waitForState(processor, Processor.Started);
 
                     listener.dataSourceCreated(outDataSource);
 

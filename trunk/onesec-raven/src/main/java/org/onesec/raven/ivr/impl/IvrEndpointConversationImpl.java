@@ -165,7 +165,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             {
                 outgoingRtpStream.open(remoteAddress, remotePort, audioStream);
                 outgoingRtpStream.start();
-                incomingRtpStream.open(remoteAddress, -1);
+                incomingRtpStream.open(remoteAddress);
                 
                 state.setState(TALKING);
 

@@ -18,6 +18,7 @@
 package org.onesec.raven.ivr.impl;
 
 import java.net.InetAddress;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import org.onesec.raven.ivr.RtpStream;
 import org.raven.log.LogLevel;
@@ -42,6 +43,7 @@ public abstract class AbstractRtpStream implements RtpStream
     private RtpStreamManagerNode manager;
     protected Node owner;
     private String logPrefix;
+    private AtomicBoolean released;
 
     public AbstractRtpStream(InetAddress address, int port, String streamType)
     {
@@ -52,6 +54,7 @@ public abstract class AbstractRtpStream implements RtpStream
 
         handledBytes = new AtomicLong();
         handledPackets = new AtomicLong();
+        released = new AtomicBoolean(false);
     }
 
     public long getCreationTime()
@@ -114,6 +117,11 @@ public abstract class AbstractRtpStream implements RtpStream
 
     public void release()
     {
+        if (!released.compareAndSet(false, true)) {
+            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                owner.getLogger().debug(logMess("Can't release stream because of already released"));
+            return;
+        }
         manager.releaseStream(this);
         try
         {
