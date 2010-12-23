@@ -98,12 +98,11 @@ public class RtpManagerTestCase extends OnesecRavenTestCase
             public void run() {
                 try {
                     Thread.sleep(100);
-                    while (audioSource.isPlaying()) {
+                    while (audioSource.isPlaying()) 
                         Thread.sleep(100);
-
-                    }
-                    sendStream.release();
                     audioSource.close();
+                    Thread.sleep(100);
+                    sendStream.release();
                 } catch (InterruptedException e) {
                     logger.error("Send over rtp process was interuppted", e);
                 }
