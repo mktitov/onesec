@@ -17,17 +17,8 @@
 
 package org.onesec.raven;
 
-import java.io.File;
-import java.io.IOException;
 import java.net.InetAddress;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.logging.Level;
-import javax.media.DataSink;
-import javax.media.Manager;
-import javax.media.MediaLocator;
-import javax.media.protocol.DataSource;
 import javax.media.protocol.FileTypeDescriptor;
-import org.apache.commons.io.FileUtils;
 import org.junit.Before;
 import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.InputStreamSource;
@@ -40,6 +31,8 @@ import org.raven.log.LogLevel;
 import org.raven.sched.impl.ExecutorServiceNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import static org.onesec.raven.JMFHelper.*;
+
 
 /**
  *
@@ -112,31 +105,6 @@ public class RtpManagerTestCase extends OnesecRavenTestCase
         return new OperationState(runner);
     }
 
-    protected OperationController writeToFile(DataSource dataSource, final String filename) throws Exception
-    {
-        logger.debug("Creating new file writer ({})", filename);
-        File file = new File(filename);
-        if (file.exists())
-            FileUtils.forceDelete(file);
-
-        final DataSink writer = Manager.createDataSink(dataSource, new MediaLocator(file.toURI().toURL()));
-        writer.open();
-        logger.debug("Opening file writer for a file ({})", filename);
-        writer.start();
-        logger.debug("Starting writing to a file ({})", filename);
-
-        return new OperationController() {
-            public void stop() {
-                try {
-                    logger.debug("Stoping writing to a file ({})", filename);
-                    writer.stop();
-                } catch (IOException ex) {
-                    logger.error("Error stoping writeToFile process", ex);
-                }
-            }
-        };
-    }
-
     protected RtpAddressNode createAddress(String ip, int startingPort)
     {
         RtpAddressNode addr = new RtpAddressNode();
@@ -164,10 +132,5 @@ public class RtpManagerTestCase extends OnesecRavenTestCase
         {
             executor.join();
         }
-    }
-
-    public interface OperationController
-    {
-        public void stop();
     }
 }

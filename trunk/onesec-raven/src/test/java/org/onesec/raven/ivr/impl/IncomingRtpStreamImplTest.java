@@ -17,6 +17,8 @@
 
 package org.onesec.raven.ivr.impl;
 
+import java.io.IOException;
+import org.onesec.raven.JMFHelper;
 import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.DataSource;
 import javax.media.protocol.FileTypeDescriptor;
@@ -27,6 +29,7 @@ import org.onesec.raven.RtpManagerTestCase;
 import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.IncomingRtpStream;
 import org.onesec.raven.ivr.IncomingRtpStreamDataSourceListener;
+import org.onesec.raven.ivr.InputStreamSource;
 import static org.easymock.EasyMock.*;
 
 /**
@@ -53,7 +56,7 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         state.join();
     }
 
-    @Test
+//    @Test
     public void dataSourceListenerEventsTest() throws Exception
     {
         IncomingRtpStreamDataSourceListener listener = createMock(
@@ -66,7 +69,7 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         IncomingRtpStream irtp = manager.getIncomingRtpStream(manager);
         String address = getInterfaceAddress().getHostName();
         irtp.open(address);
-        irtp.addDataSourceListener(listener, new ContentDescriptor(FileTypeDescriptor.WAVE));
+        irtp.addDataSourceListener(listener, new ContentDescriptor(FileTypeDescriptor.WAVE), null);
         OperationState sendControl = sendOverRtp(
                 "src/test/wav/test.wav", Codec.G711_MU_LAW, address, irtp.getPort());
         sendControl.join();
@@ -75,21 +78,21 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         verify(listener);
     }
 
-    @Test
+//    @Test
     public void oneListenerTest() throws Exception
     {
         IncomingRtpStream irtp = manager.getIncomingRtpStream(manager);
         String address = getInterfaceAddress().getHostName();
         irtp.open(address);
         DataSourceListener fileWriter = new DataSourceListener("target/recorded.wav");
-        irtp.addDataSourceListener(fileWriter, new ContentDescriptor(FileTypeDescriptor.WAVE));
+        irtp.addDataSourceListener(fileWriter, new ContentDescriptor(FileTypeDescriptor.WAVE), null);
         OperationState sendControl = sendOverRtp(
                 "src/test/wav/test.wav", Codec.G711_MU_LAW, address, irtp.getPort());
         sendControl.join();
         irtp.release();
     }
 
-    @Test
+//    @Test
     public void tenListenerTest() throws Exception
     {
         IncomingRtpStream irtp = manager.getIncomingRtpStream(manager);
@@ -99,7 +102,8 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         int i=0;
         for (;i<5;++i){
             DataSourceListener fileWriter = new DataSourceListener("target/recorded_"+i+".wav");
-            irtp.addDataSourceListener(fileWriter, new ContentDescriptor(FileTypeDescriptor.WAVE));
+            irtp.addDataSourceListener(
+                    fileWriter, new ContentDescriptor(FileTypeDescriptor.WAVE), null);
         }
         OperationState sendControl = sendOverRtp(
                 "src/test/wav/test.wav", Codec.G711_MU_LAW, address, irtp.getPort());
@@ -107,16 +111,41 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         for (;i<10;++i){
 //            Thread.sleep(100);
             DataSourceListener fileWriter = new DataSourceListener("target/recorded_"+i+".wav");
-            irtp.addDataSourceListener(fileWriter, new ContentDescriptor(FileTypeDescriptor.WAVE));
+            irtp.addDataSourceListener(
+                    fileWriter, new ContentDescriptor(FileTypeDescriptor.WAVE), null);
         }
         sendControl.join();
         irtp.release();
     }
 
+    @Test
+    public void copyToConcatDataSource() throws Exception
+    {
+        IncomingRtpStream irtp = manager.getIncomingRtpStream(manager);
+        String address = getInterfaceAddress().getHostName();
+        irtp.open(address);
+        Codec codec = Codec.G711_MU_LAW;
+        CopyDsConcatDataSource fileWriter = new CopyDsConcatDataSource(
+                "target/copy_to_concatDs.wav", codec);
+//        irtp.addDataSourceListener(
+//                fileWriter, new ContentDescriptor(ContentDescriptor.RAW), codec.getAudioFormat());
+        irtp.addDataSourceListener(
+                fileWriter, new ContentDescriptor(ContentDescriptor.RAW), null);
+        OperationState sendControl = sendOverRtp(
+                "src/test/wav/test.wav", Codec.G711_MU_LAW, address, irtp.getPort());
+        sendControl.join();
+        Thread.sleep(2000);
+        irtp.release();
+        fileWriter.ds.addSource(new TestInputStreamSource("src/test/wav/test2.wav"));
+        Thread.sleep(5000);
+        fileWriter.close();
+        Thread.sleep(1000);
+    }
+
     private class DataSourceListener implements IncomingRtpStreamDataSourceListener
     {
         private final String filename;
-        private OperationController writeControl;
+        private JMFHelper.OperationController writeControl;
 
         public DataSourceListener(String filename) {
             this.filename = filename;
@@ -128,7 +157,7 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
             if (dataSource!=null)
                 try {
                     logger.debug("Creating new file writer ({})", filename);
-                    writeControl = writeToFile(dataSource, filename);
+                    writeControl = JMFHelper.writeToFile(dataSource, filename);
                 } catch (Exception ex) {
                     logger.error("Error writing to file ({})", filename, ex);
                 }
@@ -139,6 +168,59 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         {
             if (writeControl!=null)
                 writeControl.stop();
+        }
+    }
+
+    private class CopyDsConcatDataSource implements IncomingRtpStreamDataSourceListener
+    {
+        private final String filename;
+        private final Codec codec;
+
+        private ConcatDataSource ds;
+        private JMFHelper.OperationController writeControl;
+        private DataSource dataSource;
+
+        public CopyDsConcatDataSource(String filename, Codec codec)
+        {
+            this.filename = filename;
+            this.codec = codec;
+        }
+
+        public void dataSourceCreated(DataSource dataSource)
+        {
+            if (dataSource==null) 
+                logger.error("CopyDsConcatDataSource. Received null dataSource");
+            else{
+                try{
+                    this.dataSource = dataSource;
+                    ds = new ConcatDataSource(
+                        FileTypeDescriptor.WAVE, executor, codec, 240, 5, 5, manager);
+                    ds.start();
+                    writeControl = JMFHelper.writeToFile(ds, filename);
+                    ds.addSource(dataSource);
+                }catch(Exception e){
+                    logger.error("CopyDsConcatDataSource. Error creating ConcatDataSource", e);
+                }
+            }
+        }
+
+        public void streamClosing()
+        {
+            try {
+//                dataSource.stop();
+//                InputStreamSource iss = new TestInputStreamSource("src/test/wav/test2.wav");
+//                ds.addSource(iss);
+//                while (ds.isPlaying())
+//                    Thread.sleep(20);
+            } catch (Exception ex) {
+                logger.error("CopyDsConcatDataSource. Error stream closing", ex);
+            }
+        }
+
+        public void close() throws IOException
+        {
+            ds.stop();
+            writeControl.stop();
         }
     }
 }
