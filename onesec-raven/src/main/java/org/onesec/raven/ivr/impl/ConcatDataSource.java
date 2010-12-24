@@ -56,7 +56,7 @@ public class ConcatDataSource
 {
     public final static String SILENCE_RESOURCE_NAME = "/org/onesec/raven/ivr/silence.wav";
 
-    private final Queue<InputStreamSource> sources;
+    private final Queue sources;
     private final String contentType;
     private final ExecutorService executorService;
     private final ConcatDataStream[] streams;
@@ -93,7 +93,7 @@ public class ConcatDataSource
 
         format = codec.getAudioFormat();
 
-        sources = new ConcurrentLinkedQueue<InputStreamSource>();
+        sources = new ConcurrentLinkedQueue();
         dataConcated = new AtomicBoolean(false);
         stoped = new AtomicBoolean(false);
         sourceThreadRunning = new AtomicBoolean(false);
@@ -123,6 +123,14 @@ public class ConcatDataSource
     }
 
     public void addSource(InputStreamSource source)
+    {
+        if (source!=null)
+        {
+            sources.add(source);
+        }
+    }
+
+    public void addSource(DataSource source)
     {
         if (source!=null)
         {
@@ -279,20 +287,22 @@ public class ConcatDataSource
             {
                 int bufferCount = 0;
                 List<Buffer> initialBuffer = new ArrayList<Buffer>(rtpInitialBufferSize);
-                while (!stoped.get())
-                {
-                    InputStreamSource source = sources.peek();
-                    if (source==null)
-                    {
+                while (!stoped.get()) {
+                    Object source = sources.peek();
+                    if (source==null) {
                         Thread.sleep(5);
                         continue;
                     }
-                    try
-                    {
+                    try {
+                        boolean isDataSource = source instanceof DataSource;
                         if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                            owner.getLogger().debug(logMess("Found new source. Processing..."));
+                            owner.getLogger().debug(logMess(
+                                    "Found new source (%s). Processing..."
+                                    , (isDataSource? "DataSource" : "InputStreamSource")));
                         long ts = System.currentTimeMillis();
-                        IssDataSource ids = new IssDataSource(source, contentType);
+
+                        DataSource ids = isDataSource?
+                            (DataSource)source : new IssDataSource((InputStreamSource)source, contentType);
                         Processor p = Manager.createProcessor(ids);
                         p.addControllerListener(this);
                         p.configure();
@@ -316,7 +326,8 @@ public class ConcatDataSource
                                     "Source initialization time (ms) - "+(System.currentTimeMillis()-ts)));
                         try
                         {
-                            boolean eom = false;
+//                            boolean eom = false;
+                            boolean eom = s.endOfStream();
                             initialBuffer.clear();
                             boolean initialBufferInitialized = false;
                             while (!eom)

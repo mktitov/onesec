@@ -135,7 +135,8 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
     }
 
     public boolean addDataSourceListener(
-            IncomingRtpStreamDataSourceListener listener, ContentDescriptor contentDescriptor)
+            IncomingRtpStreamDataSourceListener listener, ContentDescriptor contentDescriptor
+            , AudioFormat format)
         throws RtpStreamException
     {
         try{
@@ -144,7 +145,7 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
                     if (status==Status.CLOSED)
                         return false;
                     else if (status==Status.OPENED || status==Status.INITIALIZING){
-                        Consumer consumer = new Consumer(listener, contentDescriptor);
+                        Consumer consumer = new Consumer(listener, contentDescriptor, format);
                         consumers.add(consumer);
                         if (status==Status.OPENED)
                             consumer.fireDataSourceCreatedEvent();
@@ -271,48 +272,49 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
 
     private class Consumer
     {
-        private IncomingRtpStreamDataSourceListener listener;
+        private final IncomingRtpStreamDataSourceListener listener;
+        private final ContentDescriptor contentDescriptor;
+        private final AudioFormat format;
+
         private boolean createEventFired = false;
         private Processor processor;
         private DataSource inDataSource;
         private DataSource outDataSource;
-        private ContentDescriptor contentDescriptor;
 
         public Consumer(
-                IncomingRtpStreamDataSourceListener listener, ContentDescriptor contentDescriptor)
+                IncomingRtpStreamDataSourceListener listener, ContentDescriptor contentDescriptor
+                , AudioFormat format)
         {
             this.listener = listener;
             this.contentDescriptor = contentDescriptor;
+            this.format = format==null? FORMAT : format; 
         }
 
         private void fireDataSourceCreatedEvent()
         {
+            createEventFired = true;
             try{
-                try{
-                    inDataSource = !firstConsumerAdded? source : ((SourceCloneable)source).createClone();
-                    firstConsumerAdded = true;
+                inDataSource = !firstConsumerAdded? source : ((SourceCloneable)source).createClone();
+                firstConsumerAdded = true;
 
-                    processor = Manager.createProcessor(inDataSource);
-                    processor.configure();
-                    waitForState(processor, Processor.Configured);
-                    processor.getTrackControls()[0].setFormat(FORMAT);
-                    processor.setContentDescriptor(contentDescriptor);
-                    processor.realize();
-                    waitForState(processor, Processor.Realized);
-                    outDataSource = processor.getDataOutput();
-                    processor.start();
+                processor = Manager.createProcessor(inDataSource);
+                processor.configure();
+                waitForState(processor, Processor.Configured);
+                processor.getTrackControls()[0].setFormat(format);
+                processor.setContentDescriptor(contentDescriptor);
+                processor.realize();
+                waitForState(processor, Processor.Realized);
+                outDataSource = processor.getDataOutput();
+                processor.start();
 //                    waitForState(processor, Processor.Started);
 
-                    listener.dataSourceCreated(outDataSource);
+                listener.dataSourceCreated(outDataSource);
 
-                }catch(Exception e){
-                    if (owner.isLogLevelEnabled(LogLevel.ERROR))
-                        owner.getLogger().error(logMess(
-                                "Error creating data source for consumer"), e);
-                    listener.dataSourceCreated(null);
-                }
-            }finally{
-                createEventFired = true;
+            }catch(Exception e){
+                if (owner.isLogLevelEnabled(LogLevel.ERROR))
+                    owner.getLogger().error(logMess(
+                            "Error creating data source for consumer"), e);
+                listener.dataSourceCreated(null);
             }
         }
 

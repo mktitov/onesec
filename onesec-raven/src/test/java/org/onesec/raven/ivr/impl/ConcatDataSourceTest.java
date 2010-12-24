@@ -17,13 +17,16 @@
 
 package org.onesec.raven.ivr.impl;
 
+import java.io.File;
 import java.util.concurrent.TimeUnit;
 import javax.media.Manager;
 import javax.media.Player;
+import javax.media.protocol.DataSource;
 import javax.media.protocol.FileTypeDescriptor;
 import org.easymock.EasyMock;
 import org.easymock.IArgumentMatcher;
 import org.junit.Test;
+import org.onesec.raven.JMFHelper;
 import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.InputStreamSource;
 import org.raven.log.LogLevel;
@@ -38,7 +41,7 @@ import org.slf4j.Logger;
 public class ConcatDataSourceTest extends EasyMock
 {
     @Test
-    public void test() throws Exception
+    public void addInputStreamSourceTest() throws Exception
     {
         Node owner = createMock(Node.class);
         ExecutorService executorService = createMock(ExecutorService.class);
@@ -62,23 +65,65 @@ public class ConcatDataSourceTest extends EasyMock
         InputStreamSource source3 = new TestInputStreamSource("src/test/wav/test.wav");
 
         ConcatDataSource dataSource = new ConcatDataSource(
-                FileTypeDescriptor.WAVE, executorService, Codec.G711_A_LAW, 240, 5, 5, owner);
+                FileTypeDescriptor.WAVE, executorService, Codec.G711_MU_LAW, 240, 5, 5, owner);
 
-        Player player = Manager.createPlayer(dataSource);
-        player.start();
-//        dataSource.start();
+//        Player player = Manager.createPlayer(dataSource);
+//        player.start();
+        dataSource.start();
+        JMFHelper.OperationController control  = JMFHelper.writeToFile(
+                dataSource, "target/iss_test.wav");
         dataSource.addSource(source1);
         dataSource.addSource(source2);
         TimeUnit.SECONDS.sleep(5);
 //        dataSource.reset();
         dataSource.addSource(source3);
         TimeUnit.SECONDS.sleep(5);
-        player.stop();
+//        player.stop();
         dataSource.close();
+        control.stop();
 
         verify(owner, executorService, logger);
 
 //        fail();
+    }
+
+    @Test
+    public void addDataSourceTest() throws Exception
+    {
+        Node owner = createMock(Node.class);
+        ExecutorService executorService = createMock(ExecutorService.class);
+        Logger logger = createMock(Logger.class);
+
+        executorService.execute(executeTask());
+        expectLastCall().times(2);
+        expect(owner.isLogLevelEnabled(LogLevel.ERROR)).andReturn(Boolean.TRUE).anyTimes();
+        expect(owner.isLogLevelEnabled(LogLevel.DEBUG)).andReturn(Boolean.TRUE).anyTimes();
+        expect(owner.getLogger()).andReturn(logger).anyTimes();
+        logger.error(logMessage(true), logMessage(false));
+        expectLastCall().anyTimes();
+        logger.debug(logMessage(false));
+        expectLastCall().anyTimes();
+
+
+        replay(owner, executorService, logger);
+
+        DataSource ids = Manager.createDataSource(new File("src/test/wav/test.wav").toURI().toURL());
+
+        ConcatDataSource dataSource = new ConcatDataSource(
+                FileTypeDescriptor.WAVE, executorService, Codec.G711_MU_LAW, 240, 5, 5, owner);
+
+//        Player player = Manager.createPlayer(dataSource);
+//        player.start();
+        dataSource.start();
+        JMFHelper.OperationController control  = JMFHelper.writeToFile(
+                dataSource, "target/ds_test.wav");
+        dataSource.addSource(ids);
+        TimeUnit.SECONDS.sleep(5);
+//        player.stop();
+        dataSource.close();
+        control.stop();
+
+        verify(owner, executorService, logger);
     }
 
     private static Task executeTask()
