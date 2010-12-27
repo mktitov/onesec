@@ -20,7 +20,6 @@ package org.onesec.raven.ivr.impl;
 import java.io.File;
 import java.util.concurrent.TimeUnit;
 import javax.media.Manager;
-import javax.media.Player;
 import javax.media.protocol.DataSource;
 import javax.media.protocol.FileTypeDescriptor;
 import org.easymock.EasyMock;
@@ -57,7 +56,6 @@ public class ConcatDataSourceTest extends EasyMock
         logger.debug(logMessage(false));
         expectLastCall().anyTimes();
 
-
         replay(owner, executorService, logger);
 
         InputStreamSource source1 = new TestInputStreamSource("src/test/wav/test.wav");
@@ -67,8 +65,6 @@ public class ConcatDataSourceTest extends EasyMock
         ConcatDataSource dataSource = new ConcatDataSource(
                 FileTypeDescriptor.WAVE, executorService, Codec.G711_MU_LAW, 240, 5, 5, owner);
 
-//        Player player = Manager.createPlayer(dataSource);
-//        player.start();
         dataSource.start();
         JMFHelper.OperationController control  = JMFHelper.writeToFile(
                 dataSource, "target/iss_test.wav");
@@ -78,16 +74,14 @@ public class ConcatDataSourceTest extends EasyMock
 //        dataSource.reset();
         dataSource.addSource(source3);
         TimeUnit.SECONDS.sleep(5);
-//        player.stop();
         dataSource.close();
         control.stop();
 
         verify(owner, executorService, logger);
 
-//        fail();
     }
 
-    @Test
+//    @Test
     public void addDataSourceTest() throws Exception
     {
         Node owner = createMock(Node.class);
@@ -112,17 +106,14 @@ public class ConcatDataSourceTest extends EasyMock
         ConcatDataSource dataSource = new ConcatDataSource(
                 FileTypeDescriptor.WAVE, executorService, Codec.G711_MU_LAW, 240, 5, 5, owner);
 
-//        Player player = Manager.createPlayer(dataSource);
-//        player.start();
         dataSource.start();
         JMFHelper.OperationController control  = JMFHelper.writeToFile(
                 dataSource, "target/ds_test.wav");
         dataSource.addSource(ids);
         TimeUnit.SECONDS.sleep(5);
-//        player.stop();
         dataSource.close();
         control.stop();
-
+        
         verify(owner, executorService, logger);
     }
 
