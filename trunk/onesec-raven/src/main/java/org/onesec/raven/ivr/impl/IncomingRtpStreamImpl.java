@@ -25,9 +25,11 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import javax.media.Controller;
 import javax.media.DataSink;
+import javax.media.Format;
 import javax.media.Manager;
 import javax.media.MediaLocator;
 import javax.media.Processor;
+import javax.media.ProcessorModel;
 import javax.media.format.AudioFormat;
 import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.DataSource;
@@ -192,7 +194,8 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
         }
         else if (event instanceof ByeEvent)
         {
-            release();
+//            Thread.sleep(500);
+//            release();
         }
     }
 
@@ -297,16 +300,11 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
                 inDataSource = !firstConsumerAdded? source : ((SourceCloneable)source).createClone();
                 firstConsumerAdded = true;
 
-                processor = Manager.createProcessor(inDataSource);
-                processor.configure();
-                waitForState(processor, Processor.Configured);
-                processor.getTrackControls()[0].setFormat(format);
-                processor.setContentDescriptor(contentDescriptor);
-                processor.realize();
-                waitForState(processor, Processor.Realized);
+                ProcessorModel processorModel = new ProcessorModel(
+                        inDataSource, new Format[]{format}, contentDescriptor);
+                processor = Manager.createRealizedProcessor(processorModel);
                 outDataSource = processor.getDataOutput();
                 processor.start();
-//                    waitForState(processor, Processor.Started);
 
                 listener.dataSourceCreated(outDataSource);
 
@@ -324,12 +322,16 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
                 try{
                     try{
                         try{
-                            listener.streamClosing();
+                            try{
+                                listener.streamClosing();
+                            }finally{
+                                inDataSource.stop();
+                            }
                         }finally{
-                            inDataSource.stop();
+                            processor.stop();
                         }
                     }finally{
-                        processor.stop();
+                        processor.close();
                     }
                 }finally{
                     outDataSource.stop();

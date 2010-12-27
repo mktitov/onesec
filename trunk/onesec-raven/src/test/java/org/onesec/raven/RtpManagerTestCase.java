@@ -69,34 +69,38 @@ public class RtpManagerTestCase extends OnesecRavenTestCase
         executor = new ExecutorServiceNode();
         executor.setName("executor");
         tree.getRootNode().addAndSaveChildren(executor);
+        executor.setCorePoolSize(20);
+        executor.setMaximumPoolSize(20);
         assertTrue(executor.start());
 
         initNodes();
     }
 
-    protected OperationState sendOverRtp(String filename, Codec codec, String host, int port)
+    protected OperationState sendOverRtp(String filename, Codec codec, final String host, final int port)
             throws Exception
     {
         logger.debug("Sending RTP stream to the ({}:{}) ", host, port);
-        InputStreamSource source1 = new TestInputStreamSource("src/test/wav/test.wav");
 
         final ConcatDataSource audioSource =
                 new ConcatDataSource(FileTypeDescriptor.WAVE, executor, codec, 240, 5, 5, manager);
         final OutgoingRtpStream sendStream = manager.getOutgoingRtpStream(manager);
         sendStream.open(host, port, audioSource);
-        sendStream.start();
-        audioSource.addSource(source1);
         Thread runner = new Thread(){
             @Override
             public void run() {
                 try {
+                    InputStreamSource source1 = new TestInputStreamSource("src/test/wav/test.wav");
+                    Thread.sleep(100);
+                    sendStream.start();
+                    audioSource.addSource(source1);
                     Thread.sleep(100);
                     while (audioSource.isPlaying()) 
                         Thread.sleep(100);
+                    Thread.sleep(1000);
                     audioSource.close();
                     Thread.sleep(100);
                     sendStream.release();
-                } catch (InterruptedException e) {
+                } catch (Exception e) {
                     logger.error("Send over rtp process was interuppted", e);
                 }
             }

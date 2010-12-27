@@ -123,21 +123,18 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
     {
         IncomingRtpStream irtp = manager.getIncomingRtpStream(manager);
         String address = getInterfaceAddress().getHostName();
-        irtp.open(address);
         Codec codec = Codec.G711_MU_LAW;
         CopyDsConcatDataSource fileWriter = new CopyDsConcatDataSource(
                 "target/copy_to_concatDs.wav", codec);
-//        irtp.addDataSourceListener(
-//                fileWriter, new ContentDescriptor(ContentDescriptor.RAW), codec.getAudioFormat());
-        irtp.addDataSourceListener(
-                fileWriter, new ContentDescriptor(ContentDescriptor.RAW), null);
+        Thread.sleep(1000);
+        irtp.addDataSourceListener(fileWriter, new ContentDescriptor(ContentDescriptor.RAW), null);
         OperationState sendControl = sendOverRtp(
                 "src/test/wav/test.wav", Codec.G711_MU_LAW, address, irtp.getPort());
+        irtp.open(address);
         sendControl.join();
-        Thread.sleep(2000);
         irtp.release();
         fileWriter.ds.addSource(new TestInputStreamSource("src/test/wav/test2.wav"));
-        Thread.sleep(5000);
+        Thread.sleep(6000);
         fileWriter.close();
         Thread.sleep(1000);
     }
@@ -180,10 +177,13 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         private JMFHelper.OperationController writeControl;
         private DataSource dataSource;
 
-        public CopyDsConcatDataSource(String filename, Codec codec)
+        public CopyDsConcatDataSource(String filename, Codec codec) throws  Exception
         {
             this.filename = filename;
             this.codec = codec;
+            ds = new ConcatDataSource(FileTypeDescriptor.WAVE, executor, codec, 240, 0, 0, manager);
+            ds.start();
+            writeControl = JMFHelper.writeToFile(ds, filename);
         }
 
         public void dataSourceCreated(DataSource dataSource)
@@ -193,10 +193,6 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
             else{
                 try{
                     this.dataSource = dataSource;
-                    ds = new ConcatDataSource(
-                        FileTypeDescriptor.WAVE, executor, codec, 240, 5, 5, manager);
-                    ds.start();
-                    writeControl = JMFHelper.writeToFile(ds, filename);
                     ds.addSource(dataSource);
                 }catch(Exception e){
                     logger.error("CopyDsConcatDataSource. Error creating ConcatDataSource", e);

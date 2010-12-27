@@ -22,9 +22,11 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import javax.media.Controller;
 import javax.media.DataSink;
+import javax.media.Format;
 import javax.media.Manager;
 import javax.media.MediaLocator;
 import javax.media.Processor;
+import javax.media.ProcessorModel;
 import javax.media.format.AudioFormat;
 import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.DataSource;
@@ -55,14 +57,19 @@ public class JMFHelper
             _writer = Manager.createDataSink(dataSource, dest);
         }catch(Exception e){
             logger.warn("Error creating data sink directly from the data source, so creating a processor");
-            p = Manager.createProcessor(dataSource);
-            p.configure();
-            waitForState(p, Processor.Configured);
-            p.setContentDescriptor(new ContentDescriptor(FileTypeDescriptor.WAVE));
-            p.getTrackControls()[0].setFormat(new AudioFormat(
-                AudioFormat.LINEAR, 8000, 16, 1, AudioFormat.LITTLE_ENDIAN, AudioFormat.SIGNED));
-            p.realize();
-            waitForState(p, Processor.Realized);
+            p = Manager.createRealizedProcessor(new ProcessorModel(
+                    dataSource
+                    , new Format[]{new AudioFormat(
+                        AudioFormat.LINEAR, 8000, 16, 1, AudioFormat.LITTLE_ENDIAN, AudioFormat.SIGNED)}
+                    , new ContentDescriptor(FileTypeDescriptor.WAVE)));
+//            p = Manager.createProcessor(dataSource);
+//            p.configure();
+//            waitForState(p, Processor.Configured);
+//            p.setContentDescriptor(new ContentDescriptor(FileTypeDescriptor.WAVE));
+//            p.getTrackControls()[0].setFormat(new AudioFormat(
+//                AudioFormat.LINEAR, 8000, 16, 1, AudioFormat.LITTLE_ENDIAN, AudioFormat.SIGNED));
+//            p.realize();
+//            waitForState(p, Processor.Realized);
             _writer = Manager.createDataSink(p.getDataOutput(), dest);
             p.start();
         }
@@ -77,7 +84,10 @@ public class JMFHelper
             public void stop() {
                 try {
                     logger.debug("Stoping writing to a file ({})", filename);
-                    processor.stop();
+                    if (processor!=null){
+                        processor.stop();
+                        processor.close();
+                    }
                     writer.stop();
                 } catch (IOException ex) {
                     logger.error("Error stoping writeToFile process", ex);
@@ -96,8 +106,6 @@ public class JMFHelper
                 throw new Exception("Processor state wait timeout");
         }
     }
-
-
 
     public interface OperationController
     {

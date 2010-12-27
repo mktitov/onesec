@@ -24,15 +24,18 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import javax.media.Buffer;
 import javax.media.ControllerEvent;
 import javax.media.ControllerListener;
 import javax.media.Format;
 import javax.media.Manager;
 import javax.media.Processor;
+import javax.media.ProcessorModel;
 import javax.media.Time;
 import javax.media.control.PacketSizeControl;
 import javax.media.control.TrackControl;
+import javax.media.protocol.BufferTransferHandler;
 import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.DataSource;
 import javax.media.protocol.PushBufferDataSource;
@@ -52,21 +55,24 @@ import org.raven.tree.Node;
  */
 public class ConcatDataSource
         extends PushBufferDataSource
-        implements AudioStream, Task, ControllerListener
+        implements AudioStream, Task, ControllerListener, BufferTransferHandler
 {
     public final static String SILENCE_RESOURCE_NAME = "/org/onesec/raven/ivr/silence.wav";
 
-    private final Queue sources;
+    private final Queue<DataSource> sources;
     private final String contentType;
     private final ExecutorService executorService;
     private final ConcatDataStream[] streams;
     private final Queue<Buffer> buffers;
+    private final List<Buffer> initialBuffer;
+
     private final Node owner;
     private final AtomicBoolean dataConcated;
     private final AtomicBoolean stoped;
     private final AtomicBoolean sourceThreadRunning;
     private final AtomicBoolean streamThreadRunning;
-//    private final Format FORMAT = new AudioFormat(AudioFormat.ULAW_RTP, 8000d, 8, 1);
+    private final AtomicBoolean endOfSource;
+    private final AtomicLong lastReceiveBufferTime;
     public final Format format;
     private final int rtpPacketSize;
     private final int rtpInitialBufferSize;
@@ -75,6 +81,8 @@ public class ConcatDataSource
     private AtomicBoolean silenceSource;
     private Thread thread;
     private String logPrefix;
+    private int bufferCount;
+    boolean initialBufferInitialized;
 
     public ConcatDataSource(String contentType
             , ExecutorService executorService
@@ -93,20 +101,24 @@ public class ConcatDataSource
 
         format = codec.getAudioFormat();
 
-        sources = new ConcurrentLinkedQueue();
+        sources = new ConcurrentLinkedQueue<DataSource>();
         dataConcated = new AtomicBoolean(false);
         stoped = new AtomicBoolean(false);
         sourceThreadRunning = new AtomicBoolean(false);
         streamThreadRunning = new AtomicBoolean(false);
         silenceSource = new AtomicBoolean(true);
+        endOfSource = new AtomicBoolean(false);
+        lastReceiveBufferTime = new AtomicLong();
         buffers = new ConcurrentLinkedQueue<Buffer>();
+        initialBuffer = new ArrayList<Buffer>(rtpInitialBufferSize);
+        bufferCount = 0;
 //        rtpPacketSize = 160;
         streams = new ConcatDataStream[]{
             new ConcatDataStream(buffers, this, owner, rtpPacketSize, rtpMaxSendAheadPacketsCount)};
         streams[0].setLogPrefix(logPrefix);
         ResourceInputStreamSource silenceSource =
                 new ResourceInputStreamSource(SILENCE_RESOURCE_NAME);
-        addSource(silenceSource);
+        addSource(new IssDataSource(silenceSource, contentType));
     }
 
     public String getLogPrefix() {
@@ -125,17 +137,13 @@ public class ConcatDataSource
     public void addSource(InputStreamSource source)
     {
         if (source!=null)
-        {
-            sources.add(source);
-        }
+            sources.add(new IssDataSource(source, contentType));
     }
 
     public void addSource(DataSource source)
     {
         if (source!=null)
-        {
             sources.add(source);
-        }
     }
 
     public Format getFormat()
@@ -280,37 +288,24 @@ public class ConcatDataSource
     public void run()
     {
         sourceThreadRunning.set(true);
-        try
-        {
+        try {
             thread = Thread.currentThread();
-            try
-            {
-                int bufferCount = 0;
-                List<Buffer> initialBuffer = new ArrayList<Buffer>(rtpInitialBufferSize);
+            try {
                 while (!stoped.get()) {
-                    Object source = sources.peek();
+                    DataSource source = sources.peek();
                     if (source==null) {
                         Thread.sleep(5);
                         continue;
                     }
                     try {
-                        boolean isDataSource = source instanceof DataSource;
                         if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                            owner.getLogger().debug(logMess(
-                                    "Found new source (%s). Processing..."
-                                    , (isDataSource? "DataSource" : "InputStreamSource")));
+                            owner.getLogger().debug(logMess("Found new source. Processing..."));
                         long ts = System.currentTimeMillis();
-
-                        DataSource ids = isDataSource?
-                            (DataSource)source : new IssDataSource((InputStreamSource)source, contentType);
-                        Processor p = Manager.createProcessor(ids);
+                        ProcessorModel pm = new ProcessorModel(
+                                source, new Format[]{format}
+                                , new ContentDescriptor(ContentDescriptor.RAW));
+                        Processor p = Manager.createRealizedProcessor(pm);
                         p.addControllerListener(this);
-                        p.configure();
-                        waitForState(p, Processor.Configured);
-                        TrackControl[] tracks = p.getTrackControls();
-                        tracks[0].setFormat(format);
-                        p.realize();
-                        waitForState(p, Processor.Realized);
 
                         PacketSizeControl packetSizeControl =
                                 (PacketSizeControl) p.getControl(PacketSizeControl.class.getName());
@@ -318,85 +313,51 @@ public class ConcatDataSource
                             packetSizeControl.setPacketSize(rtpPacketSize);
 
                         PushBufferDataSource ds = (PushBufferDataSource) p.getDataOutput();
-                        p.start();
-                        waitForState(p, Processor.Started);
+                        endOfSource.set(false);
+                        initialBuffer.clear();
+                        initialBufferInitialized = false;
                         PushBufferStream s = ds.getStreams()[0];
-                        if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                        s.setTransferHandler(this);
+                        ds.start();
+                        p.start();
+                        if (owner.isLogLevelEnabled(LogLevel.TRACE))
                             owner.getLogger().debug(logMess(
-                                    "Source initialization time (ms) - "+(System.currentTimeMillis()-ts)));
-                        try
-                        {
-//                            boolean eom = false;
-                            boolean eom = s.endOfStream();
-                            initialBuffer.clear();
-                            boolean initialBufferInitialized = false;
-                            while (!eom)
-                            {
-                                Buffer buffer = new Buffer();
-                                s.read(buffer);
-                                if (buffer.isDiscard())
-                                {
-                                    Thread.sleep(2);
-                                    continue;
-                                }
-                                if (silenceSource.get())
-                                {
-                                    buffers.add(buffer);
-                                    silenceSource.set(false);
-                                    eom = true;
+                                    "Source initialization time (ms) - "
+                                    +(System.currentTimeMillis()-ts)));
+                        lastReceiveBufferTime.set(System.currentTimeMillis());
+                        try {
+                            while (!endOfSource.get()){
+                                TimeUnit.MILLISECONDS.sleep(10);
+                                if (System.currentTimeMillis()-lastReceiveBufferTime.get()>500) {
                                     if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                                        owner.getLogger().debug(logMess("Silence buffer initialized"));
-                                }
-                                else
-                                {
-                                    if (buffer.isEOM())
-                                    {
-                                        eom = true;
-                                        buffer.setEOM(false);
-                                    }
-                                    if (!initialBufferInitialized)
-                                    {
-                                        initialBuffer.add(buffer);
-                                        if (initialBuffer.size()==rtpInitialBufferSize)
-                                        {
-                                            initialBufferInitialized = true;
-//                                            System.out.println("!!!>>>Flushing initial buffer: "+initialBuffer.size());
-                                            buffers.addAll(initialBuffer);
-    //                                        initialBuffer.clear();
-                                        }
-                                    }
-                                    else
-                                        buffers.add(buffer);
-                                    ++bufferCount;
-            //                        streams[0].transferData(null);
-                                    Thread.sleep(2);
+                                        owner.getLogger().debug(
+                                                "Timeout waiting for data from source. "
+                                                + "Closing the source...");
+                                    break;
                                 }
                             }
-                            if (!initialBufferInitialized && !initialBuffer.isEmpty())
-                            {
-//                                System.out.println("!!!>>>Flushing initial buffer: "+initialBuffer.size());
-                                initialBufferInitialized = true;
-                                buffers.addAll(initialBuffer);
-    //                            initialBuffer.clear();
-                            }
-                        }
-                        finally
+                        if (!initialBufferInitialized && !initialBuffer.isEmpty())
                         {
-                            ids.stop();
+                            initialBufferInitialized = true;
+                            buffers.addAll(initialBuffer);
+                            initialBuffer.clear();
+                        }
+                        } finally {
+                            source.stop();
                             p.stop();
                             ds.stop();
                             p.close();
                         }
-                    }
-                    finally
-                    {
+                        if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                            owner.getLogger().debug(logMess("Source processed time (ms) - "
+                                    + (System.currentTimeMillis()-ts)));
+                    } finally {
                         sources.poll();
                     }
                 }
                 if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                     owner.getLogger().debug(logMess("Gathered (%s) buffers", bufferCount));
-            } catch(Throwable e)
-            {
+            } catch(Throwable e) {
                 if (owner.isLogLevelEnabled(LogLevel.ERROR))
                     owner.getLogger().error(logMess("Error creating continuous audio stream"), e);
             }
@@ -427,5 +388,49 @@ public class ConcatDataSource
     String logMess(String mess, Object... args)
     {
         return (logPrefix==null? "" : logPrefix)+"AudioStream. "+String.format(mess, args);
+    }
+
+    public void transferData(PushBufferStream stream)
+    {
+        try{
+//            owner.getLogger().debug(
+//                    "Interval between buffers: "
+//                    +(System.currentTimeMillis()-lastReceiveBufferTime.get()));
+            lastReceiveBufferTime.set(System.currentTimeMillis());
+            Buffer buffer = new Buffer();
+            stream.read(buffer);
+            if (endOfSource.get())
+                return;
+            if (buffer.isDiscard())
+                return;
+            if (silenceSource.get()) {
+                buffers.add(buffer);
+                silenceSource.set(false);
+                endOfSource.set(true);
+                if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                    owner.getLogger().debug(logMess("Silence buffer initialized"));
+            } else {
+                if (buffer.isEOM()) {
+                    endOfSource.set(true);
+                    buffer.setEOM(false);
+                }
+                if (!initialBufferInitialized) {
+                    initialBuffer.add(buffer);
+                    if (initialBuffer.size()==rtpInitialBufferSize)
+                    {
+                        initialBufferInitialized = true;
+                        buffers.addAll(initialBuffer);
+                        initialBuffer.clear();
+                    }
+                }
+                else
+                    buffers.add(buffer);
+                ++bufferCount;
+            }
+        }catch (Exception e){
+            if (owner.isLogLevelEnabled(LogLevel.ERROR))
+                owner.getLogger().debug(logMess("Error reading buffer from source"), e);
+            endOfSource.set(true);
+        }
     }
 }
