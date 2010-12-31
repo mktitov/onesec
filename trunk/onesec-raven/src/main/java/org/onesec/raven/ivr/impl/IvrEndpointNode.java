@@ -20,7 +20,6 @@ package org.onesec.raven.ivr.impl;
 import com.cisco.jtapi.extensions.CiscoAddrInServiceEv;
 import com.cisco.jtapi.extensions.CiscoAddrOutOfServiceEv;
 import com.cisco.jtapi.extensions.CiscoCall;
-import com.cisco.jtapi.extensions.CiscoMediaCapability;
 import com.cisco.jtapi.extensions.CiscoMediaTerminal;
 import com.cisco.jtapi.extensions.CiscoRTPOutputProperties;
 import com.cisco.jtapi.extensions.CiscoRTPOutputStartedEv;
@@ -94,6 +93,7 @@ import org.raven.sched.ExecutorService;
 import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
 import org.raven.tree.Node;
 import org.raven.tree.impl.BaseNode;
+import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
 import org.weda.annotations.constraints.NotNull;
 import org.weda.internal.annotations.Service;
 
@@ -112,6 +112,9 @@ public class IvrEndpointNode extends BaseNode
     @Service
     protected static StateListenersCoordinator stateListenersCoordinator;
 
+    @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
+    private RtpStreamManagerNode rtpStreamManager;
+
     @Service
     protected static Operator operator;
 
@@ -121,16 +124,14 @@ public class IvrEndpointNode extends BaseNode
     @Parameter
     private IvrConversationScenarioNode conversationScenario;
 
-    private IvrEndpointStateImpl endpointState;
-
     @NotNull @Parameter(valueHandlerType=SystemSchedulerValueHandlerFactory.TYPE)
     private ExecutorService executorService;
 
-    @NotNull @Parameter
-    private String ip;
-
-    @NotNull @Parameter(defaultValue="1234")
-    private Integer port;
+//    @NotNull @Parameter
+//    private String ip;
+//
+//    @NotNull @Parameter(defaultValue="1234")
+//    private Integer port;
 
     @NotNull @Parameter(defaultValue="AUTO")
     private Codec codec;
@@ -144,6 +145,8 @@ public class IvrEndpointNode extends BaseNode
     @NotNull @Parameter(defaultValue="0")
     private Integer rtpMaxSendAheadPacketsCount;
 
+
+    private IvrEndpointStateImpl endpointState;
     private Address terminalAddress;
     CiscoMediaTerminal terminal;
     Call call;
@@ -156,10 +159,10 @@ public class IvrEndpointNode extends BaseNode
     private AtomicBoolean observingTerminalAddress;
     private AtomicBoolean observingTerminal;
     private IvrConversationScenario currentConversation;
-    private RTPSession rtpSession;
-    private ConcatDataSource audioStream;
+//    private RTPSession rtpSession;
+//    private ConcatDataSource audioStream;
     private IvrActionsExecutor actionsExecutor;
-    private ConversationScenarioState conversationState;
+//    private ConversationScenarioState conversationState;
     private Provider provider;
     private String remoteAddress;
     private int remotePort;
@@ -172,6 +175,8 @@ public class IvrEndpointNode extends BaseNode
     private Map<String, Object> inviteBindings;
     private String opponentNumber;
     private BindingSupportImpl bindingSupport;
+    private IvrEndpointConversationImpl conversation;
+
 
     private Lock rtpSessionLock;
 
