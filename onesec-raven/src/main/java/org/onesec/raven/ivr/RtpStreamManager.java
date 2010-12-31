@@ -36,4 +36,17 @@ public interface RtpStreamManager
      * after use.
      */
     public OutgoingRtpStream getOutgoingRtpStream(Node owner);
+    /**
+     * Reserves the address by then node passed in the parameter. Next time the call of the method
+     * {@link #getOutgoingRtpStream(Node)} returns the stream with the address and port reserved by
+     * this method.
+     * @param node the node which reserves the pair of the ip address and the port
+     * @return the reserved address and the port
+     */
+    public RtpAddress reserveAddress(Node node);
+    /**
+     * Unreserve the address and the port reserved for this node
+     * @param node
+     */
+    public void unreserveAddress(Node node);
 }
