@@ -17,11 +17,14 @@
 
 package org.onesec.raven.ivr.impl;
 
+import java.util.Map;
 import com.cisco.jtapi.extensions.CiscoAddress;
 import com.cisco.jtapi.extensions.CiscoCall;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.media.protocol.FileTypeDescriptor;
@@ -36,6 +39,7 @@ import org.onesec.raven.ivr.IvrAction;
 import org.onesec.raven.ivr.IvrActionNode;
 import org.onesec.raven.ivr.IvrConversationScenarioPoint;
 import org.onesec.raven.ivr.IvrEndpointConversation;
+import org.onesec.raven.ivr.IvrEndpointConversationListener;
 import org.onesec.raven.ivr.OutgoingRtpStream;
 import org.onesec.raven.ivr.RtpStreamException;
 import org.raven.conv.ConversationScenario;
@@ -65,6 +69,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     private final ExecutorService executor;
     private final ConversationScenario scenario;
     private final RtpStreamManager streamManager;
+    private Map<String, Object> additionalBindings;
     private Codec codec;
 
     private OutgoingRtpStream outgoingRtpStream;
@@ -79,18 +84,21 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     private BindingSupportImpl bindingSupport;
     private IvrEndpointConversationStateImpl state;
     private String callingNumber;
+    private Collection<IvrEndpointConversationListener> listeners;
 
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
     public IvrEndpointConversationImpl(
             Node owner, ExecutorService executor
-            , ConversationScenario scenario, RtpStreamManager streamManager)
+            , ConversationScenario scenario, RtpStreamManager streamManager
+            , Map<String, Object> additionalBindings)
         throws Exception
     {
         this.owner = owner;
         this.executor = executor;
         this.scenario = scenario;
         this.streamManager = streamManager;
+        this.additionalBindings = additionalBindings;
 
         incomingRtpStream = streamManager.getIncomingRtpStream(owner);
         
@@ -98,10 +106,33 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         state.setState(INVALID);
     }
 
+    public void addConversationListener(IvrEndpointConversationListener listener)
+    {
+        lock.writeLock().lock();
+        try {
+            if (listeners==null)
+                listeners = new HashSet<IvrEndpointConversationListener>();
+            listeners.add(listener);
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    public void removeConversationListener(IvrEndpointConversationListener listener)
+    {
+        lock.writeLock().lock();
+        try {
+            if (listeners!=null)
+                listeners.remove(listener);
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
 //    public void initIncomingRtpProperties(String remote)
 
-    public void init(CallControlCall call, String remoteAddress, int remotePort, int packetSize,
-            int initialBufferSize, int maxSendAheadPacketsCount, Codec codec)
+    public void init(CallControlCall call, String remoteAddress, int remotePort, int packetSize
+            , int initialBufferSize, int maxSendAheadPacketsCount, Codec codec)
         throws Exception
     {
         this.remoteAddress = remoteAddress;
@@ -117,8 +148,13 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         conversationState.setBinding(DTMF_BINDING, "-", BindingScope.REQUEST);
         conversationState.setBindingDefaultValue(DTMF_BINDING, "-");
         conversationState.setBinding(VARS_BINDING, new HashMap(), BindingScope.CONVERSATION);
-        conversationState.setBinding(CONVERSATION_STATE_BINDING, conversationState, BindingScope.CONVERSATION);
+        conversationState.setBinding(
+                CONVERSATION_STATE_BINDING, conversationState, BindingScope.CONVERSATION);
         conversationState.setBinding(NUMBER_BINDING, callingNumber, BindingScope.CONVERSATION);
+        if (additionalBindings!=null)
+            for (Map.Entry<String, Object> b: additionalBindings.entrySet())
+                conversationState.setBinding(b.getKey(), b.getValue(), BindingScope.CONVERSATION);
+        additionalBindings = null;
 
         audioStream = new ConcatDataSource(
                 FileTypeDescriptor.WAVE, executor, codec, packetSize, initialBufferSize
@@ -168,6 +204,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 incomingRtpStream.open(remoteAddress);
                 
                 state.setState(TALKING);
+                fireEvent(true, null);
 
                 if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                     owner.getLogger().debug(callLog("Conversation successfully started"));
@@ -273,7 +310,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 catch (InterruptedException ex)
                 {
                     if (owner.isLogLevelEnabled(LogLevel.ERROR))
-                        owner.getLogger().error(callLog("Error canceling actions executor while stoping conversation"), ex);
+                        owner.getLogger().error(callLog(
+                                "Error canceling actions executor while stoping conversation"), ex);
                 }
                 try
                 {
@@ -287,8 +325,11 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                                     owner.getLogger().debug(callLog(
                                             "Disconnecting connection for address (%s)",
                                             connection.getAddress().getName()));
-                                if ( ((CiscoAddress)connection.getAddress()).getState()==CiscoAddress.IN_SERVICE)
+                                if ( ((    CiscoAddress)connection.getAddress()).getState()
+                                        == CiscoAddress.IN_SERVICE)
+                                {
                                     connection.disconnect();
+                                }
                                 else if (owner.getLogger().isDebugEnabled())
                                     owner.getLogger().debug(callLog(
                                             "Can't disconnect address not IN_SERVICE"));
@@ -299,13 +340,16 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 catch (Exception ex)
                 {
                     if (owner.isLogLevelEnabled(LogLevel.ERROR))
-                        owner.getLogger().error(callLog("Error droping a call while stoping conversation"), ex);
+                        owner.getLogger().error(callLog(
+                                "Error droping a call while stoping conversation"), ex);
                 }
             }
             finally
             {
                 if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                     owner.getLogger().debug(callLog("Conversation stoped (%s)", completionCode));
+                
+                fireEvent(false, completionCode);
             }
         }
         finally
@@ -399,5 +443,15 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     @Override
     public String toString() {
         return callId;
+    }
+
+    private void fireEvent(boolean conversationStartEvent, CompletionCode completionCode)
+    {
+        if (listeners!=null && !listeners.isEmpty())
+            for (IvrEndpointConversationListener listener: listeners)
+                if (conversationStartEvent)
+                    listener.conversationStarted();
+                else
+                    listener.conversationStoped(completionCode);
     }
 }
