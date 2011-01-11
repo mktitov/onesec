@@ -747,7 +747,8 @@ public class IvrMultichannelEndpointNode extends BaseNode
             if (callsLock.writeLock().tryLock(LOCK_WAIT_TIMEOUT, TimeUnit.MILLISECONDS)) {
                 try {
                     IvrEndpointConversationImpl conversation = new IvrEndpointConversationImpl(
-                                    this, executorService, conversationScenario, rtpStreamManager);
+                                    this, executorService, conversationScenario, rtpStreamManager
+                                    , null);
                     CiscoRTPParams params = new CiscoRTPParams(
                             conversation.getIncomingRtpStream().getAddress()
                             , conversation.getIncomingRtpStream().getPort());

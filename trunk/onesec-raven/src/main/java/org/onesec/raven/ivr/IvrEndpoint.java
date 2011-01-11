@@ -24,7 +24,7 @@ import org.raven.tree.Node;
 /**
  * @author Mikhail Titov
  */
-public interface IvrEndpoint extends IvrEndpointConversation, Node, ObjectDescription
+public interface IvrEndpoint extends Node, ObjectDescription
 {
     public IvrEndpointState getEndpointState();
     /**

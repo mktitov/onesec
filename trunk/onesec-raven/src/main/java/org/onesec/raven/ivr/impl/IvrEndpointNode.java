@@ -28,7 +28,6 @@ import com.cisco.jtapi.extensions.CiscoTermInServiceEv;
 import com.cisco.jtapi.extensions.CiscoTermOutOfServiceEv;
 import com.cisco.jtapi.extensions.CiscoTerminalObserver;
 import com.cisco.jtapi.extensions.CiscoUnregistrationException;
-import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -80,8 +79,10 @@ import org.onesec.raven.ivr.IvrActionNode;
 import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.IvrConversationScenarioPoint;
 import org.onesec.raven.ivr.IvrEndpoint;
+import org.onesec.raven.ivr.IvrEndpointConversationListener;
 import org.onesec.raven.ivr.IvrEndpointException;
 import org.onesec.raven.ivr.IvrEndpointState;
+import org.onesec.raven.ivr.RtpAddress;
 import org.onesec.raven.ivr.actions.ContinueConversationAction;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
@@ -104,7 +105,7 @@ import org.weda.internal.annotations.Service;
 @NodeClass
 public class IvrEndpointNode extends BaseNode 
         implements IvrEndpoint, ObjectDescription, CiscoTerminalObserver, AddressObserver
-            , CallControlCallObserver, MediaCallObserver
+            , CallControlCallObserver, MediaCallObserver, IvrEndpointConversationListener
 {
     @Service
     protected static ProviderRegistry providerRegistry;
@@ -126,6 +127,9 @@ public class IvrEndpointNode extends BaseNode
 
     @NotNull @Parameter(valueHandlerType=SystemSchedulerValueHandlerFactory.TYPE)
     private ExecutorService executorService;
+
+    //ip address and port for outgoing rtp stream
+    private RtpAddress rtpAddress;
 
 //    @NotNull @Parameter
 //    private String ip;
@@ -158,7 +162,7 @@ public class IvrEndpointNode extends BaseNode
     private AtomicBoolean observingCall;
     private AtomicBoolean observingTerminalAddress;
     private AtomicBoolean observingTerminal;
-    private IvrConversationScenario currentConversation;
+//    private IvrConversationScenario currentConversation;
 //    private RTPSession rtpSession;
 //    private ConcatDataSource audioStream;
     private IvrActionsExecutor actionsExecutor;
@@ -172,7 +176,7 @@ public class IvrEndpointNode extends BaseNode
     private boolean rtpInitialized;
     private ConversationResultImpl conversationResult;
     private ConversationCompletionCallback completionCallback;
-    private Map<String, Object> inviteBindings;
+//    private Map<String, Object> inviteBindings;
     private String opponentNumber;
     private BindingSupportImpl bindingSupport;
     private IvrEndpointConversationImpl conversation;
@@ -303,6 +307,20 @@ public class IvrEndpointNode extends BaseNode
     {
         try
         {
+            if (isLogLevelEnabled(LogLevel.DEBUG))
+                getLogger().debug(
+                        "Reserving ip address and port for outgoing rtp stream in the rtp manager ({})"
+                        , rtpStreamManager.getPath());
+            rtpAddress = rtpStreamManager.reserveAddress(this);
+            if (rtpAddress==null)
+                throw new Exception(String.format(
+                        "Error reserving ip address and port in the rtp stream manager (%s)"
+                        , rtpStreamManager.getPath()));
+            if (isLogLevelEnabled(LogLevel.DEBUG))
+                getLogger().debug(
+                        "Reserved ip address and port ({}:{})"
+                        , rtpAddress.getAddress().getHostAddress(), rtpAddress.getPort());
+
             endpointState.setState(IvrEndpointState.OUT_OF_SERVICE);
             resetStates();
             if (isLogLevelEnabled(LogLevel.DEBUG))
@@ -324,15 +342,13 @@ public class IvrEndpointNode extends BaseNode
                         "(CTI_Port on the CCM side)"
                         , terminals[0].getName(), CiscoMediaTerminal.class.getName()));
             terminal = (CiscoMediaTerminal) terminals[0];
-//            CiscoMediaCapability[] caps =
-//                    new CiscoMediaCapability[]{CiscoMediaCapability.G711_64K_30_MILLISECONDS};
 
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 debug(String.format(
                         "Registering terminal using local ip (%s) and local port (%s)..."
-                        , ip, port));
-            terminal.register(InetAddress.getByName(ip), port, codec.getCiscoMediaCapabilities());
-//            terminal.register(InetAddress.getByName(ip), port, caps);
+                        , rtpAddress.getAddress().getHostAddress(), rtpAddress.getPort()));
+            terminal.register(rtpAddress.getAddress(), rtpAddress.getPort()
+                    , codec.getCiscoMediaCapabilities());
 
             terminal.addObserver(this);
             observingTerminal.set(true);
@@ -343,6 +359,7 @@ public class IvrEndpointNode extends BaseNode
         }
         catch(Exception e)
         {
+            rtpStreamManager.unreserveAddress(this);
             throw new Exception(
                     String.format("Error initializing IVR endpoint (%s)", getPath()), e);
         }
@@ -367,11 +384,14 @@ public class IvrEndpointNode extends BaseNode
             resetConversationFields();
             handlingIncomingCall = true;
             this.opponentNumber = opponentNumber;
-            currentConversation = conversationScenario;
+
+            conversation = new IvrEndpointConversationImpl(
+                    this, executorService, conversationScenario, rtpStreamManager, bindings);
+            conversation.addConversationListener(this);
+
             conversationResult = new ConversationResultImpl();
             conversationResult.setCallStartTime(System.currentTimeMillis());
             completionCallback = callback;
-            inviteBindings = bindings;
             Call call = provider.createCall();
             CallControlCall ciscoCall = (CiscoCall) call;
             call.connect(terminal, terminalAddress, opponentNumber);
@@ -1002,4 +1022,13 @@ public class IvrEndpointNode extends BaseNode
     {
         return this;
     }
+
+    public void conversationStarted() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public void conversationStoped(CompletionCode completionCode) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
 }

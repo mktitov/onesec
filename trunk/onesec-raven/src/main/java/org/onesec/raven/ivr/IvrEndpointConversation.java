@@ -34,6 +34,19 @@ public interface IvrEndpointConversation extends ObjectDescription
     public final static String CONVERSATION_STATE_BINDING = "conversationState";
     public final static String VARS_BINDING = "vars";
     public final static String NUMBER_BINDING = "number";
+
+    /**
+     * Adds the listener to this conversation
+     * @param listener the listener
+     * @see #removeConversationListener
+     */
+    public void addConversationListener(IvrEndpointConversationListener listener);
+    /**
+     * Removes the listener from this conversation
+     * @param listener the listener
+     * @see #addConversationListener
+     */
+    public void removeConversationListener(IvrEndpointConversationListener listener);
     /**
      * Returns the node owned by this conversation.
      */

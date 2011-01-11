@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.onesec.raven.ivr.IncomingRtpStream;
 import org.onesec.raven.ivr.OutgoingRtpStream;
+import org.onesec.raven.ivr.RtpAddress;
 import org.onesec.raven.ivr.RtpStream;
 import org.onesec.raven.ivr.RtpStreamManager;
 import org.raven.annotations.NodeClass;
@@ -60,6 +61,7 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
     private Integer maxStreamCount;
 
     private Map<InetAddress, NavigableMap<Integer, RtpStream>> streams;
+    private Map<Node, RtpAddress> reservedAddresses;
     private ReentrantReadWriteLock streamsLock;
 
     private AtomicLong sendedBytes;
@@ -194,12 +196,32 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
 
     public IncomingRtpStream getIncomingRtpStream(Node owner)
     {
-        return (IncomingRtpStream)createStream(true, owner);
+        return (IncomingRtpStream)createStreamOrReserveAddress(true, owner, false);
     }
 
     public OutgoingRtpStream getOutgoingRtpStream(Node owner)
     {
-        return (OutgoingRtpStream)createStream(false, owner);
+        return (OutgoingRtpStream)createStreamOrReserveAddress(false, owner, false);
+    }
+
+    public RtpAddress reserveAddress(Node node)
+    {
+        return createStreamOrReserveAddress(false, node, true);
+    }
+
+    public void unreserveAddress(Node node)
+    {
+        streamsLock.writeLock().lock();
+        try{
+            RtpAddress rtpAddress = reservedAddresses.remove(node);
+            if (rtpAddress!=null) {
+                if (getLogger().isDebugEnabled())
+                    getLogger().debug("Unreserving rtp address for node ({})", node.getPath());
+                releaseStream(rtpAddress);
+            }
+        } finally {
+            streamsLock.writeLock().unlock();
+        }
     }
 
     void incHandledBytes(RtpStream stream, long bytes)
@@ -218,11 +240,16 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
             recievedPackets.addAndGet(packets);
     }
 
-    void releaseStream(RtpStream stream)
+    void releaseStream(RtpAddress stream)
     {
-        Map portStreams = streams.get(stream.getAddress());
-        if (portStreams!=null)
-            portStreams.remove(stream.getPort());
+        streamsLock.writeLock().lock();
+        try{
+            Map portStreams = streams.get(stream.getAddress());
+            if (portStreams!=null)
+                portStreams.remove(stream.getPort());
+        }finally{
+            streamsLock.writeLock().unlock();
+        }
     }
 
     Map<InetAddress, NavigableMap<Integer, RtpStream>> getStreams()
@@ -252,7 +279,8 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
         }
     }
 
-    private RtpStream createStream(boolean incomingStream, Node owner)
+    private RtpAddress createStreamOrReserveAddress(
+            boolean incomingStream, Node owner, boolean reserve)
     {
         if (!Status.STARTED.equals(getStatus()))
             return null;
@@ -261,6 +289,11 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
             streamsLock.writeLock().lock();
             try
             {
+                if (reserve && reservedAddresses.containsKey(owner)) {
+                    if (getLogger().isWarnEnabled())
+                        getLogger().warn("The node ({}) is already reserved the address and port ");
+                    return reservedAddresses.get(owner);
+                }
                 if (getStreamsCount() >= maxStreamCount)
                     throw new Exception("Max streams count exceded");
 
@@ -297,18 +330,26 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
                                 portNumber = portStreams.lastKey()+2;
                         }
 
-                if (incomingStream)
-                    stream = new IncomingRtpStreamImpl(address, portNumber);
-                else
-                    stream = new OutgoingRtpStreamImpl(address, portNumber);
+                if (!reserve) {
+                    if (incomingStream)
+                        stream = new IncomingRtpStreamImpl(address, portNumber);
+                    else
+                        stream = new OutgoingRtpStreamImpl(address, portNumber);
 
-                ((AbstractRtpStream)stream).setManager(this);
-                ((AbstractRtpStream)stream).setOwner(owner);
-                portStreams.put(portNumber, stream);
+                    ((AbstractRtpStream)stream).setManager(this);
+                    ((AbstractRtpStream)stream).setOwner(owner);
+                    portStreams.put(portNumber, stream);
 
-                streamCreations.incrementAndGet();
+                    streamCreations.incrementAndGet();
 
-                return stream;
+                    return stream;
+                } else {
+                    portStreams.put(portNumber, null);
+                    RtpAddress rtpAddress = new RtpAddressImpl(address, portNumber);
+                    reservedAddresses.put(owner, rtpAddress);
+
+                    return rtpAddress;
+                }
             }
             finally
             {
