@@ -22,7 +22,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.onesec.raven.ivr.IvrActionException;
 import org.onesec.raven.ivr.IvrActionStatus;
-import org.onesec.raven.ivr.IvrEndpoint;
+import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.ExecutorServiceException;
 import org.raven.sched.Task;
@@ -36,35 +36,35 @@ public class PauseActionTest extends Assert
     @Test()
     public void executeTest() throws ExecutorServiceException, IvrActionException
     {
-        IvrEndpoint endpoint = createMock(IvrEndpoint.class);
+        IvrEndpointConversation conversation = createMock(IvrEndpointConversation.class);
         ExecutorService executor = createMock(ExecutorService.class);
-        expect(endpoint.getExecutorService()).andReturn(executor);
+        expect(conversation.getExecutorService()).andReturn(executor);
         executor.execute(executeTask());
-        replay(endpoint, executor);
+        replay(conversation, executor);
 
         PauseAction action = new PauseAction(100);
         long start = System.currentTimeMillis();
-        action.execute(endpoint);
+        action.execute(conversation);
         long interval = System.currentTimeMillis()-start;
         assertTrue(interval>=100);
         assertTrue(interval<=100+10);
 
-        verify(endpoint, executor);
+        verify(conversation, executor);
     }
 
     @Test
     public void cancelTest() throws Exception
     {
-        IvrEndpoint endpoint = createMock(IvrEndpoint.class);
+        IvrEndpointConversation conversation = createMock(IvrEndpointConversation.class);
         ExecutorService executor = createMock(ExecutorService.class);
-        expect(endpoint.getExecutorService()).andReturn(executor);
+        expect(conversation.getExecutorService()).andReturn(executor);
         executor.execute(executeTaskInThread());
-        replay(endpoint, executor);
+        replay(conversation, executor);
 
         PauseAction action = new PauseAction(100);
         long start = System.currentTimeMillis();
         assertEquals(IvrActionStatus.WAITING, action.getStatus());
-        action.execute(endpoint);
+        action.execute(conversation);
         assertEquals(IvrActionStatus.EXECUTING, action.getStatus());
         Thread.sleep(20);
         assertEquals(IvrActionStatus.EXECUTING, action.getStatus());
@@ -74,7 +74,7 @@ public class PauseActionTest extends Assert
         assertTrue(interval<100);
         assertEquals(IvrActionStatus.EXECUTED, action.getStatus());
 
-        verify(endpoint, executor);
+        verify(conversation, executor);
         
     }
 
