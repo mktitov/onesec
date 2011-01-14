@@ -23,29 +23,20 @@ import com.cisco.jtapi.extensions.CiscoCall;
 import com.cisco.jtapi.extensions.CiscoMediaTerminal;
 import com.cisco.jtapi.extensions.CiscoRTPOutputProperties;
 import com.cisco.jtapi.extensions.CiscoRTPOutputStartedEv;
-import com.cisco.jtapi.extensions.CiscoRTPOutputStoppedEv;
 import com.cisco.jtapi.extensions.CiscoTermInServiceEv;
 import com.cisco.jtapi.extensions.CiscoTermOutOfServiceEv;
 import com.cisco.jtapi.extensions.CiscoTerminalObserver;
 import com.cisco.jtapi.extensions.CiscoUnregistrationException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import javax.media.protocol.FileTypeDescriptor;
 import javax.telephony.Address;
 import javax.telephony.AddressObserver;
 import javax.telephony.Call;
-import javax.telephony.Connection;
 import javax.telephony.Provider;
 import javax.telephony.Terminal;
-import javax.telephony.TerminalConnection;
 import javax.telephony.callcontrol.CallControlCall;
 import javax.telephony.callcontrol.CallControlCallObserver;
 import javax.telephony.callcontrol.CallControlConnection;
@@ -64,9 +55,6 @@ import javax.telephony.events.TermObservationEndedEv;
 import javax.telephony.media.MediaCallObserver;
 import javax.telephony.media.events.MediaTermConnDtmfEv;
 import org.onesec.core.ObjectDescription;
-import org.onesec.core.call.AddressMonitor;
-import org.onesec.core.call.CallCompletionCode;
-import org.onesec.core.call.CallResult;
 import org.onesec.core.provider.ProviderController;
 import org.onesec.core.services.Operator;
 import org.onesec.core.services.ProviderRegistry;
@@ -74,20 +62,15 @@ import org.onesec.core.services.StateListenersCoordinator;
 import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.CompletionCode;
 import org.onesec.raven.ivr.ConversationCompletionCallback;
-import org.onesec.raven.ivr.IvrAction;
-import org.onesec.raven.ivr.IvrActionNode;
 import org.onesec.raven.ivr.IvrConversationScenario;
-import org.onesec.raven.ivr.IvrConversationScenarioPoint;
 import org.onesec.raven.ivr.IvrEndpoint;
 import org.onesec.raven.ivr.IvrEndpointConversationListener;
+import org.onesec.raven.ivr.IvrEndpointConversationState;
 import org.onesec.raven.ivr.IvrEndpointException;
 import org.onesec.raven.ivr.IvrEndpointState;
 import org.onesec.raven.ivr.RtpAddress;
-import org.onesec.raven.ivr.actions.ContinueConversationAction;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
-import org.raven.conv.BindingScope;
-import org.raven.conv.ConversationScenarioState;
 import org.raven.expr.impl.BindingSupportImpl;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
@@ -107,6 +90,8 @@ public class IvrEndpointNode extends BaseNode
         implements IvrEndpoint, ObjectDescription, CiscoTerminalObserver, AddressObserver
             , CallControlCallObserver, MediaCallObserver, IvrEndpointConversationListener
 {
+    private final static int LOCK_TIMEOUT = 500;
+
     @Service
     protected static ProviderRegistry providerRegistry;
 
@@ -157,7 +142,7 @@ public class IvrEndpointNode extends BaseNode
 
     private boolean terminalInService;
     private boolean terminalAddressInService;
-    private boolean handlingIncomingCall;
+    private boolean handlingOutgoingCall;
     private boolean transfering;
     private AtomicBoolean observingCall;
     private AtomicBoolean observingTerminalAddress;
@@ -165,7 +150,7 @@ public class IvrEndpointNode extends BaseNode
 //    private IvrConversationScenario currentConversation;
 //    private RTPSession rtpSession;
 //    private ConcatDataSource audioStream;
-    private IvrActionsExecutor actionsExecutor;
+//    private IvrActionsExecutor actionsExecutor;
 //    private ConversationScenarioState conversationState;
     private Provider provider;
     private String remoteAddress;
@@ -180,7 +165,8 @@ public class IvrEndpointNode extends BaseNode
     private String opponentNumber;
     private BindingSupportImpl bindingSupport;
     private IvrEndpointConversationImpl conversation;
-
+    private ReentrantLock lock;
+    
 
     private Lock rtpSessionLock;
 
@@ -193,7 +179,8 @@ public class IvrEndpointNode extends BaseNode
         endpointState = new IvrEndpointStateImpl(this);
         stateListenersCoordinator.addListenersToState(endpointState);
         bindingSupport = new BindingSupportImpl();
-        rtpSessionLock = new ReentrantLock();
+//        rtpSessionLock = new ReentrantLock();
+        lock = new ReentrantLock();
         resetStates();
         resetConversationFields();
     }
@@ -202,7 +189,7 @@ public class IvrEndpointNode extends BaseNode
     {
         terminalInService = false;
         terminalAddressInService = false;
-        handlingIncomingCall = false;
+        handlingOutgoingCall = false;
         observingTerminal = new AtomicBoolean(false);
         observingTerminalAddress = new AtomicBoolean(false);
         observingCall = new AtomicBoolean(false);
@@ -215,12 +202,11 @@ public class IvrEndpointNode extends BaseNode
         rtpInitialized = false;
         remotePort = 0;
         remoteAddress = null;
-        handlingIncomingCall = false;
+        handlingOutgoingCall = false;
         transfering = false;
         conversationResult = null;
         completionCallback = null;
         opponentNumber = null;
-        inviteBindings = null;
     }
 
 //    private synchronized void setEndpointStatus(IvrEndpointState endpointStatus)
@@ -236,7 +222,6 @@ public class IvrEndpointNode extends BaseNode
     protected void doStart() throws Exception
     {
         super.doStart();
-        actionsExecutor = new IvrActionsExecutor(this, executorService);
         initializeEndpoint();
     }
 
@@ -251,7 +236,6 @@ public class IvrEndpointNode extends BaseNode
         removeTerminalObserver();
         terminal = null;
         terminalAddress = null;
-        actionsExecutor = null;
         resetStates();
     }
 
@@ -365,113 +349,167 @@ public class IvrEndpointNode extends BaseNode
         }
     }
 
-    public synchronized void invite(
+    public void invite(
             String opponentNumber, IvrConversationScenario conversationScenario
             , ConversationCompletionCallback callback
             , Map<String, Object> bindings) throws IvrEndpointException
     {
-        if (!getStatus().equals(Status.STARTED)
-                && endpointState.getId()!=IvrEndpointState.IN_SERVICE)
-            throw new IvrEndpointException(
-                    "Can't invite oppenent to conversation. Endpoint not ready");
-        try
-        {
-            endpointState.setState(IvrEndpointState.INVITING);
-            if (isLogLevelEnabled(LogLevel.DEBUG))
-                debug(String.format(
-                        "Inviting opponent with number (%s) to conversation (%s)"
-                        , opponentNumber, conversationScenario));
-            resetConversationFields();
-            handlingIncomingCall = true;
-            this.opponentNumber = opponentNumber;
 
-            conversation = new IvrEndpointConversationImpl(
-                    this, executorService, conversationScenario, rtpStreamManager, bindings);
-            conversation.addConversationListener(this);
-
-            conversationResult = new ConversationResultImpl();
-            conversationResult.setCallStartTime(System.currentTimeMillis());
-            completionCallback = callback;
-            Call call = provider.createCall();
-            CallControlCall ciscoCall = (CiscoCall) call;
-            call.connect(terminal, terminalAddress, opponentNumber);
-        }
-        catch (Throwable e)
-        {
-            if (isLogLevelEnabled(LogLevel.DEBUG))
-                debug(
-                    String.format("Error inviting opponent (%s) to conversation", opponentNumber)
-                    , e);
-            stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
-        }
-    }
-
-    public void transfer(
-            String address, boolean monitorTransfer, long callStartTimeout, long callEndTimeout)
-    {
-        if (IvrEndpointState.TALKING!=endpointState.getId() || Status.STARTED!=getStatus())
-        {
-            if (isLogLevelEnabled(LogLevel.WARN))
-                warn(String.format(
-                        "Can't transfer call to the address (%s). Endpoint not ready"
-                        , address));
-        }
-        else
-        {
-            try
-            {
-                audioStream.reset();
-                if (handlingIncomingCall)
-                {
-                    conversationResult.setCallEndTime(System.currentTimeMillis());
-                    transfering = true;
-                }
-                try
-                {
+        try {
+            if (lock.tryLock()) {
+                try {
+                    if (   !getStatus().equals(Status.STARTED)
+                        && endpointState.getId()!=IvrEndpointState.IN_SERVICE)
+                    {
+                        throw new IvrEndpointException(
+                                "Can't invite oppenent to conversation. Endpoint not ready");
+                    }
                     try
                     {
-                        if (handlingIncomingCall)
-                        {
-                            conversationResult.setTransferAddress(address);
-                            conversationResult.setTransferTime(System.currentTimeMillis());
-                            conversationResult.setTransferCompletionCode(CallCompletionCode.NORMAL);
-                        }
-                        ((CallControlCall) call).transfer(address);
-                        if (handlingIncomingCall && monitorTransfer)
-                        {
-                            AddressMonitor monitor = operator.createAddressMonitor(address);
-                            CallResult res = monitor.waitForCallCompletion(
-                                    opponentNumber, callStartTimeout, callEndTimeout);
-                            conversationResult.setTransferCompletionCode(res.getCompletionCode());
-                            conversationResult.setTransferConversationStartTime(
-                                    res.getConversationStartTime());
-                            conversationResult.setTransferConversationDuration(
-                                    res.getConversationDuration());
-                        }
+                        endpointState.setState(IvrEndpointState.INVITING);
+                        if (isLogLevelEnabled(LogLevel.DEBUG))
+                            debug(String.format(
+                                    "Inviting opponent with number (%s) to conversation (%s)"
+                                    , opponentNumber, conversationScenario));
+                        resetConversationFields();
+                        handlingOutgoingCall = true;
+                        this.opponentNumber = opponentNumber;
+
+                        conversation = new IvrEndpointConversationImpl(
+                                this, executorService, conversationScenario, rtpStreamManager
+                                , bindings);
+                        conversation.addConversationListener(this);
+
+                        conversationResult = new ConversationResultImpl();
+                        conversationResult.setCallStartTime(System.currentTimeMillis());
+                        completionCallback = callback;
+                        Call call = provider.createCall();
+                        CallControlCall ciscoCall = (CiscoCall) call;
+                        call.connect(terminal, terminalAddress, opponentNumber);
                     }
-                    catch(Exception e)
+                    catch (Throwable e)
                     {
-                        if (handlingIncomingCall)
-                            conversationResult.setTransferCompletionCode(CallCompletionCode.ERROR);
-                        throw e;
+                        if (isLogLevelEnabled(LogLevel.DEBUG))
+                            debug(String.format(
+                                    "Error inviting opponent (%s) to conversation", opponentNumber)
+                                , e);
+                        conversationStoped(CompletionCode.OPPONENT_UNKNOWN_ERROR);
                     }
+                } finally {
+                    lock.unlock();
                 }
-                finally
-                {
-                    if (transfering)
-                    {
-                        transfering = false;
-                        stopConversation(CompletionCode.COMPLETED_BY_ENDPOINT);
-                    }
-                }
+            } else {
+                throw new IvrEndpointException(
+                        "Can't invite oppenent to conversation. Endpoint not ready");
             }
-            catch (Exception ex)
-            {
-                if (isLogLevelEnabled(LogLevel.ERROR))
-                    error(String.format("Error transfering call to the address (%s)", address), ex);
-            }
+        } catch (IvrEndpointException e) {
+            if (isLogLevelEnabled(LogLevel.WARN))
+                getLogger().warn(e.getMessage(), e);
+            throw e;
         }
+
+//        if (!getStatus().equals(Status.STARTED)
+//                && endpointState.getId()!=IvrEndpointState.IN_SERVICE)
+//            throw new IvrEndpointException(
+//                    "Can't invite oppenent to conversation. Endpoint not ready");
+//        try
+//        {
+//            endpointState.setState(IvrEndpointState.INVITING);
+//            if (isLogLevelEnabled(LogLevel.DEBUG))
+//                debug(String.format(
+//                        "Inviting opponent with number (%s) to conversation (%s)"
+//                        , opponentNumber, conversationScenario));
+//            resetConversationFields();
+//            handlingOutgoingCall = true;
+//            this.opponentNumber = opponentNumber;
+//
+//            conversation = new IvrEndpointConversationImpl(
+//                    this, executorService, conversationScenario, rtpStreamManager, bindings);
+//            conversation.addConversationListener(this);
+//
+//            conversationResult = new ConversationResultImpl();
+//            conversationResult.setCallStartTime(System.currentTimeMillis());
+//            completionCallback = callback;
+//            Call call = provider.createCall();
+//            CallControlCall ciscoCall = (CiscoCall) call;
+//            call.connect(terminal, terminalAddress, opponentNumber);
+//        }
+//        catch (Throwable e)
+//        {
+//            if (isLogLevelEnabled(LogLevel.DEBUG))
+//                debug(
+//                    String.format("Error inviting opponent (%s) to conversation", opponentNumber)
+//                    , e);
+//            stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
+//        }
     }
+
+//    public void transfer(
+//            String address, boolean monitorTransfer, long callStartTimeout, long callEndTimeout)
+//    {
+//        if (IvrEndpointState.TALKING!=endpointState.getId() || Status.STARTED!=getStatus())
+//        {
+//            if (isLogLevelEnabled(LogLevel.WARN))
+//                warn(String.format(
+//                        "Can't transfer call to the address (%s). Endpoint not ready"
+//                        , address));
+//        }
+//        else
+//        {
+//            try
+//            {
+//                audioStream.reset();
+//                if (handlingIncomingCall)
+//                {
+//                    conversationResult.setCallEndTime(System.currentTimeMillis());
+//                    transfering = true;
+//                }
+//                try
+//                {
+//                    try
+//                    {
+//                        if (handlingIncomingCall)
+//                        {
+//                            conversationResult.setTransferAddress(address);
+//                            conversationResult.setTransferTime(System.currentTimeMillis());
+//                            conversationResult.setTransferCompletionCode(CallCompletionCode.NORMAL);
+//                        }
+//                        ((CallControlCall) call).transfer(address);
+//                        if (handlingIncomingCall && monitorTransfer)
+//                        {
+//                            AddressMonitor monitor = operator.createAddressMonitor(address);
+//                            CallResult res = monitor.waitForCallCompletion(
+//                                    opponentNumber, callStartTimeout, callEndTimeout);
+//                            conversationResult.setTransferCompletionCode(res.getCompletionCode());
+//                            conversationResult.setTransferConversationStartTime(
+//                                    res.getConversationStartTime());
+//                            conversationResult.setTransferConversationDuration(
+//                                    res.getConversationDuration());
+//                        }
+//                    }
+//                    catch(Exception e)
+//                    {
+//                        if (handlingIncomingCall)
+//                            conversationResult.setTransferCompletionCode(CallCompletionCode.ERROR);
+//                        throw e;
+//                    }
+//                }
+//                finally
+//                {
+//                    if (transfering)
+//                    {
+//                        transfering = false;
+//                        stopConversation(CompletionCode.COMPLETED_BY_ENDPOINT);
+//                    }
+//                }
+//            }
+//            catch (Exception ex)
+//            {
+//                if (isLogLevelEnabled(LogLevel.ERROR))
+//                    error(String.format("Error transfering call to the address (%s)", address), ex);
+//            }
+//        }
+//    }
 
     private synchronized void checkStatus()
     {
@@ -497,28 +535,12 @@ public class IvrEndpointNode extends BaseNode
         return endpointState;
     }
 
-    public String getIp()
-    {
-        return ip;
-    }
-
-    public void setIp(String ip)
-    {
-        this.ip = ip;
-    }
-
-    public Integer getPort()
-    {
-        return port;
-    }
-
-    public void setPort(Integer port)
-    {
-        this.port = port;
-    }
-
     public String getAddress() {
         return address;
+    }
+
+    public RtpAddress getRtpAddress() {
+        return rtpAddress!=null? rtpAddress : null;
     }
 
     public void setAddress(String address) {
@@ -577,17 +599,9 @@ public class IvrEndpointNode extends BaseNode
             {
                 case CiscoTermInServiceEv.ID: terminalInService = true; checkStatus(); break;
                 case CiscoTermOutOfServiceEv.ID: terminalInService = false; checkStatus(); break;
-                case CiscoRTPOutputStartedEv.ID:
-                    CiscoRTPOutputStartedEv rtpOutput = (CiscoRTPOutputStartedEv) event;
-                    CiscoRTPOutputProperties props = rtpOutput.getRTPOutputProperties();
-                    remoteAddress = props.getRemoteAddress().getHostAddress();
-                    remotePort = props.getRemotePort();
-                    packetSize = props.getPacketSize()*8;
-                    payloadType = props.getPayloadType();
-                    rtpInitialized = true;
-                    startRtpSession(remoteAddress, remotePort, packetSize, payloadType);
-                    break;
-                case CiscoRTPOutputStoppedEv.ID: closeRtpSession(); break;
+                case CiscoRTPOutputStartedEv.ID: 
+                    initConversation((CiscoRTPOutputStartedEv) event); break;
+//                case CiscoRTPOutputStoppedEv.ID: closeRtpSession(); break;
                 case TermObservationEndedEv.ID: observingTerminal.set(false); break;
             }
         }
@@ -619,19 +633,11 @@ public class IvrEndpointNode extends BaseNode
         {
             switch (event.getID())
             {
-                case CallCtlConnOfferedEv.ID:
-                    if (!handlingIncomingCall)
-                        acceptIncomingCall((CallCtlConnOfferedEv) event);
-                    break;
+                case CallCtlConnOfferedEv.ID: 
+                    acceptIncomingCall((CallCtlConnOfferedEv) event); break;
                 case TermConnRingingEv.ID:
-                    answerOnIncomingCall((TermConnRingingEv)event);
-                    break;
-                case CallCtlConnEstablishedEv.ID:
-                    CallCtlConnEstablishedEv e = (CallCtlConnEstablishedEv) event;
-                    ++connected;
-                    call = event.getCall();
-                    startRtpSession(remoteAddress, remotePort, packetSize, payloadType);
-                    break;
+                    answerOnIncomingCall((TermConnRingingEv)event); break;
+                case CallCtlConnEstablishedEv.ID: startConversation();
                 case TermConnDroppedEv.ID:
                     stopConversation(CompletionCode.COMPLETED_BY_OPPONENT);
                     break;
@@ -642,7 +648,7 @@ public class IvrEndpointNode extends BaseNode
                     observingCall.set(false);
                     break;
                 case CallCtlConnFailedEv.ID:
-                    if (handlingIncomingCall)
+                    if (handlingOutgoingCall)
                     {
                         CallCtlConnFailedEv ev = (CallCtlConnFailedEv) event;
                         int cause = ev.getCallControlCause();
@@ -655,7 +661,7 @@ public class IvrEndpointNode extends BaseNode
                                 break;
                             case CallCtlConnFailedEv.CAUSE_CALL_NOT_ANSWERED:
                             case CallCtlConnFailedEv.CAUSE_NORMAL:
-                                code = CompletionCode.OPPONENT_NO_ANSWERED;
+                                code = CompletionCode.OPPONENT_NOT_ANSWERED;
                                 break;
                         }
                         stopConversation(code);
@@ -676,237 +682,287 @@ public class IvrEndpointNode extends BaseNode
         }
     }
 
-    private synchronized void acceptIncomingCall(CallCtlConnOfferedEv event)
+    private void acceptIncomingCall(CallCtlConnOfferedEv event)
     {
-        CallCtlConnOfferedEv offEvent = (CallCtlConnOfferedEv)event;
-        CallControlConnection conn = (CallControlConnection) offEvent.getConnection();
-        if (conn.getAddress().getName().equals(address) && conn.getCallControlState()==CallControlConnection.OFFERED)
-            try
-            {
-                if (isLogLevelEnabled(LogLevel.DEBUG))
-                    debug("Accepting incoming call");
-                currentConversation = conversationScenario;
-                if (currentConversation==null)
-                {
-                    if (isLogLevelEnabled(LogLevel.ERROR))
-                        error(
-                            "Can not make conversation because of does not have conversation scenario");
-                    conn.disconnect();
+        try {
+            if (isLogLevelEnabled(LogLevel.DEBUG))
+                getLogger().debug("Accepting incoming call");
+            if (lock.tryLock(LOCK_TIMEOUT, TimeUnit.MILLISECONDS)) {
+                try {
+                    CallCtlConnOfferedEv offEvent = (CallCtlConnOfferedEv)event;
+                    CallControlConnection conn = (CallControlConnection) offEvent.getConnection();
+                    if (conversation==null || handlingOutgoingCall) {
+                        //creating conversation and accepting call
+                        if (!handlingOutgoingCall)
+                            conversation = new IvrEndpointConversationImpl(
+                                    this, executorService, conversationScenario, rtpStreamManager
+                                    , null);
+                        conn.accept();
+                        endpointState.setState(IvrEndpointState.ACCEPTING_CALL);
+                        if (isLogLevelEnabled(LogLevel.DEBUG))
+                            getLogger().debug("Call accepted");
+                    } else {
+                        if (isLogLevelEnabled(LogLevel.DEBUG))
+                            getLogger().debug("Can't accept. Already handling a call");
+                        conn.disconnect();
+                    }
+                } finally {
+                    lock.unlock();
                 }
-                else
-                {
-                    conn.accept();
-                    endpointState.setState(IvrEndpointState.ACCEPTING_CALL);
-                }
+            } else if (isLogLevelEnabled(LogLevel.WARN)) {
+                getLogger().warn("Lock wait timeout while accepting call");
+
             }
-            catch (Exception ex)
-            {
-                if (isLogLevelEnabled(LogLevel.ERROR))
-                    error("Error accepting call", ex);
-            }
+        } catch(Exception e) {
+            if (isLogLevelEnabled(LogLevel.DEBUG))
+                getLogger().debug("Lock wait error", e);
+        }
+//        CallCtlConnOfferedEv offEvent = (CallCtlConnOfferedEv)event;
+//        CallControlConnection conn = (CallControlConnection) offEvent.getConnection();
+//        if (conn.getAddress().getName().equals(address) && conn.getCallControlState()==CallControlConnection.OFFERED)
+//            try
+//            {
+//                if (isLogLevelEnabled(LogLevel.DEBUG))
+//                    debug("Accepting incoming call");
+//                currentConversation = conversationScenario;
+//                if (currentConversation==null)
+//                {
+//                    if (isLogLevelEnabled(LogLevel.ERROR))
+//                        error(
+//                            "Can not make conversation because of does not have conversation scenario");
+//                    conn.disconnect();
+//                }
+//                else
+//                {
+//                    conn.accept();
+//                    endpointState.setState(IvrEndpointState.ACCEPTING_CALL);
+//                }
+//            }
+//            catch (Exception ex)
+//            {
+//                if (isLogLevelEnabled(LogLevel.ERROR))
+//                    error("Error accepting call", ex);
+//            }
     }
         
-    private synchronized void answerOnIncomingCall(TermConnRingingEv event)
+    private void answerOnIncomingCall(TermConnRingingEv event)
     {
-        if (isLogLevelEnabled(LogLevel.DEBUG))
-            debug("Answering on incoming call");
-        try
-        {
-            event.getTerminalConnection().answer();
-//            endpointState.setState(IvrEndpointState.TALKING);
-        }
-        catch (Exception e)
-        {
-            if (isLogLevelEnabled(LogLevel.ERROR))
-                error("Error answering on call", e);
+        lock.lock();
+        try {
+            if (isLogLevelEnabled(LogLevel.DEBUG)) {
+                debug("Answering on incoming call");
+                
+            }
+            try {
+                event.getTerminalConnection().answer();
+            } catch (Exception e) {
+                if (isLogLevelEnabled(LogLevel.ERROR)) {
+                    error("Error answering on call", e);
+                    
+                }
+            }
+        } finally {
+            lock.unlock();
         }
     }
 
     public void continueConversation(char dtmfChar)
     {
-        try
-        {
-            IvrConversationScenarioPoint point =
-                    (IvrConversationScenarioPoint) conversationState.getNextConversationPoint();
-            String validDtmfs = point.getValidDtmfs();
-            if (dtmfChar!=EMPTY_DTMF && (validDtmfs==null || validDtmfs.indexOf(dtmfChar)<0))
-            {
-                if (isLogLevelEnabled(LogLevel.DEBUG))
-                    debug(String.format("Invalid dtmf (%s). Skipping", dtmfChar));
-                return;
+        if (lock.tryLock()) {
+            try {
+                if (conversation!=null)
+                    conversation.continueConversation(dtmfChar);
+            } finally {
+                lock.unlock();
             }
-            if (isLogLevelEnabled(LogLevel.DEBUG))
-                debug(String.format("Continue conversation with dtmf (%s)", dtmfChar));
-            if (actionsExecutor.hasDtmfProcessPoint(dtmfChar))
-                return;
-            audioStream.reset();
-            conversationState.getBindings().put(DTMF_BINDING, ""+dtmfChar);
-            Collection<Node> actions = currentConversation.makeConversation(conversationState);
-            Collection<IvrAction> ivrActions = new ArrayList<IvrAction>(10);
-            try
-            {
-                tree.addGlobalBindings(getId()+"", bindingSupport);
-                bindingSupport.putAll(conversationState.getBindings());
-//                bindingSupport.put(DTMF_BINDING, ""+dtmfChar);
-                for (Node node: actions)
-                    if (node instanceof IvrActionNode)
-                    {
-                        IvrAction action = ((IvrActionNode)node).createAction();
-                        if (action!=null)
-                            ivrActions.add(action);
-                    }
-                if (conversationState.hasImmediateTransition())
-                    ivrActions.add(new ContinueConversationAction());
-                actionsExecutor.executeActions(ivrActions);
-            }
-            finally
-            {
-                tree.removeGlobalBindings(getId()+"");
-                bindingSupport.reset();
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.getLogger(IvrEndpointNode.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        } else if (isLogLevelEnabled(LogLevel.WARN))
+            getLogger().warn(
+                    "Can't continue the conversation with dtmf ({}). Lock wait timeout", dtmfChar);
+//        try
+//        {
+//            IvrConversationScenarioPoint point =
+//                    (IvrConversationScenarioPoint) conversationState.getNextConversationPoint();
+//            String validDtmfs = point.getValidDtmfs();
+//            if (dtmfChar!=EMPTY_DTMF && (validDtmfs==null || validDtmfs.indexOf(dtmfChar)<0))
+//            {
+//                if (isLogLevelEnabled(LogLevel.DEBUG))
+//                    debug(String.format("Invalid dtmf (%s). Skipping", dtmfChar));
+//                return;
+//            }
+//            if (isLogLevelEnabled(LogLevel.DEBUG))
+//                debug(String.format("Continue conversation with dtmf (%s)", dtmfChar));
+//            if (actionsExecutor.hasDtmfProcessPoint(dtmfChar))
+//                return;
+//            audioStream.reset();
+//            conversationState.getBindings().put(DTMF_BINDING, ""+dtmfChar);
+//            Collection<Node> actions = currentConversation.makeConversation(conversationState);
+//            Collection<IvrAction> ivrActions = new ArrayList<IvrAction>(10);
+//            try
+//            {
+//                tree.addGlobalBindings(getId()+"", bindingSupport);
+//                bindingSupport.putAll(conversationState.getBindings());
+////                bindingSupport.put(DTMF_BINDING, ""+dtmfChar);
+//                for (Node node: actions)
+//                    if (node instanceof IvrActionNode)
+//                    {
+//                        IvrAction action = ((IvrActionNode)node).createAction();
+//                        if (action!=null)
+//                            ivrActions.add(action);
+//                    }
+//                if (conversationState.hasImmediateTransition())
+//                    ivrActions.add(new ContinueConversationAction());
+//                actionsExecutor.executeActions(ivrActions);
+//            }
+//            finally
+//            {
+//                tree.removeGlobalBindings(getId()+"");
+//                bindingSupport.reset();
+//            }
+//        }
+//        catch (Exception ex)
+//        {
+//            Logger.getLogger(IvrEndpointNode.class.getName()).log(Level.SEVERE, null, ex);
+//        }
     }
 
-    public synchronized void stopConversation(CompletionCode completionCode)
+    public void stopConversation(CompletionCode completionCode)
     {
-        if (isLogLevelEnabled(LogLevel.DEBUG))
-            debug("Stoping conversation");
-        closeRtpSession();
-        if (endpointState.getId()==IvrEndpointState.IN_SERVICE || endpointState.getId()==IvrEndpointState.OUT_OF_SERVICE)
-        {
-            if (isLogLevelEnabled(LogLevel.DEBUG))
-                debug("Conversation already stopped");
-            return;
+        lock.lock();
+        try {
+            if (conversation!=null) 
+                conversation.stopConversation(completionCode);
+        } finally {
+            lock.unlock();
         }
-        if (transfering)
-        {
-            if (isLogLevelEnabled(LogLevel.DEBUG))
-                debug("Can't stop conversation until transfer complete");
-            return;
-        }
-        boolean changeStateToInService = true;
-        try
-        {
-            try
-            {
-                try
-                {
-                    try
-                    {
-                        if (isLogLevelEnabled(LogLevel.DEBUG))
-                            debug("Canceling actions execution");
-                        if (actionsExecutor!=null)
-                            actionsExecutor.cancelActionsExecution();
-                    }
-                    finally
-                    {
-                        if (terminal!=null)
-                        {
-                            TerminalConnection[] connections = terminal.getTerminalConnections();
-                            if (connections!=null && connections.length>0)
-                            {
-                                if (isLogLevelEnabled(LogLevel.DEBUG))
-                                    debug("Terminal has active connection. Disconnecting...");
-                                Connection connection = connections[0].getConnection();
-                                connection.disconnect();
-                                changeStateToInService = false;
-                                return;
-    //                                while (connections[0].getState()!=TerminalConnection.DROPPED)
-    //                                    Thread.sleep(100);
-                            }
-                        }
-                    }
-                }
-                finally
-                {
-                    if (handlingIncomingCall)
-                    {
-                        if (!changeStateToInService)
-                            conversationResult.setCompletionCode(completionCode);
-                        else
-                        {
-                            if (conversationResult.getCompletionCode()==null)
-                                conversationResult.setCompletionCode(completionCode);
-                            long curTime = System.currentTimeMillis();
-                            conversationResult.setCallEndTime(curTime);
-                            completionCallback.conversationCompleted(conversationResult);
-                        }
-                    }
-                }
-            } catch (Exception e)
-            {
-                if (isLogLevelEnabled(LogLevel.ERROR))
-                    error("Error stoping conversation", e);
-            }
-        }
-        finally
-        {
-            if (changeStateToInService)
-            {
-                resetConversationFields();
-                endpointState.setState(IvrEndpointState.IN_SERVICE);
-            }
-        }
+
+//        if (isLogLevelEnabled(LogLevel.DEBUG))
+//            debug("Stoping conversation");
+//        if (endpointState.getId()==IvrEndpointState.IN_SERVICE || endpointState.getId()==IvrEndpointState.OUT_OF_SERVICE)
+//        {
+//            if (isLogLevelEnabled(LogLevel.DEBUG))
+//                debug("Conversation already stopped");
+//            return;
+//        }
+//        if (transfering)
+//        {
+//            if (isLogLevelEnabled(LogLevel.DEBUG))
+//                debug("Can't stop conversation until transfer complete");
+//            return;
+//        }
+//        boolean changeStateToInService = true;
+//        try
+//        {
+//            try
+//            {
+//                try
+//                {
+//                    try
+//                    {
+//                        if (isLogLevelEnabled(LogLevel.DEBUG))
+//                            debug("Canceling actions execution");
+//                        if (actionsExecutor!=null)
+//                            actionsExecutor.cancelActionsExecution();
+//                    }
+//                    finally
+//                    {
+//                        if (terminal!=null)
+//                        {
+//                            TerminalConnection[] connections = terminal.getTerminalConnections();
+//                            if (connections!=null && connections.length>0)
+//                            {
+//                                if (isLogLevelEnabled(LogLevel.DEBUG))
+//                                    debug("Terminal has active connection. Disconnecting...");
+//                                Connection connection = connections[0].getConnection();
+//                                connection.disconnect();
+//                                changeStateToInService = false;
+//                                return;
+//    //                                while (connections[0].getState()!=TerminalConnection.DROPPED)
+//    //                                    Thread.sleep(100);
+//                            }
+//                        }
+//                    }
+//                }
+//                finally
+//                {
+//                    if (handlingOutgoingCall)
+//                    {
+//                        if (!changeStateToInService)
+//                            conversationResult.setCompletionCode(completionCode);
+//                        else
+//                        {
+//                            if (conversationResult.getCompletionCode()==null)
+//                                conversationResult.setCompletionCode(completionCode);
+//                            long curTime = System.currentTimeMillis();
+//                            conversationResult.setCallEndTime(curTime);
+//                            completionCallback.conversationCompleted(conversationResult);
+//                        }
+//                    }
+//                }
+//            } catch (Exception e)
+//            {
+//                if (isLogLevelEnabled(LogLevel.ERROR))
+//                    error("Error stoping conversation", e);
+//            }
+//        }
+//        finally
+//        {
+//            if (changeStateToInService)
+//            {
+//                resetConversationFields();
+//                endpointState.setState(IvrEndpointState.IN_SERVICE);
+//            }
+//        }
     }
 
-    public ConversationScenarioState getConversationScenarioState() {
-        return conversationState;
-    }
+//    public ConversationScenarioState getConversationScenarioState() {
+//        return conversationState;
+//    }
 
-    private void closeRtpSession()
-    {
-        try 
-        {
-            if (rtpSessionLock.tryLock(5, TimeUnit.SECONDS)) {
-                try{
-                    if (rtpSession != null)
-                    {
-                        if (isLogLevelEnabled(LogLevel.DEBUG))
-                            debug("Stoping rtp session");
-                        try {
-                            rtpSession.stop();
-                        } catch (Exception ex) {
-                            if (isLogLevelEnabled(LogLevel.ERROR))
-                                error("Error stoping rtp session", ex);
-                        }
-                        rtpSession = null;
-                        audioStream = null;
-                    }
-                    else if (audioStream!=null)
-                    {
-                        audioStream.close();
-                        audioStream = null;
-                    }
-                }
-                finally
-                {
-                    rtpSessionLock.unlock();
-                }
-            }
-        }
-        catch (InterruptedException ex)
-        {
-            if (isLogLevelEnabled(LogLevel.DEBUG))
-                debug("Operation closeRtpSession was interrupted", ex);
-            Thread.currentThread().interrupt();
-        }
-    }
+//    private void closeRtpSession()
+//    {
+//        try
+//        {
+//            if (rtpSessionLock.tryLock(5, TimeUnit.SECONDS)) {
+//                try{
+//                    if (rtpSession != null)
+//                    {
+//                        if (isLogLevelEnabled(LogLevel.DEBUG))
+//                            debug("Stoping rtp session");
+//                        try {
+//                            rtpSession.stop();
+//                        } catch (Exception ex) {
+//                            if (isLogLevelEnabled(LogLevel.ERROR))
+//                                error("Error stoping rtp session", ex);
+//                        }
+//                        rtpSession = null;
+//                        audioStream = null;
+//                    }
+//                    else if (audioStream!=null)
+//                    {
+//                        audioStream.close();
+//                        audioStream = null;
+//                    }
+//                }
+//                finally
+//                {
+//                    rtpSessionLock.unlock();
+//                }
+//            }
+//        }
+//        catch (InterruptedException ex)
+//        {
+//            if (isLogLevelEnabled(LogLevel.DEBUG))
+//                debug("Operation closeRtpSession was interrupted", ex);
+//            Thread.currentThread().interrupt();
+//        }
+//    }
 
     private String eventsToString(Object[] events)
     {
         StringBuilder buf = new StringBuilder();
         for (int i=0; i<events.length; ++i)
-            buf.append((i>0? ", ":"")+events[i].toString());
+            buf.append(i > 0 ? ", " : "").append(events[i].toString());
         return buf.toString();
-    }
-
-    public ConcatDataSource getAudioStream()
-    {
-        return audioStream;
     }
 
     public ExecutorService getExecutorService() 
@@ -919,79 +975,131 @@ public class IvrEndpointNode extends BaseNode
         this.executorService = executorService;
     }
 
-    private synchronized void startRtpSession(
-            String remoteHost, int remotePort, int packetSize, int payloadType)
+    private void startConversation()
     {
-        if (connected<2 || !rtpInitialized)
-        {
-            if (isLogLevelEnabled(LogLevel.DEBUG))
-                debug("Can't start rtp session. Not ready");
-            return;
-
+        lock.lock();
+        try {
+            if (conversation!=null) {
+                conversation.startConversation();
+                if (conversation.getState().getId()==IvrEndpointConversationState.TALKING)
+                    endpointState.setState(IvrEndpointState.TALKING);
+            }
+        } finally {
+            lock.unlock();
         }
-        endpointState.setState(IvrEndpointState.TALKING);
-        if (handlingIncomingCall)
-            conversationResult.setConversationStartTime(System.currentTimeMillis());
-        if (isLogLevelEnabled(LogLevel.DEBUG)){
-            debug(String.format(
-                    "Starting rtp session: remoteHost (%s), remotePort (%s)"
-                    , remoteHost, remotePort));
-            debug("Proposed RTP params: packetSize ({}), payloadType ({})", packetSize, payloadType);
-        }
-        Integer psize = rtpPacketSize;
-        if (psize==null)
-            psize = packetSize;
-        try
-        {
-            Codec streamCodec = Codec.getCodecByCiscoPayload(payloadType);
-            if (streamCodec==null)
-                throw new Exception(String.format("Not supported payload type (%s)", payloadType));
-            if (isLogLevelEnabled(LogLevel.DEBUG))
-                debug(String.format(
-                        "Choosed RTP params: packetSize (%s), codec (%s), audioFormat (%s)"
-                        , psize, streamCodec, streamCodec.getAudioFormat()));
-            audioStream = new ConcatDataSource(
-                    FileTypeDescriptor.WAVE, executorService, streamCodec
-                    , psize, rtpInitialBuffer, rtpMaxSendAheadPacketsCount, this);
-            conversationState = currentConversation.createConversationState();
-            conversationState.setBinding(DTMF_BINDING, "-", BindingScope.REQUEST);
-            conversationState.setBinding(DTMFS_BINDING, new ArrayList<Character>(), BindingScope.REQUEST);
-            conversationState.setBindingDefaultValue(DTMF_BINDING, "-");
-            conversationState.setBinding(VARS_BINDING, new HashMap(), BindingScope.CONVERSATION);
-            conversationState.setBinding(
-                    CONVERSATION_STATE_BINDING, conversationState, BindingScope.CONVERSATION);
-            if (inviteBindings!=null)
-                for (Map.Entry<String, Object> b: inviteBindings.entrySet())
-                    conversationState.setBinding(
-                            b.getKey(), b.getValue(), BindingScope.CONVERSATION);
-
-            rtpSession = new RTPSession(remoteHost, remotePort, audioStream);
-            rtpSession.start();
-            continueConversation(EMPTY_DTMF);
-        } catch (Exception ex)
-        {
-            //TODO: Нужна дополнитьльная обработка? Например положить трубку
-            if (isLogLevelEnabled(LogLevel.ERROR))
-                error("Error creating rtp session", ex);
-            stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
-        }
-        //Starting the conversation
     }
 
-    private void stopRtpSession()
+    private void initConversation(CiscoRTPOutputStartedEv ev)
     {
-        if (isLogLevelEnabled(LogLevel.DEBUG))
-            debug("Stoping rtp session");
-        try
-        {
-            if (rtpSession!=null)
-                rtpSession.stop();
-        } catch (Exception ex)
-        {
-            if (isLogLevelEnabled(LogLevel.ERROR))
-                error("Error stoping rtp session", ex);
+        lock.lock();
+        try {
+            try {
+                if (conversation!=null) {
+                    if (IvrEndpointConversationState.INVALID==conversation.getState().getId()) {
+                        CiscoRTPOutputProperties props = ev.getRTPOutputProperties();
+                        Integer psize = rtpPacketSize;
+                        if (psize==null)
+                            psize = props.getPacketSize()*8;
+                        Codec streamCodec = Codec.getCodecByCiscoPayload(props.getPayloadType());
+                        if (streamCodec==null)
+                            throw new Exception(String.format(
+                                    "Not supported payload type (%s)", props.getPayloadType()));
+                        if (isLogLevelEnabled(LogLevel.DEBUG))
+                            debug(String.format(
+                                "Choosed RTP params: packetSize (%s), codec (%s), audioFormat (%s)"
+                                , psize, streamCodec, streamCodec.getAudioFormat()));
+                        conversation.init(
+                                ev.getCallID().getCall()
+                                , props.getRemoteAddress().getHostAddress(), props.getRemotePort()
+                                , psize, rtpInitialBuffer, rtpMaxSendAheadPacketsCount
+                                , streamCodec);
+                        if (isLogLevelEnabled(LogLevel.DEBUG))
+                            debug("Conversation initialized");
+                    }
+                    startConversation();
+                }
+            } catch (Exception e) {
+                if (isLogLevelEnabled(LogLevel.ERROR))
+                    error("Error initializing/start conversation", e);
+            }
+        } finally {
+            lock.unlock();
         }
     }
+
+//    private synchronized void startConversation(
+//            String remoteHost, int remotePort, int packetSize, int payloadType)
+//    {
+//        if (connected<2 || !rtpInitialized)
+//        {
+//            if (isLogLevelEnabled(LogLevel.DEBUG))
+//                debug("Can't start rtp session. Not ready");
+//            return;
+//
+//        }
+//        endpointState.setState(IvrEndpointState.TALKING);
+//        if (handlingOutgoingCall)
+//            conversationResult.setConversationStartTime(System.currentTimeMillis());
+//        if (isLogLevelEnabled(LogLevel.DEBUG)){
+//            debug(String.format(
+//                    "Starting rtp session: remoteHost (%s), remotePort (%s)"
+//                    , remoteHost, remotePort));
+//            debug("Proposed RTP params: packetSize ({}), payloadType ({})", packetSize, payloadType);
+//        }
+//        Integer psize = rtpPacketSize;
+//        if (psize==null)
+//            psize = packetSize;
+//        try
+//        {
+//            Codec streamCodec = Codec.getCodecByCiscoPayload(payloadType);
+//            if (streamCodec==null)
+//                throw new Exception(String.format("Not supported payload type (%s)", payloadType));
+//            if (isLogLevelEnabled(LogLevel.DEBUG))
+//                debug(String.format(
+//                        "Choosed RTP params: packetSize (%s), codec (%s), audioFormat (%s)"
+//                        , psize, streamCodec, streamCodec.getAudioFormat()));
+//            audioStream = new ConcatDataSource(
+//                    FileTypeDescriptor.WAVE, executorService, streamCodec
+//                    , psize, rtpInitialBuffer, rtpMaxSendAheadPacketsCount, this);
+//            conversationState = currentConversation.createConversationState();
+//            conversationState.setBinding(DTMF_BINDING, "-", BindingScope.REQUEST);
+//            conversationState.setBinding(DTMFS_BINDING, new ArrayList<Character>(), BindingScope.REQUEST);
+//            conversationState.setBindingDefaultValue(DTMF_BINDING, "-");
+//            conversationState.setBinding(VARS_BINDING, new HashMap(), BindingScope.CONVERSATION);
+//            conversationState.setBinding(
+//                    CONVERSATION_STATE_BINDING, conversationState, BindingScope.CONVERSATION);
+//            if (inviteBindings!=null)
+//                for (Map.Entry<String, Object> b: inviteBindings.entrySet())
+//                    conversationState.setBinding(
+//                            b.getKey(), b.getValue(), BindingScope.CONVERSATION);
+//
+//            rtpSession = new RTPSession(remoteHost, remotePort, audioStream);
+//            rtpSession.start();
+//            continueConversation(EMPTY_DTMF);
+//        } catch (Exception ex)
+//        {
+//            //TODO: Нужна дополнитьльная обработка? Например положить трубку
+//            if (isLogLevelEnabled(LogLevel.ERROR))
+//                error("Error creating rtp session", ex);
+//            stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
+//        }
+//        //Starting the conversation
+//    }
+
+//    private void stopRtpSession()
+//    {
+//        if (isLogLevelEnabled(LogLevel.DEBUG))
+//            debug("Stoping rtp session");
+//        try
+//        {
+//            if (rtpSession!=null)
+//                rtpSession.stop();
+//        } catch (Exception ex)
+//        {
+//            if (isLogLevelEnabled(LogLevel.ERROR))
+//                error("Error stoping rtp session", ex);
+//        }
+//    }
 
     public String getObjectName()
     {
@@ -1024,11 +1132,20 @@ public class IvrEndpointNode extends BaseNode
     }
 
     public void conversationStarted() {
-        throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    public void conversationStoped(CompletionCode completionCode) {
-        throw new UnsupportedOperationException("Not supported yet.");
+    public void conversationStoped(CompletionCode completionCode) 
+    {
+        if (handlingOutgoingCall)
+        {
+            conversationResult.setCompletionCode(completionCode);
+            long curTime = System.currentTimeMillis();
+            conversationResult.setCallEndTime(curTime);
+            completionCallback.conversationCompleted(conversationResult);
+        }
+        resetConversationFields();
+        endpointState.setState(IvrEndpointState.IN_SERVICE);
+        conversation = null;
     }
 
 }

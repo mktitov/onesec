@@ -34,13 +34,5 @@ public interface IvrEndpoint extends Node, ObjectDescription
             String opponentNumber, IvrConversationScenario conversationScenario
             , ConversationCompletionCallback callback
             , Map<String, Object> bindings) throws IvrEndpointException;
-    /**
-     * Transfers current call to the address passed in the parameter.
-     * @param address The destination telephone address string to where the Call is being
-     *      transferred
-     * @param monitorTransfer if <code>true</code> then method will monitor call transfer, etc will
-     *      wait until transfered call end
-     * @param callStartTimeout
-     * @param callEndTimeout 
-     */
+    public RtpAddress getRtpAddress();
 }

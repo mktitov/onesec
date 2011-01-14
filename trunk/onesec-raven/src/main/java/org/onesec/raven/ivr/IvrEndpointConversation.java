@@ -73,6 +73,10 @@ public interface IvrEndpointConversation extends ObjectDescription
      */
     public ConversationScenarioState getConversationScenarioState();
     /**
+     * Returns the current conversation state
+     */
+    public IvrEndpointConversationState getState();
+    /**
      * Transfers current call to the address passed in the parameter.
      * @param address The destination telephone address string to where the Call is being
      *      transferred

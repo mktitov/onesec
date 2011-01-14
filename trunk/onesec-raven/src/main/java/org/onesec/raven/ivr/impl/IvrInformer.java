@@ -515,7 +515,7 @@ public class IvrInformer
                         case COMPLETED_BY_OPPONENT: 
                             status = COMPLETED_BY_ABONENT_STATUS; sucProc = true; break;
                         case OPPONENT_BUSY: status = NUMBER_BUSY_STATUS; break;
-                        case OPPONENT_NO_ANSWERED: status = NUMBER_NOT_ANSWERED_STATUS; break;
+                        case OPPONENT_NOT_ANSWERED: status = NUMBER_NOT_ANSWERED_STATUS; break;
                         case OPPONENT_UNKNOWN_ERROR: status = PROCESSING_ERROR_STATUS; break;
                     }
                     if (sucProc && conversationResult.getConversationDuration()>0)
