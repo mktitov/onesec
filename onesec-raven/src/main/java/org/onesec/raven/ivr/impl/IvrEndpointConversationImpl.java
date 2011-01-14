@@ -129,7 +129,10 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         }
     }
 
-//    public void initIncomingRtpProperties(String remote)
+    public IvrEndpointConversationState getState()
+    {
+        return state;
+    }
 
     public void init(CallControlCall call, String remoteAddress, int remotePort, int packetSize
             , int initialBufferSize, int maxSendAheadPacketsCount, Codec codec)
@@ -233,6 +236,14 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         {
             try
             {
+                if (IvrEndpointConversationState.TALKING!=state.getId()) {
+                    if (owner.isLogLevelEnabled(LogLevel.WARN))
+                        owner.getLogger().warn(callLog(
+                                "Can't continue conversation. "
+                                + "Conversation is not started. "
+                                + "Current conversation state is %s", state.getIdName()));
+                    return;
+                }
                 IvrConversationScenarioPoint point =
                         (IvrConversationScenarioPoint) conversationState.getNextConversationPoint();
                 String validDtmfs = point.getValidDtmfs();

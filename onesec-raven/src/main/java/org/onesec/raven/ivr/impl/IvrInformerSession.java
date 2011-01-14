@@ -312,7 +312,7 @@ public class IvrInformerSession implements EndpointRequest, ConversationCompleti
                 case COMPLETED_BY_OPPONENT:
                     status = AsyncIvrInformer.COMPLETED_BY_ABONENT_STATUS; sucProc = true; break;
                 case OPPONENT_BUSY: status = AsyncIvrInformer.NUMBER_BUSY_STATUS; break;
-                case OPPONENT_NO_ANSWERED: status = AsyncIvrInformer.NUMBER_NOT_ANSWERED_STATUS; break;
+                case OPPONENT_NOT_ANSWERED: status = AsyncIvrInformer.NUMBER_NOT_ANSWERED_STATUS; break;
                 case OPPONENT_UNKNOWN_ERROR: status = AsyncIvrInformer.PROCESSING_ERROR_STATUS; break;
             }
             if (sucProc)

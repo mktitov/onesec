@@ -37,6 +37,7 @@ import org.onesec.raven.ivr.EndpointRequest;
 import org.onesec.raven.ivr.IvrEndpoint;
 import org.onesec.raven.ivr.IvrEndpointPool;
 import org.onesec.raven.ivr.IvrEndpointState;
+import org.onesec.raven.ivr.RtpAddress;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.log.LogLevel;
@@ -366,19 +367,23 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                         String name = endpoint.getName();
                         if (!Status.STARTED.equals(endpoint.getStatus()))
                             name = "<span style=\"color: yellow\">"+name+"</span>";
-                        int port = ((IvrEndpointNode)endpoint).getPort();
+                        RtpAddress rtpAddress = endpoint.getRtpAddress();
+                        int port = rtpAddress.getPort();
                         String status = endpoint.getEndpointState().getIdName();
                         status = String.format(
-                                statusFormat, status.equals("IN_SERVICE")? "green" : "blue", status);
-                        String poolStatus = busyEndpoints.containsKey(endpoint.getId())? "BUSY" : "FREE";
+                            statusFormat, status.equals("IN_SERVICE")? "green" : "blue", status);
+                        String poolStatus = busyEndpoints.containsKey(endpoint.getId())
+                                ? "BUSY" : "FREE";
                         poolStatus = String.format(
-                                statusFormat, poolStatus.equals("BUSY")? "blue" : "green", poolStatus);
+                                statusFormat, poolStatus.equals("BUSY")
+                                    ? "blue" : "green", poolStatus);
                         Long counter = usageCounters.get(endpoint.getId());
                         String usageCount = counter==null? "0" : counter.toString();
                         if (counter!=null)
                             totalUsageCount+=counter;
                         RequestInfo ri = busyEndpoints.get(endpoint.getId());
-                        String currentUsageTime = null; String requester = null; String requesterStatus = null;
+                        String currentUsageTime = null; String requester = null;
+                        String requesterStatus = null;
                         if (ri!=null)
                         {
                             currentUsageTime = ""+((System.currentTimeMillis()-ri.terminalUsageTime)/1000);
@@ -387,7 +392,8 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                         }
 
                         table.addRow(new Object[]{
-                            name, port, status, poolStatus, usageCount, currentUsageTime, requester, requesterStatus});
+                            name, port, status, poolStatus, usageCount, currentUsageTime, requester
+                                    , requesterStatus});
                     }
             }
             finally

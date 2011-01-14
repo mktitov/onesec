@@ -421,7 +421,7 @@ public class IvrMultichannelEndpointNode extends BaseNode
     public void terminalChangedEvent(TermEv[] events)
     {
         if (isLogLevelEnabled(LogLevel.DEBUG))
-            debug("Recieved terminal events: "+eventsToString(events));
+            debug("Received terminal events: "+eventsToString(events));
         for (TermEv event: events)
         {
             switch (event.getID())
@@ -442,7 +442,7 @@ public class IvrMultichannelEndpointNode extends BaseNode
     public void addressChangedEvent(AddrEv[] events)
     {
         if (isLogLevelEnabled(LogLevel.DEBUG))
-            debug("Recieved address events: "+eventsToString(events));
+            debug("Received address events: "+eventsToString(events));
         for (AddrEv event: events)
         {
             switch (event.getID())
@@ -460,7 +460,7 @@ public class IvrMultichannelEndpointNode extends BaseNode
     public void callChangedEvent(CallEv[] events)
     {
         if (isLogLevelEnabled(LogLevel.DEBUG))
-            debug("Recieved call events: "+eventsToString(events));
+            debug("Received call events: "+eventsToString(events));
         for (CallEv event: events)
         {
             switch (event.getID())
@@ -609,7 +609,7 @@ public class IvrMultichannelEndpointNode extends BaseNode
                 break;
             case CallCtlConnFailedEv.CAUSE_CALL_NOT_ANSWERED:
             case CallCtlConnFailedEv.CAUSE_NORMAL:
-                code = CompletionCode.OPPONENT_NO_ANSWERED;
+                code = CompletionCode.OPPONENT_NOT_ANSWERED;
                 break;
         }
         stopConversation(event, code);
