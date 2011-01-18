@@ -60,10 +60,22 @@ public class IvrEndpointNodeTest
     private IvrEndpointNode endpoint;
     private ExecutorServiceNode executor;
     private IvrConversationScenarioNode scenario;
+    private RtpStreamManagerNode manager;
 
     @Before
     public void prepare() throws Exception
     {
+        manager = new RtpStreamManagerNode();
+        manager.setName("rtpManager");
+        tree.getRootNode().addAndSaveChildren(manager);
+        assertTrue(manager.start());
+
+        RtpAddressNode address = new RtpAddressNode();
+        address.setName(getInterfaceAddress().getHostAddress());
+        manager.addAndSaveChildren(address);
+        address.setStartingPort(18384);
+        assertTrue(address.start());
+
         CCMCallOperatorNode callOperator = new CCMCallOperatorNode();
         callOperator.setName("call operator");
         tree.getRootNode().addAndSaveChildren(callOperator);
@@ -105,7 +117,7 @@ public class IvrEndpointNodeTest
 //        endpoint.setRtpMaxSendAheadPacketsCount(5);
 //        endpoint.setAddress("68050");
 //        endpoint.setCodec(Codec.G711_A_LAW);
-        endpoint.setIp(getInterfaceAddress().getHostAddress());
+        endpoint.setRtpStreamManager(manager);
         endpoint.setLogLevel(LogLevel.TRACE);
     }
 
@@ -129,7 +141,7 @@ public class IvrEndpointNodeTest
         assertFalse(res.isWaitInterrupted());
     }
 
-//    @Test
+    @Test
     public void simpleConversationTest() throws Exception
     {
         AudioFileNode audioFileNode = new AudioFileNode();
@@ -247,7 +259,7 @@ public class IvrEndpointNodeTest
 //        assertEquals(new Integer(0), executor.getExecutingTaskCount());
     }
 
-    @Test(timeout=120000)
+//    @Test(timeout=120000)
     public void transfer2Test() throws Exception
     {
         AudioFileNode audioNode1 = createAudioFileNode("audio1", "/home/tim/Documents/raven/зенит 2/судья_resampled.wav");

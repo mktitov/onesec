@@ -35,7 +35,7 @@ import org.raven.tree.impl.ContainerNode;
  */
 public class SayAmountActionTest extends OnesecRavenTestCase
 {
-    private TestEndpointNode term;
+    private TestEndpointConversationNode conv;
     private ExecutorServiceNode executor;
     private Node numbers;
 
@@ -49,11 +49,11 @@ public class SayAmountActionTest extends OnesecRavenTestCase
         executor.setMaximumPoolSize(10);
         assertTrue(executor.start());
 
-        term = new TestEndpointNode();
-        term.setName("endpoint");
-        tree.getRootNode().addAndSaveChildren(term);
-        term.setExecutorService(executor);
-        assertTrue(term.start());
+        conv = new TestEndpointConversationNode();
+        conv.setName("endpoint");
+        tree.getRootNode().addAndSaveChildren(conv);
+        conv.setExecutorService(executor);
+        assertTrue(conv.start());
 
         numbers = createNumbersNode();
     }
@@ -62,7 +62,7 @@ public class SayAmountActionTest extends OnesecRavenTestCase
     public void test() throws IvrActionException, InterruptedException
     {
         SayAmountAction action = new SayAmountAction(numbers, 195912.12, 100);
-        action.execute(term);
+        action.execute(conv);
         Thread.sleep(10000);
     }
 

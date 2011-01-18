@@ -27,6 +27,9 @@ import org.onesec.raven.ivr.CompletionCode;
 import org.onesec.raven.ivr.ConversationCompletionCallback;
 import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.IvrEndpoint;
+import org.onesec.raven.ivr.IvrEndpointConversation;
+import org.onesec.raven.ivr.IvrEndpointConversationListener;
+import org.onesec.raven.ivr.IvrEndpointConversationState;
 import org.onesec.raven.ivr.IvrEndpointException;
 import org.onesec.raven.ivr.IvrEndpointState;
 import org.onesec.raven.ivr.impl.ConcatDataSource;
@@ -41,7 +44,7 @@ import org.weda.annotations.constraints.NotNull;
  *
  * @author Mikhail Titov
  */
-public class TestEndpointNode extends BaseNode implements IvrEndpoint
+public class TestEndpointConversationNode extends BaseNode implements IvrEndpointConversation
 {
     @NotNull @Parameter()
     private ExecutorService executorService;
@@ -119,6 +122,18 @@ public class TestEndpointNode extends BaseNode implements IvrEndpoint
     }
 
     public ConversationScenarioState getConversationScenarioState() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public void addConversationListener(IvrEndpointConversationListener listener) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public void removeConversationListener(IvrEndpointConversationListener listener) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public IvrEndpointConversationState getState() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

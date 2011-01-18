@@ -93,6 +93,7 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
     {
         super.initFields();
         streams = new HashMap<InetAddress, NavigableMap<Integer, RtpStream>>();
+        reservedAddresses = new HashMap<Node, RtpAddress>();
         streamsLock = new ReentrantReadWriteLock();
         sendedBytes = new AtomicLong();
         recievedBytes = new AtomicLong();

@@ -63,10 +63,22 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
     private PushOnDemandDataSource pullDataSource;
     private DataCollector dataCollector;
     private AsyncIvrInformer informer;
+    private RtpStreamManagerNode manager;
 
     @Before
-    public void prepare()
+    public void prepare() throws Exception
     {
+        manager = new RtpStreamManagerNode();
+        manager.setName("rtpManager");
+        tree.getRootNode().addAndSaveChildren(manager);
+        assertTrue(manager.start());
+
+        RtpAddressNode address = new RtpAddressNode();
+        address.setName(getInterfaceAddress().getHostAddress());
+        manager.addAndSaveChildren(address);
+        address.setStartingPort(18384);
+        assertTrue(address.start());
+
         CCMCallOperatorNode callOperator = new CCMCallOperatorNode();
         callOperator.setName("call operator");
         tree.getRootNode().addAndSaveChildren(callOperator);
@@ -498,11 +510,10 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
         IvrEndpointNode endpoint = new IvrEndpointNode();
         endpoint.setName(address);
         pool.addAndSaveChildren(endpoint);
+        endpoint.setRtpStreamManager(manager);
         endpoint.setExecutorService(executor);
         endpoint.setConversationScenario(scenario);
         endpoint.setAddress(address);
-        endpoint.setPort(port);
-        endpoint.setIp("10.50.1.134");
         endpoint.setLogLevel(LogLevel.TRACE);
     }
 

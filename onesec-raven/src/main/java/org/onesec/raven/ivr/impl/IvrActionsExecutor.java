@@ -40,7 +40,7 @@ import org.raven.tree.Node;
 public class IvrActionsExecutor implements Task
 {
     public static final int CANCEL_TIMEOUT = 5000;
-    private final IvrEndpointConversation endpoint;
+    private final IvrEndpointConversation conversation;
     private final ExecutorService executorService;
     private Collection<IvrAction> actions;
     private String statusMessage;
@@ -50,9 +50,9 @@ public class IvrActionsExecutor implements Task
     private Set<Character> defferedDtmfs;
     private List<Character> collectedDtmfs;
 
-    public IvrActionsExecutor(IvrEndpointConversation endpoint, ExecutorService executorService)
+    public IvrActionsExecutor(IvrEndpointConversation conversation, ExecutorService executorService)
     {
-        this.endpoint = endpoint;
+        this.conversation = conversation;
         this.executorService = executorService;
         defferedDtmfs = new HashSet<Character>();
         collectedDtmfs = new ArrayList<Character>();
@@ -88,8 +88,8 @@ public class IvrActionsExecutor implements Task
 
     public synchronized void cancelActionsExecution() throws InterruptedException
     {
-        if (endpoint.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
-            endpoint.getOwner().getLogger().debug(logMess("Canceling actions executing"));
+        if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
+            conversation.getOwner().getLogger().debug(logMess("Canceling actions executing"));
         defferedDtmfs.clear();
         collectedDtmfs.clear();
         if (running)
@@ -112,8 +112,8 @@ public class IvrActionsExecutor implements Task
                 boolean executeAction = true;
                 try {
                     statusMessage = String.format("Executing action (%s)", action.getName());
-                    if (endpoint.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
-                        endpoint.getOwner().getLogger().debug(getStatusMessage());
+                    if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
+                        conversation.getOwner().getLogger().debug(getStatusMessage());
                     if (action instanceof DtmfProcessPointAction)
                         synchronized(this){
                             List dtmfs = new ArrayList(collectedDtmfs.size());
@@ -125,20 +125,20 @@ public class IvrActionsExecutor implements Task
                                 defferedDtmfs.remove(c);
                             executeAction = dtmfs.size()>0;
                             if (executeAction)
-                                endpoint.getConversationScenarioState().getBindings().put(
+                                conversation.getConversationScenarioState().getBindings().put(
                                         IvrEndpointConversation.DTMFS_BINDING, dtmfs);
                         }
                     if (executeAction)
-                        action.execute(endpoint);
+                        action.execute(conversation);
                     else {
                         statusMessage = String.format("Skipping execution of action (%s)", action.getName());
-                        if (endpoint.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
-                            endpoint.getOwner().getLogger().debug(getStatusMessage());
+                        if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
+                            conversation.getOwner().getLogger().debug(getStatusMessage());
                     }
                 } catch (Throwable ex) {
                     statusMessage = String.format("Action (%s) execution error", action.getName());
-                    if (endpoint.getOwner().isLogLevelEnabled(LogLevel.ERROR))
-                        endpoint.getOwner().getLogger().error(getStatusMessage(), ex);
+                    if (conversation.getOwner().isLogLevelEnabled(LogLevel.ERROR))
+                        conversation.getOwner().getLogger().error(getStatusMessage(), ex);
                     return;
                 }
                 boolean canceling = false;
@@ -148,16 +148,16 @@ public class IvrActionsExecutor implements Task
                     {
                         statusMessage = String.format(
                                 "Canceling (%s) action execution", action.getName());
-                        if (endpoint.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
-                            endpoint.getOwner().getLogger().debug(getStatusMessage());
+                        if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
+                            conversation.getOwner().getLogger().debug(getStatusMessage());
                         try {
                             action.cancel();
                         } catch (IvrActionException ex) {
                             statusMessage = String.format(
                                     "Error canceling execution of the action (%s)"
                                     , action.getName());
-                            if (endpoint.getOwner().isLogLevelEnabled(LogLevel.ERROR))
-                                endpoint.getOwner().getLogger().error(getStatusMessage(), ex);
+                            if (conversation.getOwner().isLogLevelEnabled(LogLevel.ERROR))
+                                conversation.getOwner().getLogger().error(getStatusMessage(), ex);
                         }
                         canceling = true;
                     }
@@ -165,8 +165,8 @@ public class IvrActionsExecutor implements Task
                         Thread.sleep(10);
                     } catch (InterruptedException ex) {
                         statusMessage = "Executor thread was interrupted";
-                        if (endpoint.getOwner().isLogLevelEnabled(LogLevel.ERROR))
-                            endpoint.getOwner().getLogger().error(getStatusMessage());
+                        if (conversation.getOwner().isLogLevelEnabled(LogLevel.ERROR))
+                            conversation.getOwner().getLogger().error(getStatusMessage());
                         Thread.currentThread().interrupt();
                         return;
                     }
@@ -200,7 +200,7 @@ public class IvrActionsExecutor implements Task
 
     public Node getTaskNode() 
     {
-        return endpoint.getOwner();
+        return conversation.getOwner();
     }
 
     public String getStatusMessage()
