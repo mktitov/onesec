@@ -63,10 +63,16 @@ public class IvrInformerTest extends OnesecRavenTestCase
     private DataCollector dataCollector;
     private IvrInformer informer;
     private DummyScheduler startScheduler, stopScheduler;
+    private RtpStreamManagerNode manager;
 
     @Before
     public void prepare()
     {
+        manager = new RtpStreamManagerNode();
+        manager.setName("rtpManager");
+        tree.getRootNode().addAndSaveChildren(manager);
+        assertTrue(manager.start());
+
         CCMCallOperatorNode callOperator = new CCMCallOperatorNode();
         callOperator.setName("call operator");
         tree.getRootNode().addAndSaveChildren(callOperator);
@@ -110,7 +116,7 @@ public class IvrInformerTest extends OnesecRavenTestCase
         endpoint.setExecutorService(executor);
         endpoint.setConversationScenario(scenario);
         endpoint.setAddress("88013");
-        endpoint.setIp("10.50.1.134");
+        endpoint.setRtpStreamManager(manager);
         endpoint.setLogLevel(LogLevel.TRACE);
 
         schema = new IvrInformerRecordSchemaNode();

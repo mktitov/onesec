@@ -23,6 +23,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.ivr.IncomingRtpStream;
+import org.onesec.raven.ivr.RtpAddress;
 import org.onesec.raven.ivr.RtpStream;
 
 /**
@@ -112,6 +113,22 @@ public class RtpStreamManagerNodeTest extends OnesecRavenTestCase
         assertEquals(new Integer(4), manager.getStreamsCount());
         assertEquals(2, manager.getStreams().get(localhost).size());
         assertEquals(2, manager.getStreams().get(second).size());
+    }
+
+    @Test
+    public void reserveAddressTest() throws Exception
+    {
+        assertTrue(manager.start());
+
+        RtpAddress addr = manager.reserveAddress(manager);
+        assertNotNull(addr);
+        assertEquals(new Integer(1), manager.getStreamsCount());
+
+//        RtpAddress addr2 = manager.get;
+//        assertFalse(addr.getPort()!=addr2.getPort());
+//        assertEquals(new Integer(2), manager.getStreamsCount());
+//
+//        manager.releaseStream(addr2);
     }
 
     private RtpStream createStream(InetAddress address, Integer port)

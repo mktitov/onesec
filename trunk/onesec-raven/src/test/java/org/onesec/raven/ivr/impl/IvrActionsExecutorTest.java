@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import javax.script.Bindings;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.onesec.raven.ivr.IvrAction;
@@ -34,6 +35,7 @@ import org.raven.sched.ExecutorServiceException;
 import org.raven.sched.impl.ExecutorServiceNode;
 import org.raven.test.RavenCoreTestCase;
 import org.raven.tree.Node;
+import org.raven.tree.impl.ContainerNode;
 import static org.easymock.EasyMock.*;
 //import 
 /**
@@ -44,6 +46,7 @@ public class IvrActionsExecutorTest extends RavenCoreTestCase
 {
     private ExecutorServiceNode executor;
     private IvrEndpointNode endpointNode;
+    private IvrEndpointConversation conversation;
 
     @Before
     public void prepare()
@@ -58,6 +61,21 @@ public class IvrActionsExecutorTest extends RavenCoreTestCase
         endpointNode = new IvrEndpointNode();
         endpointNode.setName("endpoint");
         tree.getRootNode().addAndSaveChildren(endpointNode);
+        
+        ContainerNode conversationOwner = new ContainerNode("conversation owner");
+        tree.getRootNode().addAndSaveChildren(conversationOwner);
+        conversationOwner.setLogLevel(LogLevel.TRACE);
+        assertTrue(conversationOwner.start());
+
+        conversation = createMock(IvrEndpointConversation.class);
+        expect(conversation.getOwner()).andReturn(conversationOwner).anyTimes();
+        replay(conversation);
+    }
+
+    @After
+    public void testMocks()
+    {
+        verify(conversation);
     }
 
 //    @Test
@@ -65,7 +83,7 @@ public class IvrActionsExecutorTest extends RavenCoreTestCase
     {
         List<IvrAction> actions = Arrays.asList(
                 (IvrAction)new TestPauseAction(), new TestPauseAction());
-        IvrActionsExecutor actionsExecutor = new IvrActionsExecutor(endpointNode, executor);
+        IvrActionsExecutor actionsExecutor = new IvrActionsExecutor(conversation, executor);
         actionsExecutor.executeActions(actions);
         Thread.sleep(1100);
         assertEquals(IvrActionStatus.EXECUTED, actions.get(0).getStatus());
@@ -78,7 +96,7 @@ public class IvrActionsExecutorTest extends RavenCoreTestCase
         List<IvrAction> actions = Arrays.asList(
                 (IvrAction)new TestPauseAction(), new TestPauseAction());
         List<IvrAction> newActions = Arrays.asList((IvrAction)new TestPauseAction());
-        IvrActionsExecutor actionsExecutor = new IvrActionsExecutor(endpointNode, executor);
+        IvrActionsExecutor actionsExecutor = new IvrActionsExecutor(conversation, executor);
         actionsExecutor.executeActions(actions);
         actionsExecutor.executeActions(newActions);
         Thread.sleep(600);

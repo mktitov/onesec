@@ -25,6 +25,7 @@ import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.IvrEndpoint;
 import org.onesec.raven.ivr.IvrEndpointException;
 import org.onesec.raven.ivr.IvrEndpointState;
+import org.onesec.raven.ivr.RtpAddress;
 import org.raven.conv.ConversationScenarioState;
 import org.raven.sched.ExecutorService;
 import org.raven.tree.Node;
@@ -87,6 +88,10 @@ public class TestIvrEndpoint extends BaseNode implements IvrEndpoint
     }
 
     public String getObjectDescription() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public RtpAddress getRtpAddress() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
