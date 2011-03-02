@@ -19,12 +19,15 @@ package org.onesec.raven.ivr.impl;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 import javax.media.Buffer;
 import javax.media.ControllerEvent;
 import javax.media.ControllerListener;
@@ -54,10 +57,11 @@ import org.raven.tree.Node;
  * @author Mikhail Titov
  */
 public class ConcatDataSource
-        extends PushBufferDataSource
-        implements AudioStream, Task, ControllerListener, BufferTransferHandler
+        extends PushBufferDataSource implements AudioStream, Task, BufferTransferHandler
 {
     public final static String SILENCE_RESOURCE_NAME = "/org/onesec/raven/ivr/silence.wav";
+    public static final int SOURCE_WAIT_TIMEOUT = 100;
+    public static final int WAIT_STATE_TIMEOUT = 2000;
 
     private final Queue<DataSource> sources;
     private final String contentType;
@@ -83,6 +87,8 @@ public class ConcatDataSource
     private String logPrefix;
     private int bufferCount;
     boolean initialBufferInitialized;
+    private ReentrantLock sourcesLock;
+    private Condition sourcesCondition;
 
     public ConcatDataSource(String contentType
             , ExecutorService executorService
@@ -101,7 +107,7 @@ public class ConcatDataSource
 
         format = codec.getAudioFormat();
 
-        sources = new ConcurrentLinkedQueue<DataSource>();
+        sources = new LinkedList<DataSource>();
         dataConcated = new AtomicBoolean(false);
         stoped = new AtomicBoolean(false);
         sourceThreadRunning = new AtomicBoolean(false);
@@ -112,6 +118,9 @@ public class ConcatDataSource
         buffers = new ConcurrentLinkedQueue<Buffer>();
         initialBuffer = new ArrayList<Buffer>(rtpInitialBufferSize);
         bufferCount = 0;
+        sourcesLock = new ReentrantLock();
+        sourcesCondition = sourcesLock.newCondition();
+
 //        rtpPacketSize = 160;
         streams = new ConcatDataStream[]{
             new ConcatDataStream(buffers, this, owner, rtpPacketSize, rtpMaxSendAheadPacketsCount)};
@@ -137,13 +146,20 @@ public class ConcatDataSource
     public void addSource(InputStreamSource source)
     {
         if (source!=null)
-            sources.add(new IssDataSource(source, contentType));
+            addSource(new IssDataSource(source, contentType));
     }
 
     public void addSource(DataSource source)
     {
-        if (source!=null)
-            sources.add(source);
+        sourcesLock.lock();
+        try {
+            if (source!=null) {
+                sources.add(source);
+                sourcesCondition.signal();
+            }
+        } finally {
+            sourcesLock.unlock();
+        }
     }
 
     public Format getFormat()
@@ -292,27 +308,28 @@ public class ConcatDataSource
             thread = Thread.currentThread();
             try {
                 while (!stoped.get()) {
-                    DataSource source = sources.peek();
-                    if (source==null) {
-                        Thread.sleep(5);
+                    DataSource source = getSource();
+                    if (source==null)
                         continue;
-                    }
+//                    DataSource source = sources.peek();
+//                    if (source==null) {
+//                        Thread.sleep(5);
+//                        continue;
+//                    }
                     try {
                         if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                             owner.getLogger().debug(logMess("Found new source. Processing..."));
                         long ts = System.currentTimeMillis();
-                        ProcessorModel pm = new ProcessorModel(
-                                source, new Format[]{format}
-                                , new ContentDescriptor(ContentDescriptor.RAW));
-                        Processor p = Manager.createRealizedProcessor(pm);
-                        p.addControllerListener(this);
+                        
+                        Processor p = ControllerStateWaiter.createRealizedProcessor(
+                                source, format, WAIT_STATE_TIMEOUT);
 
                         PacketSizeControl packetSizeControl =
                                 (PacketSizeControl) p.getControl(PacketSizeControl.class.getName());
                         if (packetSizeControl!=null)
                             packetSizeControl.setPacketSize(rtpPacketSize);
 
-                        PushBufferDataSource ds = (PushBufferDataSource) p.getDataOutput();
+                        PushBufferDataSource ds = (PushBufferDataSource)p.getDataOutput();
                         endOfSource.set(false);
                         initialBuffer.clear();
                         initialBufferInitialized = false;
@@ -352,7 +369,7 @@ public class ConcatDataSource
                             owner.getLogger().debug(logMess("Source processed time (ms) - "
                                     + (System.currentTimeMillis()-ts)));
                     } finally {
-                        sources.poll();
+//                        sources.poll();
                     }
                 }
                 if (owner.isLogLevelEnabled(LogLevel.DEBUG))
@@ -370,19 +387,25 @@ public class ConcatDataSource
         }
     }
 
-    private static void waitForState(Processor p, int state) throws Exception
+    private DataSource getSource()
     {
-        long startTime = System.currentTimeMillis();
-        while (p.getState()!=state)
-        {
-            TimeUnit.MILLISECONDS.sleep(5);
-            if (System.currentTimeMillis()-startTime>2000)
-                throw new Exception("Processor state wait timeout");
+        sourcesLock.lock();
+        try {
+            DataSource source = null;
+            try {
+                source = sources.poll();
+                if (source == null) {
+                    sourcesCondition.await(SOURCE_WAIT_TIMEOUT, TimeUnit.MILLISECONDS);
+                    source = sources.poll();
+                }
+            } catch (InterruptedException e) {
+                if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                    owner.getLogger().debug("Sources condition wait was interrupted");
+            }
+            return source;
+        } finally {
+            sourcesLock.unlock();
         }
-    }
-
-    public void controllerUpdate(ControllerEvent event)
-    {
     }
 
     String logMess(String mess, Object... args)

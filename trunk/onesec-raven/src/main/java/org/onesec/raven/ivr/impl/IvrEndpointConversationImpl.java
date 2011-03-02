@@ -173,17 +173,16 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     public IvrEndpointConversationState startConversation()
     {
         lock.writeLock().lock();
-        if (IvrEndpointConversationState.READY!=state.getId()) {
-            if (owner.isLogLevelEnabled(LogLevel.WARN))
-                owner.getLogger().warn(callLog(
-                        "Can't start conversation. Conversation is already started or not ready. " +
-                        "Current conversation state is %s", state.getIdName()));
-            return state;
-        } else if (owner.isLogLevelEnabled(LogLevel.DEBUG)) {
-            owner.getLogger().debug(callLog("Triyng to start conversation"));
-        }
         try
         {
+            if (IvrEndpointConversationState.READY!=state.getId()) {
+                if (owner.isLogLevelEnabled(LogLevel.WARN))
+                    owner.getLogger().warn(String.format(
+                            "Can't start conversation. Conversation is already started or not ready. " +
+                            "Current conversation state is %s", state.getIdName()));
+                return state;
+            } else if (owner.isLogLevelEnabled(LogLevel.DEBUG)) 
+                owner.getLogger().debug(callLog("Triyng to start conversation"));
             int activeConnections = 0;
             Connection[] connections = call.getConnections();
             if (connections!=null)
@@ -255,7 +254,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 }
 
                 if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                    owner.getLogger().debug(callLog("Continue conversation using dtmf ("+dtmfChar+")"));
+                    owner.getLogger().debug(callLog(
+                            "Continue conversation using dtmf ("+dtmfChar+")"));
                 
                 audioStream.reset();
                 conversationState.getBindings().put(DTMF_BINDING, ""+dtmfChar);
