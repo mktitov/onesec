@@ -116,8 +116,8 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
             this.remoteHost = remoteHost;
             if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                 owner.getLogger().debug(logMess(
-                        "Trying to open incoming RTP stream to the remote host (%s) using port (%s)"
-                        , remoteHost, remotePort));
+                        "Trying to open incoming RTP stream from the remote host (%s)"
+                        , remoteHost));
 
             rtpManager = rtpManagerService.createRtpManager();
             rtpManager.addReceiveStreamListener(this);

@@ -32,7 +32,6 @@ import com.cisco.jtapi.extensions.CiscoUnregistrationException;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import javax.telephony.Address;
 import javax.telephony.AddressObserver;
@@ -169,8 +168,6 @@ public class IvrEndpointNode extends BaseNode
     private BindingSupportImpl bindingSupport;
     private IvrEndpointConversationImpl conversation;
     private ReentrantLock lock;
-    
-
 
     @Override
     protected void initFields()
@@ -388,8 +385,10 @@ public class IvrEndpointNode extends BaseNode
                         conversationResult.setCallStartTime(System.currentTimeMillis());
                         completionCallback = callback;
                         Call call = provider.createCall();
-                        CallControlCall ciscoCall = (CiscoCall) call;
+//                        CallControlCall ciscoCall = (CiscoCall) call;
                         call.connect(terminal, terminalAddress, opponentNumber);
+                        if (isLogLevelEnabled(LogLevel.DEBUG))
+                            debug("Invite process successfully started");
                     }
                     catch (Throwable e)
                     {
@@ -652,7 +651,7 @@ public class IvrEndpointNode extends BaseNode
                     acceptIncomingCall((CallCtlConnOfferedEv) event); break;
                 case TermConnRingingEv.ID:
                     answerOnIncomingCall((TermConnRingingEv)event); break;
-                case CallCtlConnEstablishedEv.ID: startConversation();
+                case CallCtlConnEstablishedEv.ID: startConversation(); break;
                 case TermConnDroppedEv.ID:
                     stopConversation(CompletionCode.COMPLETED_BY_OPPONENT);
                     break;
@@ -712,7 +711,7 @@ public class IvrEndpointNode extends BaseNode
 //                            conversation = new IvrEndpointConversationImpl(
 //                                    this, executorService, conversationScenario, rtpStreamManager
 //                                    , null);
-                        conn.accept();
+//                        conn.accept();
                         endpointState.setState(IvrEndpointState.ACCEPTING_CALL);
                         if (isLogLevelEnabled(LogLevel.DEBUG))
                             getLogger().debug("Call accepted");
