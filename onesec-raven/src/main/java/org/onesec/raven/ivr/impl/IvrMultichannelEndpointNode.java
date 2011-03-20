@@ -494,7 +494,7 @@ public class IvrMultichannelEndpointNode extends BaseNode
     {
         StringBuilder buf = new StringBuilder();
         for (int i=0; i<events.length; ++i)
-            buf.append((i>0? ", ":"")+events[i].toString());
+            buf.append(i > 0 ? ", " : "").append(events[i].toString());
         return buf.toString();
     }
 

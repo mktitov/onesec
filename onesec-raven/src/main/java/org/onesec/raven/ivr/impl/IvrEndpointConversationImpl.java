@@ -31,6 +31,7 @@ import javax.media.protocol.FileTypeDescriptor;
 import javax.telephony.Call;
 import javax.telephony.Connection;
 import javax.telephony.callcontrol.CallControlCall;
+import javax.telephony.callcontrol.CallControlConnection;
 import org.onesec.raven.ivr.AudioStream;
 import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.CompletionCode;
@@ -187,7 +188,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             Connection[] connections = call.getConnections();
             if (connections!=null)
                 for (Connection connection: connections)
-                    if (connection.getState() == Connection.CONNECTED)
+//                    if (connection.getState() == Connection.CONNECTED)
+                    if (((CallControlConnection)connection).getCallControlState() == CallControlConnection.ESTABLISHED)
                         ++activeConnections;
 
             if (activeConnections!=2)
@@ -412,6 +414,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 audioStream.reset();
                 try {
                     call.transfer(address);
+                    fireTransferedEvent(address);
                 } catch (Exception ex)
                 {
                     if (owner.isLogLevelEnabled(LogLevel.ERROR))
@@ -464,5 +467,12 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                     listener.conversationStarted();
                 else
                     listener.conversationStoped(completionCode);
+    }
+
+    private void fireTransferedEvent(String address)
+    {
+        if (listeners!=null && !listeners.isEmpty())
+            for (IvrEndpointConversationListener listener: listeners)
+                listener.conversationTransfered(address);
     }
 }

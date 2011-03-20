@@ -110,8 +110,8 @@ public class IvrEndpointNodeTest
         tree.getRootNode().addAndSaveChildren(endpoint);
         endpoint.setExecutorService(executor);
         endpoint.setConversationScenario(scenario);
-//        endpoint.setAddress("88013");
-        endpoint.setAddress("88014");
+        endpoint.setAddress("88013");
+//        endpoint.setAddress("88014");
 //        endpoint.setRtpMaxSendAheadPacketsCount(0);
 //        endpoint.setRtpPacketSize(240);
 //        endpoint.setRtpMaxSendAheadPacketsCount(5);
@@ -141,7 +141,7 @@ public class IvrEndpointNodeTest
         assertFalse(res.isWaitInterrupted());
     }
 
-//    @Test
+    @Test
     public void simpleConversationTest() throws Exception
     {
         AudioFileNode audioFileNode = new AudioFileNode();
@@ -206,7 +206,7 @@ public class IvrEndpointNodeTest
 
     }
 
-    @Test(timeout=120000)
+//    @Test(timeout=120000)
     public void inviteTest() throws Exception
     {
         AudioFileNode audioNode1 = createAudioFileNode("audio1", "/home/tim/Documents/raven/зенит 2/судья_resampled.wav");
@@ -258,6 +258,41 @@ public class IvrEndpointNodeTest
 //        Thread.sleep(1000);
 //        assertEquals(new Integer(0), executor.getExecutingTaskCount());
     }
+//    @Test
+    public void transferTest() throws Exception
+    {
+        AudioFileNode audioFileNode = new AudioFileNode();
+        audioFileNode.setName("audio file");
+        tree.getRootNode().addAndSaveChildren(audioFileNode);
+        FileInputStream is = new FileInputStream("src/test/wav/test.wav");
+        audioFileNode.getAudioFile().setDataStream(is);
+        assertTrue(audioFileNode.start());
+
+        PlayAudioActionNode playAudioActionNode = new PlayAudioActionNode();
+        playAudioActionNode.setName("Play audio");
+        scenario.addAndSaveChildren(playAudioActionNode);
+        playAudioActionNode.setAudioFile(audioFileNode);
+        assertTrue(playAudioActionNode.start());
+
+        TransferCallActionNode transfer = new TransferCallActionNode();
+        transfer.setName("transfer to 89128672947");
+        scenario.addAndSaveChildren(transfer);
+        transfer.setAddress("089128672947");
+        assertTrue(transfer.start());
+
+        waitForProvider();
+        assertTrue(endpoint.start());
+        StateWaitResult res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.IN_SERVICE}, 2000);
+        res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.ACCEPTING_CALL}, 20000);
+        res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.TALKING}, 5000);
+        res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.IN_SERVICE}, 5000);
+        Thread.sleep(1000);
+    }
+
 
 //    @Test(timeout=120000)
     public void transfer2Test() throws Exception
@@ -365,41 +400,6 @@ public class IvrEndpointNodeTest
     }
 
 //    @Test
-    public void transferTest() throws Exception
-    {
-        AudioFileNode audioFileNode = new AudioFileNode();
-        audioFileNode.setName("audio file");
-        tree.getRootNode().addAndSaveChildren(audioFileNode);
-        FileInputStream is = new FileInputStream("src/test/wav/test.wav");
-        audioFileNode.getAudioFile().setDataStream(is);
-        assertTrue(audioFileNode.start());
-
-        PlayAudioActionNode playAudioActionNode = new PlayAudioActionNode();
-        playAudioActionNode.setName("Play audio");
-        scenario.addAndSaveChildren(playAudioActionNode);
-        playAudioActionNode.setAudioFile(audioFileNode);
-        assertTrue(playAudioActionNode.start());
-
-        TransferCallActionNode transfer = new TransferCallActionNode();
-        transfer.setName("transfer to 89128672947");
-        scenario.addAndSaveChildren(transfer);
-        transfer.setAddress("089128672947");
-        assertTrue(transfer.start());
-
-        waitForProvider();
-        assertTrue(endpoint.start());
-        StateWaitResult res = endpoint.getEndpointState().waitForState(
-                new int[]{IvrEndpointState.IN_SERVICE}, 2000);
-        res = endpoint.getEndpointState().waitForState(
-                new int[]{IvrEndpointState.ACCEPTING_CALL}, 20000);
-        res = endpoint.getEndpointState().waitForState(
-                new int[]{IvrEndpointState.TALKING}, 5000);
-        res = endpoint.getEndpointState().waitForState(
-                new int[]{IvrEndpointState.IN_SERVICE}, 5000);
-        Thread.sleep(1000);
-    }
-
-//    @Test
     public void inviteWithTransferTest() throws Exception
     {
         AudioFileNode audioNode1 = createAudioFileNode("audio1", "src/test/wav/test2.wav");
@@ -420,10 +420,10 @@ public class IvrEndpointNodeTest
         waitForProvider();
         assertTrue(endpoint.start());
         Map<String, Object> params = new HashMap<String, Object>();
-        params.put("tim_address", "88024");
+        params.put("tim_address", "089128672947");
         StateWaitResult res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.IN_SERVICE}, 2000);
-        endpoint.invite("089128672947", scenario, this, params);
+        endpoint.invite("88024", scenario, this, params);
 //        endpoint.invite("88024", scenario, this);
         res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.INVITING}, 30000);

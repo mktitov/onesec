@@ -148,8 +148,6 @@ public class IvrMultichannelEndpointNodeTest extends OnesecRavenTestCase
             TimeUnit.MILLISECONDS.sleep(500);
         while (!endpoint.getCalls().isEmpty())
             TimeUnit.MILLISECONDS.sleep(500);
-
-        Thread.sleep(120000);
     }
 
 //    @Test(timeout=60000)
