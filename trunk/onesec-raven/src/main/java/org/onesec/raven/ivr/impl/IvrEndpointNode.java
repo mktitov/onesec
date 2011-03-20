@@ -651,7 +651,9 @@ public class IvrEndpointNode extends BaseNode
                     acceptIncomingCall((CallCtlConnOfferedEv) event); break;
                 case TermConnRingingEv.ID:
                     answerOnIncomingCall((TermConnRingingEv)event); break;
-                case CallCtlConnEstablishedEv.ID: startConversation(); break;
+                case CallCtlConnEstablishedEv.ID:
+                    startConversation();
+                    break;
                 case TermConnDroppedEv.ID:
                     stopConversation(CompletionCode.COMPLETED_BY_OPPONENT);
                     break;
@@ -703,24 +705,26 @@ public class IvrEndpointNode extends BaseNode
                 getLogger().debug("Accepting incoming call");
             if (lock.tryLock(LOCK_TIMEOUT, TimeUnit.MILLISECONDS)) {
                 try {
-                    CallCtlConnOfferedEv offEvent = (CallCtlConnOfferedEv)event;
-                    CallControlConnection conn = (CallControlConnection) offEvent.getConnection();
-//                    if (conversation==null || handlingOutgoingCall) {
-                        //creating conversation and accepting call
-//                        if (!handlingOutgoingCall)
-//                            conversation = new IvrEndpointConversationImpl(
-//                                    this, executorService, conversationScenario, rtpStreamManager
-//                                    , null);
-//                        conn.accept();
-                        endpointState.setState(IvrEndpointState.ACCEPTING_CALL);
-                        if (isLogLevelEnabled(LogLevel.DEBUG))
-                            getLogger().debug("Call accepted");
-//                    }
-//                    else {
-//                        if (isLogLevelEnabled(LogLevel.DEBUG))
-//                            getLogger().debug("Can't accept. Already handling a call");
-//                        conn.disconnect();
-//                    }
+                    if (!handlingOutgoingCall) {
+                        CallCtlConnOfferedEv offEvent = (CallCtlConnOfferedEv)event;
+                        CallControlConnection conn = (CallControlConnection) offEvent.getConnection();
+    //                    if (conversation==null || handlingOutgoingCall) {
+                            //creating conversation and accepting call
+    //                        if (!handlingOutgoingCall)
+    //                            conversation = new IvrEndpointConversationImpl(
+    //                                    this, executorService, conversationScenario, rtpStreamManager
+    //                                    , null);
+                            conn.accept();
+                            endpointState.setState(IvrEndpointState.ACCEPTING_CALL);
+                            if (isLogLevelEnabled(LogLevel.DEBUG))
+                                getLogger().debug("Call accepted");
+    //                    }
+    //                    else {
+    //                        if (isLogLevelEnabled(LogLevel.DEBUG))
+    //                            getLogger().debug("Can't accept. Already handling a call");
+    //                        conn.disconnect();
+    //                    }
+                    }
                 } finally {
                     lock.unlock();
                 }
@@ -1198,13 +1202,21 @@ public class IvrEndpointNode extends BaseNode
     public void conversationStarted() {
     }
 
+    public void conversationTransfered(String address)
+    {
+        if (handlingOutgoingCall)
+        {
+            conversationResult.setTransferAddress(address);
+            conversationResult.setTransferTime(System.currentTimeMillis());
+        }
+    }
+
     public void conversationStoped(CompletionCode completionCode) 
     {
         if (handlingOutgoingCall)
         {
             conversationResult.setCompletionCode(completionCode);
-            long curTime = System.currentTimeMillis();
-            conversationResult.setCallEndTime(curTime);
+            conversationResult.setCallEndTime(System.currentTimeMillis());
             completionCallback.conversationCompleted(conversationResult);
         }
         resetConversationFields();

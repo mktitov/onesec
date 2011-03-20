@@ -31,4 +31,9 @@ public interface IvrEndpointConversationListener
      * Fires when conversation was stopped.
      */
     public void conversationStoped(CompletionCode completionCode);
+    /**
+     * Fires when conversation was transfered to the number passed in the parameter
+     * @address number to which conversation was transfered
+     */
+    public void conversationTransfered(String address);
 }
