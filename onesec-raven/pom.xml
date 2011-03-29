@@ -47,6 +47,11 @@
         </dependency>
 
         <dependency>
+            <groupId>javax.media</groupId>
+            <artifactId>mp3plugin</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
         </dependency>

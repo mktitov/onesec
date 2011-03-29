@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.impl;
 
+import com.sun.media.codec.audio.mp3.JavaDecoder;
 import com.sun.media.codec.audio.ulaw.Packetizer;
 import java.io.IOException;
 import javax.media.Format;
@@ -80,6 +81,13 @@ public class RTPManagerServiceImpl implements RTPManagerService
                 , PlugInManager.CODEC);
         logger.debug("G729 decoder/depacketizer ({}) successfully added", G729Decoder.class.getName());
 
+//        JavaDecoder mp3d = new JavaDecoder();
+//        PlugInManager.addPlugIn(JavaDecoder.class.getName()
+//                , mp3d.getSupportedInputFormats()
+//                , mp3d.getSupportedOutputFormats(null)
+//                , PlugInManager.CODEC);
+//        logger.debug("MP3 decoder ({}) successfully added", JavaDecoder.class.getName());
+//
 //
 //        RTPManager tempManager = RTPManager.newInstance();
         alawRtpFormat = p.getSupportedOutputFormats(null)[0];

@@ -29,7 +29,6 @@ import org.onesec.raven.RtpManagerTestCase;
 import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.IncomingRtpStream;
 import org.onesec.raven.ivr.IncomingRtpStreamDataSourceListener;
-import org.onesec.raven.ivr.InputStreamSource;
 import static org.easymock.EasyMock.*;
 
 /**
@@ -78,6 +77,21 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         verify(listener);
     }
 
+    @Test
+    public void zenitTest() throws Exception
+    {
+        IncomingRtpStream irtp = manager.getIncomingRtpStream(manager);
+        String address = getInterfaceAddress().getHostName();
+        DataSourceListener fileWriter = new DataSourceListener("target/recorded.wav");
+        irtp.addDataSourceListener(fileWriter, new ContentDescriptor(FileTypeDescriptor.WAVE), null);
+        irtp.open(address);
+//        OperationState sendControl = sendOverRtp(
+//                "src/test/wav/test.wav", Codec.G711_MU_LAW, address, irtp.getPort());
+//        sendControl.join();
+        Thread.sleep(20000);
+        irtp.release();
+    }
+
 //    @Test
     public void oneListenerTest() throws Exception
     {
@@ -118,7 +132,7 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         irtp.release();
     }
 
-    @Test
+//    @Test
     public void copyToConcatDataSource() throws Exception
     {
         IncomingRtpStream irtp = manager.getIncomingRtpStream(manager);
@@ -151,6 +165,7 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
 
         public void dataSourceCreated(DataSource dataSource)
         {
+            logger.debug("Received dataSourceCreated event");
             if (dataSource!=null)
                 try {
                     logger.debug("Creating new file writer ({})", filename);
