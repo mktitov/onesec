@@ -26,10 +26,10 @@ import org.raven.tree.Node;
 public interface EndpointRequest
 {
     /**
-     * This method will be called when {@link IvrEndpointPool endpoint pool} will found the free enpoint or
-     * when wait timeout will be reached.
+     * This method will be called when {@link IvrEndpointPool endpoint pool} will found the free 
+     * endpoint or when wait timeout will be reached.
      * @param endpoint the endpoint or null. If parameter value is null then endpoint pool does not
-     *          contains the free endpoint
+     *      contains the free endpoint
      */
     public void processRequest(IvrEndpoint endpoint);
     /**

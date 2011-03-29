@@ -63,7 +63,7 @@ public class RtpManagerTestCase extends OnesecRavenTestCase
         manager.setMaxStreamCount(10);
 
         localAddress  = getInterfaceAddress();
-        RtpAddressNode address1 = createAddress(localAddress.getHostAddress(), 3000);
+        RtpAddressNode address1 = createAddress(localAddress.getHostAddress(), 5004);
         assertTrue(manager.start());
 
         executor = new ExecutorServiceNode();

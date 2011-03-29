@@ -185,9 +185,11 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
 
             lock.lock();
             try{
+                owner.getLogger().debug("Sending dataSourceCreatedEvent to consumers.");
                 if (!consumers.isEmpty())
                     for (Consumer consumer: consumers)
                         consumer.fireDataSourceCreatedEvent();
+
             }finally{
                 lock.unlock();
             }
@@ -300,9 +302,11 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
                 inDataSource = !firstConsumerAdded? source : ((SourceCloneable)source).createClone();
                 firstConsumerAdded = true;
 
-                ProcessorModel processorModel = new ProcessorModel(
-                        inDataSource, new Format[]{format}, contentDescriptor);
-                processor = Manager.createRealizedProcessor(processorModel);
+                processor = ControllerStateWaiter.createRealizedProcessor(
+                        inDataSource, format, 4000);
+//                ProcessorModel processorModel = new ProcessorModel(
+//                        inDataSource, new Format[]{format}, contentDescriptor);
+//                processor = Manager.createRealizedProcessor(processorModel);
                 outDataSource = processor.getDataOutput();
                 processor.start();
 

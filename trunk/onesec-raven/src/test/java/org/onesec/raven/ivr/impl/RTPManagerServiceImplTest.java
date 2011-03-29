@@ -17,8 +17,11 @@
 
 package org.onesec.raven.ivr.impl;
 
+import com.sun.media.codec.audio.mp3.JavaDecoder;
 import java.util.Collection;
 import java.util.Vector;
+import javax.media.Codec;
+import javax.media.Format;
 import javax.media.PlugInManager;
 import javax.media.format.AudioFormat;
 import javax.media.rtp.RTPManager;
@@ -43,14 +46,29 @@ public class RTPManagerServiceImplTest extends OnesecRavenTestCase
     private static final Logger logger = LoggerFactory.getLogger(RTPManagerServiceImplTest.class);
 
     @Test
-    public void printFormats()
+    public void printFormats() throws Exception
     {
-        AudioFormat inFormat = new AudioFormat(
-                AudioFormat.LINEAR, 8000, 16, 1, AudioFormat.LITTLE_ENDIAN, AudioFormat.SIGNED);
-        Collection plugins = PlugInManager.getPlugInList(inFormat, null, PlugInManager.RENDERER);
+//        AudioFormat inFormat = new AudioFormat(
+//                AudioFormat.LINEAR, 8000, 16, 1, AudioFormat.LITTLE_ENDIAN, AudioFormat.SIGNED);
+        Collection plugins = PlugInManager.getPlugInList(null, null, PlugInManager.CODEC);
         assertNotNull(plugins);
-        for (Object plugin: plugins)
+        for (Object plugin: plugins) {
             logger.info("PLUGIN: {}", plugin.toString());
+            Codec codec = (Codec) Class.forName(plugin.toString()).newInstance();
+            Format[] formats = codec.getSupportedInputFormats();
+            for (Format format: formats)
+                logger.info("  Decoder. Supported format: "+format.toString());
+        }
+
+    }
+
+//    @Test
+    public void printPluginSupportedFormats()
+    {
+        JavaDecoder decoder = new JavaDecoder();
+        Format[] formats = decoder.getSupportedInputFormats();
+        for (Format format: formats)
+            logger.info("M3 Decoder. Supported format: "+format.toString());
     }
 
 //    @Test
@@ -63,7 +81,7 @@ public class RTPManagerServiceImplTest extends OnesecRavenTestCase
         checkCodec(AudioFormat.G729_RTP, AudioFormat.LINEAR, G729Decoder.class);
     }
 
-    @Test
+//    @Test
     public void serviceTest()
     {
         RTPManagerService service = registry.getService(RTPManagerService.class);
