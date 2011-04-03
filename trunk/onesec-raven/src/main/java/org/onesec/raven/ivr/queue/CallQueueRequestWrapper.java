@@ -21,14 +21,10 @@ package org.onesec.raven.ivr.queue;
  *
  * @author Mikhail Titov
  */
-public interface CallQueueEvent
+public interface CallQueueRequestWrapper extends CallQueueRequest
 {
     /**
-     * Returns the {@link CallsQueue} that fires this event
+     * Adds message to log for this request
      */
-    public CallsQueue getCallsQueue();
-    /**
-     * Returns the unique request id
-     */
-    public long getRequestId();
+    public void addToLog(String message);
 }

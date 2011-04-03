@@ -21,14 +21,18 @@ package org.onesec.raven.ivr.queue;
  *
  * @author Mikhail Titov
  */
-public interface CallQueueEvent
+public interface CallQueueOperator
 {
     /**
-     * Returns the {@link CallsQueue} that fires this event
+     * Return <b>true</b> if the operator is busy by processing request
      */
-    public CallsQueue getCallsQueue();
+    public boolean isBusy();
     /**
-     * Returns the unique request id
+     * Returns processed request count
      */
-    public long getRequestId();
+    public long getProcessedRequestCount();
+    /**
+     * Process call queue request
+     */
+    public void processRequest(CallQueueRequestWrapper request);
 }

@@ -15,20 +15,19 @@
  *  under the License.
  */
 
-package org.onesec.raven.ivr.queue;
+package org.onesec.raven.ivr.queue.impl;
+
+import org.onesec.raven.ivr.queue.CallsQueue;
+import org.onesec.raven.ivr.queue.RejectedQueueEvent;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface CallQueueEvent
+public class RejectedQueueEventImpl extends CallQueueEventImpl implements RejectedQueueEvent
 {
-    /**
-     * Returns the {@link CallsQueue} that fires this event
-     */
-    public CallsQueue getCallsQueue();
-    /**
-     * Returns the unique request id
-     */
-    public long getRequestId();
+    public RejectedQueueEventImpl(CallsQueue callsQueue, long requestId)
+    {
+        super(callsQueue, requestId);
+    }
 }
