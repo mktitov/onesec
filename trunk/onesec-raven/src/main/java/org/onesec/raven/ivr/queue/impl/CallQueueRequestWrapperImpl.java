@@ -28,6 +28,7 @@ import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.queue.CallQueueEvent;
 import org.onesec.raven.ivr.queue.CallQueueRequest;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
+import org.onesec.raven.ivr.queue.CallQueuedEvent;
 import org.onesec.raven.ivr.queue.CommutatedQueueEvent;
 import org.onesec.raven.ivr.queue.DisconnectedQueueEvent;
 import org.onesec.raven.ivr.queue.NumberChangedQueueEvent;
@@ -61,6 +62,7 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
         if (schema!=null) {
             cdr = schema.createRecord();
             cdr.setValue(QUEUED_TIME, getTimestamp());
+            cdr.setValue(CALLING_NUMBER, request.getConversation().getCallingNumber());
         }
     }
 
@@ -72,26 +74,25 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
     public void callQueueChangeEvent(CallQueueEvent event)
     {
         try{
-            if        (event instanceof DisconnectedQueueEvent) {
-                if (cdr!=null){
+            if (cdr!=null){
+                if        (event instanceof DisconnectedQueueEvent) {
                     cdr.setValue(DISCONNECTED_TIME, getTimestamp());
                     cdr.setValue(LOG, log.toString());
                     sendCdrToConsumers();
-                }
-            } else if (event instanceof RejectedQueueEvent) {
-                if (cdr!=null) {
+                } else if (event instanceof RejectedQueueEvent) {
                     cdr.setValue(REJECETED_TIME, getTimestamp());
                     cdr.setValue(LOG, log.toString());
                     sendCdrToConsumers();
-                }
-            } else if (event instanceof NumberChangedQueueEvent) {
-                addToLog("#"+((NumberChangedQueueEvent)event).getCurrentNumber());
-            } else if (event instanceof ReadyToCommutateQueueEvent) {
-                if (cdr!=null)
+                } else if (event instanceof CallQueuedEvent) {
+                    cdr.setValue(QUEUED_TIME, getTimestamp());
+                    cdr.setValue(CALLING_NUMBER, ((CallQueuedEvent)event).getQueueId());
+                } else if (event instanceof NumberChangedQueueEvent) {
+                    addToLog("#"+((NumberChangedQueueEvent)event).getCurrentNumber());
+                } else if (event instanceof ReadyToCommutateQueueEvent) {
                     cdr.setValue(READY_TO_COMMUTATE_TIME, getTimestamp());
-            } else if (event instanceof CommutatedQueueEvent) {
-                if (cdr!=null)
+                } else if (event instanceof CommutatedQueueEvent) {
                     cdr.setValue(COMMUTATED_TIME, getTimestamp());
+                }
             }
         }catch(Throwable e){
             if (owner.isLogLevelEnabled(LogLevel.ERROR))

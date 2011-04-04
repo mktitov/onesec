@@ -129,6 +129,16 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         }
     }
 
+    public String getCallingNumber()
+    {
+        lock.readLock().lock();
+        try {
+            return call!=null? call.getCallingAddress().getName() : null;
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
     public IvrEndpointConversationState getState()
     {
         return state;

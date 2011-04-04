@@ -17,24 +17,51 @@
 
 package org.onesec.raven.ivr.queue.impl;
 
-import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
-import static org.junit.Assert.*;
+import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.onesec.raven.ivr.queue.CallQueueEvent;
+import org.onesec.raven.ivr.queue.CallQueueRequest;
+import static org.easymock.EasyMock.*;
+import org.raven.ds.RecordException;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class CallQueueRequestWrapperImplTest
+public class CallQueueRequestWrapperImplTest extends OnesecRavenTestCase
 {
-    @Test
-    public void test()
-    {
+    private CallsQueuesNode callsQueues;
+    private CallQueueCdrRecordSchemaNode schema;
 
+    @Before
+    public void prepare()
+    {
+        schema = new CallQueueCdrRecordSchemaNode();
+        schema.setName("cdr schema");
+        tree.getRootNode().addAndSaveChildren(schema);
+        assertTrue(schema.start());
+
+        callsQueues = new CallsQueuesNode();
+        callsQueues.setName("queues");
+        tree.getRootNode().addAndSaveChildren(callsQueues);
+        callsQueues.setCdrRecordSchema(schema);
+        assertTrue(callsQueues.start());
+    }
+
+    @Test
+    public void test() throws RecordException
+    {
+        CallQueueRequest req = createMock(CallQueueRequest.class);
+        IvrEndpointConversation conv = createMock(IvrEndpointConversation.class);
+        expect(req.getConversation()).andReturn(conv).atLeastOnce();
+        expect(conv.getCallingNumber()).andReturn("1234").atLeastOnce();
+        expect(conv.getObjectName()).andReturn("[1]").atLeastOnce();
+
+        replay(req, conv);
+
+        CallQueueRequestWrapperImpl wrapper = new CallQueueRequestWrapperImpl(callsQueues, req);
+
+        verify(req, conv);
     }
 }
