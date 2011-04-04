@@ -21,5 +21,16 @@ package org.onesec.raven.ivr.queue;
  *
  * @author Mikhail Titov
  */
-public interface CallCommutatedQueueEvent extends CallQueueEvent {
+public class CallQueueException extends Exception
+{
+    public CallQueueException(String msg)
+    {
+        super(msg);
+    }
+
+    public CallQueueException(String message, Throwable cause)
+    {
+        super(message, cause);
+    }
+
 }

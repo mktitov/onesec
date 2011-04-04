@@ -21,7 +21,5 @@ package org.onesec.raven.ivr.queue;
  *
  * @author Mikhail Titov
  */
-public interface CallsQueues
-{
-    public void queueCall(String queueId, CallQueueRequest request) throws CallQueueException;
+public interface CommutatedQueueEvent extends CallQueueEvent {
 }
