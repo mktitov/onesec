@@ -15,13 +15,26 @@
  *  under the License.
  */
 
-package org.onesec.raven.ivr.queue;
+package org.onesec.raven.ivr.queue.impl;
+
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import static org.junit.Assert.*;
+import org.onesec.raven.ivr.IvrEndpointConversation;
+import org.onesec.raven.ivr.queue.CallQueueEvent;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface CallsQueues
+public class CallQueueRequestWrapperImplTest
 {
-    public void queueCall(String queueId, CallQueueRequest request) throws CallQueueException;
+    @Test
+    public void test()
+    {
+
+    }
 }

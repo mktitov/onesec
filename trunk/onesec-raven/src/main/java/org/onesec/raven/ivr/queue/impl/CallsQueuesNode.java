@@ -17,12 +17,9 @@
 
 package org.onesec.raven.ivr.queue.impl;
 
-import java.text.SimpleDateFormat;
 import java.util.Collection;
-import java.util.Date;
 import java.util.Map;
-import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.onesec.raven.ivr.queue.CallQueueEvent;
+import org.onesec.raven.ivr.queue.CallQueueException;
 import org.onesec.raven.ivr.queue.CallQueueRequest;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
 import org.onesec.raven.ivr.queue.CallsQueue;
@@ -35,12 +32,11 @@ import org.raven.ds.DataContext;
 import org.raven.ds.DataSource;
 import org.raven.ds.RecordSchemaField;
 import org.raven.ds.RecordSchemaFieldType;
-import org.raven.ds.impl.DataContextImpl;
 import org.raven.ds.impl.RecordSchemaNode;
 import org.raven.log.LogLevel;
-import org.raven.tree.Node;
 import org.raven.tree.NodeAttribute;
 import org.raven.tree.impl.BaseNode;
+import static org.onesec.raven.ivr.queue.impl.CallQueueCdrRecordSchemaNode.*;
 
 /**
  *
@@ -61,21 +57,28 @@ public class CallsQueuesNode  extends BaseNode implements CallsQueues, DataSourc
         checkRecordSchema(cdrRecordSchema);
     }
 
-    public void queueCall(String queueId, CallQueueRequest request)
+    public void queueCall(String queueId, CallQueueRequest request) throws CallQueueException
     {
         if (isLogLevelEnabled(LogLevel.DEBUG))
             getLogger().debug("Queueing call {} to the query {}"
                     , request.getConversation().getObjectName(), queueId);
-        CallQueueRequestWrapper requestWrapper = new CallQueueRequestWrapperImpl(request);
-        CallsQueue queue = (CallsQueue) getChildren(queueId);
-        if (queue!=null)
-            queue.queueCall(requestWrapper);
-        else {
+        try{
+            CallQueueRequestWrapper requestWrapper = new CallQueueRequestWrapperImpl(this, request);
+            CallsQueue queue = (CallsQueue) getChildren(queueId);
+            if (queue!=null)
+                queue.queueCall(requestWrapper);
+            else {
+                if (isLogLevelEnabled(LogLevel.ERROR))
+                    getLogger().error(
+                            "Rejecting queue request for call {}. Because of queue ({}) not found"
+                            , request.getConversation().getObjectName(), queueId);
+                request.callQueueChangeEvent(new RejectedQueueEventImpl(null, 0));
+            }
+        }catch(Throwable e){
+            String message = logMess(request, "Call queuing error ", e.getMessage());
             if (isLogLevelEnabled(LogLevel.ERROR))
-                getLogger().error(
-                        "Rejecting queue request for call {}. Because of queue ({}) not found"
-                        , request.getConversation().getObjectName(), queueId);
-            request.callQueueChangeEvent(new RejectedQueueEventImpl(null, 0));
+                getLogger().error(message);
+            throw new CallQueueException(message, e);
         }
     }
 
@@ -89,15 +92,9 @@ public class CallsQueuesNode  extends BaseNode implements CallsQueues, DataSourc
         return null;
     }
 
-    public void sendDataToConsumers(Map data)
+    String logMess(CallQueueRequest req, String message, Object... args)
     {
-        Collection<Node> deps = getDependentNodes();
-        if (deps!=null && !deps.isEmpty()) {
-            DataContextImpl context = new DataContextImpl();
-            for (Node dep: deps)
-                if (dep instanceof DataConsumer)
-                    ((DataConsumer)dep).setData(this, data, context);
-        }
+        return req.getConversation().getObjectName()+" "+String.format(message, args);
     }
 
     private void checkRecordSchema(RecordSchemaNode schema) throws Exception
@@ -108,43 +105,19 @@ public class CallsQueuesNode  extends BaseNode implements CallsQueues, DataSourc
             Map<String, RecordSchemaField> fields = RavenUtils.getRecordSchemaFields(schema);
             if (fields==null || fields.isEmpty())
                 throw new Exception("Schema does not contain fields");
-            checkRecordSchemaField(
-                    fields, CallQueueCdrRecordSchemaNode.ID, RecordSchemaFieldType.LONG);
-            checkRecordSchemaField(
-                    fields, CallQueueCdrRecordSchemaNode.QUEUE_ID, RecordSchemaFieldType.STRING);
-            checkRecordSchemaField(
-                    fields, CallQueueCdrRecordSchemaNode.CALLING_NUMBER
-                    , RecordSchemaFieldType.STRING);
-            checkRecordSchemaField(
-                    fields, CallQueueCdrRecordSchemaNode.OPERATOR_ID
-                    , RecordSchemaFieldType.STRING);
-            checkRecordSchemaField(
-                    fields, CallQueueCdrRecordSchemaNode.OPERATOR_NUMBER
-                    , RecordSchemaFieldType.STRING);
-            checkRecordSchemaField(
-                    fields, CallQueueCdrRecordSchemaNode.LOG
-                    , RecordSchemaFieldType.STRING);
-            checkRecordSchemaField(
-                    fields, CallQueueCdrRecordSchemaNode.QUEUED_TIME
-                    , RecordSchemaFieldType.TIMESTAMP);
-            checkRecordSchemaField(
-                    fields, CallQueueCdrRecordSchemaNode.REJECETED_TIME
-                    , RecordSchemaFieldType.TIMESTAMP);
-            checkRecordSchemaField(
-                    fields, CallQueueCdrRecordSchemaNode.READY_TO_COMMUTATE_TIME
-                    , RecordSchemaFieldType.TIMESTAMP);
-            checkRecordSchemaField(
-                    fields, CallQueueCdrRecordSchemaNode.COMMUTATED_TIME
-                    , RecordSchemaFieldType.TIMESTAMP);
-            checkRecordSchemaField(
-                    fields, CallQueueCdrRecordSchemaNode.DISCONNECTED_TIME
-                    , RecordSchemaFieldType.TIMESTAMP);
-            checkRecordSchemaField(
-                    fields, CallQueueCdrRecordSchemaNode.CONVERSATION_START_TIME
-                    , RecordSchemaFieldType.TIMESTAMP);
-            checkRecordSchemaField(
-                    fields, CallQueueCdrRecordSchemaNode.CONVERSATION_DURATION
-                    , RecordSchemaFieldType.INTEGER);
+            checkRecordSchemaField(fields, ID, RecordSchemaFieldType.LONG);
+            checkRecordSchemaField(fields, QUEUE_ID, RecordSchemaFieldType.STRING);
+            checkRecordSchemaField(fields, CALLING_NUMBER, RecordSchemaFieldType.STRING);
+            checkRecordSchemaField(fields, OPERATOR_ID, RecordSchemaFieldType.STRING);
+            checkRecordSchemaField(fields, OPERATOR_NUMBER, RecordSchemaFieldType.STRING);
+            checkRecordSchemaField(fields, LOG, RecordSchemaFieldType.STRING);
+            checkRecordSchemaField(fields, QUEUED_TIME, RecordSchemaFieldType.TIMESTAMP);
+            checkRecordSchemaField(fields, REJECETED_TIME, RecordSchemaFieldType.TIMESTAMP);
+            checkRecordSchemaField(fields, READY_TO_COMMUTATE_TIME, RecordSchemaFieldType.TIMESTAMP);
+            checkRecordSchemaField(fields, COMMUTATED_TIME, RecordSchemaFieldType.TIMESTAMP);
+            checkRecordSchemaField(fields, DISCONNECTED_TIME, RecordSchemaFieldType.TIMESTAMP);
+            checkRecordSchemaField(fields, CONVERSATION_START_TIME, RecordSchemaFieldType.TIMESTAMP);
+            checkRecordSchemaField(fields, CONVERSATION_DURATION, RecordSchemaFieldType.INTEGER);
             
         }catch (Exception e){
             throw new Exception(String.format(
@@ -172,36 +145,5 @@ public class CallsQueuesNode  extends BaseNode implements CallsQueues, DataSourc
 
     public void setCdrRecordSchema(RecordSchemaNode cdrRecordSchema) {
         this.cdrRecordSchema = cdrRecordSchema;
-    }
-
-    private final class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
-    {
-        private final CallQueueRequest request;
-        private StringBuilder log;
-
-        public CallQueueRequestWrapperImpl(CallQueueRequest request)
-        {
-            this.request = request;
-        }
-
-        public IvrEndpointConversation getConversation()
-        {
-            return request.getConversation();
-        }
-
-        public void callQueueChangeEvent(CallQueueEvent event)
-        {
-            request.callQueueChangeEvent(event);
-        }
-
-        public void addToLog(String message)
-        {
-            String time = new SimpleDateFormat("hh:mm:ss").format(new Date());
-            if (log==null)
-                log = new StringBuilder(time);
-            else
-                log.append("; ").append(time);
-            log.append(" ").append(message);
-        }
     }
 }

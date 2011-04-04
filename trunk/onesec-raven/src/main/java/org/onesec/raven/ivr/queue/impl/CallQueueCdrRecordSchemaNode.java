@@ -49,7 +49,9 @@ public class CallQueueCdrRecordSchemaNode extends RecordSchemaNode
     public final static String CONVERSATION_START_TIME = "conversationStartTime";
     public final static String CONVERSATION_DURATION = "conversationDuration";
 
-    public  final static String DATABASE_TABLE_NAME = "RAVEN_CALL_QUEUE_CDR";
+    public final static String DATABASE_TABLE_EXTENSION_NAME = "dbTable";
+    public final static String DATABASE_TABLE_NAME = "RAVEN_CALL_QUEUE_CDR";
+    public final static String DATABASE_COLUMN_EXTENSION_NAME = "dbColumn";
 
     @Message private static String datePattern;
     @Message private static String idDisplayName;
@@ -80,11 +82,11 @@ public class CallQueueCdrRecordSchemaNode extends RecordSchemaNode
 
     private void generateFields()
     {
-        Node node = getRecordExtensionsNode().getChildren("db");
+        Node node = getRecordExtensionsNode().getChildren(DATABASE_TABLE_EXTENSION_NAME);
         if (node==null)
         {
             DatabaseRecordExtension dbExtension = new DatabaseRecordExtension();
-            dbExtension.setName("dbTable");
+            dbExtension.setName(DATABASE_TABLE_EXTENSION_NAME);
             getRecordExtensionsNode().addAndSaveChildren(dbExtension);
             dbExtension.setTableName(DATABASE_TABLE_NAME);
             dbExtension.start();
@@ -115,7 +117,7 @@ public class CallQueueCdrRecordSchemaNode extends RecordSchemaNode
         String format = RecordSchemaFieldType.TIMESTAMP.equals(fieldType)? datePattern : null;
         RecordSchemaFieldNode field = super.createField(name, fieldType, format);
         field.setDisplayName(displayName);
-        DatabaseRecordFieldExtension.create(field, "dbColumn", null);
+        DatabaseRecordFieldExtension.create(field, DATABASE_COLUMN_EXTENSION_NAME, null);
         if (ID.equals(name))
             IdRecordFieldExtension.create(field, "id");
         if (RecordSchemaFieldType.TIMESTAMP.equals(fieldType))
