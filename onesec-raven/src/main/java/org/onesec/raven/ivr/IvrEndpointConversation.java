@@ -60,6 +60,10 @@ public interface IvrEndpointConversation extends ObjectDescription
      */
     public AudioStream getAudioStream();
     /**
+     * Returns the number (address) of the calling side.
+     */
+    public String getCallingNumber();
+    /**
      * Continues the conversation with passed in the parameter dtmf char
      * @param dtmfChar the dtmf char
      */
