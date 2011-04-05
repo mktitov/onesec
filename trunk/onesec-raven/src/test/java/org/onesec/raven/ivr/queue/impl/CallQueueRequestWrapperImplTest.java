@@ -22,8 +22,11 @@ import org.junit.Test;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.queue.CallQueueRequest;
+import org.onesec.raven.ivr.queue.CallsQueue;
 import static org.easymock.EasyMock.*;
 import org.raven.ds.RecordException;
+import org.raven.log.LogLevel;
+import org.raven.test.DataCollector;
 
 /**
  *
@@ -33,6 +36,7 @@ public class CallQueueRequestWrapperImplTest extends OnesecRavenTestCase
 {
     private CallsQueuesNode callsQueues;
     private CallQueueCdrRecordSchemaNode schema;
+    private DataCollector collector;
 
     @Before
     public void prepare()
@@ -46,7 +50,14 @@ public class CallQueueRequestWrapperImplTest extends OnesecRavenTestCase
         callsQueues.setName("queues");
         tree.getRootNode().addAndSaveChildren(callsQueues);
         callsQueues.setCdrRecordSchema(schema);
+        callsQueues.setLogLevel(LogLevel.DEBUG);
         assertTrue(callsQueues.start());
+
+        collector = new DataCollector();
+        collector.setName("collector");
+        tree.getRootNode().addAndSaveChildren(collector);
+        collector.setDataSource(callsQueues);
+        assertTrue(collector.start());
     }
 
     @Test
@@ -54,14 +65,19 @@ public class CallQueueRequestWrapperImplTest extends OnesecRavenTestCase
     {
         CallQueueRequest req = createMock(CallQueueRequest.class);
         IvrEndpointConversation conv = createMock(IvrEndpointConversation.class);
+        CallsQueue queue = createMock(CallsQueue.class);
         expect(req.getConversation()).andReturn(conv).atLeastOnce();
         expect(conv.getCallingNumber()).andReturn("1234").atLeastOnce();
-        expect(conv.getObjectName()).andReturn("[1]").atLeastOnce();
+        expect(conv.getObjectName()).andReturn("[7000]").anyTimes();
 
-        replay(req, conv);
+        CallQueuedEventImpl queuedEvent = new CallQueuedEventImpl(queue, 1, "q1");
+        req.callQueueChangeEvent(queuedEvent);
+
+        replay(req, conv, queue);
 
         CallQueueRequestWrapperImpl wrapper = new CallQueueRequestWrapperImpl(callsQueues, req);
+        wrapper.callQueueChangeEvent(queuedEvent);
 
-        verify(req, conv);
+        verify(req, conv, queue);
     }
 }
