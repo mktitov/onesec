@@ -15,11 +15,20 @@
  *  under the License.
  */
 
-package org.onesec.raven.ivr.queue;
+package org.onesec.raven.ivr.queue.event;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface CommutatedQueueEvent extends CallQueueEvent {
+public interface NumberChangedQueueEvent extends CallQueueEvent
+{
+    /**
+     * Returns the previous number in the queue
+     */
+    public int getPreviousNumber();
+    /**
+     * Returns the current number in the queue
+     */
+    public int getCurrentNumber();
 }

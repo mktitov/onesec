@@ -117,6 +117,10 @@ public class TestEndpointConversationNode extends BaseNode implements IvrEndpoin
         return this;
     }
 
+    public String getCallingNumber() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
     public void continueConversation(char dtmfChar) {
         throw new UnsupportedOperationException("Not supported yet.");
     }

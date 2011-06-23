@@ -15,12 +15,12 @@
  *  under the License.
  */
 
-package org.onesec.raven.ivr.queue;
+package org.onesec.raven.ivr.queue.event;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface ReadyToCommutateQueueEvent extends CallQueueEvent {
+public interface DisconnectedQueueEvent extends CallQueueEvent {
 
 }

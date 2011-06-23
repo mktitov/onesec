@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.queue;
 
+import org.onesec.raven.ivr.queue.event.CallQueueEvent;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 
 /**
