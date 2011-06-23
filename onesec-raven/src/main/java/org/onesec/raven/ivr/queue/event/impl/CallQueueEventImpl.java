@@ -15,26 +15,31 @@
  *  under the License.
  */
 
-package org.onesec.raven.ivr.queue.impl;
+package org.onesec.raven.ivr.queue.event.impl;
 
-import org.onesec.raven.ivr.queue.CallQueuedEvent;
+import org.onesec.raven.ivr.queue.event.CallQueueEvent;
 import org.onesec.raven.ivr.queue.CallsQueue;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class CallQueuedEventImpl extends CallQueueEventImpl implements CallQueuedEvent
+public class CallQueueEventImpl implements CallQueueEvent
 {
-    private final String queueId;
+    private final CallsQueue callsQueue;
+    private final long requestId;
 
-    public CallQueuedEventImpl(CallsQueue callsQueue, long requestId, String queueId)
+    public CallQueueEventImpl(CallsQueue callsQueue, long requestId)
     {
-        super(callsQueue, requestId);
-        this.queueId = queueId;
+        this.callsQueue = callsQueue;
+        this.requestId = requestId;
     }
 
-    public String getQueueId() {
-        return queueId;
+    public CallsQueue getCallsQueue() {
+        return callsQueue;
+    }
+
+    public long getRequestId() {
+        return requestId;
     }
 }

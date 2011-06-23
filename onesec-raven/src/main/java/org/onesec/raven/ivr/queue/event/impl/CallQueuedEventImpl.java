@@ -15,11 +15,26 @@
  *  under the License.
  */
 
-package org.onesec.raven.ivr.queue;
+package org.onesec.raven.ivr.queue.event.impl;
+
+import org.onesec.raven.ivr.queue.event.CallQueuedEvent;
+import org.onesec.raven.ivr.queue.CallsQueue;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface RejectedQueueEvent extends CallQueueEvent {
+public class CallQueuedEventImpl extends CallQueueEventImpl implements CallQueuedEvent
+{
+    private final String queueId;
+
+    public CallQueuedEventImpl(CallsQueue callsQueue, long requestId, String queueId)
+    {
+        super(callsQueue, requestId);
+        this.queueId = queueId;
+    }
+
+    public String getQueueId() {
+        return queueId;
+    }
 }

@@ -15,19 +15,12 @@
  *  under the License.
  */
 
-package org.onesec.raven.ivr.queue.impl;
-
-import org.onesec.raven.ivr.queue.CallsQueue;
-import org.onesec.raven.ivr.queue.RejectedQueueEvent;
+package org.onesec.raven.ivr.queue.event;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class RejectedQueueEventImpl extends CallQueueEventImpl implements RejectedQueueEvent
-{
-    public RejectedQueueEventImpl(CallsQueue callsQueue, long requestId)
-    {
-        super(callsQueue, requestId);
-    }
+public interface ReadyToCommutateQueueEvent extends CallQueueEvent {
+
 }

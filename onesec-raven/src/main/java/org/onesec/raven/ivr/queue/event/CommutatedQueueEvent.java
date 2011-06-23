@@ -15,13 +15,11 @@
  *  under the License.
  */
 
-package org.onesec.raven.ivr.queue;
+package org.onesec.raven.ivr.queue.event;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface CallQueuedEvent extends CallQueueEvent
-{
-    public String getQueueId();
+public interface CommutatedQueueEvent extends CallQueueEvent {
 }

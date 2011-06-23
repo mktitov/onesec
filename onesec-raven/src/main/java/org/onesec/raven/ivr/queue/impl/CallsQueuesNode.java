@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.queue.impl;
 
+import org.onesec.raven.ivr.queue.event.impl.RejectedQueueEventImpl;
 import java.util.Collection;
 import java.util.Map;
 import org.onesec.raven.ivr.queue.CallQueueException;
@@ -60,7 +61,7 @@ public class CallsQueuesNode  extends BaseNode implements CallsQueues, DataSourc
     public void queueCall(String queueId, CallQueueRequest request) throws CallQueueException
     {
         if (isLogLevelEnabled(LogLevel.DEBUG))
-            getLogger().debug("Queueing call {} to the query {}"
+            getLogger().debug("Queueing call {} to the queue {}"
                     , request.getConversation().getObjectName(), queueId);
         try{
             CallQueueRequestWrapper requestWrapper = new CallQueueRequestWrapperImpl(this, request);

@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.queue.impl;
 
+import org.onesec.raven.ivr.queue.event.impl.CallQueuedEventImpl;
 import org.junit.Before;
 import org.junit.Test;
 import org.onesec.raven.OnesecRavenTestCase;
