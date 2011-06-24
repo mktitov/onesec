@@ -23,6 +23,12 @@ package org.onesec.raven.ivr.queue;
  */
 public interface CallQueueRequestWrapper extends CallQueueRequest
 {
+    public void setRequestId(long requestId);
+    public long getRequestId();
+    public void setCallsQueue(CallsQueue queue);
+    public CallsQueue getCallsQueue();
+    public void fireRejectedQueueEvent();
+    public void fireCallQueuedEvent();
     /**
      * Adds message to log for this request
      */

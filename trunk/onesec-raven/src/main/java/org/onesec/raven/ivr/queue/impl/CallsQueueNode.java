@@ -17,14 +17,14 @@
 package org.onesec.raven.ivr.queue.impl;
 
 import java.util.concurrent.PriorityBlockingQueue;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
 import org.onesec.raven.ivr.queue.CallsQueue;
-import org.onesec.raven.ivr.queue.event.impl.RejectedQueueEventImpl;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
+import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.Task;
 import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
@@ -48,6 +48,7 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
     private AtomicReference<String> statusMessage;
     private AtomicBoolean stopProcessing;
     private AtomicBoolean processingThreadRunning;
+    private AtomicLong requestIdSeq;
     private PriorityBlockingQueue<CallQueueRequestWrapper> queue;
 
     @Override
@@ -56,6 +57,7 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
         statusMessage = new AtomicReference<String>("Waiting for request...");
         stopProcessing = new AtomicBoolean(true);
         processingThreadRunning = new AtomicBoolean(false);
+        requestIdSeq = new AtomicLong(1);
     }
 
     @Override
@@ -68,12 +70,30 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
 //        queue = new PriorityBlockingQueue<CallQueueRequestWrapper>(
 //                maxQueueSize, new RequestComparator());
         stopProcessing.set(false);
-        executor.execute(this);
+        requestIdSeq.set(1);
+        executor.execute(this);        
     }
     
     public void queueCall(CallQueueRequestWrapper request) 
     {
-        throw new UnsupportedOperationException("Not supported yet.");
+        if (!Status.STARTED.equals(getStatus()) || stopProcessing.get()) {
+            request.addToLog(String.format("Queue (%s) not ready", getName()));
+            request.fireRejectedQueueEvent();
+        }
+        if (isLogLevelEnabled(LogLevel.DEBUG))
+            debug("New request added to the queue ({})", request.toString());
+        request.setCallsQueue(this);
+        request.setRequestId(requestIdSeq.getAndIncrement());
+        if (queue.offer(request)) {
+            request.fireCallQueuedEvent();
+        } else{
+            if (isLogLevelEnabled(LogLevel.WARN))
+                warn(String.format(
+                        "The queue size was exceeded. The request (%s) was ignored."
+                        , request.toString()));
+            request.addToLog(String.format("The queue (%s) size was exceeded", getName()));
+            request.fireRejectedQueueEvent();
+        }        
     }
 
     public Node getTaskNode() {
@@ -95,20 +115,36 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
     public void run() {
         processingThreadRunning.set(true);
         try {
-            while (!stopProcessing.get()){
-                CallQueueRequestWrapper req = queue.poll(maxQueueSize, TimeUnit.DAYS)
+            if (isLogLevelEnabled(LogLevel.DEBUG))
+                debug("Manager task started");
+            try {
+                while (!stopProcessing.get())
+                    processRequest();
+            } catch (InterruptedException e)
+            {
+                if (isLogLevelEnabled(LogLevel.WARN))
+                    warn("Manager task was interrupted");
+                Thread.currentThread().interrupt();
             }
+            if (isLogLevelEnabled(LogLevel.DEBUG))
+                debug("Manager task stoped");
         } finally {
             clearQueue();
             processingThreadRunning.set(false);
         }
     }
     
+    private void processRequest() throws InterruptedException
+    {
+        
+    }
+    
     private void clearQueue()
     {
         statusMessage.set("Stoping processing requests. Clearing queue...");
         for (CallQueueRequestWrapper req: queue)
-            req.callQueueChangeEvent(new RejectedQueueEventImpl(this, maxQueueSize));
+            req.fireRejectedQueueEvent();
+        queue=null;
     }
     
 //    private class RequestComparator implements Comparator<CallQueueRequestWrapper>
