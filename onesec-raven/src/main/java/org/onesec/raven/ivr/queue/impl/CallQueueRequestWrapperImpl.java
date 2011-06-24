@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.queue.impl;
 
+import org.onesec.raven.ivr.queue.CallsQueue;
 import java.util.Collection;
 import org.raven.ds.DataConsumer;
 import org.raven.ds.impl.DataContextImpl;
@@ -34,6 +35,8 @@ import org.onesec.raven.ivr.queue.event.DisconnectedQueueEvent;
 import org.onesec.raven.ivr.queue.event.NumberChangedQueueEvent;
 import org.onesec.raven.ivr.queue.event.ReadyToCommutateQueueEvent;
 import org.onesec.raven.ivr.queue.event.RejectedQueueEvent;
+import org.onesec.raven.ivr.queue.event.impl.CallQueueEventImpl;
+import org.onesec.raven.ivr.queue.event.impl.RejectedQueueEventImpl;
 import org.raven.ds.Record;
 import org.raven.ds.RecordException;
 import org.raven.ds.impl.RecordSchemaNode;
@@ -50,6 +53,8 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
     private final CallQueueRequest request;
     private final CallsQueuesNode owner;
 
+    private long requestId;
+    private CallsQueue queue;
     private StringBuilder log;
     private Record cdr;
 
@@ -58,6 +63,8 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
     {
         this.owner = owner;
         this.request = request;
+        this.requestId = 0;
+        this.queue = null;
         RecordSchemaNode schema = owner.getCdrRecordSchema();
         if (schema!=null) {
             cdr = schema.createRecord();
@@ -69,6 +76,22 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
     public IvrEndpointConversation getConversation()
     {
         return request.getConversation();
+    }
+
+    public long getRequestId() {
+        return requestId;
+    }
+
+    public void setRequestId(long requestId) {
+        this.requestId = requestId;
+    }
+
+    public CallsQueue getCallsQueue() {
+        return queue;
+    }
+
+    public void setCallsQueue(CallsQueue queue) {
+        this.queue = queue;
     }
 
     public void callQueueChangeEvent(CallQueueEvent event)
@@ -113,6 +136,14 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
 
     private Timestamp getTimestamp(){
         return new Timestamp(System.currentTimeMillis());
+    }
+    
+    public void fireRejectedQueueEvent(){
+        callQueueChangeEvent(new RejectedQueueEventImpl(queue, requestId));
+    }
+
+    public void fireCallQueuedEvent() {
+        callQueueChangeEvent(new CallQueueEventImpl(queue, requestId));
     }
 
     private void sendCdrToConsumers()
