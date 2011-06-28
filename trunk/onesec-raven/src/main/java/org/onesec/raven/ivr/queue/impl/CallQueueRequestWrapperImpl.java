@@ -53,6 +53,8 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
     private final CallQueueRequest request;
     private final CallsQueuesNode owner;
 
+    private int priority;
+    private String queueId;
     private long requestId;
     private CallsQueue queue;
     private StringBuilder log;
@@ -76,6 +78,23 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
     public IvrEndpointConversation getConversation()
     {
         return request.getConversation();
+    }
+
+    
+    public int getPriority() {
+        return priority;
+    }
+
+    public void setPriority(int priority) {
+        this.priority = priority;
+    }
+
+    public String getQueueId() {
+        return queueId;
+    }
+
+    public void setQueueId(String queueId) {
+        this.queueId = queueId;
     }
 
     public long getRequestId() {

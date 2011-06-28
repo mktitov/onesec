@@ -21,6 +21,10 @@ import org.junit.Before;
 import org.junit.Test;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.raven.ds.impl.RecordSchemaNode;
+import org.onesec.raven.ivr.queue.CallQueueRequest;
+import org.onesec.raven.ivr.queue.event.RejectedQueueEvent;
+import org.raven.test.PushDataSource;
+import static org.easymock.EasyMock.*;
 
 /**
  *
@@ -30,13 +34,20 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
 {
     private CallsQueuesNode queues;
     private CallQueueCdrRecordSchemaNode schema;
+    private PushDataSource ds;
 
     @Before
     public void prepare()
     {
+        ds = new PushDataSource();
+        ds.setName("ds");
+        tree.getRootNode().addAndSaveChildren(ds);
+        assertTrue(ds.start());
+        
         queues = new CallsQueuesNode();
         queues.setName("queues");
         tree.getRootNode().addAndSaveChildren(queues);
+        queues.setDataSource(ds);
 
         schema = new CallQueueCdrRecordSchemaNode();
         schema.setName("queue cdr");
@@ -68,5 +79,22 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
     {
         queues.setCdrRecordSchema(null);
         assertTrue(queues.start());
+    }
+    
+    @Test
+    public void nullQueueIdTest()
+    {
+        CallQueueRequest req = createMock(CallQueueRequest.class);
+        
+        expect(req.getQueueId()).andReturn(null);
+        req.callQueueChangeEvent(isA(RejectedQueueEvent.class));
+        
+        replay(req);
+        
+        assertTrue(queues.start());
+        
+        ds.pushData(req);
+        
+        verify(req);
     }
 }

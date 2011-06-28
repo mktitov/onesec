@@ -14,14 +14,29 @@
  *  limitations under the License.
  *  under the License.
  */
+package org.onesec.raven.ivr.queue.impl;
 
-package org.onesec.raven.ivr.queue;
+import org.onesec.raven.ivr.queue.CallsQueuePrioritySelector;
+import org.raven.annotations.NodeClass;
+import org.raven.annotations.Parameter;
+import org.raven.tree.impl.BaseNode;
+import org.weda.annotations.constraints.NotNull;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface CallsQueues
+@NodeClass(parentNode=CallsQueueNode.class)
+public class CallsQueuePrioritySelectorNode extends BaseNode implements CallsQueuePrioritySelector
 {
-    public void queueCall(CallQueueRequest request) throws CallQueueException;
+    @NotNull @Parameter()
+    private Integer priority;
+
+    public void setPriority(Integer priority) {
+        this.priority = priority;
+    }
+
+    public Integer getPriority() {
+        return priority;
+    }
 }
