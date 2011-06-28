@@ -14,14 +14,22 @@
  *  limitations under the License.
  *  under the License.
  */
+package org.onesec.raven.ivr.queue.impl;
 
-package org.onesec.raven.ivr.queue;
+import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
+import org.onesec.raven.ivr.queue.CallsQueue;
+import org.raven.tree.impl.BaseNode;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface CallsQueues
+public class TestCallsQueueNode extends BaseNode implements CallsQueue
 {
-    public void queueCall(CallQueueRequest request) throws CallQueueException;
+    CallQueueRequestWrapper lastRequest;
+    
+    public void queueCall(CallQueueRequestWrapper request) 
+    {
+        this.lastRequest = request;
+    }
 }

@@ -40,4 +40,20 @@ public interface CallQueueRequest
      * @see RejectedQueueEvent
      */
     public void callQueueChangeEvent(CallQueueEvent event);
+    /**
+     * Returns the request priority
+     */
+    public int getPriority();
+    /**
+     * Sets request priority
+     */
+    public void setPriority(int priority);
+    /**
+     * Returns the queue id to which request is addressed
+     */
+    public String getQueueId();
+    /**
+     * Set's the queue id
+     */
+    public void setQueueId(String queueId);
 }

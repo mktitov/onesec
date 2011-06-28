@@ -14,14 +14,13 @@
  *  limitations under the License.
  *  under the License.
  */
-
 package org.onesec.raven.ivr.queue;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface CallsQueues
+public interface CallsQueuePrioritySelector 
 {
-    public void queueCall(CallQueueRequest request) throws CallQueueException;
+    public Integer getPriority();
 }

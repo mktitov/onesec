@@ -17,7 +17,6 @@
 
 package org.onesec.raven.ivr.queue.impl;
 
-import org.onesec.raven.ivr.queue.event.impl.RejectedQueueEventImpl;
 import java.util.Collection;
 import java.util.Map;
 import org.onesec.raven.ivr.queue.CallQueueException;
@@ -30,10 +29,12 @@ import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.ds.DataConsumer;
 import org.raven.ds.DataContext;
+import org.raven.ds.DataPipe;
 import org.raven.ds.DataSource;
 import org.raven.ds.RecordSchemaField;
 import org.raven.ds.RecordSchemaFieldType;
 import org.raven.ds.impl.RecordSchemaNode;
+import org.raven.ds.impl.RecordSchemaValueTypeHandlerFactory;
 import org.raven.log.LogLevel;
 import org.raven.tree.NodeAttribute;
 import org.raven.tree.impl.BaseNode;
@@ -44,10 +45,13 @@ import static org.onesec.raven.ivr.queue.impl.CallQueueCdrRecordSchemaNode.*;
  * @author Mikhail Titov
  */
 @NodeClass
-public class CallsQueuesNode  extends BaseNode implements CallsQueues, DataSource
+public class CallsQueuesNode  extends BaseNode implements CallsQueues, DataPipe
 {
-    @Parameter
+    @Parameter(valueHandlerType=RecordSchemaValueTypeHandlerFactory.TYPE)
     private RecordSchemaNode cdrRecordSchema;
+    
+    @Parameter
+    private DataSource dataSource;
 
     private RecordSchemaNode _cdrRecordSchema;
 
@@ -58,22 +62,28 @@ public class CallsQueuesNode  extends BaseNode implements CallsQueues, DataSourc
         checkRecordSchema(cdrRecordSchema);
     }
 
-    public void queueCall(String queueId, CallQueueRequest request) throws CallQueueException
+    public void queueCall(CallQueueRequest request) throws CallQueueException
     {
         if (isLogLevelEnabled(LogLevel.DEBUG))
             getLogger().debug("Queueing call {} to the queue {}"
-                    , request.getConversation().getObjectName(), queueId);
+                    , request.getConversation().getObjectName(), request.getQueueId());
         try{
             CallQueueRequestWrapper requestWrapper = new CallQueueRequestWrapperImpl(this, request);
-            CallsQueue queue = (CallsQueue) getChildren(queueId);
-            if (queue!=null)
+            if (request.getQueueId()==null){
+                if (isLogLevelEnabled(LogLevel.ERROR))
+                    getLogger().error("Invalid call queue id. Call queue id can not be null");
+                requestWrapper.fireRejectedQueueEvent();
+            }
+            CallsQueue queue = (CallsQueue) getChildren(request.getQueueId());
+            if (queue!=null && Status.STARTED.equals(getStatus()))
                 queue.queueCall(requestWrapper);
             else {
                 if (isLogLevelEnabled(LogLevel.ERROR))
                     getLogger().error(
-                            "Rejecting queue request for call {}. Because of queue ({}) not found"
-                            , request.getConversation().getObjectName(), queueId);
-                request.callQueueChangeEvent(new RejectedQueueEventImpl(null, 0));
+                            "Rejecting queue request for call {}. Because of queue ({}) "
+                            + "not found or stopped"
+                            , request.getConversation().getObjectName(), request.getQueueId());
+                requestWrapper.fireRejectedQueueEvent();
             }
         }catch(Throwable e){
             String message = logMess(request, "Call queuing error ", e.getMessage());
@@ -91,6 +101,24 @@ public class CallsQueuesNode  extends BaseNode implements CallsQueues, DataSourc
     public Collection<NodeAttribute> generateAttributes()
     {
         return null;
+    }
+
+    public Object refereshData(Collection<NodeAttribute> sessionAttributes) {
+        throw new UnsupportedOperationException(
+                "refreshData operation is unsupported by this data source");
+    }
+
+    public void setData(DataSource dataSource, Object data, DataContext context) 
+    {
+        if (!Status.STARTED.equals(getStatus()) || !(data instanceof CallQueueRequest))
+            return;
+        try {
+            queueCall((CallQueueRequest)data);
+        } catch (CallQueueException ex) {
+            if (isLogLevelEnabled(LogLevel.ERROR))
+                getLogger().error(
+                        "Error processing call queue request from {} ", dataSource.getPath());
+        }
     }
 
     String logMess(CallQueueRequest req, String message, Object... args)
@@ -138,6 +166,14 @@ public class CallsQueuesNode  extends BaseNode implements CallsQueues, DataSourc
             throw new Exception(String.format(
                     "Invalid type for column (%s). Expected (%s) but was (%s)"
                     , fieldName, type.toString(), field.getFieldType().toString()));        
+    }
+
+    public DataSource getDataSource() {
+        return dataSource;
+    }
+
+    public void setDataSource(DataSource dataSource) {
+        this.dataSource = dataSource;
     }
 
     public RecordSchemaNode getCdrRecordSchema() {
