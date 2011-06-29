@@ -14,32 +14,35 @@
  *  limitations under the License.
  *  under the License.
  */
+package org.onesec.raven.ivr.queue.event.impl;
 
-package org.onesec.raven.ivr.queue;
-
+import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.event.NumberChangedQueueEvent;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface CallQueueRequestWrapper extends CallQueueRequest
+public class NumberChangedQueueEventImpl 
+        extends CallQueueEventImpl implements NumberChangedQueueEvent
 {
-    public void setRequestId(long requestId);
-    public long getRequestId();
-    public void setCallsQueue(CallsQueue queue);
-    public CallsQueue getCallsQueue();
-    public void fireRejectedQueueEvent();
-    public void fireCallQueuedEvent();
-    public CallQueueRequest getWrappedRequest(); 
-    /**
-     * Sets the position of the request in the queue and fires {@link NumberChangedQueueEvent} if 
-     * the position changed.
-     */
-    public void setPositionInQueue(Integer pos);
-    public Integer getPositionInQueue();
-    /**
-     * Adds message to log for this request
-     */
-    public void addToLog(String message);
+    private final int previousNumber;
+    private final int currentNumber;
+
+    public NumberChangedQueueEventImpl(
+            CallsQueue callsQueue, long requestId, int previousNumber, int currentNumber) 
+    {
+        super(callsQueue, requestId);
+        this.previousNumber = previousNumber;
+        this.currentNumber = currentNumber;
+    }
+
+    public int getPreviousNumber() {
+        return previousNumber;
+    }
+
+    public int getCurrentNumber() {
+        return currentNumber;
+    }
+    
 }

@@ -20,6 +20,7 @@ package org.onesec.raven.ivr.queue.impl;
 import org.junit.Before;
 import org.junit.Test;
 import org.onesec.raven.OnesecRavenTestCase;
+import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.raven.ds.impl.RecordSchemaNode;
 import org.onesec.raven.ivr.queue.CallQueueRequest;
 import org.onesec.raven.ivr.queue.event.RejectedQueueEvent;
@@ -85,15 +86,85 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
     public void nullQueueIdTest()
     {
         CallQueueRequest req = createMock(CallQueueRequest.class);
+        IvrEndpointConversation conv = createMock(IvrEndpointConversation.class);
         
         expect(req.getQueueId()).andReturn(null);
+        expect(req.getConversation()).andReturn(conv);
+        expect(conv.getObjectName()).andReturn("call info");
         req.callQueueChangeEvent(isA(RejectedQueueEvent.class));
         
-        replay(req);
+        replay(req, conv);
         
         assertTrue(queues.start());
         
         ds.pushData(req);
+        
+        verify(req, conv);
+    }
+
+    @Test
+    public void queueNotFoundTest() 
+    {
+        CallQueueRequest req = createMock(CallQueueRequest.class);
+        IvrEndpointConversation conv = createMock(IvrEndpointConversation.class);
+        
+        expect(req.getQueueId()).andReturn("queue").anyTimes();
+        expect(req.getConversation()).andReturn(conv);
+        expect(conv.getObjectName()).andReturn("call info");
+        req.callQueueChangeEvent(isA(RejectedQueueEvent.class));
+        
+        replay(req, conv);
+        
+        assertTrue(queues.start());
+        
+        ds.pushData(req);
+        
+        verify(req, conv);
+    }
+    
+    @Test
+    public void queueNotFound2()
+    {
+        TestCallsQueueNode queue = new TestCallsQueueNode();
+        queue.setName("queue");
+        queues.addAndSaveChildren(queue);
+        
+        CallQueueRequest req = createMock(CallQueueRequest.class);
+        IvrEndpointConversation conv = createMock(IvrEndpointConversation.class);
+        
+        expect(req.getQueueId()).andReturn("queue").anyTimes();
+        expect(req.getConversation()).andReturn(conv);
+        expect(conv.getObjectName()).andReturn("call info");
+        req.callQueueChangeEvent(isA(RejectedQueueEvent.class));
+        
+        replay(req, conv);
+        
+        assertTrue(queues.start());
+        assertNull(queue.lastRequest);
+        
+        ds.pushData(req);
+        
+        verify(req, conv);
+    }
+    
+    @Test
+    public void foundTest()
+    {
+        assertTrue(queues.start());
+        TestCallsQueueNode queue = new TestCallsQueueNode();
+        queue.setName("queue");
+        queues.addAndSaveChildren(queue);
+        assertTrue(queue.start());
+        
+        CallQueueRequest req = createMock(CallQueueRequest.class);
+        
+        expect(req.getQueueId()).andReturn("queue").anyTimes();
+        
+        replay(req);
+        
+        ds.pushData(req);
+        assertNotNull(queue.lastRequest);
+        assertSame(req, queue.lastRequest.getWrappedRequest());
         
         verify(req);
     }

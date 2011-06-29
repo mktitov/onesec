@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.queue.impl;
 
+import org.raven.tree.Node;
 import java.util.Collection;
 import java.util.Map;
 import org.onesec.raven.ivr.queue.CallQueueException;
@@ -71,12 +72,15 @@ public class CallsQueuesNode  extends BaseNode implements CallsQueues, DataPipe
             CallQueueRequestWrapper requestWrapper = new CallQueueRequestWrapperImpl(this, request);
             if (request.getQueueId()==null){
                 if (isLogLevelEnabled(LogLevel.ERROR))
-                    getLogger().error("Invalid call queue id. Call queue id can not be null");
+                    getLogger().error(
+                            "Rejecting queue request for call {}. Because queueId can not be null"
+                            , request.getConversation().getObjectName());
                 requestWrapper.fireRejectedQueueEvent();
+                return;
             }
-            CallsQueue queue = (CallsQueue) getChildren(request.getQueueId());
-            if (queue!=null && Status.STARTED.equals(getStatus()))
-                queue.queueCall(requestWrapper);
+            Node queue = getChildren(request.getQueueId());
+            if (queue!=null && Status.STARTED.equals(queue.getStatus()))
+                ((CallsQueue)queue).queueCall(requestWrapper);
             else {
                 if (isLogLevelEnabled(LogLevel.ERROR))
                     getLogger().error(

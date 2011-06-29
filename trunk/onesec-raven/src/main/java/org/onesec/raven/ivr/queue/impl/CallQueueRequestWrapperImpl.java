@@ -36,6 +36,7 @@ import org.onesec.raven.ivr.queue.event.NumberChangedQueueEvent;
 import org.onesec.raven.ivr.queue.event.ReadyToCommutateQueueEvent;
 import org.onesec.raven.ivr.queue.event.RejectedQueueEvent;
 import org.onesec.raven.ivr.queue.event.impl.CallQueueEventImpl;
+import org.onesec.raven.ivr.queue.event.impl.NumberChangedQueueEventImpl;
 import org.onesec.raven.ivr.queue.event.impl.RejectedQueueEventImpl;
 import org.raven.ds.Record;
 import org.raven.ds.RecordException;
@@ -56,6 +57,7 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
     private int priority;
     private String queueId;
     private long requestId;
+    private Integer positionInQueue;
     private CallsQueue queue;
     private StringBuilder log;
     private Record cdr;
@@ -67,6 +69,7 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
         this.request = request;
         this.requestId = 0;
         this.queue = null;
+        this.positionInQueue = 0;
         RecordSchemaNode schema = owner.getCdrRecordSchema();
         if (schema!=null) {
             cdr = schema.createRecord();
@@ -75,11 +78,26 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
         }
     }
 
+    public CallQueueRequest getWrappedRequest() {
+        return request;
+    }
+
     public IvrEndpointConversation getConversation()
     {
         return request.getConversation();
     }
 
+    public Integer getPositionInQueue() {
+        return positionInQueue;
+    }
+
+    public void setPositionInQueue(Integer positionInQueue) 
+    {
+        if (this.positionInQueue!=positionInQueue)
+            callQueueChangeEvent(new NumberChangedQueueEventImpl(
+                    queue, requestId, this.positionInQueue, positionInQueue));
+        this.positionInQueue = positionInQueue;
+    }
     
     public int getPriority() {
         return priority;
@@ -164,15 +182,21 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
     public void fireCallQueuedEvent() {
         callQueueChangeEvent(new CallQueueEventImpl(queue, requestId));
     }
-
+    
     private void sendCdrToConsumers()
     {
         Collection<Node> deps = owner.getDependentNodes();
         if (deps!=null && !deps.isEmpty()) {
             DataContextImpl context = new DataContextImpl();
             for (Node dep: deps)
-                if (dep instanceof DataConsumer)
+                if (dep instanceof DataConsumer && Node.Status.STARTED.equals(dep.getStatus()))
                     ((DataConsumer)dep).setData(owner, cdr, context);
         }
+    }
+
+    @Override
+    public String toString() 
+    {
+        return getConversation().getObjectName();
     }
 }

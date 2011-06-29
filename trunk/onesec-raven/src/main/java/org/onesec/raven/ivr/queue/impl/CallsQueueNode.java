@@ -16,10 +16,15 @@
  */
 package org.onesec.raven.ivr.queue.impl;
 
-import java.util.concurrent.PriorityBlockingQueue;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.raven.annotations.NodeClass;
@@ -49,7 +54,10 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
     private AtomicBoolean stopProcessing;
     private AtomicBoolean processingThreadRunning;
     private AtomicLong requestIdSeq;
-    private PriorityBlockingQueue<CallQueueRequestWrapper> queue;
+    private LinkedList<CallQueueRequestWrapper> queue;
+    private ReadWriteLock lock;
+    private Condition requestAddedCondition;
+    private CallsQueueRequestComparator requestComparator;
 
     @Override
     protected void initFields() {
@@ -58,6 +66,9 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
         stopProcessing = new AtomicBoolean(true);
         processingThreadRunning = new AtomicBoolean(false);
         requestIdSeq = new AtomicLong(1);
+        lock = new ReentrantReadWriteLock();
+        requestAddedCondition = lock.writeLock().newCondition();
+        requestComparator = new CallsQueueRequestComparator();
     }
 
     @Override
@@ -66,9 +77,7 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
         if (processingThreadRunning.get())
             throw new Exception(
                     "Can't start calls queue because of processing thread is still running");
-        queue = new PriorityBlockingQueue<CallQueueRequestWrapper>(maxQueueSize);
-//        queue = new PriorityBlockingQueue<CallQueueRequestWrapper>(
-//                maxQueueSize, new RequestComparator());
+        queue = new LinkedList();
         stopProcessing.set(false);
         requestIdSeq.set(1);
         executor.execute(this);        
@@ -84,16 +93,28 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
             debug("New request added to the queue ({})", request.toString());
         request.setCallsQueue(this);
         request.setRequestId(requestIdSeq.getAndIncrement());
-        if (queue.offer(request)) {
-            request.fireCallQueuedEvent();
-        } else{
-            if (isLogLevelEnabled(LogLevel.WARN))
-                warn(String.format(
-                        "The queue size was exceeded. The request (%s) was ignored."
-                        , request.toString()));
-            request.addToLog(String.format("The queue (%s) size was exceeded", getName()));
-            request.fireRejectedQueueEvent();
-        }        
+        addRequestToQueue(request);
+    }
+    
+    private void addRequestToQueue(CallQueueRequestWrapper request)
+    {
+        lock.writeLock().lock();
+        try {
+            queue.offer(request);
+            if (queue.size()>1)
+                Collections.sort(queue, requestComparator);
+            if (queue.size()>maxQueueSize){
+                CallQueueRequestWrapper rejReq = queue.pop();
+                rejReq.addToLog("queue size was exceeded");
+                rejReq.fireRejectedQueueEvent();
+            }else {
+                request.fireCallQueuedEvent();
+                fireQueueNumberChangedEvents();
+            }
+            requestAddedCondition.signal();
+        } finally {
+            lock.writeLock().unlock();
+        }
     }
 
     public Node getTaskNode() {
@@ -136,25 +157,38 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
     
     private void processRequest() throws InterruptedException
     {
-        
+        if (lock.writeLock().tryLock(100, TimeUnit.MILLISECONDS)) 
+            try {
+                requestAddedCondition.await(1, TimeUnit.SECONDS);
+                CallQueueRequestWrapper request = queue.peek();
+                if (request!=null){
+                    
+                    queue.pop();
+                }
+            } finally {
+                lock.writeLock().unlock();
+            }
     }
     
     private void clearQueue()
     {
         statusMessage.set("Stoping processing requests. Clearing queue...");
-        for (CallQueueRequestWrapper req: queue)
+        for (CallQueueRequestWrapper req: queue) {
+            req.addToLog("queue stopped");
             req.fireRejectedQueueEvent();
+        }
         queue=null;
     }
-    
-//    private class RequestComparator implements Comparator<CallQueueRequestWrapper>
-//    {
-//        public int compare(CallQueueRequestWrapper o1, CallQueueRequestWrapper o2)
-//        {
-//            int res = new Integer(o1.request.getPriority()).compareTo(o2.request.getPriority());
-//            if (res==0 && o1!=o2)
-//                res = new Long(o1.id).compareTo(o2.id);
-//            return res;
-//        }
-//    }
+
+    private void fireQueueNumberChangedEvents() 
+    {
+        int lastElement = Math.min(maxQueueSize, queue.size());
+        int pos = 1;
+        for (CallQueueRequestWrapper req: queue){
+            if (pos>lastElement)
+                break;
+            req.setPositionInQueue(pos);
+            pos++;
+        }
+    }
 }
