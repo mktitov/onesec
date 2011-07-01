@@ -14,23 +14,22 @@
  *  limitations under the License.
  *  under the License.
  */
-package org.onesec.raven.ivr.queue;
+package org.onesec.raven.ivr.queue.impl;
 
-import java.util.List;
-import org.raven.tree.Node;
+import org.raven.annotations.NodeClass;
+import org.raven.tree.impl.BaseNode;
+import org.raven.tree.impl.InvisibleNode;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface CallsQueuePrioritySelector extends Node
+@NodeClass(parentNode=InvisibleNode.class)
+public class CallsQueueOperatorsNode extends BaseNode
 {
-    /**
-     * Returns the priority with which or higher this selector work
-     */
-    public Integer getPriority();
-    /**
-     * Returns the operators for this priority
-     */
-    public List<CallsQueueOperatorRef> getOperatorsRefs();
+    public static final String NAME = "Operators";
+    
+    public CallsQueueOperatorsNode() {
+        super(NAME);
+    }
 }

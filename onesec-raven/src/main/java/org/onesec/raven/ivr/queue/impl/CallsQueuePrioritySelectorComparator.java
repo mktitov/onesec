@@ -14,23 +14,19 @@
  *  limitations under the License.
  *  under the License.
  */
-package org.onesec.raven.ivr.queue;
+package org.onesec.raven.ivr.queue.impl;
 
-import java.util.List;
-import org.raven.tree.Node;
+import java.util.Comparator;
+import org.onesec.raven.ivr.queue.CallsQueuePrioritySelector;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface CallsQueuePrioritySelector extends Node
+public class CallsQueuePrioritySelectorComparator implements Comparator<CallsQueuePrioritySelector> 
 {
-    /**
-     * Returns the priority with which or higher this selector work
-     */
-    public Integer getPriority();
-    /**
-     * Returns the operators for this priority
-     */
-    public List<CallsQueueOperatorRef> getOperatorsRefs();
+    public int compare(CallsQueuePrioritySelector o1, CallsQueuePrioritySelector o2) 
+    {
+        return o2.getPriority().compareTo(o1.getPriority());
+    }
 }

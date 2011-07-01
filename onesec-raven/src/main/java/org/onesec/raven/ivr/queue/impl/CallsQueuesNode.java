@@ -55,12 +55,31 @@ public class CallsQueuesNode  extends BaseNode implements CallsQueues, DataPipe
     private DataSource dataSource;
 
     private RecordSchemaNode _cdrRecordSchema;
+    private CallsQueueOperatorsNode operatorsNode;
+    private CallsQueuesContainerNode queuesNode;
 
     @Override
     protected void doStart() throws Exception
     {
         super.doStart();
         checkRecordSchema(cdrRecordSchema);
+        initNodes();
+    }
+    
+    private void initNodes()
+    {
+        operatorsNode = (CallsQueueOperatorsNode) getChildren(CallsQueueOperatorsNode.NAME);
+        if (operatorsNode==null){
+            operatorsNode = new CallsQueueOperatorsNode();
+            addAndSaveChildren(operatorsNode);
+            operatorsNode.start();
+        }
+        queuesNode = (CallsQueuesContainerNode) getChildren(CallsQueuesContainerNode.NAME);
+        if (queuesNode==null){
+            queuesNode = new CallsQueuesContainerNode();
+            addAndSaveChildren(queuesNode);
+            queuesNode.start();
+        }
     }
 
     public void queueCall(CallQueueRequest request) throws CallQueueException
@@ -70,23 +89,31 @@ public class CallsQueuesNode  extends BaseNode implements CallsQueues, DataPipe
                     , request.getConversation().getObjectName(), request.getQueueId());
         try{
             CallQueueRequestWrapper requestWrapper = new CallQueueRequestWrapperImpl(this, request);
-            if (request.getQueueId()==null){
-                if (isLogLevelEnabled(LogLevel.ERROR))
-                    getLogger().error(
-                            "Rejecting queue request for call {}. Because queueId can not be null"
-                            , request.getConversation().getObjectName());
+            if (!Status.STARTED.equals(getStatus())){
+                if (isLogLevelEnabled(LogLevel.WARN))
+                    getLogger().warn(
+                            logMess(request, "Rejected because of queues selector stopped"));
+                requestWrapper.addToLog("queues selector stopped");
                 requestWrapper.fireRejectedQueueEvent();
                 return;
             }
-            Node queue = getChildren(request.getQueueId());
+            if (request.getQueueId()==null){
+                if (isLogLevelEnabled(LogLevel.ERROR))
+                    getLogger().error(
+                            logMess(request, "Rejected because of queueId can not be null"));
+                requestWrapper.addToLog("null queue id");
+                requestWrapper.fireRejectedQueueEvent();
+                return;
+            }
+            Node queue = queuesNode.getChildren(request.getQueueId());
             if (queue!=null && Status.STARTED.equals(queue.getStatus()))
                 ((CallsQueue)queue).queueCall(requestWrapper);
             else {
                 if (isLogLevelEnabled(LogLevel.ERROR))
-                    getLogger().error(
-                            "Rejecting queue request for call {}. Because of queue ({}) "
-                            + "not found or stopped"
-                            , request.getConversation().getObjectName(), request.getQueueId());
+                    getLogger().error(logMess(
+                            request, "Rejected because of queue (%s) not found or stopped"
+                            , request.getQueueId()));
+                requestWrapper.addToLog("queue not found");
                 requestWrapper.fireRejectedQueueEvent();
             }
         }catch(Throwable e){
@@ -95,6 +122,14 @@ public class CallsQueuesNode  extends BaseNode implements CallsQueues, DataPipe
                 getLogger().error(message);
             throw new CallQueueException(message, e);
         }
+    }
+
+    public CallsQueueOperatorsNode getOperatorsNode() {
+        return operatorsNode;
+    }
+
+    public CallsQueuesContainerNode getQueuesNode() {
+        return queuesNode;
     }
 
     public boolean getDataImmediate(DataConsumer dataConsumer, DataContext context)
@@ -114,7 +149,7 @@ public class CallsQueuesNode  extends BaseNode implements CallsQueues, DataPipe
 
     public void setData(DataSource dataSource, Object data, DataContext context) 
     {
-        if (!Status.STARTED.equals(getStatus()) || !(data instanceof CallQueueRequest))
+        if (!(data instanceof CallQueueRequest))
             return;
         try {
             queueCall((CallQueueRequest)data);

@@ -16,36 +16,29 @@
  */
 package org.onesec.raven.ivr.queue.impl;
 
-import java.util.List;
 import org.onesec.raven.ivr.queue.CallsQueueOperator;
 import org.onesec.raven.ivr.queue.CallsQueueOperatorRef;
-import org.onesec.raven.ivr.queue.CallsQueuePrioritySelector;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.tree.impl.BaseNode;
-import org.raven.util.NodeUtils;
+import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
 import org.weda.annotations.constraints.NotNull;
 
 /**
  *
  * @author Mikhail Titov
  */
-@NodeClass(parentNode=CallsQueueNode.class)
-public class CallsQueuePrioritySelectorNode extends BaseNode implements CallsQueuePrioritySelector
+@NodeClass(parentNode=CallsQueuePrioritySelectorNode.class)
+public class CallsQueueOperatorRefNode extends BaseNode implements CallsQueueOperatorRef
 {
-    @NotNull @Parameter()
-    private Integer priority;
+    @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
+    private CallsQueueOperator operator;
 
-    public void setPriority(Integer priority) {
-        this.priority = priority;
+    public void setOperator(CallsQueueOperator operator) {
+        this.operator = operator;
     }
 
-    public Integer getPriority() {
-        return priority;
-    }
-
-    public List<CallsQueueOperatorRef> getOperatorsRefs() 
-    {
-        return NodeUtils.getChildsOfType(this, CallsQueueOperatorRef.class);
+    public CallsQueueOperator getOperator() {
+        return operator;
     }
 }
