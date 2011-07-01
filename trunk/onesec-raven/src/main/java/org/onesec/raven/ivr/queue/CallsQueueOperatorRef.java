@@ -16,21 +16,14 @@
  */
 package org.onesec.raven.ivr.queue;
 
-import java.util.List;
-import org.raven.tree.Node;
-
 /**
  *
  * @author Mikhail Titov
  */
-public interface CallsQueuePrioritySelector extends Node
+public interface CallsQueueOperatorRef 
 {
     /**
-     * Returns the priority with which or higher this selector work
+     * Returns the operator 
      */
-    public Integer getPriority();
-    /**
-     * Returns the operators for this priority
-     */
-    public List<CallsQueueOperatorRef> getOperatorsRefs();
+    public CallsQueueOperator getOperator();
 }

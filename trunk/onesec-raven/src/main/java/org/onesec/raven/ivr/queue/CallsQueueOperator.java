@@ -17,22 +17,26 @@
 
 package org.onesec.raven.ivr.queue;
 
+import org.raven.tree.Node;
+
 /**
  *
  * @author Mikhail Titov
  */
-public interface CallQueueOperator
+public interface CallsQueueOperator extends Node
 {
     /**
-     * Return <b>true</b> if the operator is busy by processing request
+     * Returns the request currently processing by this operator or null
      */
-    public boolean isBusy();
+    public CallQueueRequestWrapper getProcessingRequest();
     /**
      * Returns processed request count
      */
     public long getProcessedRequestCount();
     /**
      * Process call queue request
+     * Returns true if operator (this object) taken request for processing. If method returns false
+     * then operator is busy for now
      */
-    public void processRequest(CallQueueRequestWrapper request);
+    public boolean processRequest(CallsQueue queue, CallQueueRequestWrapper request);
 }

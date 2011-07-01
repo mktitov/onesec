@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.queue.impl;
 
+import org.raven.tree.Node;
 import org.junit.Before;
 import org.junit.Test;
 import org.onesec.raven.OnesecRavenTestCase;
@@ -64,6 +65,22 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
     }
 
     @Test
+    public void initNodesTest()
+    {
+        assertTrue(queues.start());
+        
+        Node operatorsNode = queues.getChildren(CallsQueueOperatorsNode.NAME);
+        assertNotNull(operatorsNode);
+        assertStarted(operatorsNode);
+        assertTrue(operatorsNode instanceof CallsQueueOperatorsNode);
+        
+        Node queuesNode = queues.getChildren(CallsQueuesContainerNode.NAME);
+        assertNotNull(queuesNode);
+        assertTrue(queuesNode instanceof CallsQueuesContainerNode);
+        assertStarted(queuesNode);
+    }
+
+    @Test
     public void badRecordSchemaTest()
     {
         RecordSchemaNode badSchema = new RecordSchemaNode();
@@ -80,6 +97,23 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
     {
         queues.setCdrRecordSchema(null);
         assertTrue(queues.start());
+    }
+    
+    @Test
+    public void queueCallOnStoppedNode()
+    {
+        CallQueueRequest req = createMock(CallQueueRequest.class);
+        IvrEndpointConversation conv = createMock(IvrEndpointConversation.class);
+        
+        expect(req.getConversation()).andReturn(conv);
+        expect(conv.getObjectName()).andReturn("call info");
+        req.callQueueChangeEvent(isA(RejectedQueueEvent.class));
+        
+        replay(req, conv);
+        
+        ds.pushData(req);
+        
+        verify(req, conv);
     }
     
     @Test
@@ -125,9 +159,10 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
     @Test
     public void queueNotFound2()
     {
+        assertTrue(queues.start());
         TestCallsQueueNode queue = new TestCallsQueueNode();
         queue.setName("queue");
-        queues.addAndSaveChildren(queue);
+        queues.getQueuesNode().addAndSaveChildren(queue);
         
         CallQueueRequest req = createMock(CallQueueRequest.class);
         IvrEndpointConversation conv = createMock(IvrEndpointConversation.class);
@@ -139,7 +174,6 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         
         replay(req, conv);
         
-        assertTrue(queues.start());
         assertNull(queue.lastRequest);
         
         ds.pushData(req);
@@ -153,7 +187,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         assertTrue(queues.start());
         TestCallsQueueNode queue = new TestCallsQueueNode();
         queue.setName("queue");
-        queues.addAndSaveChildren(queue);
+        queues.getQueuesNode().addAndSaveChildren(queue);
         assertTrue(queue.start());
         
         CallQueueRequest req = createMock(CallQueueRequest.class);

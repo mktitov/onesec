@@ -18,6 +18,7 @@ package org.onesec.raven.ivr.queue.impl;
 
 import java.util.Collections;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -27,6 +28,9 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
 import org.onesec.raven.ivr.queue.CallsQueue;
+import org.onesec.raven.ivr.queue.CallsQueueOperator;
+import org.onesec.raven.ivr.queue.CallsQueueOperatorRef;
+import org.onesec.raven.ivr.queue.CallsQueuePrioritySelector;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.log.LogLevel;
@@ -35,6 +39,7 @@ import org.raven.sched.Task;
 import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
 import org.raven.tree.Node;
 import org.raven.tree.impl.BaseNode;
+import org.raven.util.NodeUtils;
 import org.weda.annotations.constraints.NotNull;
 
 /**
@@ -91,6 +96,7 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
         }
         if (isLogLevelEnabled(LogLevel.DEBUG))
             debug("New request added to the queue ({})", request.toString());
+        
         request.setCallsQueue(this);
         request.setRequestId(requestIdSeq.getAndIncrement());
         addRequestToQueue(request);
@@ -104,7 +110,7 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
             if (queue.size()>1)
                 Collections.sort(queue, requestComparator);
             if (queue.size()>maxQueueSize){
-                CallQueueRequestWrapper rejReq = queue.pop();
+                CallQueueRequestWrapper rejReq = queue.removeLast();
                 rejReq.addToLog("queue size was exceeded");
                 rejReq.fireRejectedQueueEvent();
             }else {
@@ -123,6 +129,14 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
 
     public String getStatusMessage() {
         return statusMessage.get();
+    }
+
+    public Integer getMaxQueueSize() {
+        return maxQueueSize;
+    }
+
+    public void setMaxQueueSize(Integer maxQueueSize) {
+        this.maxQueueSize = maxQueueSize;
     }
 
     public ExecutorService getExecutor() {
@@ -160,14 +174,53 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
         if (lock.writeLock().tryLock(100, TimeUnit.MILLISECONDS)) 
             try {
                 requestAddedCondition.await(1, TimeUnit.SECONDS);
-                CallQueueRequestWrapper request = queue.peek();
-                if (request!=null){
-                    
-                    queue.pop();
+                boolean leaveInQueue = false;
+                try {
+                    CallQueueRequestWrapper request = queue.peek();
+                    if (request!=null){
+                        CallsQueuePrioritySelector selector = searchForPrioritySelector(request);
+                        if (selector==null) {
+                            if (isLogLevelEnabled(LogLevel.WARN))
+                                getLogger().warn(
+                                        "Rejecting request ({}). Not found priority selector", request);
+                            request.addToLog("not found priority selector");
+                            request.fireRejectedQueueEvent();
+                        } else {
+                            //looking up for operator that will process the request
+                            List<CallsQueueOperatorRef> operatorRefs = selector.getOperatorsRefs();
+                            boolean processed = false;
+                            for (CallsQueueOperatorRef operatorRef: operatorRefs)
+                                if (operatorRef.getOperator().processRequest(this, request)) {
+                                    processed = true;
+                                    break;
+                                }
+                            if (!processed) {
+                                //if not operators found then processing onBusyBehaviour
+                            }
+                        }
+                    }
+                }finally{
+                    if (!leaveInQueue)
+                        queue.pop();
                 }
             } finally {
                 lock.writeLock().unlock();
             }
+    }
+    
+    private CallsQueuePrioritySelector searchForPrioritySelector(CallQueueRequestWrapper request)
+    {
+        List<CallsQueuePrioritySelector> selectors = NodeUtils.getChildsOfType(
+                this, CallsQueuePrioritySelector.class);
+        
+        if (selectors.isEmpty())
+            return null;
+        
+        Collections.sort(selectors, new CallsQueuePrioritySelectorComparator());
+        for (CallsQueuePrioritySelector selector: selectors)
+            if (selector.getPriority()<=request.getPriority())
+                return selector;
+        return null;
     }
     
     private void clearQueue()
