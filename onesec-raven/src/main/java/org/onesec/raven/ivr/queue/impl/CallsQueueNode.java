@@ -28,6 +28,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
 import org.onesec.raven.ivr.queue.CallsQueue;
+import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviour;
 import org.onesec.raven.ivr.queue.CallsQueueOperator;
 import org.onesec.raven.ivr.queue.CallsQueueOperatorRef;
 import org.onesec.raven.ivr.queue.CallsQueuePrioritySelector;
@@ -195,7 +196,13 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
                                     break;
                                 }
                             if (!processed) {
-                                //if not operators found then processing onBusyBehaviour
+                                //if no operators found then processing onBusyBehaviour
+                                CallsQueueOnBusyBehaviour onBusyBehaviour = request.getOnBusyBehaviour();
+                                if (onBusyBehaviour==null){
+                                    onBusyBehaviour = selector.getOnBusyBehaviour();
+                                    request.setOnBusyBehaviour(onBusyBehaviour);
+                                }
+                                leaveInQueue = onBusyBehaviour.handleBehaviour(this, request);
                             }
                         }
                     }

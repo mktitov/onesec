@@ -34,6 +34,7 @@ import org.raven.ds.DataPipe;
 import org.raven.ds.DataSource;
 import org.raven.ds.RecordSchemaField;
 import org.raven.ds.RecordSchemaFieldType;
+import org.raven.ds.impl.DataContextImpl;
 import org.raven.ds.impl.RecordSchemaNode;
 import org.raven.ds.impl.RecordSchemaValueTypeHandlerFactory;
 import org.raven.log.LogLevel;
@@ -82,13 +83,18 @@ public class CallsQueuesNode  extends BaseNode implements CallsQueues, DataPipe
         }
     }
 
-    public void queueCall(CallQueueRequest request) throws CallQueueException
+    public void queueCall(CallQueueRequest request) throws CallQueueException {
+        queueCall(request, new DataContextImpl());
+    }
+
+    private void queueCall(CallQueueRequest request, DataContext context) throws CallQueueException
     {
         if (isLogLevelEnabled(LogLevel.DEBUG))
             getLogger().debug("Queueing call {} to the queue {}"
                     , request.getConversation().getObjectName(), request.getQueueId());
         try{
-            CallQueueRequestWrapper requestWrapper = new CallQueueRequestWrapperImpl(this, request);
+            CallQueueRequestWrapper requestWrapper = 
+                    new CallQueueRequestWrapperImpl(this, request, context);
             if (!Status.STARTED.equals(getStatus())){
                 if (isLogLevelEnabled(LogLevel.WARN))
                     getLogger().warn(
@@ -152,11 +158,13 @@ public class CallsQueuesNode  extends BaseNode implements CallsQueues, DataPipe
         if (!(data instanceof CallQueueRequest))
             return;
         try {
-            queueCall((CallQueueRequest)data);
+            queueCall((CallQueueRequest)data, context);
         } catch (CallQueueException ex) {
             if (isLogLevelEnabled(LogLevel.ERROR))
                 getLogger().error(
-                        "Error processing call queue request from {} ", dataSource.getPath());
+                        logMess((CallQueueRequest)data, "Error processing request from %s"
+                            , dataSource.getPath())
+                        , ex);
         }
     }
 

@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.queue.impl;
 
+import org.raven.ds.DataContext;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import java.util.Collection;
 import org.raven.ds.DataConsumer;
@@ -29,6 +30,7 @@ import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.queue.event.CallQueueEvent;
 import org.onesec.raven.ivr.queue.CallQueueRequest;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
+import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviour;
 import org.onesec.raven.ivr.queue.event.CallQueuedEvent;
 import org.onesec.raven.ivr.queue.event.CommutatedQueueEvent;
 import org.onesec.raven.ivr.queue.event.DisconnectedQueueEvent;
@@ -53,6 +55,7 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
 {
     private final CallQueueRequest request;
     private final CallsQueuesNode owner;
+    private final DataContext context;
 
     private int priority;
     private String queueId;
@@ -61,21 +64,45 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
     private CallsQueue queue;
     private StringBuilder log;
     private Record cdr;
+    private int onBusyBehaviourStep;
+    private CallsQueueOnBusyBehaviour onBusyBehaviour;
 
-    public CallQueueRequestWrapperImpl(CallsQueuesNode owner, CallQueueRequest request)
-            throws RecordException
+    public CallQueueRequestWrapperImpl(
+            CallsQueuesNode owner, CallQueueRequest request, DataContext context)
+        throws RecordException
     {
         this.owner = owner;
         this.request = request;
+        this.context = context;
         this.requestId = 0;
         this.queue = null;
         this.positionInQueue = 0;
+        this.onBusyBehaviourStep = 0;
         RecordSchemaNode schema = owner.getCdrRecordSchema();
         if (schema!=null) {
             cdr = schema.createRecord();
-            cdr.setValue(QUEUED_TIME, getTimestamp());
             cdr.setValue(CALLING_NUMBER, request.getConversation().getCallingNumber());
         }
+    }
+
+    public CallsQueueOnBusyBehaviour getOnBusyBehaviour() {
+        return onBusyBehaviour;
+    }
+
+    public void setOnBusyBehaviour(CallsQueueOnBusyBehaviour onBusyBehaviour) {
+        this.onBusyBehaviour = onBusyBehaviour;
+    }
+
+    public int getOnBusyBehaviourStep() {
+        return onBusyBehaviourStep;
+    }
+
+    public void setOnBusyBehaviourStep(int onBusyBehaviourStep) {
+        this.onBusyBehaviourStep = onBusyBehaviourStep;
+    }
+
+    public DataContext getContext() {
+        return context;
     }
 
     public CallQueueRequest getWrappedRequest() {
@@ -187,7 +214,6 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
     {
         Collection<Node> deps = owner.getDependentNodes();
         if (deps!=null && !deps.isEmpty()) {
-            DataContextImpl context = new DataContextImpl();
             for (Node dep: deps)
                 if (dep instanceof DataConsumer && Node.Status.STARTED.equals(dep.getStatus()))
                     ((DataConsumer)dep).setData(owner, cdr, context);
