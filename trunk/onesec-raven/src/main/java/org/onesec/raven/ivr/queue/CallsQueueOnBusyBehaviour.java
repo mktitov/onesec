@@ -16,25 +16,18 @@
  */
 package org.onesec.raven.ivr.queue;
 
-import java.util.List;
-import org.raven.tree.Node;
-
 /**
  *
  * @author Mikhail Titov
  */
-public interface CallsQueuePrioritySelector extends Node
+public interface CallsQueueOnBusyBehaviour 
 {
     /**
-     * Returns the priority with which or higher this selector work
+     * Handles onBusy behaviour
+     * @param queue the current queue of the request
+     * @param request the request
+     * @return <b>true</b> if request must stay in the current queue or <b>false</b> if request
+     *      must be removed from the queue
      */
-    public Integer getPriority();
-    /**
-     * Returns the operators for this priority
-     */
-    public List<CallsQueueOperatorRef> getOperatorsRefs();
-    /**
-     * Returns "on busy" behaviour for this selector
-     */
-    public CallsQueueOnBusyBehaviour getOnBusyBehaviour();
+    public boolean handleBehaviour(CallsQueue queue, CallQueueRequestWrapper request);
 }

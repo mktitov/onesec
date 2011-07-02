@@ -18,6 +18,7 @@
 package org.onesec.raven.ivr.queue;
 
 import org.onesec.raven.ivr.queue.event.NumberChangedQueueEvent;
+import org.raven.ds.DataContext;
 
 /**
  *
@@ -25,21 +26,65 @@ import org.onesec.raven.ivr.queue.event.NumberChangedQueueEvent;
  */
 public interface CallQueueRequestWrapper extends CallQueueRequest
 {
+    /**
+     * Sets the unique (in queue) for this request
+     */
     public void setRequestId(long requestId);
+    /**
+     * Returns the request id
+     */
     public long getRequestId();
+    /**
+     * Sets the call queue for request
+     */
     public void setCallsQueue(CallsQueue queue);
+    /**
+     * Returns the calls queue for the request
+     */
     public CallsQueue getCallsQueue();
+    /**
+     * Fires "rejected" event for the request
+     */
     public void fireRejectedQueueEvent();
+    /**
+     * Fires "queued" event for the request
+     */
     public void fireCallQueuedEvent();
+    /**
+     * Returns the wrapped request
+     */
     public CallQueueRequest getWrappedRequest(); 
     /**
      * Sets the position of the request in the queue and fires {@link NumberChangedQueueEvent} if 
      * the position changed.
      */
     public void setPositionInQueue(Integer pos);
+    /**
+     * Returns the current position in the queue
+     */
     public Integer getPositionInQueue();
     /**
      * Adds message to log for this request
      */
     public void addToLog(String message);
+    /**
+     * Returns the data context of the request
+     */
+    public DataContext getContext();
+    /**
+     * Sets the on busy behaviour for this request
+     */
+    public void setOnBusyBehaviour(CallsQueueOnBusyBehaviour onBusyBehaviour);
+    /**
+     * Returns the on busy behaviour for this request
+     */
+    public CallsQueueOnBusyBehaviour getOnBusyBehaviour();
+    /**
+     * Sets the current on busy behaviour step number
+     */
+    public void setOnBusyBehaviourStep(int step);
+    /**
+     * Returns the current on busy behaviour step number
+     */
+    public int getOnBusyBehaviourStep();
 }

@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.queue.impl;
 
+import org.raven.ds.DataContext;
 import org.raven.tree.Node;
 import org.junit.Before;
 import org.junit.Test;
@@ -25,6 +26,7 @@ import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.raven.ds.impl.RecordSchemaNode;
 import org.onesec.raven.ivr.queue.CallQueueRequest;
 import org.onesec.raven.ivr.queue.event.RejectedQueueEvent;
+import org.raven.ds.impl.DataContextImpl;
 import org.raven.test.PushDataSource;
 import static org.easymock.EasyMock.*;
 
@@ -191,15 +193,17 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         assertTrue(queue.start());
         
         CallQueueRequest req = createMock(CallQueueRequest.class);
+        DataContext context = createMock(DataContext.class);
         
         expect(req.getQueueId()).andReturn("queue").anyTimes();
         
-        replay(req);
+        replay(req, context);
         
-        ds.pushData(req);
+        ds.pushData(req, context);
         assertNotNull(queue.lastRequest);
         assertSame(req, queue.lastRequest.getWrappedRequest());
+        assertSame(context, queue.lastRequest.getContext());
         
-        verify(req);
+        verify(req, context);
     }
 }

@@ -76,7 +76,7 @@ public class CallQueueRequestWrapperImplTest extends OnesecRavenTestCase
 
         replay(req, conv, queue);
 
-        CallQueueRequestWrapperImpl wrapper = new CallQueueRequestWrapperImpl(callsQueues, req);
+        CallQueueRequestWrapperImpl wrapper = new CallQueueRequestWrapperImpl(callsQueues, req, null);
         wrapper.callQueueChangeEvent(queuedEvent);
 
         verify(req, conv, queue);
