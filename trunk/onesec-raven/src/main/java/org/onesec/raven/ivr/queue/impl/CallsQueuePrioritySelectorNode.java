@@ -17,7 +17,7 @@
 package org.onesec.raven.ivr.queue.impl;
 
 import java.util.List;
-import org.onesec.raven.ivr.queue.CallsQueueOperator;
+import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviour;
 import org.onesec.raven.ivr.queue.CallsQueueOperatorRef;
 import org.onesec.raven.ivr.queue.CallsQueuePrioritySelector;
 import org.raven.annotations.NodeClass;
@@ -35,6 +35,38 @@ public class CallsQueuePrioritySelectorNode extends BaseNode implements CallsQue
 {
     @NotNull @Parameter()
     private Integer priority;
+    
+    private CallsQueueOnBusyBehaviourNode onBusyBehaviour;
+
+    @Override
+    protected void doInit() throws Exception {
+        super.doInit();
+        initNodes();
+    }
+
+    @Override
+    protected void doStart() throws Exception {
+        super.doStart();
+        initNodes();
+    }
+    
+    private void initNodes() {
+        onBusyBehaviour = 
+                (CallsQueueOnBusyBehaviourNode)getChildren(CallsQueueOnBusyBehaviourNode.NAME);
+        if (onBusyBehaviour==null){
+            onBusyBehaviour = new CallsQueueOnBusyBehaviourNode();
+            addAndSaveChildren(onBusyBehaviour);
+            onBusyBehaviour.start();
+        }
+    }
+    
+    public CallsQueueOnBusyBehaviour getOnBusyBehaviour() {
+        return onBusyBehaviour;
+    }
+    
+    public List<CallsQueueOperatorRef> getOperatorsRefs() {
+        return NodeUtils.getChildsOfType(this, CallsQueueOperatorRef.class);
+    }
 
     public void setPriority(Integer priority) {
         this.priority = priority;
@@ -42,10 +74,5 @@ public class CallsQueuePrioritySelectorNode extends BaseNode implements CallsQue
 
     public Integer getPriority() {
         return priority;
-    }
-
-    public List<CallsQueueOperatorRef> getOperatorsRefs() 
-    {
-        return NodeUtils.getChildsOfType(this, CallsQueueOperatorRef.class);
     }
 }
