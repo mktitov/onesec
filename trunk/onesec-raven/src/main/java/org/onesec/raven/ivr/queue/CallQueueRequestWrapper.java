@@ -80,11 +80,18 @@ public interface CallQueueRequestWrapper extends CallQueueRequest
      */
     public CallsQueueOnBusyBehaviour getOnBusyBehaviour();
     /**
-     * Sets the current on busy behaviour step number
+     * Sets the "on busy" behaviour step number (zero based) that must be executed on the next 
+     * "on busy" event
      */
     public void setOnBusyBehaviourStep(int step);
     /**
-     * Returns the current on busy behaviour step number
+     * Return the "on busy" behaviour step number (zero based) that must be executed on the next 
+     * "on busy" event
      */
     public int getOnBusyBehaviourStep();
+    /**
+     * Returns <b>true</b> if the request valid at this moment of time. If method returns 
+     * <b>false</b> then queue must cancel request processing.
+     */
+    public boolean isValid();
 }

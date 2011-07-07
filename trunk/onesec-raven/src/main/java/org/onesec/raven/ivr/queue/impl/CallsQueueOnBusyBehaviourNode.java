@@ -16,10 +16,13 @@
  */
 package org.onesec.raven.ivr.queue.impl;
 
+import java.util.List;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviour;
+import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviourStep;
 import org.raven.tree.impl.BaseNode;
+import org.raven.util.NodeUtils;
 
 /**
  *
@@ -28,13 +31,27 @@ import org.raven.tree.impl.BaseNode;
 public class CallsQueueOnBusyBehaviourNode extends BaseNode implements CallsQueueOnBusyBehaviour
 {
     public static final String NAME = "onBusyBehaviour";
+    public static final String REACHED_THE_END_OF_SEQ = 
+            "reached the end of the \"on busy behaviour steps\" sequence";
 
     public CallsQueueOnBusyBehaviourNode() {
         super(NAME);
     }
 
-    public boolean handleBehaviour(CallsQueue queue, CallQueueRequestWrapper request) {
-        throw new UnsupportedOperationException("Not supported yet.");
+    public boolean handleBehaviour(CallsQueue queue, CallQueueRequestWrapper request) 
+    {
+        List<CallsQueueOnBusyBehaviourStep> steps = NodeUtils.getChildsOfType(
+                this, CallsQueueOnBusyBehaviourStep.class);
+        int step = request.getOnBusyBehaviourStep();
+        try {
+            if (steps.isEmpty() || step>=steps.size()){
+                request.addToLog(REACHED_THE_END_OF_SEQ);
+                request.fireRejectedQueueEvent();
+                return false;
+            } else
+                return steps.get(step).handleBehaviour(queue, request);
+        } finally {
+            request.setOnBusyBehaviourStep(++step);
+        }
     }
-    
 }

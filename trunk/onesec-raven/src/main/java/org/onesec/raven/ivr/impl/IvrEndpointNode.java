@@ -19,7 +19,6 @@ package org.onesec.raven.ivr.impl;
 
 import com.cisco.jtapi.extensions.CiscoAddrInServiceEv;
 import com.cisco.jtapi.extensions.CiscoAddrOutOfServiceEv;
-import com.cisco.jtapi.extensions.CiscoCall;
 import com.cisco.jtapi.extensions.CiscoMediaOpenLogicalChannelEv;
 import com.cisco.jtapi.extensions.CiscoMediaTerminal;
 import com.cisco.jtapi.extensions.CiscoRTPOutputProperties;
@@ -38,7 +37,6 @@ import javax.telephony.AddressObserver;
 import javax.telephony.Call;
 import javax.telephony.Provider;
 import javax.telephony.Terminal;
-import javax.telephony.callcontrol.CallControlCall;
 import javax.telephony.callcontrol.CallControlCallObserver;
 import javax.telephony.callcontrol.CallControlConnection;
 import javax.telephony.callcontrol.events.CallCtlConnEstablishedEv;
@@ -1194,9 +1192,11 @@ public class IvrEndpointNode extends BaseNode
         }
     }
 
-    public Node getOwner()
-    {
+    public Node getOwner() {
         return this;
+    }
+
+    public void listenerAdded() {
     }
 
     public void conversationStarted() {

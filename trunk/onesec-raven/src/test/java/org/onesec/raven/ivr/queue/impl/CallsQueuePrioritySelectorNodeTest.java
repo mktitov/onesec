@@ -14,28 +14,25 @@
  *  limitations under the License.
  *  under the License.
  */
-package org.onesec.raven.ivr.queue;
+package org.onesec.raven.ivr.queue.impl;
 
-import java.util.List;
-import org.raven.tree.Node;
+import org.junit.Test;
+import org.onesec.raven.OnesecRavenTestCase;
+import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviour;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface CallsQueuePrioritySelector extends Node
+public class CallsQueuePrioritySelectorNodeTest extends OnesecRavenTestCase
 {
-    /**
-     * Returns the priority with which or higher this selector work
-     */
-    public Integer getPriority();
-    /**
-     * Returns the operators for this priority. Never returns null (returns empty list if 
-     * no operators for this priority selector)
-     */
-    public List<CallsQueueOperatorRef> getOperatorsRefs();
-    /**
-     * Returns "on busy" behaviour for this selector
-     */
-    public CallsQueueOnBusyBehaviour getOnBusyBehaviour();
+    @Test
+    public void initNodesTest()
+    {
+        CallsQueuePrioritySelectorNode selector = new CallsQueuePrioritySelectorNode();
+        selector.setName("priority selector");
+        tree.getRootNode().addAndSaveChildren(selector);
+        CallsQueueOnBusyBehaviour onBusyBehaviour = selector.getOnBusyBehaviour();
+        assertNotNull(onBusyBehaviour);
+    }
 }
