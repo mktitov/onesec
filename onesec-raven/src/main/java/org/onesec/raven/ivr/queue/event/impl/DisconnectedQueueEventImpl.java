@@ -1,5 +1,5 @@
 /*
- *  Copyright 2009 Mikhail Titov.
+ *  Copyright 2011 Mikhail Titov.
  * 
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -14,20 +14,18 @@
  *  limitations under the License.
  *  under the License.
  */
+package org.onesec.raven.ivr.queue.event.impl;
 
-package org.onesec.raven.ivr;
-
-import org.onesec.core.State;
+import org.onesec.raven.ivr.queue.CallsQueue;
+import org.onesec.raven.ivr.queue.event.DisconnectedQueueEvent;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface IvrEndpointConversationState 
-    extends State<IvrEndpointConversationState, IvrEndpointConversation>
+public class DisconnectedQueueEventImpl extends CallQueueEventImpl implements DisconnectedQueueEvent
 {
-    public final static int READY = 1;
-    public final static int TALKING = 2;
-    public final static int TRANSFERING = 3;
-    public final static int INVALID = 4;
+    public DisconnectedQueueEventImpl(CallsQueue callsQueue, long requestId) {
+        super(callsQueue, requestId);
+    }
 }

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2009 Mikhail Titov.
+ *  Copyright 2011 Mikhail Titov.
  * 
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -14,20 +14,12 @@
  *  limitations under the License.
  *  under the License.
  */
-
-package org.onesec.raven.ivr;
-
-import org.onesec.core.State;
+package org.onesec.raven.ivr.queue;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface IvrEndpointConversationState 
-    extends State<IvrEndpointConversationState, IvrEndpointConversation>
+public interface CallsQueueOnBusyBehaviourStep extends CallsQueueOnBusyBehaviour
 {
-    public final static int READY = 1;
-    public final static int TALKING = 2;
-    public final static int TRANSFERING = 3;
-    public final static int INVALID = 4;
 }

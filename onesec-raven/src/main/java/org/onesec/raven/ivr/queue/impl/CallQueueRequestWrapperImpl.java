@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.queue.impl;
 
+import org.onesec.raven.ivr.CompletionCode;
 import org.raven.ds.DataContext;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import java.util.Collection;
@@ -26,7 +27,10 @@ import org.raven.tree.Node;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.onesec.raven.ivr.IvrEndpointConversation;
+import org.onesec.raven.ivr.IvrEndpointConversationListener;
+import org.onesec.raven.ivr.IvrEndpointConversationState;
 import org.onesec.raven.ivr.queue.event.CallQueueEvent;
 import org.onesec.raven.ivr.queue.CallQueueRequest;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
@@ -38,6 +42,7 @@ import org.onesec.raven.ivr.queue.event.NumberChangedQueueEvent;
 import org.onesec.raven.ivr.queue.event.ReadyToCommutateQueueEvent;
 import org.onesec.raven.ivr.queue.event.RejectedQueueEvent;
 import org.onesec.raven.ivr.queue.event.impl.CallQueueEventImpl;
+import org.onesec.raven.ivr.queue.event.impl.DisconnectedQueueEventImpl;
 import org.onesec.raven.ivr.queue.event.impl.NumberChangedQueueEventImpl;
 import org.onesec.raven.ivr.queue.event.impl.RejectedQueueEventImpl;
 import org.raven.ds.Record;
@@ -56,6 +61,7 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
     private final CallQueueRequest request;
     private final CallsQueuesNode owner;
     private final DataContext context;
+    private final ConversationListener listener;
 
     private int priority;
     private String queueId;
@@ -66,6 +72,7 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
     private Record cdr;
     private int onBusyBehaviourStep;
     private CallsQueueOnBusyBehaviour onBusyBehaviour;
+    private AtomicBoolean valid;
 
     public CallQueueRequestWrapperImpl(
             CallsQueuesNode owner, CallQueueRequest request, DataContext context)
@@ -78,10 +85,24 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
         this.queue = null;
         this.positionInQueue = 0;
         this.onBusyBehaviourStep = 0;
+        this.valid = new AtomicBoolean(true);
+        listener = new ConversationListener(request.getConversation());
         RecordSchemaNode schema = owner.getCdrRecordSchema();
         if (schema!=null) {
             cdr = schema.createRecord();
             cdr.setValue(CALLING_NUMBER, request.getConversation().getCallingNumber());
+        }
+    }
+
+    public boolean isValid() {
+        return valid.get();
+    }
+    
+    private void invalidate()
+    {
+        if (valid.compareAndSet(true, false)){
+            addToLog("conversation stopped by abonent");
+            fireDisconnectedQueueEvent();
         }
     }
 
@@ -109,8 +130,7 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
         return request;
     }
 
-    public IvrEndpointConversation getConversation()
-    {
+    public IvrEndpointConversation getConversation() {
         return request.getConversation();
     }
 
@@ -210,6 +230,10 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
         callQueueChangeEvent(new CallQueueEventImpl(queue, requestId));
     }
     
+    public void fireDisconnectedQueueEvent(){
+        callQueueChangeEvent(new DisconnectedQueueEventImpl(queue, requestId));
+    }
+    
     private void sendCdrToConsumers()
     {
         Collection<Node> deps = owner.getDependentNodes();
@@ -224,5 +248,31 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
     public String toString() 
     {
         return getConversation().getObjectName();
+    }
+    
+    private class ConversationListener implements IvrEndpointConversationListener
+    {
+        private final IvrEndpointConversation conversation;
+
+        public ConversationListener(IvrEndpointConversation conversation) {
+            this.conversation = conversation;
+            conversation.addConversationListener(this);
+        }
+
+        public void listenerAdded() {
+            if (conversation.getState().getId()==IvrEndpointConversationState.INVALID)
+                invalidate();
+        }
+        
+        public void conversationStarted() {
+        }
+
+        public void conversationStoped(CompletionCode completionCode) {
+            invalidate();
+        }
+
+        public void conversationTransfered(String address) {
+            invalidate();
+        }
     }
 }

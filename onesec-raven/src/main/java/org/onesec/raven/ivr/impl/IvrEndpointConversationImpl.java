@@ -113,6 +113,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             if (listeners==null)
                 listeners = new HashSet<IvrEndpointConversationListener>();
             listeners.add(listener);
+            listener.listenerAdded();
         } finally {
             lock.writeLock().unlock();
         }

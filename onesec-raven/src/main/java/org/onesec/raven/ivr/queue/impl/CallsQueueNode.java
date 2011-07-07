@@ -29,7 +29,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviour;
-import org.onesec.raven.ivr.queue.CallsQueueOperator;
 import org.onesec.raven.ivr.queue.CallsQueueOperatorRef;
 import org.onesec.raven.ivr.queue.CallsQueuePrioritySelector;
 import org.raven.annotations.NodeClass;
@@ -58,9 +57,9 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
     
     private AtomicReference<String> statusMessage;
     private AtomicBoolean stopProcessing;
-    private AtomicBoolean processingThreadRunning;
+    AtomicBoolean processingThreadRunning;
     private AtomicLong requestIdSeq;
-    private LinkedList<CallQueueRequestWrapper> queue;
+    LinkedList<CallQueueRequestWrapper> queue;
     private ReadWriteLock lock;
     private Condition requestAddedCondition;
     private CallsQueueRequestComparator requestComparator;
@@ -86,7 +85,13 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
         queue = new LinkedList();
         stopProcessing.set(false);
         requestIdSeq.set(1);
-        executor.execute(this);        
+        executor.execute(this);
+    }
+
+    @Override
+    protected void doStop() throws Exception {
+        super.doStop();
+        stopProcessing.set(true);
     }
     
     public void queueCall(CallQueueRequestWrapper request) 
@@ -99,7 +104,8 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
             debug("New request added to the queue ({})", request.toString());
         
         request.setCallsQueue(this);
-        request.setRequestId(requestIdSeq.getAndIncrement());
+        if (request.getRequestId()==0)
+            request.setRequestId(requestIdSeq.getAndIncrement());
         addRequestToQueue(request);
     }
     
@@ -170,7 +176,7 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
         }
     }
     
-    private void processRequest() throws InterruptedException
+    void processRequest() throws InterruptedException
     {
         if (lock.writeLock().tryLock(100, TimeUnit.MILLISECONDS)) 
             try {
@@ -183,7 +189,8 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
                         if (selector==null) {
                             if (isLogLevelEnabled(LogLevel.WARN))
                                 getLogger().warn(
-                                        "Rejecting request ({}). Not found priority selector", request);
+                                        "Rejecting request ({}). Not found priority selector"
+                                        , request);
                             request.addToLog("not found priority selector");
                             request.fireRejectedQueueEvent();
                         } else {
@@ -197,7 +204,8 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
                                 }
                             if (!processed) {
                                 //if no operators found then processing onBusyBehaviour
-                                CallsQueueOnBusyBehaviour onBusyBehaviour = request.getOnBusyBehaviour();
+                                CallsQueueOnBusyBehaviour onBusyBehaviour = 
+                                        request.getOnBusyBehaviour();
                                 if (onBusyBehaviour==null){
                                     onBusyBehaviour = selector.getOnBusyBehaviour();
                                     request.setOnBusyBehaviour(onBusyBehaviour);
@@ -207,8 +215,10 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
                         }
                     }
                 }finally{
-                    if (!leaveInQueue)
+                    if (!leaveInQueue && queue.peek()!=null) {
                         queue.pop();
+                        fireQueueNumberChangedEvents();
+                    }
                 }
             } finally {
                 lock.writeLock().unlock();

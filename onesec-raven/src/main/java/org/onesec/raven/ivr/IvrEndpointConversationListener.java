@@ -24,6 +24,12 @@ package org.onesec.raven.ivr;
 public interface IvrEndpointConversationListener
 {
     /**
+     * Fires when listener added to the conversation. The advantage to execute code inside 
+     * this method is that the conversation state can not change at the time of execution of this
+     * method
+     */
+    public void listenerAdded();
+    /**
      * Fires when conversation was started.
      */
     public void conversationStarted();

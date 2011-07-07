@@ -17,13 +17,18 @@
 
 package org.onesec.raven.ivr.queue.impl;
 
+import org.easymock.IArgumentMatcher;
 import org.onesec.raven.ivr.queue.event.impl.CallQueuedEventImpl;
 import org.junit.Before;
 import org.junit.Test;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.ivr.IvrEndpointConversation;
+import org.onesec.raven.ivr.IvrEndpointConversationListener;
+import org.onesec.raven.ivr.IvrEndpointConversationState;
 import org.onesec.raven.ivr.queue.CallQueueRequest;
+import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
 import org.onesec.raven.ivr.queue.CallsQueue;
+import org.onesec.raven.ivr.queue.event.DisconnectedQueueEvent;
 import static org.easymock.EasyMock.*;
 import org.raven.ds.RecordException;
 import org.raven.log.LogLevel;
@@ -62,14 +67,17 @@ public class CallQueueRequestWrapperImplTest extends OnesecRavenTestCase
     }
 
     @Test
-    public void test() throws RecordException
+    public void validRequestTest() throws RecordException
     {
         CallQueueRequest req = createMock(CallQueueRequest.class);
         IvrEndpointConversation conv = createMock(IvrEndpointConversation.class);
+        IvrEndpointConversationState state = createMock(IvrEndpointConversationState.class);
         CallsQueue queue = createMock(CallsQueue.class);
         expect(req.getConversation()).andReturn(conv).atLeastOnce();
         expect(conv.getCallingNumber()).andReturn("1234").atLeastOnce();
         expect(conv.getObjectName()).andReturn("[7000]").anyTimes();
+        expect(state.getId()).andReturn(IvrEndpointConversationState.TALKING);
+        conv.addConversationListener(isA(IvrEndpointConversationListener.class));
 
         CallQueuedEventImpl queuedEvent = new CallQueuedEventImpl(queue, 1, "q1");
         req.callQueueChangeEvent(queuedEvent);
@@ -77,8 +85,47 @@ public class CallQueueRequestWrapperImplTest extends OnesecRavenTestCase
         replay(req, conv, queue);
 
         CallQueueRequestWrapperImpl wrapper = new CallQueueRequestWrapperImpl(callsQueues, req, null);
+        assertTrue(wrapper.isValid());
         wrapper.callQueueChangeEvent(queuedEvent);
 
         verify(req, conv, queue);
+    }
+    
+    @Test
+    public void invalidTest() throws Exception
+    {
+        CallQueueRequest request = createMock(CallQueueRequest.class);
+        IvrEndpointConversation conv = createMock((IvrEndpointConversation.class));
+        CallsQueue queue = createMock(CallsQueue.class);
+        IvrEndpointConversationState state = createMock(IvrEndpointConversationState.class);
+        
+        expect(request.getConversation()).andReturn(conv).times(2);
+        expect(conv.getCallingNumber()).andReturn("1234").atLeastOnce();
+        expect(conv.getObjectName()).andReturn("[7000]").anyTimes();
+        conv.addConversationListener(callListenerAdded());
+        expect(conv.getState()).andReturn(state);
+        expect(state.getId()).andReturn(IvrEndpointConversationState.INVALID);
+        request.callQueueChangeEvent(isA(DisconnectedQueueEvent.class));
+        
+        replay(request, conv, queue, state);
+        
+        CallQueueRequestWrapper wrapper = 
+                new CallQueueRequestWrapperImpl(callsQueues, request, null);
+        assertFalse(wrapper.isValid());
+        
+        verify(request, conv, queue, state);
+    }
+    
+    public static IvrEndpointConversationListener callListenerAdded()
+    {
+        reportMatcher(new IArgumentMatcher() {
+            public boolean matches(Object argument) {
+                ((IvrEndpointConversationListener)argument).listenerAdded();
+                return true;
+            }
+            public void appendTo(StringBuffer buffer) {
+            }
+        });
+        return null;
     }
 }
