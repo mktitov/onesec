@@ -24,4 +24,5 @@ package org.onesec.raven.ivr.queue;
 public interface CallsQueue
 {
     public void queueCall(CallQueueRequestWrapper request);
+    public String getName();
 }

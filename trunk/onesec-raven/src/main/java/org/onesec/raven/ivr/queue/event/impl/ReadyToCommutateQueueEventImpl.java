@@ -15,18 +15,27 @@
  *  under the License.
  */
 
-package org.onesec.raven.ivr.queue.event;
+package org.onesec.raven.ivr.queue.event.impl;
 
+import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.CallsQueueOperator;
+import org.onesec.raven.ivr.queue.event.ReadyToCommutateQueueEvent;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface ReadyToCommutateQueueEvent extends CallQueueEvent
+public class ReadyToCommutateQueueEventImpl extends CallQueueEventImpl implements ReadyToCommutateQueueEvent
 {
-    /**
-     * Return the call queue operator that controls the commutation
-     */
-    public CallsQueueOperator getOperator();
+    private final CallsQueueOperator operator;
+
+    public ReadyToCommutateQueueEventImpl(CallsQueue callsQueue, long requestId, CallsQueueOperator operator)
+    {
+        super(callsQueue, requestId);
+        this.operator = operator;
+    }
+
+    public CallsQueueOperator getOperator() {
+        return operator;
+    }
 }

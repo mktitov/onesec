@@ -22,7 +22,6 @@ import org.junit.Test;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviour;
-import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviourStep;
 import org.onesec.raven.ivr.queue.CallsQueueOperator;
 import org.onesec.raven.ivr.queue.CallsQueueOperatorRef;
 import org.raven.sched.impl.ExecutorServiceNode;
@@ -141,10 +140,12 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         
         CallQueueRequestWrapper req = createMock(CallQueueRequestWrapper.class);
         req.setCallsQueue(queue);
+        expect(req.getRequestId()).andReturn(0l);
         req.setRequestId(1);
         req.setPositionInQueue(1);
         expect(req.getPriority()).andReturn(1).anyTimes();
         req.fireCallQueuedEvent();
+        expect(req.getOperatorIndex()).andReturn(-1).anyTimes();
         expect(req.getOnBusyBehaviour()).andReturn(null);
         req.setOnBusyBehaviour(isA(CallsQueueOnBusyBehaviour.class));
         expect(req.getOnBusyBehaviourStep()).andReturn(0);
@@ -162,7 +163,8 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         verify(req);
     }
     
-    @Test public void processedByOperatorTest() throws Exception
+    @Test
+    public void processedByOperatorTest() throws Exception
     {
         executor.stop();
         TestPrioritySelector selector = addPrioritySelector("selector 1", 1, null);
@@ -172,13 +174,16 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         CallsQueueOperator operator = createMock(CallsQueueOperator.class);
         
         req.setCallsQueue(queue);
+        expect(req.getRequestId()).andReturn(0l);
         req.setRequestId(1);
         req.setPositionInQueue(1);
         req.fireCallQueuedEvent();        
         expect(req.getPriority()).andReturn(1).anyTimes();
+        expect(req.getOperatorIndex()).andReturn(-1);
         
         expect(operatorRef.getOperator()).andReturn(operator);
         expect(operator.processRequest(queue, req)).andReturn(Boolean.TRUE);
+        req.setOperatorIndex(0);
 
         replay(req, operatorRef, operator);
         
@@ -201,10 +206,12 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         CallsQueueOnBusyBehaviour onBusyBehaviour = createMock(CallsQueueOnBusyBehaviour.class);
         
         req.setCallsQueue(queue);
+        expect(req.getRequestId()).andReturn(0l);
         req.setRequestId(1);
         req.setPositionInQueue(1);
-        req.fireCallQueuedEvent();        
+        req.fireCallQueuedEvent();
         expect(req.getPriority()).andReturn(1).anyTimes();
+        expect(req.getOperatorIndex()).andReturn(-1);
         expect(req.getOnBusyBehaviour()).andReturn(null);
         req.setOnBusyBehaviour(onBusyBehaviour);
         expect(onBusyBehaviour.handleBehaviour(
@@ -232,17 +239,20 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         CallsQueueOnBusyBehaviour onBusyBehaviour = createMock(CallsQueueOnBusyBehaviour.class);
         
         req.setCallsQueue(queue);
+        expect(req.getRequestId()).andReturn(0l);
         req.setRequestId(1);
         req.setPositionInQueue(1);
         expectLastCall().anyTimes();
         req.fireCallQueuedEvent();        
         expect(req.getPriority()).andReturn(1).anyTimes();
+        expect(req.getOperatorIndex()).andReturn(-1);
         expect(req.getOnBusyBehaviour()).andReturn(null);
         req.setOnBusyBehaviour(onBusyBehaviour);
         expect(onBusyBehaviour.handleBehaviour(
                 isA(CallsQueue.class), isA(CallQueueRequestWrapper.class))).andReturn(Boolean.FALSE);
         
         req1.setCallsQueue(queue);
+        expect(req1.getRequestId()).andReturn(0l);
         req1.setRequestId(2);
         expect(req1.getPriority()).andReturn(2).anyTimes();
         req1.setPositionInQueue(2);
@@ -260,6 +270,57 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         assertEquals(1, queue.queue.size());
         
         verify(req, req1, onBusyBehaviour);
+    }
+
+    @Test
+    public void operatorIndexTest() throws Exception
+    {
+        executor.stop();
+        TestPrioritySelector selector = addPrioritySelector("selector 1", 1, null);
+
+        CallQueueRequestWrapper req = createMock(CallQueueRequestWrapper.class);
+        CallsQueueOperatorRef operatorRef = createMock("operatorRef1", CallsQueueOperatorRef.class);
+        CallsQueueOperatorRef operatorRef1 = createMock("operatorRef2", CallsQueueOperatorRef.class);
+        CallsQueueOperator operator = createMock(CallsQueueOperator.class);
+
+        req.setCallsQueue(queue);
+        expectLastCall().times(2);
+        expect(req.getRequestId()).andReturn(0l);
+        expect(req.getRequestId()).andReturn(1l);
+        req.setRequestId(1);
+        req.setPositionInQueue(1);
+        expectLastCall().times(2);
+        req.fireCallQueuedEvent();
+        expectLastCall().times(2);
+        expect(req.getPriority()).andReturn(1).anyTimes();
+        expect(req.getOperatorIndex()).andReturn(-1);
+        expect(req.getOperatorIndex()).andReturn(0);
+
+        expect(operatorRef.getOperator()).andReturn(operator);
+        expect(operator.processRequest(queue, req)).andReturn(Boolean.TRUE).times(2);
+        req.setOperatorIndex(0);
+        req.setOperatorIndex(1);
+        //expecting after second queueCall
+        expect(operatorRef1.getOperator()).andReturn(operator);
+
+        replay(req, operatorRef, operator, operatorRef1);
+
+        assertTrue(queue.start());
+        selector.addOperatorRef(operatorRef);
+        selector.addOperatorRef(operatorRef1);
+        queue.queueCall(req);
+        assertEquals(1, queue.queue.size());
+        queue.processRequest();
+        assertEquals(0, queue.queue.size());
+
+        //return request to the queue
+        queue.queueCall(req);
+        assertEquals(1, queue.queue.size());
+        queue.processRequest();
+        assertEquals(0, queue.queue.size());
+
+
+        verify(req, operatorRef, operator, operatorRef1);
     }
     
     private TestPrioritySelector addPrioritySelector(

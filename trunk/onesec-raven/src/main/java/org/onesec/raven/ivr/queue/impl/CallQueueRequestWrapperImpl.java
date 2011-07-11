@@ -35,6 +35,7 @@ import org.onesec.raven.ivr.queue.event.CallQueueEvent;
 import org.onesec.raven.ivr.queue.CallQueueRequest;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
 import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviour;
+import org.onesec.raven.ivr.queue.CallsQueueOperator;
 import org.onesec.raven.ivr.queue.event.CallQueuedEvent;
 import org.onesec.raven.ivr.queue.event.CommutatedQueueEvent;
 import org.onesec.raven.ivr.queue.event.DisconnectedQueueEvent;
@@ -44,6 +45,7 @@ import org.onesec.raven.ivr.queue.event.RejectedQueueEvent;
 import org.onesec.raven.ivr.queue.event.impl.CallQueueEventImpl;
 import org.onesec.raven.ivr.queue.event.impl.DisconnectedQueueEventImpl;
 import org.onesec.raven.ivr.queue.event.impl.NumberChangedQueueEventImpl;
+import org.onesec.raven.ivr.queue.event.impl.ReadyToCommutateQueueEventImpl;
 import org.onesec.raven.ivr.queue.event.impl.RejectedQueueEventImpl;
 import org.raven.ds.Record;
 import org.raven.ds.RecordException;
@@ -73,6 +75,7 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
     private int onBusyBehaviourStep;
     private CallsQueueOnBusyBehaviour onBusyBehaviour;
     private AtomicBoolean valid;
+    private int operatorIndex;
 
     public CallQueueRequestWrapperImpl(
             CallsQueuesNode owner, CallQueueRequest request, DataContext context)
@@ -86,6 +89,7 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
         this.positionInQueue = 0;
         this.onBusyBehaviourStep = 0;
         this.valid = new AtomicBoolean(true);
+        this.operatorIndex = -1;
         listener = new ConversationListener(request.getConversation());
         RecordSchemaNode schema = owner.getCdrRecordSchema();
         if (schema!=null) {
@@ -104,6 +108,14 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
             addToLog("conversation stopped by abonent");
             fireDisconnectedQueueEvent();
         }
+    }
+
+    public int getOperatorIndex() {
+        return operatorIndex;
+    }
+
+    public void setOperatorIndex(int index) {
+        this.operatorIndex = index;
     }
 
     public CallsQueueOnBusyBehaviour getOnBusyBehaviour() {
@@ -175,6 +187,11 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
     }
 
     public void setCallsQueue(CallsQueue queue) {
+        if (queue!=this.queue){
+            requestId=0;
+            operatorIndex=-1;
+            addToLog(String.format("moved to queue (%s)", queue.getName()));
+        }
         this.queue = queue;
     }
 
@@ -191,8 +208,9 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
                     cdr.setValue(LOG, log.toString());
                     sendCdrToConsumers();
                 } else if (event instanceof CallQueuedEvent) {
-                    cdr.setValue(QUEUED_TIME, getTimestamp());
-                    cdr.setValue(CALLING_NUMBER, ((CallQueuedEvent)event).getQueueId());
+                    if (cdr.getValue(QUEUED_TIME)==null)
+                        cdr.setValue(QUEUED_TIME, getTimestamp());
+                    cdr.setValue(QUEUE_ID, ((CallQueuedEvent)event).getQueueId());
                 } else if (event instanceof NumberChangedQueueEvent) {
                     addToLog("#"+((NumberChangedQueueEvent)event).getCurrentNumber());
                 } else if (event instanceof ReadyToCommutateQueueEvent) {
@@ -232,6 +250,10 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
     
     public void fireDisconnectedQueueEvent(){
         callQueueChangeEvent(new DisconnectedQueueEventImpl(queue, requestId));
+    }
+
+    public void fireReadyToCommutateQueueEvent(CallsQueueOperator operator) {
+        callQueueChangeEvent(new ReadyToCommutateQueueEventImpl(queue, requestId, operator));
     }
     
     private void sendCdrToConsumers()
