@@ -135,9 +135,11 @@ public class CallsQueueOperatorNode extends BaseNode
         bindings.put(CALL_QUEUE_OPERATOR_BINDING, this);
         bindings.put(CALL_QUEUE_REQUEST_BINDING, info.request);
         try {
-            for (int i=0; i<info.numbers.length; ++i) try {
-                info.numberIndex=i;
-                callToOperator(endpoint, info.numbers[i], info, bindings);
+            try {
+                for (int i=0; i<info.numbers.length; ++i) {
+                    info.numberIndex=i;
+                    callToOperator(endpoint, info.numbers[i], info, bindings);
+                }
             } catch(Exception e){
                 if (isLogLevelEnabled(LogLevel.ERROR))
                     getLogger().error("Error handling by operator", e);
@@ -173,6 +175,11 @@ public class CallsQueueOperatorNode extends BaseNode
         } finally {
             lock.unlock();
         }
+    }
+
+    private void commutateCalls()
+    {
+        
     }
 
     private boolean checkInviteTimeout(long callStartTime, RequestInfo info, IvrEndpoint endpoint
@@ -253,6 +260,7 @@ public class CallsQueueOperatorNode extends BaseNode
                 getLogger().debug("Operator ({}, {}) ready to commutate", getName(), number);
             request.get().operatorReadyToCommutate=true;
             request.get().request.addToLog(String.format("operator (%s) ready to commutate", number));
+            request.get().operatorConversation = operatorConversation;
             eventCondition.signal();
         } finally {
             lock.unlock();
@@ -321,6 +329,7 @@ public class CallsQueueOperatorNode extends BaseNode
         boolean readyToCommutateSended = false;
         boolean abonentReadyToCommutate = false;
         boolean commutated = false;
+        IvrEndpointConversation operatorConversation = null;
 
         public RequestInfo(CallQueueRequestWrapper request, CallsQueue queue, long waitTimeout
                 , int inviteTimeout, IvrConversationScenario conversationScenario, String[] numbers)
