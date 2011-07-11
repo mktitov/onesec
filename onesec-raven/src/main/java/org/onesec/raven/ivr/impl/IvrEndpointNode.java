@@ -846,8 +846,10 @@ public class IvrEndpointNode extends BaseNode
     {
         lock.lock();
         try {
-            if (conversation!=null) 
+            if (conversation!=null) {
                 conversation.stopConversation(completionCode);
+                conversation = null;
+            }
         } finally {
             lock.unlock();
         }

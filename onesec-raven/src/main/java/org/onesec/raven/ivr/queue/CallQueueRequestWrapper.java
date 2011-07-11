@@ -51,6 +51,10 @@ public interface CallQueueRequestWrapper extends CallQueueRequest
      */
     public void fireCallQueuedEvent();
     /**
+     * Fires "ReadyToCommutateQueueEvent" for the request
+     */
+    public void fireReadyToCommutateQueueEvent(CallsQueueOperator operator);
+    /**
      * Returns the wrapped request
      */
     public CallQueueRequest getWrappedRequest(); 
@@ -94,4 +98,14 @@ public interface CallQueueRequestWrapper extends CallQueueRequest
      * <b>false</b> then queue must cancel request processing.
      */
     public boolean isValid();
+    /**
+     * Sets the index to the last operator that tried to handle the request. The queue must take the
+     * next operator in the next attempt.
+     */
+    public void setOperatorIndex(int index);
+    /**
+     * Returns the index of last operator that tried to handle the request. The default value is -1
+     * @see #setOperatorIndex(Integer) 
+     */
+    public int getOperatorIndex();
 }

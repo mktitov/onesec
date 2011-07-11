@@ -162,81 +162,6 @@ public class IvrInformerSession implements EndpointRequest, ConversationCompleti
         }
     }
 
-
-//    public void run()
-//    {
-//        try
-//        {
-//            boolean groupInformed = false;
-//            for (Record record: records)
-//            {
-//                if (!informer.getInformAllowed())
-//                    return;
-//                try
-//                {
-//                    statusMessage = "Starting inform abonent";
-//                    record.setValue(CALL_START_TIME_FIELD, new Timestamp(System.currentTimeMillis()));
-//                    currentRecord = record;
-//                    Map<String, Object> bindings = new HashMap<String, Object>();
-//                    bindings.put(AsyncIvrInformer.RECORD_BINDING, record);
-//                    bindings.put(AsyncIvrInformer.INFORMER_BINDING, this);
-//                    statusMessage = "Calling to the abonent";
-//                    String abonentNumber = converter.convert(String.class, record.getValue(ABONENT_NUMBER_FIELD), null);
-//                    conversationResult = null;
-//                    if (groupInformed)
-//                        skipRecord(record);
-//                    else
-//                    {
-//                        endpoint.invite(abonentNumber, scenario, this, bindings);
-//                        boolean restartEndpoint = false;
-//                        informLock.lock();
-//                        try
-//                        {
-//                            //разговор может завершиться не начавшись
-//                            if (conversationResult==null)
-//                            {
-//                                if (maxCallDuration!=null && maxCallDuration>0)
-//                                {
-//                                    if (!abonentInformed.await(maxCallDuration, TimeUnit.SECONDS))
-//                                        restartEndpoint = true;
-//                                }
-//                                else
-//                                    abonentInformed.await();
-//                            }
-//                            handleConversationResult(record);
-//                            String completionCode = (String) record.getValue(COMPLETION_CODE_FIELD);
-//                            Long duration = (Long) record.getValue(CONVERSATION_DURATION_FIELD);
-//                            if (ObjectUtils.in(completionCode, AsyncIvrInformer.COMPLETED_BY_INFORMER_STATUS
-//                                    , AsyncIvrInformer.COMPLETED_BY_ABONENT_STATUS)
-//                                && duration!=null && duration>0)
-//                            {
-//                                groupInformed = true;
-//                            }
-//                        }
-//                        finally
-//                        {
-//                            informLock.unlock();
-//                        }
-//                        if (restartEndpoint)
-//                            restartEndpoint();
-//                    }
-//                    informer.sendRecordToConsumers(record);
-//                }
-//                catch(Exception e)
-//                {
-//                    if (informer.isLogLevelEnabled(LogLevel.ERROR))
-//                        informer.getLogger().error(
-//                                "Error informing abonent: "+informer.getRecordInfo(record), e);
-//                }
-//            }
-//        }
-//        finally
-//        {
-//            informer.incInformedAbonents();
-//            informer.removeSession(this);
-//        }
-//    }
-//
     public void conversationCompleted(ConversationResult conversationResult)
     {
         this.conversationResult = conversationResult;
@@ -390,7 +315,8 @@ public class IvrInformerSession implements EndpointRequest, ConversationCompleti
                                 && endpoint.getEndpointState().getId()==IvrEndpointState.INVITING)
                             {
                                 restartEndpoint = true;
-                                record.setValue(COMPLETION_CODE_FIELD, AsyncIvrInformer.NUMBER_NOT_ANSWERED_STATUS);
+                                record.setValue(COMPLETION_CODE_FIELD
+                                        , AsyncIvrInformer.NUMBER_NOT_ANSWERED_STATUS);
                             }
 
                         if (!restartEndpoint && conversationResult==null)
@@ -432,7 +358,8 @@ public class IvrInformerSession implements EndpointRequest, ConversationCompleti
         statusMessage.set("Skiping infroming because of no free terminal in the pool");
         for (Record record: records)
         {
-            record.setValue(COMPLETION_CODE_FIELD, AsyncIvrInformer.ERROR_NO_FREE_ENDPOINT_IN_THE_POOL);
+            record.setValue(COMPLETION_CODE_FIELD
+                    , AsyncIvrInformer.ERROR_NO_FREE_ENDPOINT_IN_THE_POOL);
             informer.sendRecordToConsumers(record, dataContext);
         }
     }

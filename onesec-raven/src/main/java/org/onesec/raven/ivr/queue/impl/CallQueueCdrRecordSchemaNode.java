@@ -40,7 +40,7 @@ public class CallQueueCdrRecordSchemaNode extends RecordSchemaNode
     public final static String CALLING_NUMBER = "callingNumber";
     public final static String OPERATOR_ID = "operatorId";
     public final static String OPERATOR_NUMBER = "operatorNumber";
-        public final static String LOG = "log";
+    public final static String LOG = "log";
     public final static String QUEUED_TIME = "queuedTime";
     public final static String REJECETED_TIME = "rejecetedTime";
     public final static String READY_TO_COMMUTATE_TIME = "readyToCommutateTime";
