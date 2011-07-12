@@ -138,20 +138,27 @@ public class CallsQueueOperatorNode extends BaseNode
             try {
                 for (int i=0; i<info.numbers.length; ++i) {
                     info.numberIndex=i;
-                    callToOperator(endpoint, info.numbers[i], info, bindings);
+                    if (callToOperator(endpoint, info.numbers[i], info, bindings))
+                        break;
                 }
+                freeResources();
             } catch(Exception e){
                 if (isLogLevelEnabled(LogLevel.ERROR))
                     getLogger().error("Error handling by operator", e);
                 info.request.addToLog("error handling by operator");
                 info.queue.queueCall(info.request);
+                freeResources();
             }
         } finally {
             busy.set(false);
         }
     }
 
-    private void callToOperator(IvrEndpoint endpoint, String operatorNumber, RequestInfo info
+    /**
+     * Returns <b>true</b> if there were success commutation or if abonent hung up
+     * @throws Exception
+     */
+    private boolean callToOperator(IvrEndpoint endpoint, String operatorNumber, RequestInfo info
             , Map<String, Object> bindings)
         throws Exception
     {
@@ -163,21 +170,32 @@ public class CallsQueueOperatorNode extends BaseNode
             while (checkState()){
                 eventCondition.await(500, TimeUnit.MILLISECONDS);
                 if (!checkInviteTimeout(callStartTime, info, endpoint, operatorNumber))
-                    return;
+                    return true;
                 if (info.operatorReadyToCommutate && !info.readyToCommutateSended){
                     info.request.fireReadyToCommutateQueueEvent(this);
                     info.readyToCommutateSended=true;
                 }
-                if (info.abonentReadyToCommutate && !info.commutated){
-                    
-                }
+                if (info.abonentReadyToCommutate && !info.commutated)
+                    commutateCalls(info);
             }
+
+            if (info.commutated) {
+                info.request.fireDisconnectedQueueEvent();
+                return false;
+            } else
+                return !info.request.isValid();
         } finally {
             lock.unlock();
         }
     }
 
-    private void commutateCalls()
+    private void commutateCalls(RequestInfo info)
+    {
+        info.commutated = true;
+        
+    }
+
+    private void freeResources()
     {
         
     }
