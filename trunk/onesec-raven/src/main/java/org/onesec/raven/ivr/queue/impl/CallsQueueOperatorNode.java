@@ -136,19 +136,27 @@ public class CallsQueueOperatorNode extends BaseNode
         bindings.put(CALL_QUEUE_REQUEST_BINDING, info.request);
         try {
             try {
+                boolean callHandled = false;
                 for (int i=0; i<info.numbers.length; ++i) {
                     info.numberIndex=i;
-                    if (callToOperator(endpoint, info.numbers[i], info, bindings))
+                    if (callToOperator(endpoint, bindings)) {
+                        callHandled = true;
                         break;
+                    }
                 }
-                freeResources();
+                if (!callHandled) {
+                    if (isLogLevelEnabled(LogLevel.DEBUG))
+                        getLogger().debug("Operator ({}) didn't handle the call", getName());
+                    info.request.addToLog(String.format("operator (%s) didn't handle a call", getName()));
+                    info.queue.queueCall(info.request);
+                }
             } catch(Exception e){
                 if (isLogLevelEnabled(LogLevel.ERROR))
                     getLogger().error("Error handling by operator", e);
                 info.request.addToLog("error handling by operator");
                 info.queue.queueCall(info.request);
-                freeResources();
             }
+            freeResources();
         } finally {
             busy.set(false);
         }
@@ -158,10 +166,10 @@ public class CallsQueueOperatorNode extends BaseNode
      * Returns <b>true</b> if there were success commutation or if abonent hung up
      * @throws Exception
      */
-    private boolean callToOperator(IvrEndpoint endpoint, String operatorNumber, RequestInfo info
-            , Map<String, Object> bindings)
+    private boolean callToOperator(IvrEndpoint endpoint, Map<String, Object> bindings)
         throws Exception
     {
+        RequestInfo info = request.get();
         info.operatorConversationFlag = true;
         endpoint.invite(phoneNumbers, info.conversationScenario, this, bindings);
         lock.lock();
@@ -169,8 +177,10 @@ public class CallsQueueOperatorNode extends BaseNode
             long callStartTime = System.currentTimeMillis();
             while (checkState()){
                 eventCondition.await(500, TimeUnit.MILLISECONDS);
-                if (!checkInviteTimeout(callStartTime, info, endpoint, operatorNumber))
-                    return true;
+                if (!checkState())
+                    break;
+                if (!checkInviteTimeout(callStartTime, info, endpoint, info.getNumber()))
+                    return false;
                 if (info.operatorReadyToCommutate && !info.readyToCommutateSended){
                     info.request.fireReadyToCommutateQueueEvent(this);
                     info.readyToCommutateSended=true;
@@ -244,14 +254,17 @@ public class CallsQueueOperatorNode extends BaseNode
     }
 
     //Endpoint ConverstionCompleteCallback
-    public void conversationCompleted(ConversationResult conversationResult)
+    public void conversationCompleted(ConversationResult res)
     {
         if (isLogLevelEnabled(LogLevel.DEBUG))
             getLogger().debug("Operator's conversation completed");
         lock.lock();
         try {
-            request.get().operatorConversationFlag = false;
+            RequestInfo info = request.get();
+            info.operatorConversationFlag = false;
             checkState();
+            info.request.addToLog(String.format(
+                    "conv. for op. number (%s) completed (%s)", info.getNumber(), res.getCompletionCode()));
             eventCondition.signal();
         } finally {
             lock.unlock();
@@ -277,7 +290,7 @@ public class CallsQueueOperatorNode extends BaseNode
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 getLogger().debug("Operator ({}, {}) ready to commutate", getName(), number);
             request.get().operatorReadyToCommutate=true;
-            request.get().request.addToLog(String.format("operator (%s) ready to commutate", number));
+            request.get().request.addToLog(String.format("op. number (%s) ready to commutate", number));
             request.get().operatorConversation = operatorConversation;
             eventCondition.signal();
         } finally {
