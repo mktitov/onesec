@@ -34,10 +34,11 @@ public interface IncomingRtpStream extends RtpStream
      */
     public void open(String remoteHost) throws RtpStreamException;
     /**
-     * 
-     * @param listener
-     * @param desc
-     * @return
+     * Returns <b>true</b> if listener was successfully added or <b>false</b> if incoming rtp stream
+     * is already closed.
+     * @param listener the listener
+     * @param desc not using //TODO: убрать параметр
+     * @param format the audio format 
      * @throws RtpStreamException
      */
     public boolean addDataSourceListener(

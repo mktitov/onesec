@@ -154,8 +154,11 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
                     lock.unlock();
                 }
                 return true;
-            } else
-                return false;
+            } else {
+                if (owner.isLogLevelEnabled(LogLevel.ERROR))
+                    owner.getLogger().error(logMess("Error adding listener. Lock wait timeout"));
+                throw new RtpStreamException("Error adding listener. Lock wait timeout");
+            }
         }catch(InterruptedException e){
             if (owner.isLogLevelEnabled(LogLevel.ERROR))
                 owner.getLogger().error(logMess("Error adding listener"), e);
@@ -300,11 +303,7 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
                 inDataSource = !firstConsumerAdded? source : ((SourceCloneable)source).createClone();
                 firstConsumerAdded = true;
 
-                processor = ControllerStateWaiter.createRealizedProcessor(
-                        inDataSource, format, 4000);
-//                ProcessorModel processorModel = new ProcessorModel(
-//                        inDataSource, new Format[]{format}, contentDescriptor);
-//                processor = Manager.createRealizedProcessor(processorModel);
+                processor = ControllerStateWaiter.createRealizedProcessor(inDataSource, format, 4000);
                 outDataSource = processor.getDataOutput();
                 processor.start();
 

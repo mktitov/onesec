@@ -25,6 +25,7 @@ import org.onesec.raven.ivr.AudioStream;
 import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.CompletionCode;
 import org.onesec.raven.ivr.ConversationCompletionCallback;
+import org.onesec.raven.ivr.IncomingRtpStream;
 import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.IvrEndpoint;
 import org.onesec.raven.ivr.IvrEndpointConversation;
@@ -138,6 +139,10 @@ public class TestEndpointConversationNode extends BaseNode implements IvrEndpoin
     }
 
     public IvrEndpointConversationState getState() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public IncomingRtpStream getIncomingRtpStream() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
