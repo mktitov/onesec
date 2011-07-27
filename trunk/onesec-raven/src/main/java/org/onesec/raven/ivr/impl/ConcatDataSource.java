@@ -306,11 +306,6 @@ public class ConcatDataSource
                     DataSource source = getSource();
                     if (source==null)
                         continue;
-//                    DataSource source = sources.peek();
-//                    if (source==null) {
-//                        Thread.sleep(5);
-//                        continue;
-//                    }
                     try {
                         if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                             owner.getLogger().debug(logMess("Found new source. Processing..."));

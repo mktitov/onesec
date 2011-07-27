@@ -60,6 +60,10 @@ public interface IvrEndpointConversation extends ObjectDescription
      */
     public AudioStream getAudioStream();
     /**
+     * Returns the incoming rtp stream of the conversation
+     */
+    public IncomingRtpStream getIncomingRtpStream();
+    /**
      * Returns the number (address) of the calling side.
      */
     public String getCallingNumber();

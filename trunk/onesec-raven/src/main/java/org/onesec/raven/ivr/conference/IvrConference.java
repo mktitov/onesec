@@ -27,11 +27,36 @@ import org.onesec.raven.ivr.IvrEndpointConversation;
  */
 public interface IvrConference
 {
+    /**
+     * Adds recorded to the conference
+     */
     public void addRecorder(AudioStream stream);
+    /**
+     * Adds conversation to the conference
+     */
     public void addConversation(IvrEndpointConversation conversation);
+    /**
+     * Returns all records or empty list
+     */
     public List<AudioStream> getRecorders();
+    /**
+     * Returns all conversations
+     */
     public List<IvrEndpointConversation> getConversations();
+    /**
+     * Adds listener to the conference
+     */
     public void addConferenceListener(IvrConferenceListener listener);
+    /**
+     * Removes listener from the conference
+     */
+    public void removeListener(IvrConferenceListener listener);
+    /**
+     * Starts the conference
+     */
     public void startConference();
+    /**
+     * Stops the conference
+     */
     public void stopConference();
 }
