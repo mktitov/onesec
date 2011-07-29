@@ -17,18 +17,10 @@
 
 package org.onesec.raven.ivr;
 
-import org.raven.tree.Node;
-
 /**
  *
  * @author Mikhail Titov
  */
-public interface IvrConversationsBridgeManager extends Node
-{
-    /**
-     * Creates bridge between two conversations.
-     * @return the created bridge.
-     */
-    public IvrConversationsBridge createBridge(IvrEndpointConversation conv1, IvrEndpointConversation conv2)
-            throws IvrConversationBridgeExeption;
+public enum IvrConversationsBridgeStatus {
+    CREATED, ACTIVATING, ACTIVATED, DEACTIVATED
 }

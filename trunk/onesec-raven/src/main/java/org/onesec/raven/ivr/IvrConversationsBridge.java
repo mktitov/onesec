@@ -24,6 +24,30 @@ package org.onesec.raven.ivr;
 public interface IvrConversationsBridge
 {
     /**
+     * Returns the current status of the bridge
+     */
+    public IvrConversationsBridgeStatus getStatus();
+    /**
+     * Returns the time in milliseconds when bridge was created
+     */
+    public long getCreatedTimestamp();
+    /**
+     * Returns the time in milliseconds when bridge activation begun
+     */
+    public long getActivatingTimestamp();
+    /**
+     * Returns the time in milliseconds when bridge were activated
+     */
+    public long getActivatedTimestamp();
+    /**
+     * Returns the first conversation in the bridge
+     */
+    public IvrEndpointConversation getConversation1();
+    /**
+     * Returns the second conversation in the bridge
+     */
+    public IvrEndpointConversation getConversation2();
+    /**
      * Activates bridge
      */
     public void activateBridge();

@@ -17,33 +17,83 @@
 
 package org.onesec.raven.ivr.impl;
 
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import org.onesec.raven.ivr.IvrConversationBridgeExeption;
 import org.onesec.raven.ivr.IvrConversationsBridge;
 import org.onesec.raven.ivr.IvrConversationsBridgeListener;
 import org.onesec.raven.ivr.IvrConversationsBridgeManager;
 import org.onesec.raven.ivr.IvrEndpointConversation;
+import org.raven.annotations.NodeClass;
+import org.raven.table.TableImpl;
+import org.raven.tree.NodeAttribute;
+import org.raven.tree.Viewable;
+import org.raven.tree.ViewableObject;
 import org.raven.tree.impl.BaseNode;
+import org.weda.internal.annotations.Message;
 
 /**
  *
  * @author Mikhail Titov
  */
+@NodeClass
 public class IvrConversationsBridgeManagerNode extends BaseNode 
-        implements IvrConversationsBridgeManager, IvrConversationsBridgeListener
+        implements IvrConversationsBridgeManager, IvrConversationsBridgeListener, Viewable
 {
     private Set<IvrConversationsBridge> bridges;
+    private ReadWriteLock lock;
 
-    public synchronized IvrConversationsBridge createBridge(
-            IvrEndpointConversation conv1, IvrEndpointConversation conv2)
+    @Message
+    private static String phoneNumberMessage;
+    @Message
+    private static String bridgeStatusMessage;
+    @Message
+    private static String conversationStatusMessage;
+    @Message
+    private static String createdTimestampMessage;
+    @Message
+    private static String activatingTimestampMessage;
+    @Message
+    private static String activatedTimestampMessage;
+
+    @Override
+    protected void initFields()
     {
-        IvrConversationsBridge bridge = new IvrConversationsBridgeImpl(conv1, conv2, this);
-        bridges.add(bridge);
-        bridge.addBridgeListener(this);
-        return bridge;
+        super.initFields();
+        bridges = new HashSet<IvrConversationsBridge>();
+        lock = new ReentrantReadWriteLock();
     }
 
-    public synchronized void bridgeDeactivated(IvrConversationsBridge bridge) {
-        bridges.remove(bridge);
+    public IvrConversationsBridge createBridge(IvrEndpointConversation conv1, IvrEndpointConversation conv2)
+        throws IvrConversationBridgeExeption
+    {
+        lock.writeLock().lock();
+        try {
+            IvrConversationsBridge bridge = new IvrConversationsBridgeImpl(conv1, conv2, this);
+            bridges.add(bridge);
+            bridge.addBridgeListener(this);
+            return bridge;
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    public void bridgeDeactivated(IvrConversationsBridge bridge)
+    {
+        lock.writeLock().lock();
+        try {
+            bridges.remove(bridge);
+        } finally {
+            lock.writeLock().unlock();
+        }
     }
 
     /**
@@ -51,5 +101,45 @@ public class IvrConversationsBridgeManagerNode extends BaseNode
      */
     Set<IvrConversationsBridge> getBridges() {
         return bridges;
+    }
+
+    public Map<String, NodeAttribute> getRefreshAttributes() throws Exception {
+        return null;
+    }
+
+    public List<ViewableObject> getViewableObjects(Map<String, NodeAttribute> refreshAttributes) 
+            throws Exception
+    {
+        List orderedBridges = null;
+        lock.readLock().lock();
+        try {
+            orderedBridges = new ArrayList(bridges);
+        } finally {
+            lock.readLock().unlock();
+        }
+        Collections.sort(orderedBridges);
+        TableImpl table = new TableImpl(new String[]{
+            bridgeStatusMessage, phoneNumberMessage+" 1", phoneNumberMessage+" 2",
+            conversationStatusMessage+"1", conversationStatusMessage+"2", createdTimestampMessage,
+            activatingTimestampMessage, activatedTimestampMessage});
+        SimpleDateFormat fmt = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
+        for (IvrConversationsBridge b: bridges)
+            table.addRow(new Object[]{
+                b.getStatus(),
+                b.getConversation1().getCallingNumber(), b.getConversation2().getCallingNumber(),
+                b.getConversation1().getState().getIdName(), b.getConversation2().getState().getIdName(),
+                formatTs(b.getCreatedTimestamp(), fmt), formatTs(b.getActivatingTimestamp(), fmt),
+                formatTs(b.getActivatedTimestamp(), fmt)
+            });
+        return null;
+    }
+
+    private String formatTs(long ts, SimpleDateFormat fmt)
+    {
+        return ts==0? "" : fmt.format(new Date(ts));
+    }
+
+    public Boolean getAutoRefresh() {
+        return Boolean.TRUE;
     }
 }
