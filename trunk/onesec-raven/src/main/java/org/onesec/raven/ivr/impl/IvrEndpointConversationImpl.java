@@ -39,6 +39,7 @@ import org.onesec.raven.ivr.IvrAction;
 import org.onesec.raven.ivr.IvrActionNode;
 import org.onesec.raven.ivr.IvrConversationScenarioPoint;
 import org.onesec.raven.ivr.IvrEndpointConversation;
+import org.onesec.raven.ivr.IvrEndpointConversationEvent;
 import org.onesec.raven.ivr.IvrEndpointConversationListener;
 import org.onesec.raven.ivr.OutgoingRtpStream;
 import org.onesec.raven.ivr.RtpStreamException;
@@ -47,6 +48,8 @@ import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.tree.Node;
 import org.onesec.raven.ivr.IvrEndpointConversationState;
+import org.onesec.raven.ivr.IvrEndpointConversationStoppedEvent;
+import org.onesec.raven.ivr.IvrEndpointConversationTransferedEvent;
 import org.onesec.raven.ivr.RtpStreamManager;
 import org.onesec.raven.ivr.actions.ContinueConversationAction;
 import org.raven.conv.BindingScope;
@@ -113,7 +116,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             if (listeners==null)
                 listeners = new HashSet<IvrEndpointConversationListener>();
             listeners.add(listener);
-            listener.listenerAdded();
+            listener.listenerAdded(new IvrEndpointConversationEventImpl(this));
         } finally {
             lock.writeLock().unlock();
         }
@@ -472,18 +475,25 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
 
     private void fireEvent(boolean conversationStartEvent, CompletionCode completionCode)
     {
-        if (listeners!=null && !listeners.isEmpty())
+        if (listeners!=null && !listeners.isEmpty()) {
+            IvrEndpointConversationEvent event = conversationStartEvent? 
+                new IvrEndpointConversationEventImpl(this) :
+                new IvrEndpointConversationStoppedEventImpl(this, completionCode);
             for (IvrEndpointConversationListener listener: listeners)
                 if (conversationStartEvent)
-                    listener.conversationStarted();
+                    listener.conversationStarted(event);
                 else
-                    listener.conversationStoped(completionCode);
+                    listener.conversationStopped((IvrEndpointConversationStoppedEvent)event);
+        }
     }
 
     private void fireTransferedEvent(String address)
     {
-        if (listeners!=null && !listeners.isEmpty())
+        if (listeners!=null && !listeners.isEmpty()) {
+            IvrEndpointConversationTransferedEvent event =
+                    new IvrEndpointConversationTransferedEventImpl(this, address);
             for (IvrEndpointConversationListener listener: listeners)
-                listener.conversationTransfered(address);
+                listener.conversationTransfered(event);
+        }
     }
 }

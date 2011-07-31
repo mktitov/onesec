@@ -28,10 +28,16 @@ import com.cisco.jtapi.extensions.CiscoTermInServiceEv;
 import com.cisco.jtapi.extensions.CiscoTermOutOfServiceEv;
 import com.cisco.jtapi.extensions.CiscoTerminalObserver;
 import com.cisco.jtapi.extensions.CiscoUnregistrationException;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.telephony.Address;
 import javax.telephony.AddressObserver;
 import javax.telephony.Call;
@@ -63,8 +69,11 @@ import org.onesec.raven.ivr.CompletionCode;
 import org.onesec.raven.ivr.ConversationCompletionCallback;
 import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.IvrEndpoint;
+import org.onesec.raven.ivr.IvrEndpointConversationEvent;
 import org.onesec.raven.ivr.IvrEndpointConversationListener;
 import org.onesec.raven.ivr.IvrEndpointConversationState;
+import org.onesec.raven.ivr.IvrEndpointConversationStoppedEvent;
+import org.onesec.raven.ivr.IvrEndpointConversationTransferedEvent;
 import org.onesec.raven.ivr.IvrEndpointException;
 import org.onesec.raven.ivr.IvrEndpointState;
 import org.onesec.raven.ivr.RtpAddress;
@@ -166,6 +175,8 @@ public class IvrEndpointNode extends BaseNode
     private BindingSupportImpl bindingSupport;
     private IvrEndpointConversationImpl conversation;
     private ReentrantLock lock;
+    private Set<IvrEndpointConversationListener> conversationListeners;
+    private ReadWriteLock listenersLock;
 
     @Override
     protected void initFields()
@@ -177,6 +188,8 @@ public class IvrEndpointNode extends BaseNode
         stateListenersCoordinator.addListenersToState(endpointState);
         bindingSupport = new BindingSupportImpl();
         lock = new ReentrantLock();
+        conversationListeners = new HashSet<IvrEndpointConversationListener>();
+        listenersLock = new ReentrantReadWriteLock();
         resetStates();
         resetConversationFields();
     }
@@ -394,7 +407,8 @@ public class IvrEndpointNode extends BaseNode
                             debug(String.format(
                                     "Error inviting opponent (%s) to conversation", opponentNumber)
                                 , e);
-                        conversationStoped(CompletionCode.OPPONENT_UNKNOWN_ERROR);
+                        conversationStopped(new IvrEndpointConversationStoppedEventImpl(
+                                conversation, CompletionCode.OPPONENT_UNKNOWN_ERROR));
                     }
                 } finally {
                     lock.unlock();
@@ -1198,32 +1212,81 @@ public class IvrEndpointNode extends BaseNode
         return this;
     }
 
-    public void listenerAdded() {
-    }
-
-    public void conversationStarted() {
-    }
-
-    public void conversationTransfered(String address)
+    public void addConversationListener(IvrEndpointConversationListener listener)
     {
-        if (handlingOutgoingCall)
-        {
-            conversationResult.setTransferAddress(address);
-            conversationResult.setTransferTime(System.currentTimeMillis());
+        listenersLock.writeLock().lock();
+        try {
+            conversationListeners.add(listener);
+        } finally {
+            listenersLock.writeLock().unlock();
         }
     }
 
-    public void conversationStoped(CompletionCode completionCode) 
+    public void removeConversationListener(IvrEndpointConversationListener listener)
+    {
+        listenersLock.writeLock().lock();
+        try {
+            conversationListeners.remove(listener);
+        } finally {
+            listenersLock.writeLock().unlock();
+        }
+    }
+
+    public void listenerAdded(IvrEndpointConversationEvent event) 
+    {
+        listenersLock.readLock().lock();
+        try {
+            for (IvrEndpointConversationListener listener : conversationListeners) 
+                listener.listenerAdded(event);
+        } finally {
+            listenersLock.readLock().unlock();
+        }
+    }
+
+    public void conversationStarted(IvrEndpointConversationEvent event) 
+    {
+        listenersLock.readLock().lock();
+        try {
+            for (IvrEndpointConversationListener listener: conversationListeners)
+                listener.conversationStarted(event);
+        } finally {
+            listenersLock.readLock().unlock();
+        }
+    }
+
+    public void conversationTransfered(IvrEndpointConversationTransferedEvent event)
     {
         if (handlingOutgoingCall)
         {
-            conversationResult.setCompletionCode(completionCode);
+            conversationResult.setTransferAddress(event.getTransferAddress());
+            conversationResult.setTransferTime(System.currentTimeMillis());
+        }
+        listenersLock.readLock().lock();
+        try {
+            for (IvrEndpointConversationListener listener: conversationListeners)
+                listener.conversationTransfered(event);
+        } finally {
+            listenersLock.readLock().unlock();
+        }
+    }
+
+    public void conversationStopped(IvrEndpointConversationStoppedEvent event)
+    {
+        if (handlingOutgoingCall)
+        {
+            conversationResult.setCompletionCode(event.getCompletionCode());
             conversationResult.setCallEndTime(System.currentTimeMillis());
             completionCallback.conversationCompleted(conversationResult);
         }
         resetConversationFields();
         endpointState.setState(IvrEndpointState.IN_SERVICE);
         conversation = null;
+        listenersLock.readLock().lock();
+        try {
+            for (IvrEndpointConversationListener listener: conversationListeners)
+                listener.conversationStopped(event);
+        } finally {
+            listenersLock.readLock().unlock();
+        }
     }
-
 }

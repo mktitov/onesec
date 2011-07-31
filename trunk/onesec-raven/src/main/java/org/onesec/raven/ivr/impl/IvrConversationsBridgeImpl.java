@@ -27,8 +27,11 @@ import org.onesec.raven.ivr.IvrConversationsBridge;
 import org.onesec.raven.ivr.IvrConversationsBridgeListener;
 import org.onesec.raven.ivr.IvrConversationsBridgeStatus;
 import org.onesec.raven.ivr.IvrEndpointConversation;
+import org.onesec.raven.ivr.IvrEndpointConversationEvent;
 import org.onesec.raven.ivr.IvrEndpointConversationListener;
 import org.onesec.raven.ivr.IvrEndpointConversationState;
+import org.onesec.raven.ivr.IvrEndpointConversationStoppedEvent;
+import org.onesec.raven.ivr.IvrEndpointConversationTransferedEvent;
 import org.onesec.raven.ivr.RtpStreamException;
 import org.raven.log.LogLevel;
 import org.raven.tree.Node;
@@ -137,7 +140,7 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
             listener.bridgeDeactivated(this);
     }
     
-    private void conversationStopped(IvrEndpointConversation conv)
+    private void convStopped(IvrEndpointConversation conv)
     {
         status.set(IvrConversationsBridgeStatus.DEACTIVATED);
         fireBridgeDeactivatedEvent();
@@ -177,7 +180,7 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
             try {
                 conv.getIncomingRtpStream().addDataSourceListener(this, null, null);
             } catch (RtpStreamException ex) {
-                conversationStopped(conv);
+                convStopped(conv);
             }
         }
 
@@ -186,20 +189,20 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
         }
 
         public void streamClosing() {
-            conversationStopped(conv);
+            convStopped(conv);
         }
 
-        public void listenerAdded() {
+        public void listenerAdded(IvrEndpointConversationEvent event) {
             if (conv.getState().getId()!=IvrEndpointConversationState.TALKING)
-                conversationStopped(conv);
+                convStopped(conv);
         }
 
-        public void conversationStarted() { }
+        public void conversationStarted(IvrEndpointConversationEvent event) { }
 
-        public void conversationStoped(CompletionCode completionCode) {
-            conversationStopped(conv);
+        public void conversationStopped(IvrEndpointConversationStoppedEvent event) {
+            convStopped(conv);
         }
 
-        public void conversationTransfered(String address) { }
+        public void conversationTransfered(IvrEndpointConversationTransferedEvent event) { }
     }
 }

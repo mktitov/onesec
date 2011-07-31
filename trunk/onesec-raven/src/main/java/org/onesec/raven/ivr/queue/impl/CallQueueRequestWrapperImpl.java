@@ -22,15 +22,17 @@ import org.raven.ds.DataContext;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import java.util.Collection;
 import org.raven.ds.DataConsumer;
-import org.raven.ds.impl.DataContextImpl;
 import org.raven.tree.Node;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.onesec.raven.ivr.IvrEndpointConversation;
+import org.onesec.raven.ivr.IvrEndpointConversationEvent;
 import org.onesec.raven.ivr.IvrEndpointConversationListener;
 import org.onesec.raven.ivr.IvrEndpointConversationState;
+import org.onesec.raven.ivr.IvrEndpointConversationStoppedEvent;
+import org.onesec.raven.ivr.IvrEndpointConversationTransferedEvent;
 import org.onesec.raven.ivr.queue.event.CallQueueEvent;
 import org.onesec.raven.ivr.queue.CallQueueRequest;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
@@ -281,19 +283,19 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
             conversation.addConversationListener(this);
         }
 
-        public void listenerAdded() {
+        public void listenerAdded(IvrEndpointConversationEvent event) {
             if (conversation.getState().getId()==IvrEndpointConversationState.INVALID)
                 invalidate();
         }
         
-        public void conversationStarted() {
+        public void conversationStarted(IvrEndpointConversationEvent event) {
         }
 
-        public void conversationStoped(CompletionCode completionCode) {
+        public void conversationStopped(IvrEndpointConversationStoppedEvent event) {
             invalidate();
         }
 
-        public void conversationTransfered(String address) {
+        public void conversationTransfered(IvrEndpointConversationTransferedEvent event) {
             invalidate();
         }
     }

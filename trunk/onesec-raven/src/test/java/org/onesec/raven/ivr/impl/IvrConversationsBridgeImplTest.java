@@ -111,7 +111,7 @@ public class IvrConversationsBridgeImplTest extends OnesecRavenTestCase
         reportMatcher(new IArgumentMatcher() {
             public boolean matches(Object arg) {
                 IvrEndpointConversationListener listener = (IvrEndpointConversationListener) arg;
-                listener.listenerAdded();
+                listener.listenerAdded(null);
                 conversationListeners.add(listener);
                 return true;
             }

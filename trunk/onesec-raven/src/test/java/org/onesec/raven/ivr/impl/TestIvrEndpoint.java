@@ -23,6 +23,7 @@ import org.onesec.raven.ivr.CompletionCode;
 import org.onesec.raven.ivr.ConversationCompletionCallback;
 import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.IvrEndpoint;
+import org.onesec.raven.ivr.IvrEndpointConversationListener;
 import org.onesec.raven.ivr.IvrEndpointException;
 import org.onesec.raven.ivr.IvrEndpointState;
 import org.onesec.raven.ivr.RtpAddress;
@@ -79,7 +80,8 @@ public class TestIvrEndpoint extends BaseNode implements IvrEndpoint
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    public void transfer(String address, boolean monitorTransfer, long callStartTimeout, long callEndTimeout) {
+    public void transfer(String address, boolean monitorTransfer, long callStartTimeout, long callEndTimeout)
+    {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
@@ -92,6 +94,14 @@ public class TestIvrEndpoint extends BaseNode implements IvrEndpoint
     }
 
     public RtpAddress getRtpAddress() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public void addConversationListener(IvrEndpointConversationListener listener) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public void removeConversationListener(IvrEndpointConversationListener listener) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

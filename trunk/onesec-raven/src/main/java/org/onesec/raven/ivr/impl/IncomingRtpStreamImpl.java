@@ -187,6 +187,7 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
             lock.lock();
             try{
                 owner.getLogger().debug("Sending dataSourceCreatedEvent to consumers.");
+                status = Status.OPENED;
                 if (!consumers.isEmpty())
                     for (Consumer consumer: consumers)
                         consumer.fireDataSourceCreatedEvent();
@@ -197,6 +198,12 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
         }
         else if (event instanceof ByeEvent)
         {
+            lock.lock();
+            try {
+                status = Status.CLOSED;
+            } finally {
+                lock.unlock();
+            }
 //            Thread.sleep(500);
 //            release();
         }
