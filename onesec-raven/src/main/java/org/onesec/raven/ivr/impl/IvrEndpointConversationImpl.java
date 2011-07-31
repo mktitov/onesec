@@ -273,10 +273,10 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 conversationState.getBindings().put(DTMF_BINDING, ""+dtmfChar);
                 Collection<Node> actions = scenario.makeConversation(conversationState);
                 Collection<IvrAction> ivrActions = new ArrayList<IvrAction>(10);
-                String bindingId = owner.getId()+"_"+call.getCallID().intValue();
+                String bindingId = null;
                 try
                 {
-                    tree.addGlobalBindings(bindingId, bindingSupport);
+                    bindingId = tree.addGlobalBindings(bindingSupport);
                     bindingSupport.putAll(conversationState.getBindings());
                     bindingSupport.put(DTMF_BINDING, ""+dtmfChar);
                     for (Node node: actions)
@@ -292,7 +292,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 }
                 finally
                 {
-                    tree.removeGlobalBindings(bindingId);
+                    if (bindingId!=null)
+                        tree.removeGlobalBindings(bindingId);
                     bindingSupport.reset();
                 }
             }

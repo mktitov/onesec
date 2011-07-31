@@ -23,8 +23,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.onesec.core.StateWaitResult;
 import org.onesec.raven.ivr.ConversationCompletionCallback;
 import org.onesec.raven.ivr.ConversationResult;
@@ -32,7 +30,6 @@ import org.onesec.raven.ivr.EndpointRequest;
 import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.IvrEndpoint;
 import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.onesec.raven.ivr.IvrEndpointException;
 import org.onesec.raven.ivr.IvrEndpointPool;
 import org.onesec.raven.ivr.IvrEndpointState;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
@@ -297,6 +294,7 @@ public class CallsQueueOperatorNode extends BaseNode
             lock.unlock();
         }
     }
+    
     public CallQueueRequestWrapper getProcessingRequest()
     {
         RequestInfo info = request.get();

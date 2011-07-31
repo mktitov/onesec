@@ -19,6 +19,7 @@ package org.onesec.raven.ivr.impl;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
@@ -38,6 +39,7 @@ import org.raven.tree.NodeAttribute;
 import org.raven.tree.Viewable;
 import org.raven.tree.ViewableObject;
 import org.raven.tree.impl.BaseNode;
+import org.raven.tree.impl.ViewableObjectImpl;
 import org.weda.internal.annotations.Message;
 
 /**
@@ -131,7 +133,8 @@ public class IvrConversationsBridgeManagerNode extends BaseNode
                 formatTs(b.getCreatedTimestamp(), fmt), formatTs(b.getActivatingTimestamp(), fmt),
                 formatTs(b.getActivatedTimestamp(), fmt)
             });
-        return null;
+        ViewableObject obj = new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, table);
+        return Arrays.asList(obj);
     }
 
     private String formatTs(long ts, SimpleDateFormat fmt)
