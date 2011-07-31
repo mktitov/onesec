@@ -120,7 +120,7 @@ public class CallQueueRequestWrapperImplTest extends OnesecRavenTestCase
     {
         reportMatcher(new IArgumentMatcher() {
             public boolean matches(Object argument) {
-                ((IvrEndpointConversationListener)argument).listenerAdded();
+                ((IvrEndpointConversationListener)argument).listenerAdded(null);
                 return true;
             }
             public void appendTo(StringBuffer buffer) {

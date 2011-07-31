@@ -35,4 +35,12 @@ public interface IvrEndpoint extends Node, ObjectDescription
             , ConversationCompletionCallback callback
             , Map<String, Object> bindings) throws IvrEndpointException;
     public RtpAddress getRtpAddress();
+    /**
+     * Adds conversation listener
+     */
+    public void addConversationListener(IvrEndpointConversationListener listener);
+    /**
+     * Removes conversation listener
+     */
+    public void removeConversationListener(IvrEndpointConversationListener listener);
 }
