@@ -29,6 +29,8 @@ import org.easymock.IArgumentMatcher;
 import org.junit.Before;
 import org.junit.Test;
 import org.onesec.raven.OnesecRavenTestCase;
+import org.onesec.raven.impl.CCMCallOperatorNode;
+import org.onesec.raven.impl.ProviderNode;
 import org.onesec.raven.ivr.AudioStream;
 import org.onesec.raven.ivr.IncomingRtpStream;
 import org.onesec.raven.ivr.IncomingRtpStreamDataSourceListener;
@@ -36,6 +38,10 @@ import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.IvrEndpointConversationListener;
 import org.onesec.raven.ivr.IvrEndpointConversationState;
 import org.onesec.raven.ivr.RtpStreamException;
+import org.onesec.raven.ivr.actions.PauseActionNode;
+import org.raven.log.LogLevel;
+import org.raven.sched.impl.ExecutorServiceNode;
+import org.raven.tree.Node;
 import static org.easymock.EasyMock.*;
 
 /**
@@ -82,6 +88,78 @@ public class IvrConversationsBridgeManagerNodeTest extends OnesecRavenTestCase
 
         conv1Mocks.verify();
         conv2Mocks.verify();
+    }
+
+    public void realTest() throws Exception
+    {
+        RtpStreamManagerNode manager = new RtpStreamManagerNode();
+        manager.setName("rtpManager");
+        tree.getRootNode().addAndSaveChildren(manager);
+        assertTrue(manager.start());
+
+        RtpAddressNode address = new RtpAddressNode();
+        address.setName(getInterfaceAddress().getHostAddress());
+        manager.addAndSaveChildren(address);
+        address.setStartingPort(18384);
+        assertTrue(address.start());
+
+        CCMCallOperatorNode callOperator = new CCMCallOperatorNode();
+        callOperator.setName("call operator");
+        tree.getRootNode().addAndSaveChildren(callOperator);
+        assertTrue(callOperator.start());
+
+        ProviderNode provider = new ProviderNode();
+        provider.setName("88013-88014 provider");
+        callOperator.getProvidersNode().addAndSaveChildren(provider);
+        provider.setFromNumber(88013);
+        provider.setToNumber(88037);
+//        provider.setFromNumber(68050);
+//        provider.setToNumber(68050);
+        provider.setHost("10.16.15.1");
+        provider.setPassword("cti_user1");
+        provider.setUser("cti_user1");
+        assertTrue(provider.start());
+
+        ExecutorServiceNode executor = new ExecutorServiceNode();
+        executor.setName("executor");
+        tree.getRootNode().addAndSaveChildren(executor);
+        executor.setMaximumPoolSize(15);
+        executor.setCorePoolSize(10);
+        assertTrue(executor.start());
+
+        IvrConversationScenarioNode scenario = new IvrConversationScenarioNode();
+        scenario.setName("scenario");
+        tree.getRootNode().addAndSaveChildren(scenario);
+        assertTrue(scenario.start());
+
+        createPauseActionNode(scenario, 30000l);
+        IvrEndpointNode endpoint1 = createEndpoint("88013", executor, manager, scenario);
+//        endpoint1.
+    }
+
+    private PauseActionNode createPauseActionNode(Node owner, Long interval)
+    {
+        PauseActionNode pauseAction = new PauseActionNode();
+        pauseAction.setName("pause");
+        owner.addAndSaveChildren(pauseAction);
+        pauseAction.setInterval(interval);
+        assertTrue(pauseAction.start());
+        return pauseAction;
+    }
+
+    private IvrEndpointNode createEndpoint(String number, ExecutorServiceNode executor
+            , RtpStreamManagerNode rtpManager, IvrConversationScenarioNode scenario)
+    {
+        IvrEndpointNode endpoint = new IvrEndpointNode();
+        endpoint.setName(number);
+        tree.getRootNode().addAndSaveChildren(endpoint);
+        endpoint.setExecutorService(executor);
+        endpoint.setConversationScenario(scenario);
+        endpoint.setAddress(number);
+        endpoint.setRtpStreamManager(rtpManager);
+        endpoint.setLogLevel(LogLevel.TRACE);
+        
+        return endpoint;
     }
 
     private void trainConversation(ConversationMocks mocks, String suffix) throws RtpStreamException
