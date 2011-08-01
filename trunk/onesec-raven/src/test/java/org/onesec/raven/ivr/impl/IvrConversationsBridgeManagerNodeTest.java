@@ -19,8 +19,6 @@ package org.onesec.raven.ivr.impl;
 
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.onesec.raven.ivr.ConversationResult;
 import org.onesec.raven.ivr.IvrConversationBridgeExeption;
 import org.onesec.raven.ivr.IvrConversationsBridge;
