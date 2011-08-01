@@ -23,8 +23,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.onesec.core.StateWaitResult;
 import org.onesec.raven.ivr.ConversationCompletionCallback;
 import org.onesec.raven.ivr.ConversationResult;
@@ -91,7 +89,7 @@ public class CallsQueueOperatorNode extends BaseNode
         super.initFields();
         request = new AtomicReference<RequestInfo>();
         busy = new AtomicBoolean(false);
-        statusMessage.set(null);
+        statusMessage = new AtomicReference<String>();
         lock = new ReentrantLock();
         eventCondition = lock.newCondition();
     }
@@ -126,21 +124,21 @@ public class CallsQueueOperatorNode extends BaseNode
     //EndpointPool request methods
     public void processRequest(IvrEndpoint endpoint)
     {
-        RequestInfo info = request.get();
-
-        if (endpoint==null) {
-            if (isLogLevelEnabled(LogLevel.WARN))
-                getLogger().warn("Can't process call queue request because of no free endpoints "
-                        + "in the pool", endpointPool.getName());
-            info.request.addToLog("no free endpoints in the pool");
-            info.queue.queueCall(info.request);
-            return;
-        }
-
-        Map<String, Object> bindings = new HashMap<String, Object>();
-        bindings.put(CALL_QUEUE_OPERATOR_BINDING, this);
-        bindings.put(CALL_QUEUE_REQUEST_BINDING, info.request);
         try {
+            RequestInfo info = request.get();
+
+            if (endpoint==null) {
+                if (isLogLevelEnabled(LogLevel.WARN))
+                    getLogger().warn("Can't process call queue request because of no free endpoints "
+                            + "in the pool", endpointPool.getName());
+                info.request.addToLog("no free endpoints in the pool");
+                info.queue.queueCall(info.request);
+                return;
+            }
+
+            Map<String, Object> bindings = new HashMap<String, Object>();
+            bindings.put(CALL_QUEUE_OPERATOR_BINDING, this);
+            bindings.put(CALL_QUEUE_REQUEST_BINDING, info.request);
             try {
                 boolean callHandled = false;
                 for (int i=0; i<info.numbers.length; ++i) {
@@ -214,7 +212,7 @@ public class CallsQueueOperatorNode extends BaseNode
             , String operatorNumber) throws Exception
     {
         if (endpoint.getEndpointState().getId()==IvrEndpointState.INVITING
-            && callStartTime+info.inviteTimeout*1000>System.currentTimeMillis())
+            && callStartTime+info.inviteTimeout*1000<=System.currentTimeMillis())
         {
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 getLogger().debug("Operator number ({}) not answered", operatorNumber);
