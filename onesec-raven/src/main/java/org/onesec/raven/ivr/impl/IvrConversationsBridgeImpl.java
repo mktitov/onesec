@@ -21,7 +21,6 @@ import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.media.protocol.DataSource;
-import org.onesec.raven.ivr.CompletionCode;
 import org.onesec.raven.ivr.IncomingRtpStreamDataSourceListener;
 import org.onesec.raven.ivr.IvrConversationsBridge;
 import org.onesec.raven.ivr.IvrConversationsBridgeListener;
@@ -140,9 +139,11 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
             listener.bridgeDeactivated(this);
     }
     
-    private void convStopped(IvrEndpointConversation conv)
+    private synchronized void convStopped(IvrEndpointConversation conv)
     {
         status.set(IvrConversationsBridgeStatus.DEACTIVATED);
+        if (owner.isLogLevelEnabled(LogLevel.INFO))
+            owner.getLogger().info(logMess("Bridge successfully deactivated"));
         fireBridgeDeactivatedEvent();
     }
 

@@ -23,11 +23,16 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.onesec.core.StateWaitResult;
 import org.onesec.raven.ivr.ConversationCompletionCallback;
 import org.onesec.raven.ivr.ConversationResult;
 import org.onesec.raven.ivr.EndpointRequest;
+import org.onesec.raven.ivr.IvrConversationBridgeExeption;
 import org.onesec.raven.ivr.IvrConversationScenario;
+import org.onesec.raven.ivr.IvrConversationsBridge;
+import org.onesec.raven.ivr.IvrConversationsBridgeManager;
 import org.onesec.raven.ivr.IvrEndpoint;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.IvrEndpointPool;
@@ -70,6 +75,9 @@ public class CallsQueueOperatorNode extends BaseNode
 
     @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
     private IvrConversationScenarioNode conversationScenario;
+
+    @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
+    private IvrConversationsBridgeManager conversationsBridgeManager;
     
     private AtomicReference<RequestInfo> request;
     private AtomicReference<String> statusMessage;
@@ -99,7 +107,8 @@ public class CallsQueueOperatorNode extends BaseNode
             return false;
         String[] numbers = RavenUtils.split(phoneNumbers, ",");
         this.request.set(new RequestInfo(
-                request, queue, endpointWaitTimeout, inviteTimeout, conversationScenario, numbers));
+                request, queue, endpointWaitTimeout, inviteTimeout, conversationScenario, numbers
+                , conversationsBridgeManager));
         statusMessage.set(String.format(SEARCHING_FOR_ENDPOINT_MSG, request.toString()));
         request.addToLog(String.format("handling by operator (%s)", getName()));
         commutationValid = true;
@@ -183,7 +192,7 @@ public class CallsQueueOperatorNode extends BaseNode
                     info.readyToCommutateSended=true;
                 }
                 if (info.abonentReadyToCommutate && !info.commutated)
-                    commutateCalls(info);
+                    info.commutateCalls();
             }
 
             if (info.commutated) {
@@ -194,12 +203,6 @@ public class CallsQueueOperatorNode extends BaseNode
         } finally {
             lock.unlock();
         }
-    }
-
-    private void commutateCalls(RequestInfo info)
-    {
-        info.commutated = true;
-        
     }
 
     private void freeResources()
@@ -305,6 +308,14 @@ public class CallsQueueOperatorNode extends BaseNode
         return statusMessage.get();
     }
 
+    public IvrConversationsBridgeManager getConversationsBridgeManager() {
+        return conversationsBridgeManager;
+    }
+
+    public void setConversationsBridgeManager(IvrConversationsBridgeManager conversationsBridgeManager) {
+        this.conversationsBridgeManager = conversationsBridgeManager;
+    }
+
     public IvrConversationScenarioNode getConversationScenario() {
         return conversationScenario;
     }
@@ -351,6 +362,7 @@ public class CallsQueueOperatorNode extends BaseNode
         final long waitTimeout;
         final int inviteTimeout;
         final IvrConversationScenario conversationScenario;
+        final IvrConversationsBridgeManager bridgeManager;
         final String[] numbers;
         int numberIndex=0;
         boolean operatorConversationFlag = false;
@@ -361,7 +373,8 @@ public class CallsQueueOperatorNode extends BaseNode
         IvrEndpointConversation operatorConversation = null;
 
         public RequestInfo(CallQueueRequestWrapper request, CallsQueue queue, long waitTimeout
-                , int inviteTimeout, IvrConversationScenario conversationScenario, String[] numbers)
+                , int inviteTimeout, IvrConversationScenario conversationScenario, String[] numbers
+                , IvrConversationsBridgeManager bridgeManager)
         {
             this.request = request;
             this.queue = queue;
@@ -369,10 +382,18 @@ public class CallsQueueOperatorNode extends BaseNode
             this.inviteTimeout = inviteTimeout;
             this.conversationScenario = conversationScenario;
             this.numbers = numbers;
+            this.bridgeManager = bridgeManager;
         }
 
         public String getNumber(){
             return numbers[numberIndex];
+        }
+
+        public void commutateCalls() throws IvrConversationBridgeExeption
+        {
+            IvrConversationsBridge bridge = bridgeManager.createBridge(
+                    request.getConversation(), operatorConversation);
+            bridge.activateBridge();
         }
     }
 }
