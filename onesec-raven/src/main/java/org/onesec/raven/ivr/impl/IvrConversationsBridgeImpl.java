@@ -133,6 +133,12 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
         listeners.add(listener);
     }
 
+    private void fireBridgeActivatedEvent()
+    {
+        for (IvrConversationsBridgeListener listener: listeners)
+            listener.bridgeActivated(this);
+    }
+
     private void fireBridgeDeactivatedEvent()
     {
         for (IvrConversationsBridgeListener listener: listeners)
@@ -159,6 +165,7 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
         if (dataSourceCounter==2){
             status.set(IvrConversationsBridgeStatus.ACTIVATED);
             activatedTimestamp.set(System.currentTimeMillis());
+            fireBridgeActivatedEvent();
             if (owner.isLogLevelEnabled(LogLevel.INFO))
                 owner.getLogger().info(logMess("Bridge successfully activated"));
         }

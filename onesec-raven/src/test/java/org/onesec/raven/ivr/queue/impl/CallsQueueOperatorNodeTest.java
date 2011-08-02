@@ -25,6 +25,10 @@ import org.junit.Before;
 import org.junit.Test;
 import org.onesec.core.StateWaitResult;
 import org.onesec.raven.OnesecRavenTestCase;
+import org.onesec.raven.ivr.CompletionCode;
+import org.onesec.raven.ivr.IvrConversationsBridge;
+import org.onesec.raven.ivr.IvrConversationsBridgeListener;
+import org.onesec.raven.ivr.IvrConversationsBridgeManager;
 import org.onesec.raven.ivr.IvrEndpoint;
 import org.onesec.raven.ivr.IvrEndpointPool;
 import org.onesec.raven.ivr.IvrEndpointState;
@@ -32,6 +36,8 @@ import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import static org.easymock.EasyMock.*;
+import org.onesec.raven.ivr.ConversationResult;
+import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.queue.CallsQueueOperator;
 import org.raven.sched.ExecutorServiceException;
 
@@ -143,6 +149,81 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
         assertTrue(endTime-startTime<7000);
 
         verify(request, queue, pool, endpoint, endpointState, stateWaitResult);
+    }
+
+    @Test
+    public void commutateTest() throws Exception
+    {
+        final CallQueueRequestWrapper request = createMock(CallQueueRequestWrapper.class);
+        IvrEndpointConversation abonentConversation = createMock(
+                "abonentConversation", IvrEndpointConversation.class);
+        IvrEndpointConversation operatorConversation = createMock(
+                "operatorConversation", IvrEndpointConversation.class);
+        final CallsQueue queue = createMock(CallsQueue.class);
+        IvrEndpointPool pool = createMock(IvrEndpointPool.class);
+        IvrEndpoint operatorEndpoint = createMock(IvrEndpoint.class);
+        IvrEndpointState endpointState = createMock(IvrEndpointState.class);
+        IvrConversationsBridgeManager manager = createMock(IvrConversationsBridgeManager.class);
+        IvrConversationsBridge bridge = createMock(IvrConversationsBridge.class);
+        ConversationResult conversationResult = createMock(ConversationResult.class);
+
+        request.addToLog("handling by operator (operator)");
+        pool.requestEndpoint(sendEndpoint(operatorEndpoint));
+        operatorEndpoint.invite(eq("88024"), same(scenario), same(operator), checkBindings(operator, request));
+        expect(request.isValid()).andReturn(Boolean.TRUE).anyTimes();
+        expect(operatorEndpoint.getEndpointState()).andReturn(endpointState).anyTimes();
+        expect(endpointState.getId()).andReturn(IvrEndpointState.TALKING).anyTimes();
+        request.addToLog("op. number (88024) ready to commutate");
+        request.fireReadyToCommutateQueueEvent(operator);
+        request.addToLog("abonent ready to commutate");
+        expect(request.getConversation()).andReturn(abonentConversation);
+        expect(manager.createBridge(abonentConversation, operatorConversation)).andReturn(bridge);
+        bridge.addBridgeListener(checkBridgeListener());
+        bridge.activateBridge();
+        request.fireCommutatedEvent();
+        expect(conversationResult.getCompletionCode()).andReturn(CompletionCode.COMPLETED_BY_OPPONENT);
+        request.addToLog("conv. for op. number (88024) completed (COMPLETED_BY_OPPONENT)");
+        request.fireDisconnectedQueueEvent();
+        
+        replay(request, abonentConversation, operatorConversation, queue, pool, operatorEndpoint, 
+            endpointState, manager, bridge, conversationResult);
+
+        operator.setInviteTimeout(5);
+        assertTrue(operator.start());
+        endpointPool.setEndpointPool(pool);
+        bridgeManager.setManager(manager);
+        new Thread(){
+            @Override
+            public void run() {
+                operator.processRequest(queue, request);
+            }
+        }.start();
+        Thread.sleep(1000);
+        //check for busy
+        assertFalse(operator.processRequest(queue, request));
+        operator.operatorReadyToCommutate(operatorConversation);
+        Thread.sleep(100);
+        operator.abonentReadyToCommutate(abonentConversation);
+        Thread.sleep(100);
+        operator.conversationCompleted(conversationResult);
+        Thread.sleep(100);
+
+        verify(request, abonentConversation, operatorConversation, queue, pool, operatorEndpoint,
+            endpointState, manager, bridge, conversationResult);
+    }
+
+    public static IvrConversationsBridgeListener checkBridgeListener()
+    {
+        reportMatcher(new IArgumentMatcher() {
+            public boolean matches(Object arg) {
+                IvrConversationsBridgeListener listener = (IvrConversationsBridgeListener) arg;
+                listener.bridgeActivated(null);
+                return true;
+            }
+            public void appendTo(StringBuffer buffer) {
+            }
+        });
+        return null;
     }
 
     public static Map<String, Object> checkBindings(

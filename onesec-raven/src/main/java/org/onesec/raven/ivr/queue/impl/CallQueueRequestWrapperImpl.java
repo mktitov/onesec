@@ -45,6 +45,7 @@ import org.onesec.raven.ivr.queue.event.NumberChangedQueueEvent;
 import org.onesec.raven.ivr.queue.event.ReadyToCommutateQueueEvent;
 import org.onesec.raven.ivr.queue.event.RejectedQueueEvent;
 import org.onesec.raven.ivr.queue.event.impl.CallQueueEventImpl;
+import org.onesec.raven.ivr.queue.event.impl.CommutatedQueueEventImpl;
 import org.onesec.raven.ivr.queue.event.impl.DisconnectedQueueEventImpl;
 import org.onesec.raven.ivr.queue.event.impl.NumberChangedQueueEventImpl;
 import org.onesec.raven.ivr.queue.event.impl.ReadyToCommutateQueueEventImpl;
@@ -202,9 +203,11 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
         try{
             if (cdr!=null){
                 if        (event instanceof DisconnectedQueueEvent) {
-                    cdr.setValue(DISCONNECTED_TIME, getTimestamp());
-                    cdr.setValue(LOG, log.toString());
-                    sendCdrToConsumers();
+                    if (cdr.getValue(DISCONNECTED_TIME)==null) {
+                        cdr.setValue(DISCONNECTED_TIME, getTimestamp());
+                        cdr.setValue(LOG, log.toString());
+                        sendCdrToConsumers();
+                    }
                 } else if (event instanceof RejectedQueueEvent) {
                     cdr.setValue(REJECETED_TIME, getTimestamp());
                     cdr.setValue(LOG, log.toString());
@@ -256,6 +259,10 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
 
     public void fireReadyToCommutateQueueEvent(CallsQueueOperator operator) {
         callQueueChangeEvent(new ReadyToCommutateQueueEventImpl(queue, requestId, operator));
+    }
+
+    public void fireCommutatedEvent() {
+        callQueueChangeEvent(new CommutatedQueueEventImpl(queue, requestId));
     }
     
     private void sendCdrToConsumers()
