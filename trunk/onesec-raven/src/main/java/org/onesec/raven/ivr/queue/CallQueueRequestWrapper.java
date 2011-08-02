@@ -55,6 +55,10 @@ public interface CallQueueRequestWrapper extends CallQueueRequest
      */
     public void fireReadyToCommutateQueueEvent(CallsQueueOperator operator);
     /**
+     * Fires when operator and abonent where commutated
+     */
+    public void fireCommutatedEvent();
+    /**
      * Fires when commutation was disconnected
      */
     public void fireDisconnectedQueueEvent();

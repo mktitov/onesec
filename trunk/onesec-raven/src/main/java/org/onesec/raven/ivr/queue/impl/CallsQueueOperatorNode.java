@@ -30,6 +30,7 @@ import org.onesec.raven.ivr.EndpointRequest;
 import org.onesec.raven.ivr.IvrConversationBridgeExeption;
 import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.IvrConversationsBridge;
+import org.onesec.raven.ivr.IvrConversationsBridgeListener;
 import org.onesec.raven.ivr.IvrConversationsBridgeManager;
 import org.onesec.raven.ivr.IvrEndpoint;
 import org.onesec.raven.ivr.IvrEndpointConversation;
@@ -195,7 +196,7 @@ public class CallsQueueOperatorNode extends BaseNode
 
             if (info.commutated) {
                 info.request.fireDisconnectedQueueEvent();
-                return false;
+                return true;
             } else
                 return !info.request.isValid();
         } finally {
@@ -354,7 +355,8 @@ public class CallsQueueOperatorNode extends BaseNode
         this.phoneNumbers = phoneNumbers;
     }
     
-    private class RequestInfo {
+    private class RequestInfo implements IvrConversationsBridgeListener
+    {
         final CallQueueRequestWrapper request;
         final CallsQueue queue;
         final long waitTimeout;
@@ -391,7 +393,16 @@ public class CallsQueueOperatorNode extends BaseNode
         {
             IvrConversationsBridge bridge = bridgeManager.createBridge(
                     request.getConversation(), operatorConversation);
+            bridge.addBridgeListener(this);
             bridge.activateBridge();
+            commutated = true;
+        }
+
+        public void bridgeActivated(IvrConversationsBridge bridge) {
+            request.fireCommutatedEvent();
+        }
+
+        public void bridgeDeactivated(IvrConversationsBridge bridge) {
         }
     }
 }

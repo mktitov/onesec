@@ -88,6 +88,9 @@ public class IvrConversationsBridgeManagerNode extends BaseNode
         }
     }
 
+    public void bridgeActivated(IvrConversationsBridge bridge) {
+    }
+
     public void bridgeDeactivated(IvrConversationsBridge bridge)
     {
         lock.writeLock().lock();

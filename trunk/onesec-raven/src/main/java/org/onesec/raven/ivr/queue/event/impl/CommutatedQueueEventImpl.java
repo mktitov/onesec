@@ -15,20 +15,18 @@
  *  under the License.
  */
 
-package org.onesec.raven.ivr;
+package org.onesec.raven.ivr.queue.event.impl;
+
+import org.onesec.raven.ivr.queue.CallsQueue;
+import org.onesec.raven.ivr.queue.event.CommutatedQueueEvent;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface IvrConversationsBridgeListener
+public class CommutatedQueueEventImpl extends CallQueueEventImpl implements CommutatedQueueEvent
 {
-    /**
-     * Fires when bridge was activated
-     */
-    public void bridgeActivated(IvrConversationsBridge bridge);
-    /**
-     * Fires when bridge was deactivated
-     */
-    public void bridgeDeactivated(IvrConversationsBridge bridge);
+    public CommutatedQueueEventImpl(CallsQueue callsQueue, long requestId) {
+        super(callsQueue, requestId);
+    }
 }
