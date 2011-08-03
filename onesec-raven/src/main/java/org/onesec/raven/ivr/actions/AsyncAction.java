@@ -73,24 +73,20 @@ public abstract class AsyncAction extends AbstractAction implements Task
 
     public void run()
     {
-        try
-        {
-            try
-            {
+        try{
+            try {
                 if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
                     conversation.getOwner().getLogger().debug(logMess("Executing..."));
                 doExecute(conversation);
                 if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
                     conversation.getOwner().getLogger().debug(logMess("Executed"));
             }
-            catch (Exception ex)
-            {
+            catch (Exception ex) {
                 if (conversation.getOwner().isLogLevelEnabled(LogLevel.ERROR))
                     conversation.getOwner().getLogger().error(logMess("Execution error"), ex);
             }
         }
-        finally
-        {
+        finally {
             setStatus(IvrActionStatus.EXECUTED);
         }
     }
