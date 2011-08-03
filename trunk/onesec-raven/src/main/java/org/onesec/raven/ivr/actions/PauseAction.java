@@ -47,10 +47,8 @@ public class PauseAction extends AsyncAction
         if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
             conversation.getOwner().getLogger().debug(logMess("Pausing on "+interval+" ms"));
         long start = System.currentTimeMillis();
-        do
-        {
-                TimeUnit.MILLISECONDS.sleep(10);
-        }
-        while (System.currentTimeMillis()-start<interval && !hasCancelRequest());
+        do {
+            TimeUnit.MILLISECONDS.sleep(10);
+        } while (System.currentTimeMillis()-start<interval && !hasCancelRequest());
     }
 }
