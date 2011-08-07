@@ -27,6 +27,7 @@ import org.onesec.raven.ivr.IvrActionException;
 import org.onesec.raven.ivr.impl.AudioFileNode;
 import org.raven.sched.impl.ExecutorServiceNode;
 import org.raven.tree.Node;
+import org.raven.tree.Tree;
 import org.raven.tree.impl.ContainerNode;
 
 /**
@@ -53,9 +54,10 @@ public class SayAmountActionTest extends OnesecRavenTestCase
         conv.setName("endpoint");
         tree.getRootNode().addAndSaveChildren(conv);
         conv.setExecutorService(executor);
+        conv.setFileName("target/amount.wav");
         assertTrue(conv.start());
 
-        numbers = createNumbersNode();
+        numbers = createNumbersNode(tree);
     }
 
     @Test(timeout=15000)
@@ -66,7 +68,7 @@ public class SayAmountActionTest extends OnesecRavenTestCase
         Thread.sleep(10000);
     }
 
-    private Node createNumbersNode() throws Exception
+    public static Node createNumbersNode(Tree tree) throws Exception
     {
         ContainerNode numbers = new ContainerNode("numbers");
         tree.getRootNode().addAndSaveChildren(numbers);
@@ -75,6 +77,8 @@ public class SayAmountActionTest extends OnesecRavenTestCase
         File[] sounds = new File("src/test/wav/numbers").listFiles();
         for (File sound: sounds)
         {
+            if (sound.isDirectory())
+                continue;
             AudioFileNode audioNode = new AudioFileNode();
             audioNode.setName(FilenameUtils.getBaseName(sound.getName()));
             numbers.addAndSaveChildren(audioNode);

@@ -32,6 +32,7 @@ import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.DataSource;
 import javax.media.protocol.FileTypeDescriptor;
 import org.apache.commons.io.FileUtils;
+import org.onesec.raven.ivr.impl.ControllerStateWaiter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,19 +58,15 @@ public class JMFHelper
             _writer = Manager.createDataSink(dataSource, dest);
         }catch(Exception e){
             logger.warn("Error creating data sink directly from the data source, so creating a processor");
-            p = Manager.createRealizedProcessor(new ProcessorModel(
-                    dataSource
-                    , new Format[]{new AudioFormat(
-                        AudioFormat.LINEAR, 8000, 16, 1, AudioFormat.LITTLE_ENDIAN, AudioFormat.SIGNED)}
-                    , new ContentDescriptor(FileTypeDescriptor.WAVE)));
-//            p = Manager.createProcessor(dataSource);
-//            p.configure();
-//            waitForState(p, Processor.Configured);
-//            p.setContentDescriptor(new ContentDescriptor(FileTypeDescriptor.WAVE));
-//            p.getTrackControls()[0].setFormat(new AudioFormat(
-//                AudioFormat.LINEAR, 8000, 16, 1, AudioFormat.LITTLE_ENDIAN, AudioFormat.SIGNED));
-//            p.realize();
-//            waitForState(p, Processor.Realized);
+            AudioFormat format = new AudioFormat(AudioFormat.LINEAR, 8000, 16, 1, AudioFormat.LITTLE_ENDIAN
+                    , AudioFormat.SIGNED);
+            p = ControllerStateWaiter.createRealizedProcessor(dataSource, format, 4000
+                    , new ContentDescriptor(FileTypeDescriptor.WAVE));
+//            p = Manager.createRealizedProcessor(new ProcessorModel(
+//                    dataSource
+//                    , new Format[]{new AudioFormat(
+//                        AudioFormat.LINEAR, 8000, 16, 1, AudioFormat.LITTLE_ENDIAN, AudioFormat.SIGNED)}
+//                    , new ContentDescriptor(FileTypeDescriptor.WAVE)));
             _writer = Manager.createDataSink(p.getDataOutput(), dest);
             p.start();
         }
