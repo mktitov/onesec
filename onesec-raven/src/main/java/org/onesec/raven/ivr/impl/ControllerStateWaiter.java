@@ -28,6 +28,7 @@ import javax.media.Format;
 import javax.media.Manager;
 import javax.media.Processor;
 import javax.media.control.TrackControl;
+import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.DataSource;
 
 /**
@@ -97,7 +98,7 @@ public class ControllerStateWaiter implements ControllerListener
     }
 
     public static Processor createRealizedProcessor(
-            DataSource source, Format format, int stateWaitTimeout)
+            DataSource source, Format format, int stateWaitTimeout, ContentDescriptor contentDescriptor)
         throws Exception
     {
         Processor p = Manager.createProcessor(source);
@@ -105,11 +106,20 @@ public class ControllerStateWaiter implements ControllerListener
                 new int[]{Processor.Configured, Processor.Realized}, p, stateWaitTimeout);
         p.configure();
         waiter.waitForNextState();
+        if (contentDescriptor!=null)
+            p.setContentDescriptor(contentDescriptor);
         TrackControl[] tracks = p.getTrackControls();
         tracks[0].setFormat(format);
         p.realize();
         waiter.waitForNextState();
         
         return p;
+    }
+    
+    public static Processor createRealizedProcessor(
+            DataSource source, Format format, int stateWaitTimeout)
+        throws Exception
+    {
+        return createRealizedProcessor(source, format, stateWaitTimeout, null);
     }
 }
