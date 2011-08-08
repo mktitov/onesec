@@ -17,10 +17,58 @@
 
 package org.onesec.raven.ivr.queue.actions;
 
+import org.onesec.raven.ivr.IvrAction;
+import org.onesec.raven.ivr.IvrActionNode;
+import org.onesec.raven.ivr.impl.AudioFileNode;
+import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
+import org.raven.annotations.NodeClass;
+import org.raven.annotations.Parameter;
+import org.raven.tree.Node;
+import org.raven.tree.impl.BaseNode;
+import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
+import org.weda.annotations.constraints.NotNull;
+
 /**
  *
  * @author Mikhail Titov
  */
-public class SayNumberInQueueActionNode {
+@NodeClass(parentNode=IvrConversationScenarioNode.class)
+public class SayNumberInQueueActionNode extends BaseNode implements IvrActionNode
+{
+    @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
+    private Node numbersNode;
 
+    @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
+    private AudioFileNode preambleAudio;
+
+    @NotNull @Parameter(defaultValue="10")
+    private Long pauseBeetweenWords;
+
+    public IvrAction createAction() {
+        return new SayNumberInQueueAction(numbersNode, pauseBeetweenWords, preambleAudio);
+    }
+
+    public Node getNumbersNode() {
+        return numbersNode;
+    }
+
+    public void setNumbersNode(Node numbersNode) {
+        this.numbersNode = numbersNode;
+    }
+
+    public Long getPauseBeetweenWords() {
+        return pauseBeetweenWords;
+    }
+
+    public void setPauseBeetweenWords(Long pauseBeetweenWords) {
+        this.pauseBeetweenWords = pauseBeetweenWords;
+    }
+
+    public AudioFileNode getPreambleAudio() {
+        return preambleAudio;
+    }
+
+    public void setPreambleAudio(AudioFileNode preambleAudio) {
+        this.preambleAudio = preambleAudio;
+    }
 }
