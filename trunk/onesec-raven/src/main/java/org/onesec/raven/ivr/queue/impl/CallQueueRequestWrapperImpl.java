@@ -36,6 +36,7 @@ import org.onesec.raven.ivr.IvrEndpointConversationTransferedEvent;
 import org.onesec.raven.ivr.queue.event.CallQueueEvent;
 import org.onesec.raven.ivr.queue.CallQueueRequest;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
+import org.onesec.raven.ivr.queue.CallsCommutationManager;
 import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviour;
 import org.onesec.raven.ivr.queue.CallsQueueOperator;
 import org.onesec.raven.ivr.queue.event.CallQueuedEvent;
@@ -257,7 +258,7 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
         callQueueChangeEvent(new DisconnectedQueueEventImpl(queue, requestId));
     }
 
-    public void fireReadyToCommutateQueueEvent(CallsQueueOperator operator) {
+    public void fireReadyToCommutateQueueEvent(CallsCommutationManager operator) {
         callQueueChangeEvent(new ReadyToCommutateQueueEventImpl(queue, requestId, operator));
     }
 

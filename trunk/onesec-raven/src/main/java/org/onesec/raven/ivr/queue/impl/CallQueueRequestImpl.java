@@ -18,7 +18,7 @@
 package org.onesec.raven.ivr.queue.impl;
 
 import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.onesec.raven.ivr.queue.CallQueueRequest;
+import org.onesec.raven.ivr.queue.CallsCommutationManager;
 import org.onesec.raven.ivr.queue.CallsQueueOperator;
 import org.onesec.raven.ivr.queue.QueuedCallStatus;
 import org.onesec.raven.ivr.queue.event.CallQueueEvent;
@@ -42,7 +42,7 @@ public class CallQueueRequestImpl implements QueuedCallStatus
     private Status status;
     private int serialNumber;
     private int prevSerialNumber;
-    private CallsQueueOperator operator;
+    private CallsCommutationManager commutationManager;
 
     public CallQueueRequestImpl(IvrEndpointConversation conversation, int priority, String queueId,
             boolean continueConversationOnReadyToCommutate)
@@ -68,7 +68,7 @@ public class CallQueueRequestImpl implements QueuedCallStatus
     {
         if (event instanceof ReadyToCommutateQueueEvent) {
             status = Status.READY_TO_COMMUTATE;
-            operator = ((ReadyToCommutateQueueEvent)event).getOperator();
+            commutationManager = ((ReadyToCommutateQueueEvent)event).getCommutationManager();
             if (continueConversationOnReadyToCommutate)
                 conversation.continueConversation('-');
         } else if (event instanceof CommutatedQueueEvent) {
@@ -84,7 +84,7 @@ public class CallQueueRequestImpl implements QueuedCallStatus
     public synchronized void replayToReadyToCommutate()
     {
         status = Status.COMMUTATING;
-        operator.abonentReadyToCommutate(conversation);
+        commutationManager.abonentReadyToCommutate(conversation);
     }
 
     public int getPriority() {
