@@ -18,10 +18,9 @@
 package org.onesec.raven.ivr.queue.impl;
 
 import java.util.Map;
-import org.apache.poi.hssf.record.ScenarioProtectRecord;
 import org.easymock.IArgumentMatcher;
-import org.onesec.raven.ivr.EndpointRequest;
 import org.junit.Before;
+import org.onesec.raven.ivr.EndpointRequest;
 import org.junit.Test;
 import org.onesec.core.StateWaitResult;
 import org.onesec.raven.OnesecRavenTestCase;
@@ -34,6 +33,7 @@ import org.onesec.raven.ivr.IvrEndpointPool;
 import org.onesec.raven.ivr.IvrEndpointState;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
+import org.onesec.raven.ivr.queue.CallsCommutationManager;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import static org.easymock.EasyMock.*;
 import org.onesec.raven.ivr.ConversationResult;
@@ -124,7 +124,8 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
 
         request.addToLog("handling by operator (operator)");
         pool.requestEndpoint(sendEndpoint(endpoint));
-        endpoint.invite(eq("88024"), same(scenario), same(operator), checkBindings(operator, request));
+        endpoint.invite(eq("88024"), same(scenario), isA(CallsCommutationManagerImpl.class)
+                , checkBindings(operator, request));
         expect(request.isValid()).andReturn(Boolean.TRUE).anyTimes();
         expect(endpoint.getEndpointState()).andReturn(endpointState).anyTimes();
         expect(endpointState.getId()).andReturn(IvrEndpointState.INVITING).anyTimes();
@@ -169,12 +170,13 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
 
         request.addToLog("handling by operator (operator)");
         pool.requestEndpoint(sendEndpoint(operatorEndpoint));
-        operatorEndpoint.invite(eq("88024"), same(scenario), same(operator), checkBindings(operator, request));
+        operatorEndpoint.invite(eq("88024"), same(scenario), isA(CallsCommutationManagerImpl.class)
+                , checkBindings(operator, request));
         expect(request.isValid()).andReturn(Boolean.TRUE).anyTimes();
         expect(operatorEndpoint.getEndpointState()).andReturn(endpointState).anyTimes();
         expect(endpointState.getId()).andReturn(IvrEndpointState.TALKING).anyTimes();
         request.addToLog("op. number (88024) ready to commutate");
-        request.fireReadyToCommutateQueueEvent(operator);
+        request.fireReadyToCommutateQueueEvent(isA(CallsCommutationManager.class));
         request.addToLog("abonent ready to commutate");
         expect(request.getConversation()).andReturn(abonentConversation);
         expect(manager.createBridge(abonentConversation, operatorConversation)).andReturn(bridge);
@@ -201,11 +203,12 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
         Thread.sleep(1000);
         //check for busy
         assertFalse(operator.processRequest(queue, request));
-        operator.operatorReadyToCommutate(operatorConversation);
+        CallsCommutationManagerImpl commutationManager = operator.getCommutationManager();
+        commutationManager.operatorReadyToCommutate(operatorConversation);
         Thread.sleep(100);
-        operator.abonentReadyToCommutate(abonentConversation);
+        commutationManager.abonentReadyToCommutate(abonentConversation);
         Thread.sleep(100);
-        operator.conversationCompleted(conversationResult);
+        commutationManager.conversationCompleted(conversationResult);
         Thread.sleep(100);
 
         verify(request, abonentConversation, operatorConversation, queue, pool, operatorEndpoint,
@@ -232,8 +235,9 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
         reportMatcher(new IArgumentMatcher() {
             public boolean matches(Object argument) {
                 Map<String, Object> bindings = (Map<String, Object>) argument;
-                assertSame(bindings.get(CallsQueueOperator.CALL_QUEUE_OPERATOR_BINDING), operator);
-                assertSame(bindings.get(CallsQueueOperator.CALL_QUEUE_REQUEST_BINDING), request);
+                assertTrue(bindings.get(CallsCommutationManager.CALL_QUEUE_OPERATOR_BINDING)
+                        instanceof CallsCommutationManager);
+                assertSame(bindings.get(CallsCommutationManager.CALL_QUEUE_REQUEST_BINDING), request);
                 return true;
             }
             public void appendTo(StringBuffer buffer) {
