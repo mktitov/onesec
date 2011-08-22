@@ -35,11 +35,11 @@ import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
 import org.onesec.raven.ivr.queue.CallsCommutationManager;
 import org.onesec.raven.ivr.queue.CallsQueue;
-import static org.easymock.EasyMock.*;
 import org.onesec.raven.ivr.ConversationResult;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.queue.CallsQueueOperator;
 import org.raven.sched.ExecutorServiceException;
+import static org.easymock.EasyMock.*;
 
 /**
  *

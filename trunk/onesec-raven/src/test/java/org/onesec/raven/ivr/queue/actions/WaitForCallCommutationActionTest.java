@@ -17,10 +17,7 @@
 
 package org.onesec.raven.ivr.queue.actions;
 
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.script.Bindings;
 import org.junit.Assert;
 import org.junit.Test;
