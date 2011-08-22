@@ -17,11 +17,14 @@
 
 package org.onesec.raven.ivr.queue.actions;
 
+import java.util.concurrent.TimeUnit;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.actions.AsyncAction;
+import org.onesec.raven.ivr.queue.CallsCommutationManager;
 
 /**
- *
+ * Цель: проинформировать {@link CallsCommutationManager} о том, что оператор готов к коммутации и ждать
+ *       до тех пор пока оператор не положит трубку или пока
  * @author Mikhail Titov
  */
 public class WaitForCallCommutationAction extends AsyncAction
@@ -33,12 +36,23 @@ public class WaitForCallCommutationAction extends AsyncAction
     }
 
     @Override
-    protected void doExecute(IvrEndpointConversation conversation) throws Exception {
-        throw new UnsupportedOperationException("Not supported yet.");
+    protected void doExecute(IvrEndpointConversation conversation) throws Exception
+    {
+        CallsCommutationManager commutationManager = (CallsCommutationManager) conversation
+                .getConversationScenarioState()
+                .getBindings()
+                .get(CallsCommutationManager.CALLS_COMMUTATION_MANAGER_BINDING);
+
+        if (commutationManager==null)
+            throw new Exception("CallsCommutationManager not found in the conversation scenario state");
+
+        commutationManager.operatorReadyToCommutate(conversation);
+
+        while (!hasCancelRequest() && commutationManager.isCommutationValid())
+            TimeUnit.MILLISECONDS.sleep(100);
     }
 
     public boolean isFlowControlAction() {
         return false;
     }
-
 }

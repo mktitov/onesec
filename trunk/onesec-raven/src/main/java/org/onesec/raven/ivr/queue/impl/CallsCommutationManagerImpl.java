@@ -20,6 +20,7 @@ package org.onesec.raven.ivr.queue.impl;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
@@ -60,12 +61,12 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager, Ivr
     private final CallsQueueOperatorNode owner;
     private final AtomicReference<String> statusMessage;
     private int numberIndex=0;
-    private boolean operatorConversationFlag = false;
+    private AtomicBoolean operatorConversationFlag = new AtomicBoolean(false);
     private boolean operatorReadyToCommutate = false;
     private boolean readyToCommutateSended = false;
     private boolean abonentReadyToCommutate = false;
     private boolean commutated = false;
-    private boolean commutationValid = true;
+    private AtomicBoolean commutationValid = new AtomicBoolean(true);
     private IvrEndpointConversation operatorConversation = null;
     private ReentrantLock lock = new ReentrantLock();
     private Condition eventCondition = lock.newCondition();
@@ -89,10 +90,12 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager, Ivr
 
     private boolean checkState()
     {
-        if (commutationValid){
-            commutationValid = request.isValid() && operatorConversationFlag;
-        }
-        return commutationValid;
+        commutationValid.compareAndSet(true, request.isValid() && operatorConversationFlag.get());
+        return commutationValid.get();
+    }
+
+    public boolean isCommutationValid() {
+        return commutationValid.get();
     }
 
     private String getNumber(){
@@ -117,7 +120,7 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager, Ivr
             }
 
             Map<String, Object> bindings = new HashMap<String, Object>();
-            bindings.put(CALL_QUEUE_OPERATOR_BINDING, this);
+            bindings.put(CALLS_COMMUTATION_MANAGER_BINDING, this);
             bindings.put(CALL_QUEUE_REQUEST_BINDING, request);
             try {
                 boolean callHandled = false;
@@ -148,7 +151,7 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager, Ivr
 
     public boolean callToOperator(IvrEndpoint endpoint, Map<String, Object> bindings) throws Exception
     {
-        operatorConversationFlag = true;
+        operatorConversationFlag.set(true);
         endpoint.invite(getNumber(), conversationScenario, this, bindings);
         lock.lock();
         try {
@@ -274,7 +277,7 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager, Ivr
             owner.getLogger().debug(logMess("Operator's conversation completed"));
         lock.lock();
         try {
-            operatorConversationFlag = false;
+            operatorConversationFlag.set(false);
             checkState();
             request.addToLog(String.format(
                     "conv. for op. number (%s) completed (%s)", getNumber(), res.getCompletionCode()));

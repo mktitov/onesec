@@ -25,7 +25,7 @@ import org.onesec.raven.ivr.IvrEndpointConversation;
  */
 public interface CallsCommutationManager
 {
-    public final static String CALL_QUEUE_OPERATOR_BINDING = "queueOperator";
+    public final static String CALLS_COMMUTATION_MANAGER_BINDING = "queueCommutationManager";
     public final static String CALL_QUEUE_REQUEST_BINDING = "queueRequest";
     
     /**
@@ -38,4 +38,8 @@ public interface CallsCommutationManager
      * @param operatorConversation the operator conversation
      */
     public void abonentReadyToCommutate(IvrEndpointConversation abonentConversation);
+    /**
+     * Returns <b>true</b> while the state of the communication between two calls is valid
+     */
+    public boolean isCommutationValid();
 }

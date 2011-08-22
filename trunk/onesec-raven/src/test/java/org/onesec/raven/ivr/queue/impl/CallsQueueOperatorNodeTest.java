@@ -235,7 +235,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
         reportMatcher(new IArgumentMatcher() {
             public boolean matches(Object argument) {
                 Map<String, Object> bindings = (Map<String, Object>) argument;
-                assertTrue(bindings.get(CallsCommutationManager.CALL_QUEUE_OPERATOR_BINDING)
+                assertTrue(bindings.get(CallsCommutationManager.CALLS_COMMUTATION_MANAGER_BINDING)
                         instanceof CallsCommutationManager);
                 assertSame(bindings.get(CallsCommutationManager.CALL_QUEUE_REQUEST_BINDING), request);
                 return true;

@@ -31,6 +31,6 @@ import org.raven.tree.impl.BaseNode;
 public class WaitForCallCommutationActionNode extends BaseNode implements IvrActionNode
 {
     public IvrAction createAction() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return new WaitForCallCommutationAction();
     }
 }
