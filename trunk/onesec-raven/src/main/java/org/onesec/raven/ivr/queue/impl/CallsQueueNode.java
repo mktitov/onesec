@@ -65,7 +65,8 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
     private CallsQueueRequestComparator requestComparator;
 
     @Override
-    protected void initFields() {
+    protected void initFields()
+    {
         super.initFields();
         statusMessage = new AtomicReference<String>("Waiting for request...");
         stopProcessing = new AtomicBoolean(true);
