@@ -53,14 +53,14 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         queue.setExecutor(executor);
     }
     
-//    @Test
+    @Test
     public void successQueued()
     {
         executor.stop();
         
         CallQueueRequestWrapper req = createMock(CallQueueRequestWrapper.class);
         req.setCallsQueue(queue);
-        req.setRequestId(1);
+//        req.setRequestId(1);
         req.setPositionInQueue(1);
         req.fireCallQueuedEvent();
         replay(req);
@@ -71,7 +71,7 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         verify(req);
     }
     
-//    @Test
+    @Test
     public void rejectedByMaxQueueSize()
     {
         executor.stop();
@@ -79,14 +79,14 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         CallQueueRequestWrapper req = createMock(CallQueueRequestWrapper.class);
         CallQueueRequestWrapper req1 = createMock(CallQueueRequestWrapper.class);
         req.setCallsQueue(queue);
-        req.setRequestId(1);
+//        req.setRequestId(1);
         expect(req.getPriority()).andReturn(1).anyTimes();
         expect(req.getRequestId()).andReturn(1l).anyTimes();
         req.setPositionInQueue(1);
         req.fireCallQueuedEvent();
         
         req1.setCallsQueue(queue);
-        req1.setRequestId(2);
+//        req1.setRequestId(2);
         expect(req1.getPriority()).andReturn(1).anyTimes();
         expect(req1.getRequestId()).andReturn(2l).anyTimes();
         req1.addToLog(eq("queue size was exceeded"));
@@ -102,12 +102,12 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         verify(req, req1);
     }
     
-//    @Test(timeout=5000)
+    @Test(timeout=5000)
     public void rejectedByNotFoundPrioritySelector() throws InterruptedException
     {
         CallQueueRequestWrapper req = createMock(CallQueueRequestWrapper.class);
         req.setCallsQueue(queue);
-        req.setRequestId(1);
+//        req.setRequestId(1);
         req.setPositionInQueue(1);
         req.fireCallQueuedEvent();
         req.addToLog("not found priority selector");
@@ -140,8 +140,8 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         
         CallQueueRequestWrapper req = createMock(CallQueueRequestWrapper.class);
         req.setCallsQueue(queue);
-        expect(req.getRequestId()).andReturn(0l);
-        req.setRequestId(1);
+//        expect(req.getRequestId()).andReturn(0l);
+//        req.setRequestId(1);
         req.setPositionInQueue(1);
         expect(req.getPriority()).andReturn(1).anyTimes();
         req.fireCallQueuedEvent();
@@ -174,8 +174,8 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         CallsQueueOperator operator = createMock(CallsQueueOperator.class);
         
         req.setCallsQueue(queue);
-        expect(req.getRequestId()).andReturn(0l);
-        req.setRequestId(1);
+//        expect(req.getRequestId()).andReturn(0l);
+//        req.setRequestId(1);
         req.setPositionInQueue(1);
         req.fireCallQueuedEvent();        
         expect(req.getPriority()).andReturn(1).anyTimes();
@@ -206,8 +206,8 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         CallsQueueOnBusyBehaviour onBusyBehaviour = createMock(CallsQueueOnBusyBehaviour.class);
         
         req.setCallsQueue(queue);
-        expect(req.getRequestId()).andReturn(0l);
-        req.setRequestId(1);
+//        expect(req.getRequestId()).andReturn(0l);
+//        req.setRequestId(1);
         req.setPositionInQueue(1);
         req.fireCallQueuedEvent();
         expect(req.getPriority()).andReturn(1).anyTimes();
@@ -239,8 +239,8 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         CallsQueueOnBusyBehaviour onBusyBehaviour = createMock(CallsQueueOnBusyBehaviour.class);
         
         req.setCallsQueue(queue);
-        expect(req.getRequestId()).andReturn(0l);
-        req.setRequestId(1);
+//        expect(req.getRequestId()).andReturn(0l);
+//        req.setRequestId(1);
         req.setPositionInQueue(1);
         expectLastCall().anyTimes();
         req.fireCallQueuedEvent();        
@@ -252,8 +252,8 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
                 isA(CallsQueue.class), isA(CallQueueRequestWrapper.class))).andReturn(Boolean.FALSE);
         
         req1.setCallsQueue(queue);
-        expect(req1.getRequestId()).andReturn(0l);
-        req1.setRequestId(2);
+//        expect(req1.getRequestId()).andReturn(0l);
+//        req1.setRequestId(2);
         expect(req1.getPriority()).andReturn(2).anyTimes();
         req1.setPositionInQueue(2);
         req1.fireCallQueuedEvent();
@@ -285,9 +285,9 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
 
         req.setCallsQueue(queue);
         expectLastCall().times(2);
-        expect(req.getRequestId()).andReturn(0l);
-        expect(req.getRequestId()).andReturn(1l);
-        req.setRequestId(1);
+//        expect(req.getRequestId()).andReturn(0l);
+//        expect(req.getRequestId()).andReturn(1l);
+//        req.setRequestId(1);
         req.setPositionInQueue(1);
         expectLastCall().times(2);
         req.fireCallQueuedEvent();

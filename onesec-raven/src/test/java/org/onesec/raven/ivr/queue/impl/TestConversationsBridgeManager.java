@@ -39,9 +39,10 @@ public class TestConversationsBridgeManager extends BaseNode implements IvrConve
         this.manager = manager;
     }
 
-    public IvrConversationsBridge createBridge(IvrEndpointConversation conv1, IvrEndpointConversation conv2)
-            throws IvrConversationBridgeExeption
+    public IvrConversationsBridge createBridge(
+            IvrEndpointConversation conv1, IvrEndpointConversation conv2, String logPrefix)
+        throws IvrConversationBridgeExeption
     {
-        return manager.createBridge(conv1, conv2);
+        return manager.createBridge(conv1, conv2, logPrefix);
     }
 }

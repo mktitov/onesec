@@ -20,6 +20,7 @@ package org.onesec.raven.ivr.queue.impl;
 import org.raven.tree.Node;
 import java.util.Collection;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 import org.onesec.raven.ivr.queue.CallQueueException;
 import org.onesec.raven.ivr.queue.CallQueueRequest;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
@@ -55,6 +56,7 @@ public class CallsQueuesNode  extends BaseNode implements CallsQueues, DataPipe
     @Parameter
     private DataSource dataSource;
 
+    private AtomicLong requestIdSeq;
     private RecordSchemaNode _cdrRecordSchema;
     private CallsQueueOperatorsNode operatorsNode;
     private CallsQueuesContainerNode queuesNode;
@@ -69,6 +71,7 @@ public class CallsQueuesNode  extends BaseNode implements CallsQueues, DataPipe
     
     private void initNodes()
     {
+        requestIdSeq = new AtomicLong();
         operatorsNode = (CallsQueueOperatorsNode) getChildren(CallsQueueOperatorsNode.NAME);
         if (operatorsNode==null){
             operatorsNode = new CallsQueueOperatorsNode();
@@ -90,11 +93,11 @@ public class CallsQueuesNode  extends BaseNode implements CallsQueues, DataPipe
     private void queueCall(CallQueueRequest request, DataContext context) throws CallQueueException
     {
         if (isLogLevelEnabled(LogLevel.DEBUG))
-            getLogger().debug("Queueing call {} to the queue {}"
+            getLogger().debug("{}. CallsQueues. Queueing call to the queue {}"
                     , request.getConversation().getObjectName(), request.getQueueId());
         try{
             CallQueueRequestWrapper requestWrapper = 
-                    new CallQueueRequestWrapperImpl(this, request, context);
+                    new CallQueueRequestWrapperImpl(this, request, context, requestIdSeq.incrementAndGet());
             if (!Status.STARTED.equals(getStatus())){
                 if (isLogLevelEnabled(LogLevel.WARN))
                     getLogger().warn(
@@ -170,7 +173,7 @@ public class CallsQueuesNode  extends BaseNode implements CallsQueues, DataPipe
 
     String logMess(CallQueueRequest req, String message, Object... args)
     {
-        return req.getConversation().getObjectName()+" "+String.format(message, args);
+        return req.getConversation().getObjectName()+". CallsQueues.  "+String.format(message, args);
     }
 
     private void checkRecordSchema(RecordSchemaNode schema) throws Exception

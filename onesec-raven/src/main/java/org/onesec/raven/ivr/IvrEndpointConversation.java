@@ -68,6 +68,10 @@ public interface IvrEndpointConversation extends ObjectDescription
      */
     public String getCallingNumber();
     /**
+     * Returns the number (address) of the called side.
+     */
+    public String getCalledNumber();
+    /**
      * Continues the conversation with passed in the parameter dtmf char
      * @param dtmfChar the dtmf char
      */

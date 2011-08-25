@@ -27,10 +27,6 @@ import org.raven.ds.DataContext;
 public interface CallQueueRequestWrapper extends CallQueueRequest
 {
     /**
-     * Sets the unique (in queue) for this request
-     */
-    public void setRequestId(long requestId);
-    /**
      * Returns the request id
      */
     public long getRequestId();
@@ -116,4 +112,8 @@ public interface CallQueueRequestWrapper extends CallQueueRequest
      * @see #setOperatorIndex(Integer) 
      */
     public int getOperatorIndex();
+    /**
+     * Forms the log message
+     */
+    public String logMess(String Message, Object... args);
 }

@@ -143,6 +143,16 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         }
     }
 
+    public String getCalledNumber()
+    {
+        lock.readLock().lock();
+        try {
+            return call!=null? call.getCalledAddress().getName() : null;
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
     public IvrEndpointConversationState getState()
     {
         return state;
@@ -460,12 +470,12 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
 
     public String getObjectName()
     {
-        return getCallId();
+        return callId;
     }
 
     public String getObjectDescription()
     {
-        return getCallId();
+        return callId;
     }
 
     @Override

@@ -92,7 +92,7 @@ public class IvrConversationsBridgeManagerNodeTest extends OnesecRavenTestCase
         assertTrue(manager.start());
 
         assertEquals(0, manager.getBridges().size());
-        IvrConversationsBridge bridge = manager.createBridge(conv1Mocks.conv, conv2Mocks.conv);
+        IvrConversationsBridge bridge = manager.createBridge(conv1Mocks.conv, conv2Mocks.conv, null);
         assertEquals(1, manager.getBridges().size());
         bridge.activateBridge();
 
@@ -273,7 +273,7 @@ public class IvrConversationsBridgeManagerNodeTest extends OnesecRavenTestCase
         if (conversations.size()==2){
             try {
                 IvrConversationsBridge bridge = bridgeManager.createBridge(
-                        conversations.get(0), conversations.get(1));
+                        conversations.get(0), conversations.get(1), null);
                 bridge.activateBridge();
             } catch (IvrConversationBridgeExeption ex) {
                 ex.printStackTrace();
