@@ -179,7 +179,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
         request.fireReadyToCommutateQueueEvent(isA(CallsCommutationManager.class));
         request.addToLog("abonent ready to commutate");
         expect(request.getConversation()).andReturn(abonentConversation);
-        expect(manager.createBridge(abonentConversation, operatorConversation)).andReturn(bridge);
+        expect(manager.createBridge(abonentConversation, operatorConversation, null)).andReturn(bridge);
         bridge.addBridgeListener(checkBridgeListener());
         bridge.activateBridge();
         request.fireCommutatedEvent();

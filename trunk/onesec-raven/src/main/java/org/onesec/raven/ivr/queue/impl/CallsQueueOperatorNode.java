@@ -28,6 +28,7 @@ import org.onesec.raven.ivr.queue.CallsQueueOperator;
 import org.raven.RavenUtils;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
+import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorServiceException;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
@@ -95,10 +96,14 @@ public class CallsQueueOperatorNode extends BaseNode
                 request, queue, endpointWaitTimeout, inviteTimeout, conversationScenario, numbers
                 , conversationsBridgeManager, this));
         request.addToLog(String.format("handling by operator (%s)", getName()));
+        if (isLogLevelEnabled(LogLevel.DEBUG))
+            getLogger().debug(commutationManager.get().logMess("Processing..."));
         try {
             endpointPool.requestEndpoint(commutationManager.get());
             return true;
         } catch (ExecutorServiceException ex) {
+            if (isLogLevelEnabled(LogLevel.ERROR))
+                getLogger().error(commutationManager.get().logMess("Get endpoint from pool error"), ex);
             request.addToLog("get endpoint from pool error");
             busy.set(false);
             return false;

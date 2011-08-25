@@ -74,12 +74,13 @@ public class IvrConversationsBridgeManagerNode extends BaseNode
         lock = new ReentrantReadWriteLock();
     }
 
-    public IvrConversationsBridge createBridge(IvrEndpointConversation conv1, IvrEndpointConversation conv2)
+    public IvrConversationsBridge createBridge(IvrEndpointConversation conv1, IvrEndpointConversation conv2,
+            String logPrefix)
         throws IvrConversationBridgeExeption
     {
         lock.writeLock().lock();
         try {
-            IvrConversationsBridge bridge = new IvrConversationsBridgeImpl(conv1, conv2, this);
+            IvrConversationsBridge bridge = new IvrConversationsBridgeImpl(conv1, conv2, this, logPrefix);
             bridges.add(bridge);
             bridge.addBridgeListener(this);
             return bridge;

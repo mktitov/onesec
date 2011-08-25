@@ -71,7 +71,8 @@ public class IvrConversationsBridgeImplTest extends OnesecRavenTestCase
         node.setLogLevel(LogLevel.TRACE);
         assertTrue(node.start());
 
-        IvrConversationsBridge br = new IvrConversationsBridgeImpl(conv1Mocks.conv, conv2Mocks.conv, node);
+        IvrConversationsBridge br = new IvrConversationsBridgeImpl(
+                conv1Mocks.conv, conv2Mocks.conv, node, null);
         br.activateBridge();
 
         assertEquals(2, conversationListeners.size());

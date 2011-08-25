@@ -84,7 +84,7 @@ public class CallQueueRequestWrapperImplTest extends OnesecRavenTestCase
 
         replay(req, conv, queue);
 
-        CallQueueRequestWrapperImpl wrapper = new CallQueueRequestWrapperImpl(callsQueues, req, null);
+        CallQueueRequestWrapperImpl wrapper = new CallQueueRequestWrapperImpl(callsQueues, req, null, 1);
         assertTrue(wrapper.isValid());
         wrapper.callQueueChangeEvent(queuedEvent);
 
@@ -109,8 +109,7 @@ public class CallQueueRequestWrapperImplTest extends OnesecRavenTestCase
         
         replay(request, conv, queue, state);
         
-        CallQueueRequestWrapper wrapper = 
-                new CallQueueRequestWrapperImpl(callsQueues, request, null);
+        CallQueueRequestWrapper wrapper = new CallQueueRequestWrapperImpl(callsQueues, request, null, 1);
         assertFalse(wrapper.isValid());
         
         verify(request, conv, queue, state);

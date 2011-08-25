@@ -205,7 +205,7 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager, Ivr
     public void commutateCalls() throws IvrConversationBridgeExeption
     {
         IvrConversationsBridge bridge = bridgeManager.createBridge(
-                request.getConversation(), operatorConversation);
+                request.getConversation(), operatorConversation, logMess(""));
         bridge.addBridgeListener(this);
         bridge.activateBridge();
         commutated = true;
@@ -247,9 +247,9 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager, Ivr
     public void bridgeDeactivated(IvrConversationsBridge bridge) {
     }
 
-    private String logMess(String message, Object... args)
+    String logMess(String message, Object... args)
     {
-        return String.format("Opertor (%s). ", owner.getName()) + String.format(message, args);
+        return request.logMess("Operator ("+owner.getName()+"). "+message, args);
     }
 
     private void freeResources(){        

@@ -58,7 +58,6 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
     private AtomicReference<String> statusMessage;
     private AtomicBoolean stopProcessing;
     AtomicBoolean processingThreadRunning;
-    private AtomicLong requestIdSeq;
     LinkedList<CallQueueRequestWrapper> queue;
     private ReadWriteLock lock;
     private Condition requestAddedCondition;
@@ -71,7 +70,6 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
         statusMessage = new AtomicReference<String>("Waiting for request...");
         stopProcessing = new AtomicBoolean(true);
         processingThreadRunning = new AtomicBoolean(false);
-        requestIdSeq = new AtomicLong(1);
         lock = new ReentrantReadWriteLock();
         requestAddedCondition = lock.writeLock().newCondition();
         requestComparator = new CallsQueueRequestComparator();
@@ -85,7 +83,6 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
                     "Can't start calls queue because of processing thread is still running");
         queue = new LinkedList();
         stopProcessing.set(false);
-        requestIdSeq.set(1);
         executor.execute(this);
     }
 
@@ -101,12 +98,14 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
             request.addToLog(String.format("Queue (%s) not ready", getName()));
             request.fireRejectedQueueEvent();
         }
-        if (isLogLevelEnabled(LogLevel.DEBUG))
-            debug("New request added to the queue ({})", request.toString());
         
+        CallsQueue oldQueue = request.getCallsQueue();
         request.setCallsQueue(this);
-        if (request.getRequestId()==0)
-            request.setRequestId(requestIdSeq.getAndIncrement());
+        if (isLogLevelEnabled(LogLevel.DEBUG)) 
+            getLogger().debug(logMess(request, "Request %s to the queue", this==oldQueue?"returned":"added"));
+        
+//        if (request.getRequestId()==0)
+//            request.setRequestId(requestIdSeq.getAndIncrement());
         addRequestToQueue(request);
     }
     
@@ -186,15 +185,21 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
                 try {
                     CallQueueRequestWrapper request = queue.peek();
                     if (request!=null){
+                        if (isLogLevelEnabled(LogLevel.DEBUG))
+                            getLogger().debug(logMess(request, "Processing request"));
                         CallsQueuePrioritySelector selector = searchForPrioritySelector(request);
                         if (selector==null) {
                             if (isLogLevelEnabled(LogLevel.WARN))
-                                getLogger().warn(
-                                        "Rejecting request ({}). Not found priority selector"
-                                        , request);
+                                getLogger().warn(logMess(
+                                        request
+                                        , "Rejecting request. Not found priority selector"));
                             request.addToLog("not found priority selector");
                             request.fireRejectedQueueEvent();
                         } else {
+                            if (isLogLevelEnabled(LogLevel.DEBUG))
+                                getLogger().debug(logMess(
+                                        request, "Request mapped to the (%s) priority selector"
+                                        , selector.getName()));
                             //looking up for operator that will process the request
                             List<CallsQueueOperatorRef> operatorRefs = selector.getOperatorsRefs();
                             boolean processed = false;
@@ -209,6 +214,9 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
                             }
                             if (!processed) {
                                 //if no operators found then processing onBusyBehaviour
+                                if (isLogLevelEnabled(LogLevel.DEBUG))
+                                    getLogger().debug(logMess(
+                                            request, "Not found free operator to process request"));
                                 CallsQueueOnBusyBehaviour onBusyBehaviour = 
                                         request.getOnBusyBehaviour();
                                 if (onBusyBehaviour==null){
@@ -223,7 +231,7 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
                     if (!leaveInQueue && queue.peek()!=null) {
                         queue.pop();
                         fireQueueNumberChangedEvents();
-                    }
+                    } 
                 }
             } finally {
                 lock.writeLock().unlock();
@@ -265,5 +273,10 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
             req.setPositionInQueue(pos);
             pos++;
         }
+    }
+
+    private String logMess(CallQueueRequestWrapper req, String mess, Object... args)
+    {
+        return req.logMess("CallsQueue. "+mess, args);
     }
 }

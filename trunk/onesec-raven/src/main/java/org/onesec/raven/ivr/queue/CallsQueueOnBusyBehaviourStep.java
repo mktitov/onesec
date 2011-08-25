@@ -16,10 +16,12 @@
  */
 package org.onesec.raven.ivr.queue;
 
+import org.raven.tree.Node;
+
 /**
  *
  * @author Mikhail Titov
  */
-public interface CallsQueueOnBusyBehaviourStep extends CallsQueueOnBusyBehaviour
+public interface CallsQueueOnBusyBehaviourStep extends CallsQueueOnBusyBehaviour, Node
 {
 }

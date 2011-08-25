@@ -68,10 +68,10 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
     private final CallsQueuesNode owner;
     private final DataContext context;
     private final ConversationListener listener;
+    private final long requestId;
 
     private int priority;
     private String queueId;
-    private long requestId;
     private Integer positionInQueue;
     private CallsQueue queue;
     private StringBuilder log;
@@ -82,13 +82,13 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
     private int operatorIndex;
 
     public CallQueueRequestWrapperImpl(
-            CallsQueuesNode owner, CallQueueRequest request, DataContext context)
+            CallsQueuesNode owner, CallQueueRequest request, DataContext context, long requestId)
         throws RecordException
     {
         this.owner = owner;
         this.request = request;
         this.context = context;
-        this.requestId = 0;
+        this.requestId = requestId;
         this.queue = null;
         this.positionInQueue = 0;
         this.onBusyBehaviourStep = 0;
@@ -182,17 +182,14 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
         return requestId;
     }
 
-    public void setRequestId(long requestId) {
-        this.requestId = requestId;
-    }
-
     public CallsQueue getCallsQueue() {
         return queue;
     }
 
-    public void setCallsQueue(CallsQueue queue) {
+    public void setCallsQueue(CallsQueue queue)
+    {
         if (queue!=this.queue){
-            requestId=0;
+//            requestId=0;
             operatorIndex=-1;
             addToLog(String.format("moved to queue (%s)", queue.getName()));
         }
@@ -280,6 +277,13 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
     public String toString() 
     {
         return getConversation().getObjectName();
+    }
+
+    public String logMess(String message, Object... args)
+    {
+        return request.getConversation().toString()
+                +" [reqId: "+requestId+(queue==null?"":"; queue: "+queue.getName())+"]. "
+                +String.format(message, args);
     }
     
     private class ConversationListener implements IvrEndpointConversationListener

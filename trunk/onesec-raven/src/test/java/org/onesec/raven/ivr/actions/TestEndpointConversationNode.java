@@ -18,7 +18,6 @@
 package org.onesec.raven.ivr.actions;
 
 import java.util.Map;
-import javax.media.Manager;
 import javax.media.Player;
 import javax.media.protocol.FileTypeDescriptor;
 import org.onesec.raven.JMFHelper;
@@ -28,7 +27,6 @@ import org.onesec.raven.ivr.CompletionCode;
 import org.onesec.raven.ivr.ConversationCompletionCallback;
 import org.onesec.raven.ivr.IncomingRtpStream;
 import org.onesec.raven.ivr.IvrConversationScenario;
-import org.onesec.raven.ivr.IvrEndpoint;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.IvrEndpointConversationListener;
 import org.onesec.raven.ivr.IvrEndpointConversationState;
@@ -134,6 +132,10 @@ public class TestEndpointConversationNode extends BaseNode implements IvrEndpoin
     }
 
     public String getCallingNumber() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public String getCalledNumber() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

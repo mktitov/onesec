@@ -45,6 +45,7 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
     private final IvrEndpointConversation conv2;
     private final Node owner;
     private final long createdTimestamp;
+    private final String logPrefix;
     private AtomicLong activatingTimestamp;
     private AtomicLong activatedTimestamp;
     private LinkedList<IvrConversationsBridgeListener> listeners;
@@ -54,11 +55,12 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
     private AtomicReference<IvrConversationsBridgeStatus> status;
 
     public IvrConversationsBridgeImpl(
-            IvrEndpointConversation conv1, IvrEndpointConversation conv2, Node owner)
+            IvrEndpointConversation conv1, IvrEndpointConversation conv2, Node owner, String logPrefix)
     {
         this.conv1 = conv1;
         this.conv2 = conv2;
         this.owner = owner;
+        this.logPrefix = logPrefix;
         this.createdTimestamp = System.currentTimeMillis();
         activatingTimestamp = new AtomicLong();
         activatedTimestamp = new AtomicLong();
@@ -173,7 +175,8 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
 
     private String logMess(String message, Object... args)
     {
-        return "Bridge. "+conv1.getCallingNumber()+">-<"+conv2.getCallingNumber()+": "
+        return (logPrefix==null?"":logPrefix)+"Bridge. "
+                +conv1.getCallingNumber()+" >-< "+conv2.getCalledNumber()+" : "
                 +String.format(message, args);
     }
 

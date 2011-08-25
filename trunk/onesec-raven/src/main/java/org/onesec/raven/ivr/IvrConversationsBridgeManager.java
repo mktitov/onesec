@@ -29,6 +29,7 @@ public interface IvrConversationsBridgeManager extends Node
      * Creates bridge between two conversations.
      * @return the created bridge.
      */
-    public IvrConversationsBridge createBridge(IvrEndpointConversation conv1, IvrEndpointConversation conv2)
-            throws IvrConversationBridgeExeption;
+    public IvrConversationsBridge createBridge(IvrEndpointConversation conv1, IvrEndpointConversation conv2
+           , String logPrefix)
+        throws IvrConversationBridgeExeption;
 }
