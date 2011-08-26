@@ -100,10 +100,12 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
                     for (Consumer consumer: consumers)
                         consumer.fireStreamClosingEvent();
             }finally{
-                rtpManager.removeTargets("Disconnected");
+                if (rtpManager!=null)
+                    rtpManager.removeTargets("Disconnected");
             }
         }finally{
-            rtpManager.dispose();
+            if (rtpManager!=null)
+                rtpManager.dispose();
         }
     }
 

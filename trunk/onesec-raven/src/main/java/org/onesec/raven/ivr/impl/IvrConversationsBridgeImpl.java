@@ -163,7 +163,7 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
         if (owner.isLogLevelEnabled(LogLevel.DEBUG))
             owner.getLogger().debug(logMess(
                     "Incoming RTP stream from %s routed to the outgoing RTP of the %s"
-                    , conv.getCallingNumber(), targetConv.getCallingNumber()));
+                    , getNumber(conv), getNumber(targetConv)));
         if (dataSourceCounter==2){
             status.set(IvrConversationsBridgeStatus.ACTIVATED);
             activatedTimestamp.set(System.currentTimeMillis());
@@ -171,6 +171,11 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
             if (owner.isLogLevelEnabled(LogLevel.INFO))
                 owner.getLogger().info(logMess("Bridge successfully activated"));
         }
+    }
+
+    private String getNumber(IvrEndpointConversation conv)
+    {
+        return conv==conv1? conv.getCallingNumber() : conv.getCalledNumber();
     }
 
     private String logMess(String message, Object... args)

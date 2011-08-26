@@ -17,12 +17,14 @@
 
 package org.onesec.raven.ivr.queue.impl;
 
+import java.util.Map;
 import org.onesec.core.StateWaitResult;
 import org.onesec.core.provider.ProviderController;
 import org.onesec.core.provider.ProviderControllerState;
 import org.onesec.core.services.ProviderRegistry;
 import java.util.concurrent.TimeUnit;
 import org.raven.ds.DataContext;
+import org.raven.ds.RecordException;
 import org.raven.tree.Node;
 import org.junit.Before;
 import org.junit.Test;
@@ -31,20 +33,30 @@ import org.onesec.raven.impl.CCMCallOperatorNode;
 import org.onesec.raven.impl.ProviderNode;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.IvrEndpointConversationListener;
+import org.onesec.raven.ivr.actions.ContinueConversationAction;
+import org.onesec.raven.ivr.actions.PauseActionNode;
+import org.onesec.raven.ivr.actions.StopConversationActionNode;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.onesec.raven.ivr.impl.IvrConversationsBridgeManagerNode;
 import org.onesec.raven.ivr.impl.IvrEndpointNode;
 import org.onesec.raven.ivr.impl.IvrEndpointPoolNode;
+import org.onesec.raven.ivr.impl.IvrMultichannelEndpointNode;
 import org.onesec.raven.ivr.impl.RtpAddressNode;
 import org.onesec.raven.ivr.impl.RtpStreamManagerNode;
 import org.raven.ds.impl.RecordSchemaNode;
 import org.onesec.raven.ivr.queue.CallQueueRequest;
 import org.onesec.raven.ivr.queue.actions.QueueCallActionNode;
+import org.onesec.raven.ivr.queue.actions.QueuedCallEventHandlerNode;
 import org.onesec.raven.ivr.queue.actions.WaitForCallCommutationActionNode;
 import org.onesec.raven.ivr.queue.event.RejectedQueueEvent;
+import org.raven.conv.impl.GotoNode;
+import org.raven.ds.Record;
 import org.raven.log.LogLevel;
 import org.raven.sched.impl.ExecutorServiceNode;
+import org.raven.test.DataCollector;
 import org.raven.test.PushDataSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static org.easymock.EasyMock.*;
 
 /**
@@ -56,6 +68,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
     private CallsQueuesNode queues;
     private CallQueueCdrRecordSchemaNode schema;
     private PushDataSource ds;
+    private DataCollector collector;
 
     private QueueCallActionNode queueCallAction;
 
@@ -237,7 +250,22 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
     public void realTest() throws Exception
     {
         prepareRealTest();
+
         TimeUnit.SECONDS.sleep(30);
+
+        Logger log = LoggerFactory.getLogger(Node.class);
+        log.debug("!! Finising test !!");
+        assertEquals(1, collector.getDataListSize());
+        assertTrue(collector.getDataList().get(0) instanceof Record);
+        Record rec = (Record) collector.getDataList().get(0);
+        writeRecord(rec, log);
+    }
+
+    private void writeRecord(Record rec, Logger log) throws RecordException
+    {
+        log.debug("CDR Record data: ");
+        for (Map.Entry entry: rec.getValues().entrySet())
+            log.debug("  {} : {}", entry.getKey(), entry.getValue());
     }
 
     private void prepareRealTest() throws Exception
@@ -262,7 +290,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         provider.setName("88013 provider");
         callOperator.getProvidersNode().addAndSaveChildren(provider);
         provider.setFromNumber(88013);
-        provider.setToNumber(88024);
+        provider.setToNumber(88037);
         provider.setHost("10.16.15.1");
         provider.setPassword("cti_user1");
         provider.setUser("cti_user1");
@@ -280,7 +308,6 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         tree.getRootNode().addAndSaveChildren(pool);
         pool.setExecutor(executor);
         pool.setLogLevel(LogLevel.TRACE);
-        assertTrue(pool.start());
 
         IvrConversationsBridgeManagerNode bridgeManager = new IvrConversationsBridgeManagerNode();
         bridgeManager.setName("conversation bridge manager");
@@ -291,30 +318,51 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         waitForProvider();
         //creating abonent endpoint
         IvrConversationScenarioNode abonentScenario = createAbonentScenario();
-        createEndpoint(tree.getRootNode(), executor, manager, abonentScenario, "88013");
-        createEndpoint(pool, executor, manager, abonentScenario, "88015");
+//        createEndpoint(tree.getRootNode(), executor, manager, abonentScenario, "88013");
+        createMultichannelEndpoint(executor, manager, abonentScenario);
+        createEndpoint(pool, executor, manager, null, "88015");
+        
+        assertTrue(pool.start());
         
 
         IvrConversationScenarioNode operatorScenarioNode = createOperatorScenario();
+        RecordSchemaNode cdrSchema = createCdrRecordSchema();
         
-        createCallsQueues(executor, operatorScenarioNode, pool, bridgeManager);
+        createCallsQueues(executor, operatorScenarioNode, pool, bridgeManager, cdrSchema);
 
     }
 
+    private RecordSchemaNode createCdrRecordSchema()
+    {
+        CallQueueCdrRecordSchemaNode cdr = new CallQueueCdrRecordSchemaNode();
+        cdr.setName("cdr schema");
+        tree.getRootNode().addAndSaveChildren(cdr);
+        assertTrue(cdr.start());
+        return cdr;
+    }
+
     private void createCallsQueues(ExecutorServiceNode executor, IvrConversationScenarioNode operatorScenario
-            , IvrEndpointPoolNode pool, IvrConversationsBridgeManagerNode bridge)
+            , IvrEndpointPoolNode pool, IvrConversationsBridgeManagerNode bridge, RecordSchemaNode schema)
     {
         CallsQueuesNode queues = new CallsQueuesNode();
         queues.setName("call queues");
         tree.getRootNode().addAndSaveChildren(queues);
         queues.setDataSource(queueCallAction);
         queues.setLogLevel(LogLevel.TRACE);
+        queues.setCdrRecordSchema(schema);
         assertTrue(queues.start());
+
+        collector = new DataCollector();
+        collector.setName("cdr record collector");
+        tree.getRootNode().addAndSaveChildren(collector);
+        collector.setDataSource(queues);
+        assertTrue(collector.start());
 
         CallsQueueOperatorNode operator = new CallsQueueOperatorNode();
         operator.setName("Titov MK");
         queues.getOperatorsNode().addAndSaveChildren(operator);
-        operator.setPhoneNumbers("089128672947");
+        operator.setPhoneNumbers("88027");
+//        operator.setPhoneNumbers("089128672947");
         operator.setConversationScenario(operatorScenario);
         operator.setEndpointPool(pool);
         operator.setConversationsBridgeManager(bridge);
@@ -343,6 +391,20 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         assertTrue(operatorRef.start());        
     }
 
+    private void createMultichannelEndpoint(ExecutorServiceNode executor, RtpStreamManagerNode manager
+            , IvrConversationScenarioNode scenario)
+    {
+        IvrMultichannelEndpointNode endpoint = new IvrMultichannelEndpointNode();
+        endpoint.setName("endpoint");
+        tree.getRootNode().addAndSaveChildren(endpoint);
+        endpoint.setLogLevel(LogLevel.TRACE);
+        endpoint.setAddress("88037");
+        endpoint.setConversationScenario(scenario);
+        endpoint.setExecutorService(executor);
+        endpoint.setRtpStreamManager(manager);
+        assertTrue(endpoint.start());
+    }
+
     private void createEndpoint(Node owner, ExecutorServiceNode executor, RtpStreamManagerNode manager
             , IvrConversationScenarioNode scenario, String address)
     {
@@ -365,6 +427,30 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         abonentScenario.setLogLevel(LogLevel.TRACE);
         assertTrue(abonentScenario.start());
 
+        QueuedCallEventHandlerNode disconnectHandler = new QueuedCallEventHandlerNode();
+        disconnectHandler.setName("disconnect handler");
+        abonentScenario.addAndSaveChildren(disconnectHandler);
+        disconnectHandler.setEventType(QueuedCallEventHandlerNode.Status.DISCONNECTED);
+        disconnectHandler.setLogLevel(LogLevel.TRACE);
+        assertTrue(disconnectHandler.start());
+
+        StopConversationActionNode stopAction = new StopConversationActionNode();
+        stopAction.setName("stop conversation");
+        disconnectHandler.addAndSaveChildren(stopAction);
+        assertTrue(stopAction.start());
+
+        QueuedCallEventHandlerNode queueingHandler = new QueuedCallEventHandlerNode();
+        queueingHandler.setName("queueing handler");
+        abonentScenario.addAndSaveChildren(queueingHandler);
+        queueingHandler.setEventType(QueuedCallEventHandlerNode.Status.QUEUING);
+        assertTrue(queueingHandler.start());
+
+        PauseActionNode pauseAction = new PauseActionNode();
+        pauseAction.setName("pause 2 secs");
+        queueingHandler.addAndSaveChildren(pauseAction);
+        pauseAction.setInterval(2000l);
+        assertTrue(pauseAction.start());
+
         queueCallAction = new QueueCallActionNode();
         queueCallAction.setName("queue call");
         abonentScenario.addAndSaveChildren(queueCallAction);
@@ -373,6 +459,12 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         queueCallAction.setQueueId("test");
         queueCallAction.setLogLevel(LogLevel.TRACE);
         assertTrue(queueCallAction.start());
+
+        GotoNode gotoAction = new GotoNode();
+        gotoAction.setName("goto");
+        abonentScenario.addAndSaveChildren(gotoAction);
+        gotoAction.setConversationPoint(abonentScenario);
+        assertTrue(gotoAction.start());
 
         return abonentScenario;
     }
@@ -390,6 +482,11 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         operatorScenario.addAndSaveChildren(action);
         action.setLogLevel(LogLevel.TRACE);
         assertTrue(action.start());
+
+        StopConversationActionNode stopAction = new StopConversationActionNode();
+        stopAction.setName("stop conversation");
+        operatorScenario.addAndSaveChildren(stopAction);
+        assertTrue(stopAction.start());
 
         return operatorScenario;
     }

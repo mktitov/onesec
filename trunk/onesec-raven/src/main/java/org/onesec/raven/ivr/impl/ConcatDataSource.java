@@ -220,9 +220,8 @@ public class ConcatDataSource
 
     public void close() 
     {
-        if (stoped.get())
+        if (!stoped.compareAndSet(false, true))
             return;
-        stoped.set(true);
         sources.clear();
         buffers.clear();
         try
@@ -334,13 +333,13 @@ public class ConcatDataSource
                                     +(System.currentTimeMillis()-ts)));
                         lastReceiveBufferTime.set(System.currentTimeMillis());
                         try {
-                            while (!endOfSource.get()){
+                            while (!endOfSource.get() && !stoped.get()){
                                 TimeUnit.MILLISECONDS.sleep(10);
                                 if (System.currentTimeMillis()-lastReceiveBufferTime.get()>500) {
                                     if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                                        owner.getLogger().debug(
+                                        owner.getLogger().debug(logMess(
                                                 "Timeout waiting for data from source. "
-                                                + "Closing the source...");
+                                                + "Closing the source..."));
                                     break;
                                 }
                             }

@@ -152,6 +152,7 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager, Ivr
     public boolean callToOperator(IvrEndpoint endpoint, Map<String, Object> bindings) throws Exception
     {
         operatorConversationFlag.set(true);
+        request.fireOperatorNumberQueueEvent(getNumber());
         endpoint.invite(getNumber(), conversationScenario, this, bindings);
         lock.lock();
         try {

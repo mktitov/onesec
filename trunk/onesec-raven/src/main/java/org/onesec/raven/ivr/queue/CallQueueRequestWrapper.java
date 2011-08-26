@@ -59,6 +59,14 @@ public interface CallQueueRequestWrapper extends CallQueueRequest
      */
     public void fireDisconnectedQueueEvent();
     /**
+     * Fires when request assigned to operator
+     */
+    public void fireOperatorQueueEvent(String operatorId);
+    /**
+     * Fires when queue tries to call to operator using number passed in the parameter
+     */
+    public void fireOperatorNumberQueueEvent(String operatorNumber);
+    /**
      * Returns the wrapped request
      */
     public CallQueueRequest getWrappedRequest(); 

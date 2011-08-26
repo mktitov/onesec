@@ -26,6 +26,7 @@ import org.onesec.raven.ivr.queue.event.CommutatedQueueEvent;
 import org.onesec.raven.ivr.queue.event.DisconnectedQueueEvent;
 import org.onesec.raven.ivr.queue.event.NumberChangedQueueEvent;
 import org.onesec.raven.ivr.queue.event.ReadyToCommutateQueueEvent;
+import org.onesec.raven.ivr.queue.event.RejectedQueueEvent;
 
 /**
  *
@@ -33,7 +34,6 @@ import org.onesec.raven.ivr.queue.event.ReadyToCommutateQueueEvent;
  */
 public class CallQueueRequestImpl implements QueuedCallStatus
 {
-    private enum Status {QUEUEING, READY_TO_COMMUTATE, COMMUTATING, COMMUTATED, DISCONNECTED}
 
     private final IvrEndpointConversation conversation;
     private final boolean continueConversationOnReadyToCommutate;
@@ -54,6 +54,10 @@ public class CallQueueRequestImpl implements QueuedCallStatus
         this.status = Status.QUEUEING;
         this.serialNumber = -1;
         this.prevSerialNumber = -1;
+    }
+
+    public synchronized Status getStatus() {
+        return status;
     }
 
     public boolean isContinueConversationOnReadyToCommutate() {
@@ -78,6 +82,8 @@ public class CallQueueRequestImpl implements QueuedCallStatus
         } else if (event instanceof NumberChangedQueueEvent) {
             prevSerialNumber = serialNumber;
             serialNumber = ((NumberChangedQueueEvent)event).getCurrentNumber();
+        } else if (event instanceof RejectedQueueEvent) {
+            status = Status.REJECTED;
         }
     }
 

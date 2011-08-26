@@ -22,6 +22,12 @@ package org.onesec.raven.ivr.queue;
  */
 public interface QueuedCallStatus extends CallQueueRequest
 {
+    public enum Status {QUEUEING, READY_TO_COMMUTATE, COMMUTATING, COMMUTATED, DISCONNECTED, REJECTED}
+
+    /**
+     * Return current status of the queued call
+     */
+    public Status getStatus();
     /**
      * Returns <b>true</b> if call is queuing now
      */

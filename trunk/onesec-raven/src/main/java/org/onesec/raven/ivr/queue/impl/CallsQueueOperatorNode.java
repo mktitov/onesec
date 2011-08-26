@@ -91,6 +91,7 @@ public class CallsQueueOperatorNode extends BaseNode
     {
         if (!Status.STARTED.equals(getStatus()) || !busy.compareAndSet(false, true))
             return false;
+        request.fireOperatorQueueEvent(getName());
         String[] numbers = RavenUtils.split(phoneNumbers, ",");
         this.commutationManager.set(new CallsCommutationManagerImpl(
                 request, queue, endpointWaitTimeout, inviteTimeout, conversationScenario, numbers
