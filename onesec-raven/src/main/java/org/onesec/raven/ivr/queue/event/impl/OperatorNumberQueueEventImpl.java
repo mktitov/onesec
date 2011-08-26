@@ -1,5 +1,5 @@
 /*
- *  Copyright 2009 Mikhail Titov.
+ *  Copyright 2011 Mikhail Titov.
  * 
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -15,28 +15,26 @@
  *  under the License.
  */
 
-package org.onesec.raven.ivr.actions;
+package org.onesec.raven.ivr.queue.event.impl;
 
-import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.onesec.raven.ivr.impl.AudioFileNode;
+import org.onesec.raven.ivr.queue.CallsQueue;
+import org.onesec.raven.ivr.queue.event.OperatorNumberQueueEvent;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class PlayAudioAction extends AbstractPlayAudioAction
+public class OperatorNumberQueueEventImpl extends CallQueueEventImpl implements OperatorNumberQueueEvent
 {
-    public final static String NAME = "Play audio action";
-    private final AudioFileNode audioFile;
+    private final String operatorNumber;
 
-    public PlayAudioAction(AudioFileNode audioFile)
+    public OperatorNumberQueueEventImpl(CallsQueue callsQueue, long requestId, String operatorNumber)
     {
-        super(NAME);
-        this.audioFile = audioFile;
+        super(callsQueue, requestId);
+        this.operatorNumber = operatorNumber;
     }
 
-    @Override
-    protected AudioFileNode getAudioFile(IvrEndpointConversation conversation) {
-        return audioFile;
+    public String getOperatorNumber() {
+        return operatorNumber;
     }
 }

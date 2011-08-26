@@ -43,12 +43,17 @@ import org.onesec.raven.ivr.queue.event.CallQueuedEvent;
 import org.onesec.raven.ivr.queue.event.CommutatedQueueEvent;
 import org.onesec.raven.ivr.queue.event.DisconnectedQueueEvent;
 import org.onesec.raven.ivr.queue.event.NumberChangedQueueEvent;
+import org.onesec.raven.ivr.queue.event.OperatorNumberQueueEvent;
+import org.onesec.raven.ivr.queue.event.OperatorQueueEvent;
 import org.onesec.raven.ivr.queue.event.ReadyToCommutateQueueEvent;
 import org.onesec.raven.ivr.queue.event.RejectedQueueEvent;
 import org.onesec.raven.ivr.queue.event.impl.CallQueueEventImpl;
+import org.onesec.raven.ivr.queue.event.impl.CallQueuedEventImpl;
 import org.onesec.raven.ivr.queue.event.impl.CommutatedQueueEventImpl;
 import org.onesec.raven.ivr.queue.event.impl.DisconnectedQueueEventImpl;
 import org.onesec.raven.ivr.queue.event.impl.NumberChangedQueueEventImpl;
+import org.onesec.raven.ivr.queue.event.impl.OperatorNumberQueueEventImpl;
+import org.onesec.raven.ivr.queue.event.impl.OperatorQueueEventImpl;
 import org.onesec.raven.ivr.queue.event.impl.ReadyToCommutateQueueEventImpl;
 import org.onesec.raven.ivr.queue.event.impl.RejectedQueueEventImpl;
 import org.raven.ds.Record;
@@ -99,6 +104,7 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
         if (schema!=null) {
             cdr = schema.createRecord();
             cdr.setValue(CALLING_NUMBER, request.getConversation().getCallingNumber());
+            cdr.setValue(QUEUED_TIME, getTimestamp());
         }
     }
 
@@ -202,7 +208,11 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
             if (cdr!=null){
                 if        (event instanceof DisconnectedQueueEvent) {
                     if (cdr.getValue(DISCONNECTED_TIME)==null) {
-                        cdr.setValue(DISCONNECTED_TIME, getTimestamp());
+                        Timestamp ts = getTimestamp();
+                        Timestamp startTs = (Timestamp)cdr.getValue(COMMUTATED_TIME);
+                        cdr.setValue(DISCONNECTED_TIME, ts);
+                        long dur = (ts.getTime()-startTs.getTime())/1000;
+                        cdr.setValue(CONVERSATION_DURATION, dur);
                         cdr.setValue(LOG, log.toString());
                         sendCdrToConsumers();
                     }
@@ -220,7 +230,11 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
                     cdr.setValue(READY_TO_COMMUTATE_TIME, getTimestamp());
                 } else if (event instanceof CommutatedQueueEvent) {
                     cdr.setValue(COMMUTATED_TIME, getTimestamp());
-                }
+                    cdr.setValue(CONVERSATION_START_TIME, getTimestamp());
+                } else if (event instanceof OperatorQueueEvent) {
+                    cdr.setValue(OPERATOR_ID, ((OperatorQueueEvent)event).getOperatorId());
+                } else if (event instanceof OperatorNumberQueueEvent)
+                    cdr.setValue(OPERATOR_NUMBER, ((OperatorNumberQueueEvent)event).getOperatorNumber());
             }
         }catch(Throwable e){
             if (owner.isLogLevelEnabled(LogLevel.ERROR))
@@ -239,6 +253,19 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
         log.append(" ").append(message);
     }
 
+    private void setCdrValue(String fieldName, Object value)
+    {
+        try {
+            if (cdr != null) 
+                cdr.setValue(fieldName, value);
+        } catch (RecordException e) {
+            if (owner.isLogLevelEnabled(LogLevel.ERROR))
+                owner.getLogger().error(
+                        String.format("Can't set value (%s) for CDR record field (%s)", fieldName, value)
+                        , e);
+        }
+    }
+
     private Timestamp getTimestamp(){
         return new Timestamp(System.currentTimeMillis());
     }
@@ -248,7 +275,7 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
     }
 
     public void fireCallQueuedEvent() {
-        callQueueChangeEvent(new CallQueueEventImpl(queue, requestId));
+        callQueueChangeEvent(new CallQueuedEventImpl(queue, requestId, queue.getName()));
     }
     
     public void fireDisconnectedQueueEvent(){
@@ -261,6 +288,14 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
 
     public void fireCommutatedEvent() {
         callQueueChangeEvent(new CommutatedQueueEventImpl(queue, requestId));
+    }
+
+    public void fireOperatorQueueEvent(String operatorId) {
+        callQueueChangeEvent(new OperatorQueueEventImpl(queue, requestId, operatorId));
+    }
+
+    public void fireOperatorNumberQueueEvent(String operatorNumber) {
+        callQueueChangeEvent(new OperatorNumberQueueEventImpl(queue, requestId, operatorNumber));
     }
     
     private void sendCdrToConsumers()

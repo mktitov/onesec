@@ -77,23 +77,28 @@ public class QueueCallAction extends AsyncAction
                     conversation, priority, queueId, continueConversationOnReadyToCommutate);
             state.setBinding(QUEUED_CALL_STATUS_BINDING, callStatus, BindingScope.CONVERSATION);
             requestSender.sendCallQueueRequest(callStatus);
-        } else if (callStatus.isReadyToCommutate()) {
-            if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
-                conversation.getOwner().getLogger().debug(
-                        "Operator and abonent are ready to commutate. Commutating...");
-            callStatus.replayToReadyToCommutate();
-            do {
-                TimeUnit.MILLISECONDS.sleep(10);
-            } while (!callStatus.isCommutated() && !hasCancelRequest());
+        } else if (callStatus.isReadyToCommutate() || callStatus.isCommutated()) {
+            if (callStatus.isReadyToCommutate()) {
+                if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
+                    conversation.getOwner().getLogger().debug(logMess(
+                            "Operator and abonent are ready to commutate. Commutating..."));
+                callStatus.replayToReadyToCommutate();
+                do {
+                    TimeUnit.MILLISECONDS.sleep(10);
+                } while (!callStatus.isCommutated() && !hasCancelRequest());
 
-            if (hasCancelRequest()) return;
-
+                if (hasCancelRequest()) return;
+            }
             if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
-                conversation.getOwner().getLogger().debug(
-                        "Abonent and operator were commutated. Waiting for disconnected event...");
+                conversation.getOwner().getLogger().debug(logMess(
+                        "Abonent and operator were commutated. Waiting for disconnected event..."));
             do {
                 TimeUnit.MILLISECONDS.sleep(10);
             } while (!callStatus.isDisconnected() && !hasCancelRequest());
+            
+            if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
+                conversation.getOwner().getLogger().debug(logMess(
+                        "Commutation disconnected"));
         }
     }
 
