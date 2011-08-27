@@ -18,8 +18,12 @@
 package org.onesec.raven.ivr.actions;
 
 import java.util.List;
+import javax.script.Bindings;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.impl.AudioFileNode;
+import org.onesec.raven.ivr.impl.AudioFileRefNode;
+import org.raven.RavenUtils;
+import org.raven.log.LogLevel;
 import org.raven.tree.Node;
 
 /**
@@ -29,12 +33,13 @@ import org.raven.tree.Node;
 public class PlayAudioSequenceAction extends AbstractPlayAudioAction
 {
     public final static String NAME = "Play audio sequence action";
+    public final static String AUDIO_SEQUENCE_POSITION_BINDING = "audioSequencePosition";
 
-    private final List<AudioFileNode> audioFiles;
+    private final List<AudioFileRefNode> audioFiles;
     private final Node owner;
     private final boolean randomPlay;
 
-    public PlayAudioSequenceAction(Node owner, List<AudioFileNode> audioFiles, boolean randomPlay)
+    public PlayAudioSequenceAction(Node owner, List<AudioFileRefNode> audioFiles, boolean randomPlay)
     {
         super(NAME);
         this.audioFiles = audioFiles;
@@ -45,13 +50,22 @@ public class PlayAudioSequenceAction extends AbstractPlayAudioAction
     @Override
     protected AudioFileNode getAudioFile(IvrEndpointConversation conversation) 
     {
-        Integer pos = (Integer) conversation.getConversationScenarioState().getBindings().get(
-                this.getClass().getName()+owner.getId());
+        String posId = RavenUtils.generateKey( AUDIO_SEQUENCE_POSITION_BINDING, owner);
+        Bindings bindings = conversation.getConversationScenarioState().getBindings();
+        Integer pos = (Integer) bindings.get(posId);
         if (pos!=null)
             ++pos;
-        else if (randomPlay)
+        else if (randomPlay) {
+            if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
+                conversation.getOwner().getLogger().debug(logMess("Position (%s) selected randomly"));
             pos = getRandomPosition();
-        return pos==null || pos<0 || pos>audioFiles.size()? audioFiles.get(0) : audioFiles.get(pos);
+        }
+        if (pos==null || pos<0 || pos>=audioFiles.size())
+            pos = 0;
+        bindings.put(posId, pos);
+        if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
+            conversation.getOwner().getLogger().debug(logMess("Selected audio file at position (%s)"));
+        return audioFiles.get(pos).getAudioFileNode();
     }
 
     private int getRandomPosition()
