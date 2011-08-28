@@ -51,7 +51,7 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
 {
     @NotNull @Parameter(defaultValue="10")
     private Integer maxQueueSize;
-    
+
     @NotNull @Parameter(valueHandlerType=SystemSchedulerValueHandlerFactory.TYPE)
     private ExecutorService executor;
     

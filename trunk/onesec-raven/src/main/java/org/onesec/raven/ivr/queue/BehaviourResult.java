@@ -14,15 +14,23 @@
  *  limitations under the License.
  *  under the License.
  */
-package org.onesec.raven.ivr.queue;
 
-import org.raven.tree.Node;
+package org.onesec.raven.ivr.queue;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface CallsQueueOnBusyBehaviourStep extends Node
+public interface BehaviourResult
 {
-    public BehaviourResult handleBehaviour(CallsQueue queue, CallQueueRequestWrapper request);
+    /**
+     * Returns <b>true</b> if the request must stay in the queue else request will be removed from the queue
+     */
+    public boolean isLeaveInQueue();
+    /**
+     * Returns <b>true</b> if the {@link CallsQueueOnBusyBehaviour} must stay at this step. If returns
+     * <b>false</b> the {@link CallsQueueOnBusyBehaviour} goes to the next
+     * {@link CallsQueueOnBusyBehaviourStep step}
+     */
+    public boolean isLeaveAtThisStep();
 }

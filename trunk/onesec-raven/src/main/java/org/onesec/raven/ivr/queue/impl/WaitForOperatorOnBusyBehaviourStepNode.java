@@ -14,31 +14,39 @@
  *  limitations under the License.
  *  under the License.
  */
+
 package org.onesec.raven.ivr.queue.impl;
 
 import org.onesec.raven.ivr.queue.BehaviourResult;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviourStep;
+import org.raven.annotations.NodeClass;
+import org.raven.annotations.Parameter;
 import org.raven.tree.impl.BaseNode;
+import org.weda.annotations.constraints.NotNull;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class TestOnBusyBehaviourStep extends BaseNode implements CallsQueueOnBusyBehaviourStep
+@NodeClass(parentNode=CallsQueueOnBusyBehaviourNode.class)
+public class WaitForOperatorOnBusyBehaviourStepNode extends BaseNode implements CallsQueueOnBusyBehaviourStep
 {
-    private BehaviourResult behaviourResult;
+    @NotNull @Parameter
+    private Integer waitTimeout;
 
-    public BehaviourResult getBehaviourResult() {
-        return behaviourResult;
+    public BehaviourResult handleBehaviour(CallsQueue queue, CallQueueRequestWrapper request)
+    {
+        boolean leaveAtThisStep = System.currentTimeMillis()-request.getLastQueuedTime()<=waitTimeout*1000;
+        return new BehaviourResultImpl(true, leaveAtThisStep);
     }
 
-    public void setBehaviourResult(BehaviourResult behaviourResult) {
-        this.behaviourResult = behaviourResult;
+    public Integer getWaitTimeout() {
+        return waitTimeout;
     }
 
-    public BehaviourResult handleBehaviour(CallsQueue queue, CallQueueRequestWrapper request) {
-        return behaviourResult;
+    public void setWaitTimeout(Integer waitTimeout) {
+        this.waitTimeout = waitTimeout;
     }
 }
