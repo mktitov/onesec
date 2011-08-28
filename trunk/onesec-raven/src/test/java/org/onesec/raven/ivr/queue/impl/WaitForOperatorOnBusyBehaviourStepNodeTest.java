@@ -20,6 +20,7 @@ package org.onesec.raven.ivr.queue.impl;
 import org.junit.Test;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.ivr.queue.BehaviourResult;
+import org.onesec.raven.ivr.queue.BehaviourResult.StepPolicy;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
 import static org.easymock.EasyMock.*;
 /**
@@ -46,15 +47,15 @@ public class WaitForOperatorOnBusyBehaviourStepNodeTest extends OnesecRavenTestC
 
         BehaviourResult res = waiter.handleBehaviour(null, req);
         assertTrue(res.isLeaveInQueue());
-        assertTrue(res.isLeaveAtThisStep());
+        assertEquals(StepPolicy.LEAVE_AT_THIS_STEP, res.getNextStepPolicy());
         
         res = waiter.handleBehaviour(null, req);
         assertTrue(res.isLeaveInQueue());
-        assertTrue(res.isLeaveAtThisStep());
+        assertEquals(StepPolicy.LEAVE_AT_THIS_STEP, res.getNextStepPolicy());
         
         res = waiter.handleBehaviour(null, req);
         assertTrue(res.isLeaveInQueue());
-        assertFalse(res.isLeaveAtThisStep());
+        assertEquals(StepPolicy.IMMEDIATELY_EXECUTE_NEXT_STEP, res.getNextStepPolicy());
 
         verify(req);
     }

@@ -29,6 +29,11 @@ import org.raven.tree.impl.BaseNode;
 public class TestOnBusyBehaviourStep extends BaseNode implements CallsQueueOnBusyBehaviourStep
 {
     private BehaviourResult behaviourResult;
+    private boolean behaviourHandled = false;
+
+    public boolean isBehaviourHandled() {
+        return behaviourHandled;
+    }
 
     public BehaviourResult getBehaviourResult() {
         return behaviourResult;
@@ -38,7 +43,9 @@ public class TestOnBusyBehaviourStep extends BaseNode implements CallsQueueOnBus
         this.behaviourResult = behaviourResult;
     }
 
-    public BehaviourResult handleBehaviour(CallsQueue queue, CallQueueRequestWrapper request) {
+    public BehaviourResult handleBehaviour(CallsQueue queue, CallQueueRequestWrapper request)
+    {
+        behaviourHandled = true;
         return behaviourResult;
     }
 }
