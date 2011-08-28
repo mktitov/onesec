@@ -19,6 +19,7 @@ package org.onesec.raven.ivr.queue.impl;
 import org.junit.Before;
 import org.junit.Test;
 import org.onesec.raven.OnesecRavenTestCase;
+import org.onesec.raven.ivr.queue.BehaviourResult;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import static org.easymock.EasyMock.*;
@@ -60,7 +61,7 @@ public class CallsQueueOnBusyBehaviourNodeTest extends OnesecRavenTestCase
     @Test
     public void leaveInQueueTest()
     {
-        addTestStep(true);
+        addTestStep(new BehaviourResultImpl(true, false));
         
         CallsQueue queue = createMock(CallsQueue.class);
         CallQueueRequestWrapper request = createMock(CallQueueRequestWrapper.class);
@@ -77,7 +78,7 @@ public class CallsQueueOnBusyBehaviourNodeTest extends OnesecRavenTestCase
     @Test
     public void removeFromQueueTest()
     {
-        addTestStep(false);
+        addTestStep(new BehaviourResultImpl(false, false));
         
         CallsQueue queue = createMock(CallsQueue.class);
         CallQueueRequestWrapper request = createMock(CallQueueRequestWrapper.class);
@@ -90,13 +91,30 @@ public class CallsQueueOnBusyBehaviourNodeTest extends OnesecRavenTestCase
         
         verify(queue, request);
     }
+
+    @Test
+    public void leaveAtThisStep()
+    {
+        addTestStep(new BehaviourResultImpl(true, true));
+
+        CallsQueue queue = createMock(CallsQueue.class);
+        CallQueueRequestWrapper request = createMock(CallQueueRequestWrapper.class);
+        expect(request.getOnBusyBehaviourStep()).andReturn(0);
+        request.setOnBusyBehaviourStep(0);
+
+        replay(queue, request);
+
+        assertTrue(behaviourNode.handleBehaviour(queue, request));
+
+        verify(queue, request);
+    }
     
-    private TestOnBusyBehaviourStep addTestStep(boolean handleResult)
+    private TestOnBusyBehaviourStep addTestStep(BehaviourResult behaviourResult)
     {
         TestOnBusyBehaviourStep step = new TestOnBusyBehaviourStep();
         step.setName("step");
         behaviourNode.addAndSaveChildren(step);
-        step.setHandleBehaviourResult(handleResult);
+        step.setBehaviourResult(behaviourResult);
         assertTrue(step.start());
         
         return step;

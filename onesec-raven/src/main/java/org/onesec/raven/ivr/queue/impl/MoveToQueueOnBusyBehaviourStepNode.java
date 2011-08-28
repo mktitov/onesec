@@ -14,31 +14,40 @@
  *  limitations under the License.
  *  under the License.
  */
+
 package org.onesec.raven.ivr.queue.impl;
 
 import org.onesec.raven.ivr.queue.BehaviourResult;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviourStep;
+import org.raven.annotations.NodeClass;
+import org.raven.annotations.Parameter;
 import org.raven.tree.impl.BaseNode;
+import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
+import org.weda.annotations.constraints.NotNull;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class TestOnBusyBehaviourStep extends BaseNode implements CallsQueueOnBusyBehaviourStep
+@NodeClass(parentNode=CallsQueueOnBusyBehaviourNode.class)
+public class MoveToQueueOnBusyBehaviourStepNode extends BaseNode implements CallsQueueOnBusyBehaviourStep
 {
-    private BehaviourResult behaviourResult;
+    @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
+    private CallsQueueNode callsQueue;
 
-    public BehaviourResult getBehaviourResult() {
-        return behaviourResult;
+    public CallsQueueNode getCallsQueue() {
+        return callsQueue;
     }
 
-    public void setBehaviourResult(BehaviourResult behaviourResult) {
-        this.behaviourResult = behaviourResult;
+    public void setCallsQueue(CallsQueueNode callsQueue) {
+        this.callsQueue = callsQueue;
     }
 
-    public BehaviourResult handleBehaviour(CallsQueue queue, CallQueueRequestWrapper request) {
-        return behaviourResult;
+    public BehaviourResult handleBehaviour(CallsQueue queue, CallQueueRequestWrapper request)
+    {
+        this.callsQueue.queueCall(request);
+        return new BehaviourResultImpl(false, false);
     }
 }

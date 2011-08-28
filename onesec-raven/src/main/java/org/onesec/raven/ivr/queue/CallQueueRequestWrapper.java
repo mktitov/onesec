@@ -124,4 +124,9 @@ public interface CallQueueRequestWrapper extends CallQueueRequest
      * Forms the log message
      */
     public String logMess(String Message, Object... args);
+    /**
+     * Returns the time of the last {@link #fireCallQueuedEvent()} call
+     * @return
+     */
+    public long getLastQueuedTime();
 }

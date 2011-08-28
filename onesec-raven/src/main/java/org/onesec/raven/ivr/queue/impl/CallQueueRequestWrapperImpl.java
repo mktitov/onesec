@@ -85,6 +85,7 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
     private CallsQueueOnBusyBehaviour onBusyBehaviour;
     private AtomicBoolean valid;
     private int operatorIndex;
+    private long lastQueuedTime;
 
     public CallQueueRequestWrapperImpl(
             CallsQueuesNode owner, CallQueueRequest request, DataContext context, long requestId)
@@ -192,11 +193,16 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
         return queue;
     }
 
+    public long getLastQueuedTime() {
+        return lastQueuedTime;
+    }
+
     public void setCallsQueue(CallsQueue queue)
     {
         if (queue!=this.queue){
 //            requestId=0;
             operatorIndex=-1;
+            lastQueuedTime = System.currentTimeMillis();
             addToLog(String.format("moved to queue (%s)", queue.getName()));
         }
         this.queue = queue;
