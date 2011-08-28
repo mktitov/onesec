@@ -48,6 +48,6 @@ public class MoveToQueueOnBusyBehaviourStepNode extends BaseNode implements Call
     public BehaviourResult handleBehaviour(CallsQueue queue, CallQueueRequestWrapper request)
     {
         this.callsQueue.queueCall(request);
-        return new BehaviourResultImpl(false, false);
+        return new BehaviourResultImpl(false, BehaviourResult.StepPolicy.GOTO_NEXT_STEP);
     }
 }

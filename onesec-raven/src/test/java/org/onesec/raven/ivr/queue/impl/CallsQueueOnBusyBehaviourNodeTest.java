@@ -61,7 +61,7 @@ public class CallsQueueOnBusyBehaviourNodeTest extends OnesecRavenTestCase
     @Test
     public void leaveInQueueTest()
     {
-        addTestStep(new BehaviourResultImpl(true, false));
+        addTestStep(new BehaviourResultImpl(true, BehaviourResult.StepPolicy.GOTO_NEXT_STEP));
         
         CallsQueue queue = createMock(CallsQueue.class);
         CallQueueRequestWrapper request = createMock(CallQueueRequestWrapper.class);
@@ -78,7 +78,7 @@ public class CallsQueueOnBusyBehaviourNodeTest extends OnesecRavenTestCase
     @Test
     public void removeFromQueueTest()
     {
-        addTestStep(new BehaviourResultImpl(false, false));
+        addTestStep(new BehaviourResultImpl(false, BehaviourResult.StepPolicy.GOTO_NEXT_STEP));
         
         CallsQueue queue = createMock(CallsQueue.class);
         CallQueueRequestWrapper request = createMock(CallQueueRequestWrapper.class);
@@ -95,7 +95,7 @@ public class CallsQueueOnBusyBehaviourNodeTest extends OnesecRavenTestCase
     @Test
     public void leaveAtThisStep()
     {
-        addTestStep(new BehaviourResultImpl(true, true));
+        addTestStep(new BehaviourResultImpl(true, BehaviourResult.StepPolicy.LEAVE_AT_THIS_STEP));
 
         CallsQueue queue = createMock(CallsQueue.class);
         CallQueueRequestWrapper request = createMock(CallQueueRequestWrapper.class);
@@ -109,6 +109,27 @@ public class CallsQueueOnBusyBehaviourNodeTest extends OnesecRavenTestCase
         verify(queue, request);
     }
     
+    @Test
+    public void immediatelyExecuteNextStep()
+    {
+        addTestStep(new BehaviourResultImpl(true, BehaviourResult.StepPolicy.IMMEDIATELY_EXECUTE_NEXT_STEP));
+
+        CallsQueue queue = createMock(CallsQueue.class);
+        CallQueueRequestWrapper request = createStrictMock(CallQueueRequestWrapper.class);
+        expect(request.getOnBusyBehaviourStep()).andReturn(0);
+        request.setOnBusyBehaviourStep(1);
+        expect(request.getOnBusyBehaviourStep()).andReturn(1);
+        request.addToLog(CallsQueueOnBusyBehaviourNode.REACHED_THE_END_OF_SEQ);
+        request.fireRejectedQueueEvent();
+        request.setOnBusyBehaviourStep(2);
+
+        replay(queue, request);
+
+        assertFalse(behaviourNode.handleBehaviour(queue, request));
+
+        verify(queue, request);
+    }
+
     private TestOnBusyBehaviourStep addTestStep(BehaviourResult behaviourResult)
     {
         TestOnBusyBehaviourStep step = new TestOnBusyBehaviourStep();

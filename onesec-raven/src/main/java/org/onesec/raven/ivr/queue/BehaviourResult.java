@@ -23,14 +23,24 @@ package org.onesec.raven.ivr.queue;
  */
 public interface BehaviourResult
 {
+    public enum StepPolicy {
+        LEAVE_AT_THIS_STEP(0), GOTO_NEXT_STEP(1), IMMEDIATELY_EXECUTE_NEXT_STEP(1);
+
+        private final int incStepBy;
+
+        private StepPolicy(int incStepBy) {
+            this.incStepBy = incStepBy;
+        }
+
+        public int getIncStepBy() {
+            return incStepBy;
+        }
+    }
     /**
      * Returns <b>true</b> if the request must stay in the queue else request will be removed from the queue
      */
     public boolean isLeaveInQueue();
     /**
-     * Returns <b>true</b> if the {@link CallsQueueOnBusyBehaviour} must stay at this step. If returns
-     * <b>false</b> the {@link CallsQueueOnBusyBehaviour} goes to the next
-     * {@link CallsQueueOnBusyBehaviourStep step}
      */
-    public boolean isLeaveAtThisStep();
+    public StepPolicy getNextStepPolicy();
 }

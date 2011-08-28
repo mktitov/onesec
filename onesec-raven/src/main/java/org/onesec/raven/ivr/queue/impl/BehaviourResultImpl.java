@@ -26,18 +26,18 @@ import org.onesec.raven.ivr.queue.BehaviourResult;
 public class BehaviourResultImpl implements BehaviourResult
 {
     private final boolean leaveInQueue;
-    private final boolean leaveAtThisStep;
+    private final StepPolicy stepPolicy;
 
-    public BehaviourResultImpl(boolean leaveInQueue, boolean leaveAtThisStep) {
+    public BehaviourResultImpl(boolean leaveInQueue, StepPolicy stepPolicy) {
         this.leaveInQueue = leaveInQueue;
-        this.leaveAtThisStep = leaveAtThisStep;
-    }
-
-    public boolean isLeaveAtThisStep() {
-        return leaveAtThisStep;
+        this.stepPolicy = stepPolicy;
     }
 
     public boolean isLeaveInQueue() {
         return leaveInQueue;
+    }
+
+    public StepPolicy getNextStepPolicy() {
+        return stepPolicy;
     }
 }

@@ -18,6 +18,7 @@
 package org.onesec.raven.ivr.queue.impl;
 
 import org.onesec.raven.ivr.queue.BehaviourResult;
+import org.onesec.raven.ivr.queue.BehaviourResult.StepPolicy;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviourStep;
@@ -38,8 +39,9 @@ public class WaitForOperatorOnBusyBehaviourStepNode extends BaseNode implements 
 
     public BehaviourResult handleBehaviour(CallsQueue queue, CallQueueRequestWrapper request)
     {
-        boolean leaveAtThisStep = System.currentTimeMillis()-request.getLastQueuedTime()<=waitTimeout*1000;
-        return new BehaviourResultImpl(true, leaveAtThisStep);
+        StepPolicy stepPolicy = System.currentTimeMillis()-request.getLastQueuedTime()<=waitTimeout*1000?
+            StepPolicy.LEAVE_AT_THIS_STEP : StepPolicy.IMMEDIATELY_EXECUTE_NEXT_STEP;
+        return new BehaviourResultImpl(true, stepPolicy);
     }
 
     public Integer getWaitTimeout() {

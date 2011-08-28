@@ -18,6 +18,7 @@ package org.onesec.raven.ivr.queue.impl;
 
 import java.util.List;
 import org.onesec.raven.ivr.queue.BehaviourResult;
+import org.onesec.raven.ivr.queue.BehaviourResult.StepPolicy;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviour;
@@ -49,7 +50,7 @@ public class CallsQueueOnBusyBehaviourNode extends BaseNode implements CallsQueu
         List<CallsQueueOnBusyBehaviourStep> steps = NodeUtils.getChildsOfType(
                 this, CallsQueueOnBusyBehaviourStep.class);
         int step = request.getOnBusyBehaviourStep();
-        int incStepBy = 1;
+        BehaviourResult.StepPolicy stepPolicy = BehaviourResult.StepPolicy.GOTO_NEXT_STEP;
         try {
             if (steps.isEmpty() || step>=steps.size()){
                 if (isLogLevelEnabled(LogLevel.DEBUG))
@@ -64,12 +65,13 @@ public class CallsQueueOnBusyBehaviourNode extends BaseNode implements CallsQueu
                     getLogger().debug(logMess(
                             request, "Processing on busy behaviour step (%s)", stepNode.getName()));
                 BehaviourResult res = steps.get(step).handleBehaviour(queue, request);
-                if (res.isLeaveAtThisStep())
-                    incStepBy = 0;
+                stepPolicy = res.getNextStepPolicy();
                 return res.isLeaveInQueue();
             }
         } finally {
-            request.setOnBusyBehaviourStep(step+incStepBy);
+            request.setOnBusyBehaviourStep(step+stepPolicy.getIncStepBy());
+            if (StepPolicy.IMMEDIATELY_EXECUTE_NEXT_STEP.equals(stepPolicy))
+                return handleBehaviour(queue, request);
         }
     }
 
