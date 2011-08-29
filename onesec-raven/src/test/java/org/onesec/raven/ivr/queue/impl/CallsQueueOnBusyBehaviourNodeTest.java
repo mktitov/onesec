@@ -22,6 +22,7 @@ import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.ivr.queue.BehaviourResult;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
 import org.onesec.raven.ivr.queue.CallsQueue;
+import org.raven.tree.Node;
 import static org.easymock.EasyMock.*;
 
 /**
@@ -130,14 +131,43 @@ public class CallsQueueOnBusyBehaviourNodeTest extends OnesecRavenTestCase
         verify(queue, request);
     }
 
+    @Test
+    public void replaceByTest()
+    {
+        CallsQueueOnBusyBehaviourNode b2 = new CallsQueueOnBusyBehaviourNode();
+        b2.setName("another behaviour");
+        tree.getRootNode().addAndSaveChildren(b2);
+        assertTrue(b2.start());
+
+        behaviourNode.setReplaceBy(b2);
+
+        addTestStep(b2, new BehaviourResultImpl(true, BehaviourResult.StepPolicy.LEAVE_AT_THIS_STEP));
+
+        CallsQueue queue = createMock(CallsQueue.class);
+        CallQueueRequestWrapper request = createMock(CallQueueRequestWrapper.class);
+        expect(request.getOnBusyBehaviourStep()).andReturn(0);
+        request.setOnBusyBehaviourStep(0);
+
+        replay(queue, request);
+
+        assertTrue(behaviourNode.handleBehaviour(queue, request));
+
+        verify(queue, request);
+    }
+
     private TestOnBusyBehaviourStep addTestStep(BehaviourResult behaviourResult)
+    {
+        return addTestStep(behaviourNode, behaviourResult);
+    }
+    
+    private TestOnBusyBehaviourStep addTestStep(Node owner, BehaviourResult behaviourResult)
     {
         TestOnBusyBehaviourStep step = new TestOnBusyBehaviourStep();
         step.setName("step");
-        behaviourNode.addAndSaveChildren(step);
+        owner.addAndSaveChildren(step);
         step.setBehaviourResult(behaviourResult);
         assertTrue(step.start());
-        
+
         return step;
     }
 }

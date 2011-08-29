@@ -19,6 +19,7 @@ package org.onesec.raven.ivr.actions;
 
 import java.util.List;
 import javax.script.Bindings;
+import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.impl.AudioFileNode;
 import org.onesec.raven.ivr.impl.AudioFileRefNode;
@@ -35,11 +36,11 @@ public class PlayAudioSequenceAction extends AbstractPlayAudioAction
     public final static String NAME = "Play audio sequence action";
     public final static String AUDIO_SEQUENCE_POSITION_BINDING = "audioSequencePosition";
 
-    private final List<AudioFileRefNode> audioFiles;
+    private final List<AudioFile> audioFiles;
     private final Node owner;
     private final boolean randomPlay;
 
-    public PlayAudioSequenceAction(Node owner, List<AudioFileRefNode> audioFiles, boolean randomPlay)
+    public PlayAudioSequenceAction(Node owner, List<AudioFile> audioFiles, boolean randomPlay)
     {
         super(NAME);
         this.audioFiles = audioFiles;
@@ -48,7 +49,7 @@ public class PlayAudioSequenceAction extends AbstractPlayAudioAction
     }
 
     @Override
-    protected AudioFileNode getAudioFile(IvrEndpointConversation conversation) 
+    protected AudioFile getAudioFile(IvrEndpointConversation conversation) 
     {
         String posId = RavenUtils.generateKey( AUDIO_SEQUENCE_POSITION_BINDING, owner);
         Bindings bindings = conversation.getConversationScenarioState().getBindings();
@@ -65,7 +66,7 @@ public class PlayAudioSequenceAction extends AbstractPlayAudioAction
         bindings.put(posId, pos);
         if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
             conversation.getOwner().getLogger().debug(logMess("Selected audio file at position (%s)"));
-        return audioFiles.get(pos).getAudioFileNode();
+        return audioFiles.get(pos);
     }
 
     private int getRandomPosition()

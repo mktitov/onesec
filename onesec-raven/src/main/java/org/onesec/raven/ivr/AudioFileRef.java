@@ -14,7 +14,8 @@
  *  limitations under the License.
  *  under the License.
  */
-package org.onesec.raven.ivr.queue;
+
+package org.onesec.raven.ivr;
 
 import org.raven.tree.Node;
 
@@ -22,14 +23,7 @@ import org.raven.tree.Node;
  *
  * @author Mikhail Titov
  */
-public interface CallsQueueOnBusyBehaviour extends Node
+public interface AudioFileRef extends Node
 {
-    /**
-     * Handles onBusy behaviour
-     * @param queue the current queue of the request
-     * @param request the request
-     * @return <b>true</b> if request must stay in the current queue or <b>false</b> if request
-     *      must be removed from the queue
-     */
-    public boolean handleBehaviour(CallsQueue queue, CallQueueRequestWrapper request);
+    public AudioFile getAudioFile();
 }

@@ -20,6 +20,7 @@ package org.onesec.raven.ivr.impl;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import org.onesec.raven.ivr.AudioFile;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.tree.DataFile;
@@ -36,7 +37,7 @@ import org.weda.annotations.constraints.NotNull;
  * @author Mikhail Titov
  */
 @NodeClass()
-public class AudioFileNode extends BaseNode implements Viewable
+public class AudioFileNode extends BaseNode implements Viewable, AudioFile
 {
     @NotNull @Parameter(valueHandlerType=DataFileValueHandlerFactory.TYPE)
     private DataFile audioFile;
