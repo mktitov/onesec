@@ -26,8 +26,8 @@ import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviourStep;
 import org.raven.annotations.Parameter;
 import org.raven.log.LogLevel;
 import org.raven.tree.impl.BaseNode;
+import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
 import org.raven.util.NodeUtils;
-import org.weda.annotations.constraints.NotNull;
 
 /**
  *
@@ -39,6 +39,9 @@ public class CallsQueueOnBusyBehaviourNode extends BaseNode implements CallsQueu
     public static final String REACHED_THE_END_OF_SEQ = 
             "reached the end of the \"on busy behaviour steps\" sequence";
 
+    @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
+    private CallsQueueOnBusyBehaviour replaceBy;
+
     public CallsQueueOnBusyBehaviourNode() {
         super(NAME);
     }
@@ -47,6 +50,11 @@ public class CallsQueueOnBusyBehaviourNode extends BaseNode implements CallsQueu
     {
         if (isLogLevelEnabled(LogLevel.DEBUG))
             getLogger().debug(logMess(request, "Processing..."));
+
+        CallsQueueOnBusyBehaviour _replaceBy = replaceBy;
+        if (_replaceBy!=null) 
+            return _replaceBy.handleBehaviour(queue, request);
+
         List<CallsQueueOnBusyBehaviourStep> steps = NodeUtils.getChildsOfType(
                 this, CallsQueueOnBusyBehaviourStep.class);
         int step = request.getOnBusyBehaviourStep();
@@ -73,6 +81,14 @@ public class CallsQueueOnBusyBehaviourNode extends BaseNode implements CallsQueu
             if (StepPolicy.IMMEDIATELY_EXECUTE_NEXT_STEP.equals(stepPolicy))
                 return handleBehaviour(queue, request);
         }
+    }
+
+    public CallsQueueOnBusyBehaviour getReplaceBy() {
+        return replaceBy;
+    }
+
+    public void setReplaceBy(CallsQueueOnBusyBehaviour replaceBy) {
+        this.replaceBy = replaceBy;
     }
 
     private String logMess(CallQueueRequestWrapper req, String mess, Object... args)

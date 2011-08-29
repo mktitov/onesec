@@ -18,8 +18,10 @@
 package org.onesec.raven.ivr.actions;
 
 import java.util.List;
+import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.IvrAction;
 import org.onesec.raven.ivr.IvrActionNode;
+import org.onesec.raven.ivr.impl.AudioFileNode;
 import org.onesec.raven.ivr.impl.AudioFileRefNode;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.raven.annotations.NodeClass;
@@ -32,7 +34,9 @@ import org.weda.annotations.constraints.NotNull;
  *
  * @author Mikhail Titov
  */
-@NodeClass(parentNode=IvrConversationScenarioNode.class, childNodes=AudioFileRefNode.class)
+@NodeClass(
+    parentNode=IvrConversationScenarioNode.class,
+    childNodes={AudioFileRefNode.class, AudioFileNode.class})
 public class PlayAudioSequenceActionNode extends BaseNode implements IvrActionNode
 {
     @NotNull @Parameter(defaultValue="false")
@@ -48,7 +52,7 @@ public class PlayAudioSequenceActionNode extends BaseNode implements IvrActionNo
 
     public IvrAction createAction()
     {
-        List<AudioFileRefNode> files = NodeUtils.getChildsOfType(this, AudioFileRefNode.class);
+        List<AudioFile> files = NodeUtils.getChildsOfType(this, AudioFile.class);
         if (files.isEmpty())
             return null;
         return new PlayAudioSequenceAction(this, files, true);

@@ -19,6 +19,7 @@ package org.onesec.raven.ivr.actions;
 
 import java.io.InputStream;
 import java.util.concurrent.TimeUnit;
+import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.AudioStream;
 import org.onesec.raven.ivr.InputStreamSource;
 import org.onesec.raven.ivr.IvrEndpointConversation;
@@ -31,14 +32,14 @@ import org.raven.log.LogLevel;
  */
 public abstract class AbstractPlayAudioAction extends AsyncAction implements InputStreamSource
 {
-    private AudioFileNode audioFile;
+    private AudioFile audioFile;
 
     public AbstractPlayAudioAction(String actionName)
     {
         super(actionName);
     }
 
-    protected abstract AudioFileNode getAudioFile(IvrEndpointConversation conversation);
+    protected abstract AudioFile getAudioFile(IvrEndpointConversation conversation);
     
     @Override
     protected void doExecute(IvrEndpointConversation conversation) throws Exception

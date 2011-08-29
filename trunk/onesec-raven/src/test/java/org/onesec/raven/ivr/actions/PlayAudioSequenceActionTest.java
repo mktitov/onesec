@@ -17,14 +17,13 @@
 
 package org.onesec.raven.ivr.actions;
 
-import org.raven.RavenUtils;
 import org.raven.tree.Node;
 import java.util.List;
 import javax.script.Bindings;
 import org.junit.Assert;
 import org.junit.Test;
+import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.onesec.raven.ivr.impl.AudioFileNode;
 import org.raven.conv.ConversationScenarioState;
 import org.raven.log.LogLevel;
 import static org.easymock.EasyMock.*;
@@ -48,7 +47,7 @@ public class PlayAudioSequenceActionTest extends Assert
     @Test()
     public void getAudioFileTest()
     {
-        List<AudioFileNode> audios = createStrictMock(List.class);
+        List<AudioFile> audios = createStrictMock(List.class);
         Node owner = createMock(Node.class);
         IvrEndpointConversation conv = createMock(IvrEndpointConversation.class);
         ConversationScenarioState state = createMock(ConversationScenarioState.class);

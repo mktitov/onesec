@@ -19,8 +19,11 @@ package org.onesec.raven.ivr.impl;
 
 import java.util.List;
 import java.util.Map;
+import org.onesec.raven.ivr.AudioFile;
+import org.onesec.raven.ivr.AudioFileRef;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
+import org.raven.tree.DataFile;
 import org.raven.tree.NodeAttribute;
 import org.raven.tree.Viewable;
 import org.raven.tree.ViewableObject;
@@ -34,18 +37,10 @@ import org.weda.annotations.constraints.NotNull;
  * @author Mikhail Titov
  */
 @NodeClass(parentNode=InvisibleNode.class)
-public class AudioFileRefNode extends BaseNode implements Viewable
+public class AudioFileRefNode extends BaseNode implements AudioFile, Viewable
 {
     @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
-    private AudioFileNode audioFileNode;
-
-    public AudioFileNode getAudioFileNode() {
-        return audioFileNode;
-    }
-
-    public void setAudioFileNode(AudioFileNode audioFileNode) {
-        this.audioFileNode = audioFileNode;
-    }
+    private AudioFile audioFileNode;
 
     public Map<String, NodeAttribute> getRefreshAttributes() throws Exception {
         return null;
@@ -54,10 +49,16 @@ public class AudioFileRefNode extends BaseNode implements Viewable
     public List<ViewableObject> getViewableObjects(Map<String, NodeAttribute> refreshAttributes) 
         throws Exception
     {
-        return Status.STARTED.equals(getStatus())? audioFileNode.getViewableObjects(refreshAttributes) : null;
+        return Status.STARTED.equals(getStatus()) && audioFileNode instanceof Viewable?
+            ((Viewable)audioFileNode).getViewableObjects(refreshAttributes) : null;
     }
 
     public Boolean getAutoRefresh() {
         return true;
     }
+
+    public DataFile getAudioFile() {
+        return audioFileNode.getAudioFile();
+    }
+
 }
