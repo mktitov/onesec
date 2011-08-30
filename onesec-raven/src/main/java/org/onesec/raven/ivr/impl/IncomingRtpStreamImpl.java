@@ -188,7 +188,7 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
 
             lock.lock();
             try{
-                owner.getLogger().debug("Sending dataSourceCreatedEvent to consumers.");
+                owner.getLogger().debug(logMess("Sending dataSourceCreatedEvent to consumers"));
                 status = Status.OPENED;
                 if (!consumers.isEmpty())
                     for (Consumer consumer: consumers)

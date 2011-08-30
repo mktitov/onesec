@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.actions;
 
+import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.impl.AudioFileNode;
 
@@ -27,16 +28,16 @@ import org.onesec.raven.ivr.impl.AudioFileNode;
 public class PlayAudioAction extends AbstractPlayAudioAction
 {
     public final static String NAME = "Play audio action";
-    private final AudioFileNode audioFile;
+    private final AudioFileNode file;
 
     public PlayAudioAction(AudioFileNode audioFile)
     {
         super(NAME);
-        this.audioFile = audioFile;
+        this.file = audioFile;
     }
 
     @Override
-    protected AudioFileNode getAudioFile(IvrEndpointConversation conversation) {
-        return audioFile;
+    protected AudioFile getAudioFile(IvrEndpointConversation conversation) {
+        return file;
     }
 }

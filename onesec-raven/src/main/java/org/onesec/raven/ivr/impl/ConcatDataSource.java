@@ -359,7 +359,7 @@ public class ConcatDataSource
                             owner.getLogger().debug(logMess("Source processed time (ms) - "
                                     + (System.currentTimeMillis()-ts)));
                     } finally {
-//                        sources.poll();
+                        sources.poll();
                     }
                 }
                 if (owner.isLogLevelEnabled(LogLevel.DEBUG))
@@ -383,10 +383,11 @@ public class ConcatDataSource
         try {
             DataSource source = null;
             try {
-                source = sources.poll();
+                //using peek instead of poll for normal functionality of isPlaying() method
+                source = sources.peek();
                 if (source == null) {
                     sourcesCondition.await(SOURCE_WAIT_TIMEOUT, TimeUnit.MILLISECONDS);
-                    source = sources.poll();
+                    source = sources.peek();
                 }
             } catch (InterruptedException e) {
                 if (owner.isLogLevelEnabled(LogLevel.DEBUG))

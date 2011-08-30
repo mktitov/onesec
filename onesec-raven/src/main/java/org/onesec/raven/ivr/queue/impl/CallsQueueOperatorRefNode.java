@@ -16,6 +16,9 @@
  */
 package org.onesec.raven.ivr.queue.impl;
 
+import org.onesec.raven.ivr.IvrConversationScenario;
+import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
+import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.CallsQueueOperator;
 import org.onesec.raven.ivr.queue.CallsQueueOperatorRef;
 import org.raven.annotations.NodeClass;
@@ -34,11 +37,26 @@ public class CallsQueueOperatorRefNode extends BaseNode implements CallsQueueOpe
     @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
     private CallsQueueOperator operator;
 
+    @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
+    private IvrConversationScenario conversationScenario;
+
     public void setOperator(CallsQueueOperator operator) {
         this.operator = operator;
     }
 
     public CallsQueueOperator getOperator() {
         return operator;
+    }
+
+    public IvrConversationScenario getConversationScenario() {
+        return conversationScenario;
+    }
+
+    public void setConversationScenario(IvrConversationScenario conversationScenario) {
+        this.conversationScenario = conversationScenario;
+    }
+
+    public boolean processRequest(CallsQueue queue, CallQueueRequestWrapper request) {
+        return operator.processRequest(queue, request, conversationScenario);
     }
 }

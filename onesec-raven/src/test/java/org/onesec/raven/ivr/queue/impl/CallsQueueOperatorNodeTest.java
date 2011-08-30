@@ -73,7 +73,6 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
         operator = new CallsQueueOperatorNode();
         operator.setName("operator");
         tree.getRootNode().addAndSaveChildren(operator);
-        operator.setConversationScenario(scenario);
         operator.setConversationsBridgeManager(bridgeManager);
         operator.setEndpointPool(endpointPool);
         operator.setPhoneNumbers("88024");
@@ -86,7 +85,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
         CallsQueue queue = createMock(CallsQueue.class);
         replay(request, queue);
 
-        assertFalse(operator.processRequest(queue, request));
+        assertFalse(operator.processRequest(queue, request, scenario));
 
         verify(request, queue);
     }
@@ -99,6 +98,8 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
         IvrEndpointPool pool = createMock(IvrEndpointPool.class);
         
         request.addToLog("handling by operator (operator)");
+        request.fireOperatorQueueEvent(operator.getName());
+        expect(request.logMess(isA(String.class), isA(String.class))).andReturn("log mess").anyTimes();
         pool.requestEndpoint(sendNullEndpoint());
         request.addToLog("no free endpoints in the pool");
         queue.queueCall(request);
@@ -107,7 +108,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
 
         assertTrue(operator.start());
         endpointPool.setEndpointPool(pool);
-        operator.processRequest(queue, request);
+        operator.processRequest(queue, request, scenario);
         
         verify(request, queue, pool);
     }
@@ -122,6 +123,8 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
         IvrEndpointState endpointState = createMock(IvrEndpointState.class);
         StateWaitResult stateWaitResult = createMock(StateWaitResult.class);
 
+        request.fireOperatorQueueEvent(operator.getName());
+        request.fireOperatorNumberQueueEvent("88024");
         request.addToLog("handling by operator (operator)");
         pool.requestEndpoint(sendEndpoint(endpoint));
         endpoint.invite(eq("88024"), same(scenario), isA(CallsCommutationManagerImpl.class)
@@ -144,7 +147,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
         assertTrue(operator.start());
         endpointPool.setEndpointPool(pool);
         long startTime = System.currentTimeMillis();
-        operator.processRequest(queue, request);
+        operator.processRequest(queue, request, scenario);
         long endTime = System.currentTimeMillis();
         assertTrue(endTime-startTime>5000);
         assertTrue(endTime-startTime<7000);
@@ -168,7 +171,10 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
         IvrConversationsBridge bridge = createMock(IvrConversationsBridge.class);
         ConversationResult conversationResult = createMock(ConversationResult.class);
 
+        request.fireOperatorQueueEvent(operator.getName());
+        request.fireOperatorNumberQueueEvent("88024");
         request.addToLog("handling by operator (operator)");
+        expect(request.logMess(isA(String.class))).andReturn("prefix");
         pool.requestEndpoint(sendEndpoint(operatorEndpoint));
         operatorEndpoint.invite(eq("88024"), same(scenario), isA(CallsCommutationManagerImpl.class)
                 , checkBindings(operator, request));
@@ -179,7 +185,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
         request.fireReadyToCommutateQueueEvent(isA(CallsCommutationManager.class));
         request.addToLog("abonent ready to commutate");
         expect(request.getConversation()).andReturn(abonentConversation);
-        expect(manager.createBridge(abonentConversation, operatorConversation, null)).andReturn(bridge);
+        expect(manager.createBridge(abonentConversation, operatorConversation, "prefix")).andReturn(bridge);
         bridge.addBridgeListener(checkBridgeListener());
         bridge.activateBridge();
         request.fireCommutatedEvent();
@@ -197,12 +203,12 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
         new Thread(){
             @Override
             public void run() {
-                operator.processRequest(queue, request);
+                operator.processRequest(queue, request, scenario);
             }
         }.start();
         Thread.sleep(1000);
         //check for busy
-        assertFalse(operator.processRequest(queue, request));
+        assertFalse(operator.processRequest(queue, request, scenario));
         CallsCommutationManagerImpl commutationManager = operator.getCommutationManager();
         commutationManager.operatorReadyToCommutate(operatorConversation);
         Thread.sleep(100);

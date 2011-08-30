@@ -19,6 +19,7 @@ package org.onesec.raven.ivr.queue.impl;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.IvrConversationsBridgeManager;
 import org.onesec.raven.ivr.IvrEndpointPool;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
@@ -57,9 +58,6 @@ public class CallsQueueOperatorNode extends BaseNode
     private Long endpointWaitTimeout;
 
     @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
-    private IvrConversationScenarioNode conversationScenario;
-
-    @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
     private IvrConversationsBridgeManager conversationsBridgeManager;
     
     private AtomicReference<CallsCommutationManagerImpl> commutationManager;
@@ -87,7 +85,8 @@ public class CallsQueueOperatorNode extends BaseNode
     }
 
     //CallQueueOpertor's method
-    public boolean processRequest(CallsQueue queue, CallQueueRequestWrapper request) 
+    public boolean processRequest(CallsQueue queue, CallQueueRequestWrapper request
+            , IvrConversationScenario conversationScenario)
     {
         if (!Status.STARTED.equals(getStatus()) || !busy.compareAndSet(false, true))
             return false;
@@ -131,14 +130,6 @@ public class CallsQueueOperatorNode extends BaseNode
 
     public void setConversationsBridgeManager(IvrConversationsBridgeManager conversationsBridgeManager) {
         this.conversationsBridgeManager = conversationsBridgeManager;
-    }
-
-    public IvrConversationScenarioNode getConversationScenario() {
-        return conversationScenario;
-    }
-
-    public void setConversationScenario(IvrConversationScenarioNode conversationScenario) {
-        this.conversationScenario = conversationScenario;
     }
 
     public IvrEndpointPool getEndpointPool() {
