@@ -20,10 +20,10 @@ package org.onesec.raven.ivr.queue;
  *
  * @author Mikhail Titov
  */
-public interface CallsQueueOperatorRef 
+public interface CallsQueueOperatorRef
 {
     /**
      * Returns the operator 
      */
-    public CallsQueueOperator getOperator();
+    public boolean processRequest(CallsQueue queue, CallQueueRequestWrapper request);
 }

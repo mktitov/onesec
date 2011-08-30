@@ -24,6 +24,7 @@ import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviour;
 import org.onesec.raven.ivr.queue.CallsQueueOperator;
 import org.onesec.raven.ivr.queue.CallsQueueOperatorRef;
+import org.raven.log.LogLevel;
 import org.raven.sched.impl.ExecutorServiceNode;
 import org.raven.test.RavenCoreTestCase;
 import org.raven.tree.Node;
@@ -59,6 +60,7 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         executor.stop();
         
         CallQueueRequestWrapper req = createMock(CallQueueRequestWrapper.class);
+        expect(req.getCallsQueue()).andReturn(null);
         req.setCallsQueue(queue);
 //        req.setRequestId(1);
         req.setPositionInQueue(1);
@@ -79,12 +81,14 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         CallQueueRequestWrapper req = createMock(CallQueueRequestWrapper.class);
         CallQueueRequestWrapper req1 = createMock(CallQueueRequestWrapper.class);
         req.setCallsQueue(queue);
+        expect(req.getCallsQueue()).andReturn(null);
 //        req.setRequestId(1);
         expect(req.getPriority()).andReturn(1).anyTimes();
         expect(req.getRequestId()).andReturn(1l).anyTimes();
         req.setPositionInQueue(1);
         req.fireCallQueuedEvent();
         
+        expect(req1.getCallsQueue()).andReturn(null);
         req1.setCallsQueue(queue);
 //        req1.setRequestId(2);
         expect(req1.getPriority()).andReturn(1).anyTimes();
@@ -106,6 +110,7 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
     public void rejectedByNotFoundPrioritySelector() throws InterruptedException
     {
         CallQueueRequestWrapper req = createMock(CallQueueRequestWrapper.class);
+        expect(req.getCallsQueue()).andReturn(null);
         req.setCallsQueue(queue);
 //        req.setRequestId(1);
         req.setPositionInQueue(1);
@@ -113,7 +118,8 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         req.addToLog("not found priority selector");
         req.fireRejectedQueueEvent();
         replay(req);
-        
+
+        queue.setLogLevel(LogLevel.NONE);
         assertTrue(queue.start());
         queue.queueCall(req);
 //        queue.run();
@@ -126,7 +132,6 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         verify(req);
     }
     
-//    @Test(timeout=5000)
     @Test
     public void rejectedByNoOperatorsNoOnBusyBehaviour() throws InterruptedException
     {
@@ -139,6 +144,7 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         assertTrue(selector.start());
         
         CallQueueRequestWrapper req = createMock(CallQueueRequestWrapper.class);
+        expect(req.getCallsQueue()).andReturn(null);
         req.setCallsQueue(queue);
 //        expect(req.getRequestId()).andReturn(0l);
 //        req.setRequestId(1);
@@ -173,6 +179,7 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         CallsQueueOperatorRef operatorRef = createMock(CallsQueueOperatorRef.class);
         CallsQueueOperator operator = createMock(CallsQueueOperator.class);
         
+        expect(req.getCallsQueue()).andReturn(null);
         req.setCallsQueue(queue);
 //        expect(req.getRequestId()).andReturn(0l);
 //        req.setRequestId(1);
@@ -181,8 +188,7 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         expect(req.getPriority()).andReturn(1).anyTimes();
         expect(req.getOperatorIndex()).andReturn(-1);
         
-        expect(operatorRef.getOperator()).andReturn(operator);
-        expect(operator.processRequest(queue, req)).andReturn(Boolean.TRUE);
+        expect(operatorRef.processRequest(queue, req)).andReturn(Boolean.TRUE);
         req.setOperatorIndex(0);
 
         replay(req, operatorRef, operator);
@@ -197,7 +203,7 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         verify(req, operatorRef, operator);
     }
     
-    @Test 
+    @Test
     public void leaveInQueueTest() throws Exception
     {
         executor.stop();
@@ -205,6 +211,7 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         CallQueueRequestWrapper req = createMock(CallQueueRequestWrapper.class);
         CallsQueueOnBusyBehaviour onBusyBehaviour = createMock(CallsQueueOnBusyBehaviour.class);
         
+        expect(req.getCallsQueue()).andReturn(null);
         req.setCallsQueue(queue);
 //        expect(req.getRequestId()).andReturn(0l);
 //        req.setRequestId(1);
@@ -229,7 +236,7 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         verify(req, onBusyBehaviour);
     }
     
-    @Test 
+    @Test
     public void orderChangeAfterProcessTest() throws Exception
     {
         executor.stop();
@@ -238,6 +245,7 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         CallQueueRequestWrapper req1 = createMock("req1", CallQueueRequestWrapper.class);
         CallsQueueOnBusyBehaviour onBusyBehaviour = createMock(CallsQueueOnBusyBehaviour.class);
         
+        expect(req.getCallsQueue()).andReturn(null);
         req.setCallsQueue(queue);
 //        expect(req.getRequestId()).andReturn(0l);
 //        req.setRequestId(1);
@@ -251,6 +259,7 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         expect(onBusyBehaviour.handleBehaviour(
                 isA(CallsQueue.class), isA(CallQueueRequestWrapper.class))).andReturn(Boolean.FALSE);
         
+        expect(req1.getCallsQueue()).andReturn(null);
         req1.setCallsQueue(queue);
 //        expect(req1.getRequestId()).andReturn(0l);
 //        req1.setRequestId(2);
@@ -283,6 +292,7 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         CallsQueueOperatorRef operatorRef1 = createMock("operatorRef2", CallsQueueOperatorRef.class);
         CallsQueueOperator operator = createMock(CallsQueueOperator.class);
 
+        expect(req.getCallsQueue()).andReturn(null).andReturn(queue);
         req.setCallsQueue(queue);
         expectLastCall().times(2);
 //        expect(req.getRequestId()).andReturn(0l);
@@ -296,12 +306,11 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         expect(req.getOperatorIndex()).andReturn(-1);
         expect(req.getOperatorIndex()).andReturn(0);
 
-        expect(operatorRef.getOperator()).andReturn(operator);
-        expect(operator.processRequest(queue, req)).andReturn(Boolean.TRUE).times(2);
+        expect(operatorRef.processRequest(queue, req)).andReturn(Boolean.TRUE);
         req.setOperatorIndex(0);
         req.setOperatorIndex(1);
         //expecting after second queueCall
-        expect(operatorRef1.getOperator()).andReturn(operator);
+        expect(operatorRef1.processRequest(queue, req)).andReturn(Boolean.TRUE);
 
         replay(req, operatorRef, operator, operatorRef1);
 

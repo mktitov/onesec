@@ -1037,10 +1037,10 @@ public class IvrEndpointNode extends BaseNode
                             return;
                         }
                         IvrConversationScenarioNode scenario = conversationScenario;
-                        if (handlingOutgoingCall && scenario==null) {
+                        if (!handlingOutgoingCall && scenario==null) {
                             if (isLogLevelEnabled(LogLevel.WARN))
                                 getLogger().warn(
-                                    "Can not open logical channel for outgoing call because of "
+                                    "Can not open logical channel for incoming call because of "
                                     + "does not have conversation scenario");
                             return;
                         }

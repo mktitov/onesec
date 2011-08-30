@@ -56,7 +56,7 @@ public abstract class AbstractPlayAudioAction extends AsyncAction implements Inp
         AudioStream stream = conversation.getAudioStream();
         if (stream!=null){
             stream.addSource(this);
-            Thread.sleep(100);
+            Thread.sleep(200);
             while (!hasCancelRequest() && stream.isPlaying())
                 TimeUnit.MILLISECONDS.sleep(100);
         }
