@@ -29,8 +29,6 @@ import com.cisco.jtapi.extensions.CiscoTermOutOfServiceEv;
 import com.cisco.jtapi.extensions.CiscoTerminalObserver;
 import com.cisco.jtapi.extensions.CiscoUnregistrationException;
 import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -1046,10 +1044,12 @@ public class IvrEndpointNode extends BaseNode
                         }
                             
                         callId = event.getCiscoRTPHandle().getHandle();
-                        if (!handlingOutgoingCall)
+                        if (!handlingOutgoingCall) {
                             conversation = new IvrEndpointConversationImpl(
                                             this, executorService, conversationScenario
                                             , rtpStreamManager, null);
+                            conversation.addConversationListener(this);
+                        }
                         CiscoRTPParams params = new CiscoRTPParams(
                                 conversation.getIncomingRtpStream().getAddress()
                                 , conversation.getIncomingRtpStream().getPort());
