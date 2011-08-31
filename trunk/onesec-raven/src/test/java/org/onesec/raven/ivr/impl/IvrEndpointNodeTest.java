@@ -141,7 +141,7 @@ public class IvrEndpointNodeTest
         assertFalse(res.isWaitInterrupted());
     }
 
-    @Test
+//    @Test
     public void simpleConversationTest() throws Exception
     {
         AudioFileNode audioFileNode = new AudioFileNode();
@@ -166,6 +166,79 @@ public class IvrEndpointNodeTest
         assertTrue(endpoint.start());
         StateWaitResult res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.IN_SERVICE}, 2000);
+        res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.ACCEPTING_CALL}, 20000);
+        res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.TALKING}, 5000);
+        res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.IN_SERVICE}, 5000);
+        Thread.sleep(1000);
+    }
+
+    @Test
+    public void simpleConversationWithConversationPointTest() throws Exception
+    {
+        AudioFileNode audioFileNode = createAudioFileNode("audio file", "src/test/wav/test.wav");
+        createPlayAudioActionNode("play audio", scenario, audioFileNode);
+        createPauseActionNode(scenario, 2000l);
+
+        IvrConversationScenarioPointNode point = new IvrConversationScenarioPointNode();
+        point.setName("conversation point");
+        scenario.addAndSaveChildren(point);
+        assertTrue(point.start());
+
+        createPauseActionNode(point, 3000l);
+        createPlayAudioActionNode("audio2", point, audioFileNode);
+
+        StopConversationActionNode stopConversationActionNode = new StopConversationActionNode();
+        stopConversationActionNode.setName("stop conversation");
+        point.addAndSaveChildren(stopConversationActionNode);
+        assertTrue(stopConversationActionNode.start());
+
+        waitForProvider();
+        assertTrue(endpoint.start());
+        StateWaitResult res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.IN_SERVICE}, 2000);
+        res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.ACCEPTING_CALL}, 20000);
+        res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.TALKING}, 15000);
+        res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.IN_SERVICE}, 5000);
+        Thread.sleep(1000);
+    }
+
+//    @Test
+    public void simpleConversationTwoCallsTest() throws Exception
+    {
+        AudioFileNode audioFileNode = new AudioFileNode();
+        audioFileNode.setName("audio file");
+        tree.getRootNode().addAndSaveChildren(audioFileNode);
+        FileInputStream is = new FileInputStream("src/test/wav/test.wav");
+        audioFileNode.getAudioFile().setDataStream(is);
+        assertTrue(audioFileNode.start());
+
+        PlayAudioActionNode playAudioActionNode = new PlayAudioActionNode();
+        playAudioActionNode.setName("Play audio");
+        scenario.addAndSaveChildren(playAudioActionNode);
+        playAudioActionNode.setAudioFile(audioFileNode);
+        assertTrue(playAudioActionNode.start());
+
+        StopConversationActionNode stopConversationActionNode = new StopConversationActionNode();
+        stopConversationActionNode.setName("stop conversation");
+        scenario.addAndSaveChildren(stopConversationActionNode);
+        assertTrue(stopConversationActionNode.start());
+
+        waitForProvider();
+        assertTrue(endpoint.start());
+        StateWaitResult res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.IN_SERVICE}, 2000);
+        res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.ACCEPTING_CALL}, 20000);
+        res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.TALKING}, 5000);
+        res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.IN_SERVICE}, 5000);
         res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.ACCEPTING_CALL}, 20000);
         res = endpoint.getEndpointState().waitForState(
@@ -468,7 +541,7 @@ public class IvrEndpointNodeTest
             String name, Node owner, AudioFileNode audioFileNode)
     {
         PlayAudioActionNode playAudioActionNode = new PlayAudioActionNode();
-        playAudioActionNode.setName("Play audio");
+        playAudioActionNode.setName(name);
         owner.addAndSaveChildren(playAudioActionNode);
         playAudioActionNode.setAudioFile(audioFileNode);
         assertTrue(playAudioActionNode.start());

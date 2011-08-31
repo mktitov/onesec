@@ -18,6 +18,7 @@
 package org.onesec.raven.ivr.impl;
 
 import org.onesec.raven.ivr.IvrConversationScenarioPoint;
+import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.conv.impl.ConversationScenarioPointNode;
 
@@ -25,6 +26,7 @@ import org.raven.conv.impl.ConversationScenarioPointNode;
  *
  * @author Mikhail Titov
  */
+@NodeClass(parentNode=IvrConversationScenarioNode.class, importChildTypesFromParent=true)
 public class IvrConversationScenarioPointNode
         extends ConversationScenarioPointNode implements IvrConversationScenarioPoint
 {

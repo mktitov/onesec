@@ -57,6 +57,10 @@ public class AudioFileRefNode extends BaseNode implements AudioFile, Viewable
         return true;
     }
 
+    public void setAudioFileNode(AudioFile audioFileNode) {
+        this.audioFileNode = audioFileNode;
+    }
+
     public DataFile getAudioFile() {
         return audioFileNode.getAudioFile();
     }

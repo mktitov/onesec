@@ -36,7 +36,6 @@ import javax.media.control.PacketSizeControl;
 import javax.media.protocol.BufferTransferHandler;
 import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.DataSource;
-import javax.media.protocol.FileTypeDescriptor;
 import javax.media.protocol.PushBufferDataSource;
 import javax.media.protocol.PushBufferStream;
 import org.onesec.raven.ivr.AudioStream;
@@ -78,6 +77,7 @@ public class ConcatDataSource
     private final int rtpInitialBufferSize;
     private final int rtpMaxSendAheadPacketsCount;
     private boolean started = false;
+    private AtomicBoolean silenceBufferInitialized;
     private AtomicBoolean silenceSource;
     private Thread thread;
     private String logPrefix;
@@ -109,6 +109,7 @@ public class ConcatDataSource
         sourceThreadRunning = new AtomicBoolean(false);
         streamThreadRunning = new AtomicBoolean(false);
         silenceSource = new AtomicBoolean(true);
+        silenceBufferInitialized = new AtomicBoolean();
         endOfSource = new AtomicBoolean(false);
         lastReceiveBufferTime = new AtomicLong();
         buffers = new ConcurrentLinkedQueue<Buffer>();
@@ -228,11 +229,11 @@ public class ConcatDataSource
         {
             long stopStart = System.currentTimeMillis();
             while (sourceThreadRunning.get() && System.currentTimeMillis()-stopStart<=5000)
-                Thread.sleep(100);
+                TimeUnit.MILLISECONDS.sleep(100);
             if (System.currentTimeMillis()-stopStart>5000 && sourceThreadRunning.get())
                 thread.interrupt();
             while (streamThreadRunning.get())
-                Thread.sleep(100);
+                TimeUnit.MILLISECONDS.sleep(100);
         }
         catch (InterruptedException e)
         {
@@ -247,10 +248,14 @@ public class ConcatDataSource
         return stoped.get();
     }
 
+    protected void setSilenceBufferInitialized(boolean val) {
+        silenceBufferInitialized.set(true);
+    }
+
     public void reset()
     {
         try {
-            while (silenceSource.get())
+            while (!silenceBufferInitialized.get())
                 TimeUnit.MILLISECONDS.sleep(10);
         }
         catch (InterruptedException e)
@@ -371,7 +376,6 @@ public class ConcatDataSource
         }
         finally
         {
-            silenceSource.set(false);
             dataConcated.set(true);
             sourceThreadRunning.set(false);
         }
