@@ -101,6 +101,7 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
                 silentBuffer.copy(bufferToSend);
                 if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                     owner.getLogger().debug(logMess("Silence buffer added to stream"));
+                dataSource.setSilenceBufferInitialized(true);
             }
             buffer.copy(bufferToSend);
         }
@@ -173,7 +174,8 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
                     ++packetNumber;
                     action = "sleeping";
                     long expectedPacketNumber = (System.currentTimeMillis()-startTime)/packetLength;
-                    sleepTime = (packetNumber-expectedPacketNumber-(bufferToSend==null? 0 : maxSendAheadPacketsCount))*packetLength;
+                    sleepTime = (packetNumber-expectedPacketNumber-
+                            (bufferToSend==null? 0 : maxSendAheadPacketsCount))*packetLength;
                     if (sleepTime>0)
                         TimeUnit.MILLISECONDS.sleep(sleepTime);
                 }

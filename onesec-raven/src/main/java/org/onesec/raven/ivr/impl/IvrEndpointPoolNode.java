@@ -368,7 +368,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                         if (!Status.STARTED.equals(endpoint.getStatus()))
                             name = "<span style=\"color: yellow\">"+name+"</span>";
                         RtpAddress rtpAddress = endpoint.getRtpAddress();
-                        int port = rtpAddress.getPort();
+                        Object port = rtpAddress==null? "" : rtpAddress.getPort();
                         String status = endpoint.getEndpointState().getIdName();
                         status = String.format(
                             statusFormat, status.equals("IN_SERVICE")? "green" : "blue", status);

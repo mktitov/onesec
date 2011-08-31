@@ -73,7 +73,7 @@ public class ConcatDataSourceTest extends EasyMock
         dataSource.addSource(source1);
         dataSource.addSource(source2);
         TimeUnit.SECONDS.sleep(5);
-//        dataSource.reset();
+        dataSource.reset();
         dataSource.addSource(source3);
         TimeUnit.SECONDS.sleep(5);
         dataSource.close();

@@ -41,6 +41,7 @@ import org.raven.ds.impl.RecordSchemaValueTypeHandlerFactory;
 import org.raven.log.LogLevel;
 import org.raven.tree.NodeAttribute;
 import org.raven.tree.impl.BaseNode;
+import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
 import static org.onesec.raven.ivr.queue.impl.CallQueueCdrRecordSchemaNode.*;
 
 /**
@@ -53,7 +54,7 @@ public class CallsQueuesNode  extends BaseNode implements CallsQueues, DataPipe
     @Parameter(valueHandlerType=RecordSchemaValueTypeHandlerFactory.TYPE)
     private RecordSchemaNode cdrRecordSchema;
     
-    @Parameter
+    @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
     private DataSource dataSource;
 
     private AtomicLong requestIdSeq;

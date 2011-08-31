@@ -55,6 +55,6 @@ public class PlayAudioSequenceActionNode extends BaseNode implements IvrActionNo
         List<AudioFile> files = NodeUtils.getChildsOfType(this, AudioFile.class);
         if (files.isEmpty())
             return null;
-        return new PlayAudioSequenceAction(this, files, true);
+        return new PlayAudioSequenceAction(this, files, randomPlay);
     }
 }

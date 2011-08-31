@@ -231,6 +231,7 @@ public class IvrEndpointNode extends BaseNode
     protected void doStart() throws Exception
     {
         super.doStart();
+        resetConversationFields();
         initializeEndpoint();
     }
 

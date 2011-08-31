@@ -46,7 +46,7 @@ import org.weda.annotations.constraints.NotNull;
  *
  * @author Mikhail Titov
  */
-@NodeClass(parentNode=CallsQueuesNode.class)
+@NodeClass(parentNode=CallsQueuesContainerNode.class)
 public class CallsQueueNode extends BaseNode implements CallsQueue, Task
 {
     @NotNull @Parameter(defaultValue="10")
