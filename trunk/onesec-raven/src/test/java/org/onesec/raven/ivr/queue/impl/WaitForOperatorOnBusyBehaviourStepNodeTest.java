@@ -40,7 +40,9 @@ public class WaitForOperatorOnBusyBehaviourStepNodeTest extends OnesecRavenTestC
         CallQueueRequestWrapper req = createStrictMock(CallQueueRequestWrapper.class);
         long time = System.currentTimeMillis();
         expect(req.getLastQueuedTime()).andReturn(time);
+        req.setOperatorIndex(-1);
         expect(req.getLastQueuedTime()).andReturn(time-3000);
+        req.setOperatorIndex(-1);
         expect(req.getLastQueuedTime()).andReturn(time-6000);
 
         replay(req);

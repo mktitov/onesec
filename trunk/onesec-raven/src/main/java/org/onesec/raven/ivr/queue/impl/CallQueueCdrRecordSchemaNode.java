@@ -42,7 +42,7 @@ public class CallQueueCdrRecordSchemaNode extends RecordSchemaNode
     public final static String OPERATOR_NUMBER = "operatorNumber";
     public final static String LOG = "log";
     public final static String QUEUED_TIME = "queuedTime";
-    public final static String REJECETED_TIME = "rejecetedTime";
+    public final static String REJECTED_TIME = "rejectedTime";
     public final static String READY_TO_COMMUTATE_TIME = "readyToCommutateTime";
     public final static String COMMUTATED_TIME = "commutatedTime";
     public final static String DISCONNECTED_TIME = "disconnectedTime";
@@ -98,7 +98,7 @@ public class CallQueueCdrRecordSchemaNode extends RecordSchemaNode
         createField(OPERATOR_NUMBER, operatorNumberDisplayName, RecordSchemaFieldType.STRING);
         createField(LOG, logDisplayName, RecordSchemaFieldType.STRING);
         createField(QUEUED_TIME, queuedTimeDisplayName, RecordSchemaFieldType.TIMESTAMP);
-        createField(REJECETED_TIME, rejectedTimeDisplayName, RecordSchemaFieldType.TIMESTAMP);
+        createField(REJECTED_TIME, rejectedTimeDisplayName, RecordSchemaFieldType.TIMESTAMP);
         createField(READY_TO_COMMUTATE_TIME, readyToCommutateDisplayName
                 , RecordSchemaFieldType.TIMESTAMP);
         createField(COMMUTATED_TIME, commutatedTimeDisplayName, RecordSchemaFieldType.TIMESTAMP);

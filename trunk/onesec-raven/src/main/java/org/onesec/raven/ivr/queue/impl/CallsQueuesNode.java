@@ -192,7 +192,7 @@ public class CallsQueuesNode  extends BaseNode implements CallsQueues, DataPipe
             checkRecordSchemaField(fields, OPERATOR_NUMBER, RecordSchemaFieldType.STRING);
             checkRecordSchemaField(fields, LOG, RecordSchemaFieldType.STRING);
             checkRecordSchemaField(fields, QUEUED_TIME, RecordSchemaFieldType.TIMESTAMP);
-            checkRecordSchemaField(fields, REJECETED_TIME, RecordSchemaFieldType.TIMESTAMP);
+            checkRecordSchemaField(fields, REJECTED_TIME, RecordSchemaFieldType.TIMESTAMP);
             checkRecordSchemaField(fields, READY_TO_COMMUTATE_TIME, RecordSchemaFieldType.TIMESTAMP);
             checkRecordSchemaField(fields, COMMUTATED_TIME, RecordSchemaFieldType.TIMESTAMP);
             checkRecordSchemaField(fields, DISCONNECTED_TIME, RecordSchemaFieldType.TIMESTAMP);

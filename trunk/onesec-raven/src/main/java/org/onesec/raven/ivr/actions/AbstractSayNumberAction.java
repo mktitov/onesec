@@ -46,7 +46,7 @@ public abstract class AbstractSayNumberAction extends AsyncAction
         return false;
     }
 
-    protected abstract List<String> formWords(IvrEndpointConversation conversation);
+    protected abstract List formWords(IvrEndpointConversation conversation);
 
     @Override
     protected void doExecute(IvrEndpointConversation conversation) throws Exception
@@ -84,6 +84,7 @@ public abstract class AbstractSayNumberAction extends AsyncAction
                 return;
             TimeUnit.MILLISECONDS.sleep(pauseBetweenWords);
         }
+        TimeUnit.MILLISECONDS.sleep(100);
     }
 
     protected boolean playAudio(AudioFileInputStreamSource audioSource, AudioStream stream)
@@ -91,7 +92,7 @@ public abstract class AbstractSayNumberAction extends AsyncAction
     {
         stream.addSource(audioSource);
         while (!hasCancelRequest() && stream.isPlaying())
-            Thread.sleep(10);
+            TimeUnit.MILLISECONDS.sleep(10);
         return !hasCancelRequest();
     }
 }

@@ -45,7 +45,7 @@ public class SayNumberInQueueActionNode extends BaseNode implements IvrActionNod
     private Long pauseBeetweenWords;
 
     public IvrAction createAction() {
-        return new SayNumberInQueueAction(numbersNode, pauseBeetweenWords, preambleAudio);
+        return new SayNumberInQueueAction(this, numbersNode, pauseBeetweenWords, preambleAudio);
     }
 
     public Node getNumbersNode() {

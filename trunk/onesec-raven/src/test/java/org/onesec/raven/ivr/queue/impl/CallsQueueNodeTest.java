@@ -285,35 +285,38 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
     public void operatorIndexTest() throws Exception
     {
         executor.stop();
-        TestPrioritySelector selector = addPrioritySelector("selector 1", 1, null);
 
         CallQueueRequestWrapper req = createMock(CallQueueRequestWrapper.class);
         CallsQueueOperatorRef operatorRef = createMock("operatorRef1", CallsQueueOperatorRef.class);
         CallsQueueOperatorRef operatorRef1 = createMock("operatorRef2", CallsQueueOperatorRef.class);
         CallsQueueOperator operator = createMock(CallsQueueOperator.class);
+        CallsQueueOnBusyBehaviour onBusyBehaviour = createMock(CallsQueueOnBusyBehaviour.class);
 
-        expect(req.getCallsQueue()).andReturn(null).andReturn(queue);
+        expect(req.getCallsQueue()).andReturn(null).andReturn(queue).times(2);
         req.setCallsQueue(queue);
-        expectLastCall().times(2);
+        expectLastCall().times(3);
 //        expect(req.getRequestId()).andReturn(0l);
 //        expect(req.getRequestId()).andReturn(1l);
 //        req.setRequestId(1);
         req.setPositionInQueue(1);
-        expectLastCall().times(2);
+        expectLastCall().times(3);
         req.fireCallQueuedEvent();
-        expectLastCall().times(2);
+        expectLastCall().times(3);
         expect(req.getPriority()).andReturn(1).anyTimes();
-        expect(req.getOperatorIndex()).andReturn(-1);
-        expect(req.getOperatorIndex()).andReturn(0);
+        expect(req.getOperatorIndex()).andReturn(-1).andReturn(0).andReturn(1);
+
+        expect(onBusyBehaviour.handleBehaviour(queue, req)).andReturn(Boolean.TRUE);
 
         expect(operatorRef.processRequest(queue, req)).andReturn(Boolean.TRUE);
         req.setOperatorIndex(0);
         req.setOperatorIndex(1);
+        expect(req.getOnBusyBehaviour()).andReturn(onBusyBehaviour);
         //expecting after second queueCall
         expect(operatorRef1.processRequest(queue, req)).andReturn(Boolean.TRUE);
 
-        replay(req, operatorRef, operator, operatorRef1);
+        replay(req, operatorRef, operator, operatorRef1, onBusyBehaviour);
 
+        TestPrioritySelector selector = addPrioritySelector("selector 1", 1, onBusyBehaviour);
         assertTrue(queue.start());
         selector.addOperatorRef(operatorRef);
         selector.addOperatorRef(operatorRef1);
@@ -328,8 +331,14 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         queue.processRequest();
         assertEquals(0, queue.queue.size());
 
+        //return request to the queue
+        queue.queueCall(req);
+        assertEquals(1, queue.queue.size());
+        queue.processRequest();
+        assertEquals(1, queue.queue.size());
 
-        verify(req, operatorRef, operator, operatorRef1);
+
+        verify(req, operatorRef, operator, operatorRef1, onBusyBehaviour);
     }
     
     private TestPrioritySelector addPrioritySelector(

@@ -49,7 +49,7 @@ public class CallQueueCdrRecordSchemaNodeTest extends OnesecRavenTestCase
         checkField(schema, OPERATOR_NUMBER, RecordSchemaFieldType.STRING);
         checkField(schema, LOG, RecordSchemaFieldType.STRING);
         checkField(schema, QUEUED_TIME, RecordSchemaFieldType.TIMESTAMP);
-        checkField(schema, REJECETED_TIME, RecordSchemaFieldType.TIMESTAMP);
+        checkField(schema, REJECTED_TIME, RecordSchemaFieldType.TIMESTAMP);
         checkField(schema, READY_TO_COMMUTATE_TIME, RecordSchemaFieldType.TIMESTAMP);
         checkField(schema, COMMUTATED_TIME, RecordSchemaFieldType.TIMESTAMP);
         checkField(schema, DISCONNECTED_TIME, RecordSchemaFieldType.TIMESTAMP);
