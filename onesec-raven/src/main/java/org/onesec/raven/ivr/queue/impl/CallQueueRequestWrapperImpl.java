@@ -213,7 +213,7 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
         try{
             if (cdr!=null){
                 if        (event instanceof DisconnectedQueueEvent) {
-                    if (cdr.getValue(DISCONNECTED_TIME)==null) {
+                    if (cdr.getValue(DISCONNECTED_TIME)==null && cdr.getValue(COMMUTATED_TIME)!=null) {
                         Timestamp ts = getTimestamp();
                         Timestamp startTs = (Timestamp)cdr.getValue(COMMUTATED_TIME);
                         cdr.setValue(DISCONNECTED_TIME, ts);
@@ -223,7 +223,7 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
                         sendCdrToConsumers();
                     }
                 } else if (event instanceof RejectedQueueEvent) {
-                    cdr.setValue(REJECETED_TIME, getTimestamp());
+                    cdr.setValue(REJECTED_TIME, getTimestamp());
                     cdr.setValue(LOG, log.toString());
                     sendCdrToConsumers();
                 } else if (event instanceof CallQueuedEvent) {

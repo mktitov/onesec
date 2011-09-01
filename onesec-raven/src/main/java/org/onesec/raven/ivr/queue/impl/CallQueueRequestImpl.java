@@ -19,7 +19,6 @@ package org.onesec.raven.ivr.queue.impl;
 
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.queue.CallsCommutationManager;
-import org.onesec.raven.ivr.queue.CallsQueueOperator;
 import org.onesec.raven.ivr.queue.QueuedCallStatus;
 import org.onesec.raven.ivr.queue.event.CallQueueEvent;
 import org.onesec.raven.ivr.queue.event.CommutatedQueueEvent;
@@ -37,6 +36,7 @@ public class CallQueueRequestImpl implements QueuedCallStatus
 
     private final IvrEndpointConversation conversation;
     private final boolean continueConversationOnReadyToCommutate;
+    private final boolean continueConversationOnReject;
     private int priority;
     private String queueId;
     private Status status;
@@ -45,12 +45,13 @@ public class CallQueueRequestImpl implements QueuedCallStatus
     private CallsCommutationManager commutationManager;
 
     public CallQueueRequestImpl(IvrEndpointConversation conversation, int priority, String queueId,
-            boolean continueConversationOnReadyToCommutate)
+            boolean continueConversationOnReadyToCommutate, boolean continueConversationOnReject)
     {
         this.conversation = conversation;
         this.priority = priority;
         this.queueId = queueId;
         this.continueConversationOnReadyToCommutate = continueConversationOnReadyToCommutate;
+        this.continueConversationOnReject = continueConversationOnReject;
         this.status = Status.QUEUEING;
         this.serialNumber = -1;
         this.prevSerialNumber = -1;
@@ -62,6 +63,10 @@ public class CallQueueRequestImpl implements QueuedCallStatus
 
     public boolean isContinueConversationOnReadyToCommutate() {
         return continueConversationOnReadyToCommutate;
+    }
+
+    public boolean isContinueConversationOnReject() {
+        return continueConversationOnReject;
     }
 
     public IvrEndpointConversation getConversation() {
@@ -84,6 +89,8 @@ public class CallQueueRequestImpl implements QueuedCallStatus
             serialNumber = ((NumberChangedQueueEvent)event).getCurrentNumber();
         } else if (event instanceof RejectedQueueEvent) {
             status = Status.REJECTED;
+            if (continueConversationOnReject)
+                conversation.continueConversation('-');
         }
     }
 

@@ -40,8 +40,11 @@ import org.weda.annotations.constraints.NotNull;
 @NodeClass(parentNode=IvrConversationScenarioNode.class)
 public class QueueCallActionNode extends BaseNode implements IvrActionNode, DataSource, CallQueueRequestSender
 {
-    @NotNull @Parameter(defaultValue="false")
+    @NotNull @Parameter(defaultValue="true")
     private Boolean continueConversationOnReadyToCommutate;
+
+    @NotNull @Parameter(defaultValue="true")
+    private Boolean continueConversationOnReject;
 
     @Parameter(defaultValue="10")
     private Integer priority;
@@ -51,7 +54,8 @@ public class QueueCallActionNode extends BaseNode implements IvrActionNode, Data
 
     public IvrAction createAction()
     {
-        return new QueueCallAction(this, continueConversationOnReadyToCommutate, priority, queueId);
+        return new QueueCallAction(this, continueConversationOnReadyToCommutate, continueConversationOnReject
+                , priority, queueId);
     }
 
     public boolean getDataImmediate(DataConsumer dataConsumer, DataContext context) {
@@ -73,6 +77,14 @@ public class QueueCallActionNode extends BaseNode implements IvrActionNode, Data
 
     public void setContinueConversationOnReadyToCommutate(Boolean continueConversationOnReadyToCommutate) {
         this.continueConversationOnReadyToCommutate = continueConversationOnReadyToCommutate;
+    }
+
+    public Boolean getContinueConversationOnReject() {
+        return continueConversationOnReject;
+    }
+
+    public void setContinueConversationOnReject(Boolean continueConversationOnReject) {
+        this.continueConversationOnReject = continueConversationOnReject;
     }
 
     public Integer getPriority() {

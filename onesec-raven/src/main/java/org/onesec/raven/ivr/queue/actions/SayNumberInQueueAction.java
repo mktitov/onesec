@@ -19,11 +19,13 @@ package org.onesec.raven.ivr.queue.actions;
 
 import java.util.ArrayList;
 import java.util.List;
+import javax.script.Bindings;
 import org.onesec.raven.impl.NumberToDigitConverter;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.actions.AbstractSayNumberAction;
 import org.onesec.raven.ivr.impl.AudioFileNode;
 import org.onesec.raven.ivr.queue.QueuedCallStatus;
+import org.raven.RavenUtils;
 import org.raven.tree.Node;
 
 /**
@@ -32,26 +34,38 @@ import org.raven.tree.Node;
  */
 public class SayNumberInQueueAction extends AbstractSayNumberAction
 {
+    public final static String LAST_SAYED_NUMBER = "lastSayedNumber";
     private final static String NAME = "Say number in queue action";
 
     private final AudioFileNode preambleAudio;
+    private final Node owner;
 
-    public SayNumberInQueueAction(Node numbersNode, long pauseBetweenWords, AudioFileNode preambleAudio)
+    public SayNumberInQueueAction(Node owner, Node numbersNode, long pauseBetweenWords
+            , AudioFileNode preambleAudio)
     {
         super(NAME, numbersNode, pauseBetweenWords);
         this.preambleAudio = preambleAudio;
+        this.owner = owner;
     }
 
     @Override
-    protected List<String> formWords(IvrEndpointConversation conversation)
+    protected List formWords(IvrEndpointConversation conversation)
     {
-        QueuedCallStatus callStatus = (QueuedCallStatus) conversation.getConversationScenarioState()
-                .getBindings().get(QueueCallAction.QUEUED_CALL_STATUS_BINDING);
-        if (callStatus==null || !callStatus.isQueueing() || callStatus.getSerialNumber()<1)
+        Bindings bindings = conversation.getConversationScenarioState().getBindings();
+        QueuedCallStatus callStatus = (QueuedCallStatus) bindings.get(QueueCallAction.QUEUED_CALL_STATUS_BINDING);
+        String key = RavenUtils.generateKey(LAST_SAYED_NUMBER, owner);
+        Integer lastSayedNumber = (Integer) bindings.get(key);
+        if (   callStatus==null || !callStatus.isQueueing() || callStatus.getSerialNumber()<1
+            || (lastSayedNumber!=null && callStatus.getSerialNumber()>=lastSayedNumber))
+        {
             return null;
+        }
+
+        int num = callStatus.getSerialNumber();
         List words = new ArrayList();
         words.add(preambleAudio);
-        words.addAll(NumberToDigitConverter.getDigits(callStatus.getSerialNumber()));
+        words.addAll(NumberToDigitConverter.getDigits(num));
+        bindings.put(key, num);
         return words;
     }
 }

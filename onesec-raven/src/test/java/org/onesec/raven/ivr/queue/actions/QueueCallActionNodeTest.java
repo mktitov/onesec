@@ -37,6 +37,8 @@ public class QueueCallActionNodeTest extends OnesecRavenTestCase
         actionNode.setName("queue action");
         tree.getRootNode().addAndSaveChildren(actionNode);
         actionNode.setQueueId("test queue");
+        actionNode.setContinueConversationOnReadyToCommutate(Boolean.TRUE);
+        actionNode.setContinueConversationOnReject(Boolean.FALSE);
         assertTrue(actionNode.start());
     }
 
@@ -47,7 +49,8 @@ public class QueueCallActionNodeTest extends OnesecRavenTestCase
         assertNotNull(action);
         assertTrue(action instanceof QueueCallAction);
         QueueCallAction queueAction = (QueueCallAction)action;
-        assertFalse(queueAction.isContinueConversationOnReadyToCommutate());
+        assertTrue(queueAction.isContinueConversationOnReadyToCommutate());
+        assertFalse(queueAction.isContinueConversationOnReject());
         assertEquals(actionNode.getPriority().intValue(), queueAction.getPriority());
         assertEquals("test queue", queueAction.getQueueId());
         assertSame(actionNode, queueAction.getRequestSender());

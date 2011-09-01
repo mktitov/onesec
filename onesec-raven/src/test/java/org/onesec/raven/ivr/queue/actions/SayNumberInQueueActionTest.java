@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.queue.actions;
 
+import java.util.List;
 import java.io.File;
 import javax.script.Bindings;
 import org.apache.commons.io.FileUtils;
@@ -57,7 +58,7 @@ public class SayNumberInQueueActionTest extends OnesecRavenTestCase
         tree.getRootNode().addAndSaveChildren(conv);
         conv.setExecutorService(executor);
         conv.setFileName("target/number_in_queue.wav");
-        assertTrue(conv.start());
+//        assertTrue(conv.start());
 
         numbers = SayAmountActionTest.createNumbersNode(tree);
 
@@ -74,22 +75,82 @@ public class SayNumberInQueueActionTest extends OnesecRavenTestCase
     {
         ConversationScenarioState state = createMock(ConversationScenarioState.class);
         Bindings bindings = createMock(Bindings.class);
+        Node owner = createMock(Node.class);
         QueuedCallStatus callStatus = createMock(QueuedCallStatus.class);
 
         expect(state.getBindings()).andReturn(bindings);
         expect(bindings.get(QueueCallAction.QUEUED_CALL_STATUS_BINDING)).andReturn(callStatus);
+        String key = SayNumberInQueueAction.LAST_SAYED_NUMBER+"_1";
+        expect(bindings.get(key)).andReturn(null);
+        expect(bindings.put(key, 10)).andReturn(null);
         expect(callStatus.isQueueing()).andReturn(Boolean.TRUE);
         expect(callStatus.getSerialNumber()).andReturn(10).anyTimes();
+        expect(owner.getId()).andReturn(1).anyTimes();
 
-        replay(state, bindings, callStatus);
+        replay(state, bindings, callStatus, owner);
 
         conv.setConversationScenarioState(state);
-        SayNumberInQueueAction action = new SayNumberInQueueAction(numbers, 50, preamble);
+        assertTrue(conv.start());
+        SayNumberInQueueAction action = new SayNumberInQueueAction(owner, numbers, 50, preamble);
         action.execute(conv);
         Thread.sleep(10000);
         
-        verify(state, bindings, callStatus);
+        verify(state, bindings, callStatus, owner);
 
+    }
+
+    @Test
+    public void formWords() throws Exception
+    {
+        ConversationScenarioState state = createMock(ConversationScenarioState.class);
+        Bindings bindings = createMock(Bindings.class);
+        QueuedCallStatus callStatus = createMock(QueuedCallStatus.class);
+        Node owner = createMock(Node.class);
+
+        expect(state.getBindings()).andReturn(bindings);
+        expect(bindings.get(QueueCallAction.QUEUED_CALL_STATUS_BINDING)).andReturn(callStatus);
+        String key = SayNumberInQueueAction.LAST_SAYED_NUMBER+"_1";
+        expect(bindings.get(key)).andReturn(10);
+        expect(callStatus.isQueueing()).andReturn(Boolean.TRUE);
+        expect(callStatus.getSerialNumber()).andReturn(10).anyTimes();
+        expect(owner.getId()).andReturn(1).anyTimes();
+
+        replay(state, bindings, callStatus, owner);
+
+        conv.setConversationScenarioState(state);
+        SayNumberInQueueAction action = new SayNumberInQueueAction(owner, numbers, 50, preamble);
+        assertNull(action.formWords(conv));
+
+        verify(state, bindings, callStatus, owner);
+    }
+
+    @Test
+    public void formWords2() throws Exception
+    {
+        ConversationScenarioState state = createMock(ConversationScenarioState.class);
+        Bindings bindings = createMock(Bindings.class);
+        QueuedCallStatus callStatus = createMock(QueuedCallStatus.class);
+        Node owner = createMock(Node.class);
+
+        expect(state.getBindings()).andReturn(bindings);
+        expect(bindings.get(QueueCallAction.QUEUED_CALL_STATUS_BINDING)).andReturn(callStatus);
+        String key = SayNumberInQueueAction.LAST_SAYED_NUMBER+"_1";
+        expect(bindings.get(key)).andReturn(null);
+        expect(bindings.put(key, 10)).andReturn(null);
+        expect(callStatus.isQueueing()).andReturn(Boolean.TRUE);
+        expect(callStatus.getSerialNumber()).andReturn(10).anyTimes();
+        expect(owner.getId()).andReturn(1).anyTimes();
+
+        replay(state, bindings, callStatus, owner);
+
+        conv.setConversationScenarioState(state);
+        SayNumberInQueueAction action = new SayNumberInQueueAction(owner, numbers, 50, preamble);
+        List words = action.formWords(conv);
+        assertNotNull(words);
+        assertEquals(2, words.size());
+        assertArrayEquals(new Object[]{preamble, "10"}, words.toArray());
+
+        verify(state, bindings, callStatus, owner);
     }
 
 }

@@ -69,11 +69,11 @@ public class ControllerStateWaiter implements ControllerListener
             if (controller.getState()!=states[stateIndex])
                 throw new Exception("Controller state wait timeout");
             ++stateIndex;
-            if (stateIndex==states.length)
-                controller.removeControllerListener(this);
         } finally {
             lock.unlock();
         }
+        if (stateIndex==states.length)
+            controller.removeControllerListener(this);
     }
 
     public void controllerUpdate(ControllerEvent event)

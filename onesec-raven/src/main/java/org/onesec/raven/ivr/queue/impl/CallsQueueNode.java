@@ -204,21 +204,20 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
                             List<CallsQueueOperatorRef> operatorRefs = selector.getOperatorsRefs();
                             boolean processed = false;
                             int startIndex = request.getOperatorIndex()+1;
-                            startIndex = startIndex>=operatorRefs.size()? 0 : startIndex;
-                            for (int i=startIndex; i<operatorRefs.size(); ++i){
-                                if (operatorRefs.get(i).processRequest(this, request)) {
-                                    request.setOperatorIndex(i);
-                                    processed = true;
-                                    break;
+                            if (startIndex<operatorRefs.size())
+                                for (int i=startIndex; i<operatorRefs.size(); ++i){
+                                    if (operatorRefs.get(i).processRequest(this, request)) {
+                                        request.setOperatorIndex(i);
+                                        processed = true;
+                                        break;
+                                    }
                                 }
-                            }
                             if (!processed) {
                                 //if no operators found then processing onBusyBehaviour
                                 if (isLogLevelEnabled(LogLevel.DEBUG))
                                     getLogger().debug(logMess(
                                             request, "Not found free operator to process request"));
-                                CallsQueueOnBusyBehaviour onBusyBehaviour = 
-                                        request.getOnBusyBehaviour();
+                                CallsQueueOnBusyBehaviour onBusyBehaviour = request.getOnBusyBehaviour();
                                 if (onBusyBehaviour==null){
                                     onBusyBehaviour = selector.getOnBusyBehaviour();
                                     request.setOnBusyBehaviour(onBusyBehaviour);

@@ -36,15 +36,18 @@ public class QueueCallAction extends AsyncAction
     public final static String QUEUED_CALL_STATUS_BINDING = "queuedCallStatus";
     
     private final boolean continueConversationOnReadyToCommutate;
+    private final boolean continueConversationOnReject;
     private final CallQueueRequestSender requestSender;
     private final int priority;
     private final String queueId;
 
-    public QueueCallAction(CallQueueRequestSender requestSender, 
-            boolean continueConversationOnReadyToCommutate, int priority, String queueId)
+    public QueueCallAction(CallQueueRequestSender requestSender
+            , boolean continueConversationOnReadyToCommutate, boolean continueConversationOnReject
+            , int priority, String queueId)
     {
         super(ACTION_NAME);
         this.continueConversationOnReadyToCommutate = continueConversationOnReadyToCommutate;
+        this.continueConversationOnReject = continueConversationOnReject;
         this.requestSender = requestSender;
         this.priority = priority;
         this.queueId = queueId;
@@ -52,6 +55,10 @@ public class QueueCallAction extends AsyncAction
 
     public boolean isContinueConversationOnReadyToCommutate() {
         return continueConversationOnReadyToCommutate;
+    }
+
+    public boolean isContinueConversationOnReject() {
+        return continueConversationOnReject;
     }
 
     public int getPriority() {
@@ -74,7 +81,8 @@ public class QueueCallAction extends AsyncAction
                 QUEUED_CALL_STATUS_BINDING);
         if (callStatus==null){
             callStatus = new CallQueueRequestImpl(
-                    conversation, priority, queueId, continueConversationOnReadyToCommutate);
+                    conversation, priority, queueId, continueConversationOnReadyToCommutate
+                    , continueConversationOnReject);
             state.setBinding(QUEUED_CALL_STATUS_BINDING, callStatus, BindingScope.CONVERSATION);
             requestSender.sendCallQueueRequest(callStatus);
         } else if (callStatus.isReadyToCommutate() || callStatus.isCommutated()) {
