@@ -43,7 +43,9 @@ public class CallQueueCdrRecordSchemaNodeTest extends OnesecRavenTestCase
 
         checkRecordDbExtension(schema);
         checkField(schema, ID, RecordSchemaFieldType.LONG);
-        checkField(schema, QUEUE_ID, RecordSchemaFieldType.STRING);
+        checkField(schema, TARGET_QUEUE, RecordSchemaFieldType.STRING);
+        checkField(schema, HANDLED_BY_QUEUE, RecordSchemaFieldType.STRING);
+        checkField(schema, PRIORITY, RecordSchemaFieldType.INTEGER);
         checkField(schema, CALLING_NUMBER, RecordSchemaFieldType.STRING);
         checkField(schema, OPERATOR_ID, RecordSchemaFieldType.STRING);
         checkField(schema, OPERATOR_NUMBER, RecordSchemaFieldType.STRING);

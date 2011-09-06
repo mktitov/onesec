@@ -36,7 +36,9 @@ import org.weda.internal.annotations.Message;
 public class CallQueueCdrRecordSchemaNode extends RecordSchemaNode
 {
     public final static String ID = "id";
-    public final static String QUEUE_ID = "queueId";
+    public final static String TARGET_QUEUE = "targetQueue";
+    public final static String HANDLED_BY_QUEUE = "handledByQueue";
+    public final static String PRIORITY = "priority";
     public final static String CALLING_NUMBER = "callingNumber";
     public final static String OPERATOR_ID = "operatorId";
     public final static String OPERATOR_NUMBER = "operatorNumber";
@@ -55,7 +57,9 @@ public class CallQueueCdrRecordSchemaNode extends RecordSchemaNode
 
     @Message private static String datePattern;
     @Message private static String idDisplayName;
-    @Message private static String queueIdDisplayName;
+    @Message private static String targetQueueDisplayName;
+    @Message private static String handledByQueueDisplayName;
+    @Message private static String priorityDisplayName;
     @Message private static String callingNumberDisplayName;
     @Message private static String operatorIdDisplayName;
     @Message private static String operatorNumberDisplayName;
@@ -92,7 +96,9 @@ public class CallQueueCdrRecordSchemaNode extends RecordSchemaNode
             dbExtension.start();
         }
         createField(ID, idDisplayName, RecordSchemaFieldType.LONG);
-        createField(QUEUE_ID, queueIdDisplayName, RecordSchemaFieldType.STRING);
+        createField(TARGET_QUEUE, targetQueueDisplayName, RecordSchemaFieldType.STRING);
+        createField(HANDLED_BY_QUEUE, handledByQueueDisplayName, RecordSchemaFieldType.STRING);
+        createField(PRIORITY, priorityDisplayName, RecordSchemaFieldType.INTEGER);
         createField(CALLING_NUMBER, callingNumberDisplayName, RecordSchemaFieldType.STRING);
         createField(OPERATOR_ID, operatorIdDisplayName, RecordSchemaFieldType.STRING);
         createField(OPERATOR_NUMBER, operatorNumberDisplayName, RecordSchemaFieldType.STRING);

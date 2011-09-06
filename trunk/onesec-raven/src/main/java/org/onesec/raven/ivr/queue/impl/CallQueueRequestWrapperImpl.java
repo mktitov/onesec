@@ -106,6 +106,7 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
             cdr = schema.createRecord();
             cdr.setValue(CALLING_NUMBER, request.getConversation().getCallingNumber());
             cdr.setValue(QUEUED_TIME, getTimestamp());
+            cdr.setValue(PRIORITY, request.getPriority());
         }
     }
 
@@ -229,7 +230,9 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
                 } else if (event instanceof CallQueuedEvent) {
                     if (cdr.getValue(QUEUED_TIME)==null)
                         cdr.setValue(QUEUED_TIME, getTimestamp());
-                    cdr.setValue(QUEUE_ID, ((CallQueuedEvent)event).getQueueId());
+                    if (cdr.getValue(TARGET_QUEUE)==null)
+                        cdr.setValue(TARGET_QUEUE, ((CallQueuedEvent)event).getQueueId());
+                    cdr.setValue(HANDLED_BY_QUEUE, ((CallQueuedEvent)event).getQueueId());
                 } else if (event instanceof NumberChangedQueueEvent) {
                     addToLog("#"+((NumberChangedQueueEvent)event).getCurrentNumber());
                 } else if (event instanceof ReadyToCommutateQueueEvent) {
