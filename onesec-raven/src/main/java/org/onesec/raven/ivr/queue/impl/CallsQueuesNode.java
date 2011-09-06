@@ -186,7 +186,7 @@ public class CallsQueuesNode  extends BaseNode implements CallsQueues, DataPipe
             if (fields==null || fields.isEmpty())
                 throw new Exception("Schema does not contain fields");
             checkRecordSchemaField(fields, ID, RecordSchemaFieldType.LONG);
-            checkRecordSchemaField(fields, QUEUE_ID, RecordSchemaFieldType.STRING);
+            checkRecordSchemaField(fields, TARGET_QUEUE, RecordSchemaFieldType.STRING);
             checkRecordSchemaField(fields, CALLING_NUMBER, RecordSchemaFieldType.STRING);
             checkRecordSchemaField(fields, OPERATOR_ID, RecordSchemaFieldType.STRING);
             checkRecordSchemaField(fields, OPERATOR_NUMBER, RecordSchemaFieldType.STRING);
