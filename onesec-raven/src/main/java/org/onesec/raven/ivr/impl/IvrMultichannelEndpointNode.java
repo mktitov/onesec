@@ -306,9 +306,6 @@ public class IvrMultichannelEndpointNode extends BaseNode
                         "(CTI_Port on the CCM side)"
                         , terminals[0].getName(), CiscoRouteTerminal.class.getName()));
             terminal = (CiscoRouteTerminal) terminals[0];
-//            CiscoMediaCapability[] caps =
-//                    new CiscoMediaCapability[]{CiscoMediaCapability.G711_64K_30_MILLISECONDS};
-
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 debug(String.format(
                         "Registering terminal (%s)...", address));
