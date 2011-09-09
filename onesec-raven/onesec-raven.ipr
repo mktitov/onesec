@@ -55,6 +55,13 @@
       <list>
         <option value="$PROJECT_DIR$/pom.xml" />
         <option value="$PROJECT_DIR$/../../raven-monitoring/raven-core/pom.xml" />
+        <option value="$PROJECT_DIR$/../../raven-monitoring/raven-ui/pom.xml" />
+      </list>
+    </option>
+    <option name="activeProfiles">
+      <list>
+        <option value="default" />
+        <option value="with-onesec" />
       </list>
     </option>
   </component>
@@ -182,8 +189,9 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/../../play/aeroexpress/Aeroexpress site.iml" filepath="$PROJECT_DIR$/../../play/aeroexpress/Aeroexpress site.iml" />
-      <module fileurl="file://$PROJECT_DIR$/onesec-raven.iml" filepath="$PROJECT_DIR$/onesec-raven.iml" group="Raven" />
-      <module fileurl="file://$PROJECT_DIR$/../../raven-monitoring/raven-core/raven-core.iml" filepath="$PROJECT_DIR$/../../raven-monitoring/raven-core/raven-core.iml" group="Raven" />
+      <module fileurl="file://$PROJECT_DIR$/onesec-raven.iml" filepath="$PROJECT_DIR$/onesec-raven.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../../raven-monitoring/raven-core/raven-core.iml" filepath="$PROJECT_DIR$/../../raven-monitoring/raven-core/raven-core.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../../raven-monitoring/raven-ui/raven-ui.iml" filepath="$PROJECT_DIR$/../../raven-monitoring/raven-ui/raven-ui.iml" />
     </modules>
   </component>
   <component name="ProjectResources">
@@ -197,6 +205,7 @@
   </component>
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="svn" />
+    <mapping directory="$PROJECT_DIR$/../../raven-monitoring/raven-ui" vcs="svn" />
   </component>
   <component name="libraryTable">
     <library name="Maven: antlr:antlr:2.7.7">
