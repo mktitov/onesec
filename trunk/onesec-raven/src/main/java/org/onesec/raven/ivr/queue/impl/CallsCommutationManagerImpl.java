@@ -18,6 +18,8 @@
 package org.onesec.raven.ivr.queue.impl;
 
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -38,6 +40,7 @@ import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.IvrEndpointState;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
 import org.onesec.raven.ivr.queue.CallsCommutationManager;
+import org.onesec.raven.ivr.queue.CallsCommutationManagerListener;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.raven.log.LogLevel;
 import org.raven.tree.Node;
@@ -60,6 +63,8 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager, Ivr
     private final String[] numbers;
     private final CallsQueueOperatorNode owner;
     private final AtomicReference<String> statusMessage;
+    private final List<CallsCommutationManagerListener> listeners =
+            new LinkedList<CallsCommutationManagerListener>();
     private int numberIndex=0;
     private AtomicBoolean operatorConversationFlag = new AtomicBoolean(false);
     private boolean operatorReadyToCommutate = false;
@@ -104,6 +109,14 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager, Ivr
 
     public CallQueueRequestWrapper getRequest() {
         return request;
+    }
+
+    public void addListener(CallsCommutationManagerListener listener) {
+        listeners.add(listener);
+    }
+
+    public void removeListener(CallsCommutationManagerListener listener) {
+        listeners.remove(listener);
     }
 
     public void processRequest(IvrEndpoint endpoint)
@@ -234,6 +247,7 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager, Ivr
             if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                 owner.getLogger().debug(logMess("Abonent ready to commutate"));
             request.addToLog("abonent ready to commutate");
+            fireAbonentReadyEvent();
             abonentReadyToCommutate = true;
             eventCondition.signal();
         } finally {
@@ -286,5 +300,11 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager, Ivr
         } finally {
             lock.unlock();
         }
+    }
+
+    private void fireAbonentReadyEvent()
+    {
+        for (CallsCommutationManagerListener listener: listeners)
+            listener.abonentReady();
     }
 }

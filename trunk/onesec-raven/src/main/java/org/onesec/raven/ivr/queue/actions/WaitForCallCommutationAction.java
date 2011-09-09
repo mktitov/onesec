@@ -18,18 +18,29 @@
 package org.onesec.raven.ivr.queue.actions;
 
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.actions.AsyncAction;
+import org.onesec.raven.ivr.impl.IvrUtils;
+import org.onesec.raven.ivr.impl.ResourceInputStreamSource;
 import org.onesec.raven.ivr.queue.CallsCommutationManager;
+import org.onesec.raven.ivr.queue.CallsCommutationManagerListener;
 
 /**
  * Цель: проинформировать {@link CallsCommutationManager} о том, что оператор готов к коммутации и ждать
- *       до тех пор пока оператор не положит трубку или пока
+ *       до тех пор пока оператор не положит трубку или пока коммутация активна (абонент не положит трубку)
  * @author Mikhail Titov
  */
-public class WaitForCallCommutationAction extends AsyncAction
+public class WaitForCallCommutationAction extends AsyncAction implements CallsCommutationManagerListener
 {
     private final static String NAME = "Wait for commutation action";
+    private final static String BEEP_RESOURCE_NAME = "/org/onesec/raven/ivr/phone_beep.wav";
+    private final static int WAIT_TIMEOUT = 100;
+
+    private final Lock lock = new ReentrantLock();
+    private final Condition abonentReadyCondition = lock.newCondition();
 
     public WaitForCallCommutationAction() {
         super(NAME);
@@ -46,13 +57,43 @@ public class WaitForCallCommutationAction extends AsyncAction
         if (commutationManager==null)
             throw new Exception("CallsCommutationManager not found in the conversation scenario state");
 
-        commutationManager.operatorReadyToCommutate(conversation);
+        commutationManager.addListener(this);
+        try {
+            commutationManager.operatorReadyToCommutate(conversation);
 
-        while (!hasCancelRequest() && commutationManager.isCommutationValid())
-            TimeUnit.MILLISECONDS.sleep(100);
+            boolean preamblePlayed = false;
+            while (!hasCancelRequest() && commutationManager.isCommutationValid()){
+                if (!preamblePlayed) {
+                    lock.lock();
+                    try {
+                        if (abonentReadyCondition.await(WAIT_TIMEOUT, TimeUnit.MILLISECONDS)) {
+                            preamblePlayed = true;
+                            IvrUtils.playAudioInAction(
+                                    this, conversation, new ResourceInputStreamSource(BEEP_RESOURCE_NAME));
+                        }
+                    } finally {
+                        lock.unlock();
+                    }
+                } else
+                    TimeUnit.MILLISECONDS.sleep(WAIT_TIMEOUT);
+            }
+        } finally {
+            commutationManager.removeListener(this);
+        }
     }
 
     public boolean isFlowControlAction() {
         return false;
     }
+
+    public void abonentReady()
+    {
+        lock.lock();
+        try {
+            abonentReadyCondition.signal();
+        } finally {
+            lock.unlock();
+        }
+    }
+
 }

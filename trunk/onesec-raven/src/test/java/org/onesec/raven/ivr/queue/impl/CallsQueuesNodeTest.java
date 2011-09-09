@@ -33,7 +33,6 @@ import org.onesec.raven.impl.CCMCallOperatorNode;
 import org.onesec.raven.impl.ProviderNode;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.IvrEndpointConversationListener;
-import org.onesec.raven.ivr.actions.ContinueConversationAction;
 import org.onesec.raven.ivr.actions.PauseActionNode;
 import org.onesec.raven.ivr.actions.StopConversationActionNode;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;

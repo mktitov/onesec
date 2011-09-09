@@ -42,4 +42,12 @@ public interface CallsCommutationManager
      * Returns <b>true</b> while the state of the communication between two calls is valid
      */
     public boolean isCommutationValid();
+    /**
+     * Adds listener for commutation manager events
+     */
+    public void addListener(CallsCommutationManagerListener listener);
+    /**
+     * Removes listener of the commutation manager events
+     */
+    public void removeListener(CallsCommutationManagerListener listener);
 }

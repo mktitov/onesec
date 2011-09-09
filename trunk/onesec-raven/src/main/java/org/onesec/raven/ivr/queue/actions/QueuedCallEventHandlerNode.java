@@ -36,7 +36,7 @@ import org.weda.annotations.constraints.NotNull;
 @NodeClass(parentNode=IvrConversationScenarioNode.class, importChildTypesFromParent=true)
 public class QueuedCallEventHandlerNode extends BaseNode
 {
-    public enum Status {QUEUING, DISCONNECTED, REJECTED}
+    public enum Status {QUEUING, READY_TO_COMMUTATE, DISCONNECTED, REJECTED}
 
     @NotNull @Parameter
     private Status eventType;
@@ -74,6 +74,7 @@ public class QueuedCallEventHandlerNode extends BaseNode
             case QUEUEING: return event==Status.QUEUING;
             case DISCONNECTED: return event==Status.DISCONNECTED;
             case REJECTED: return event==Status.REJECTED;
+            case READY_TO_COMMUTATE: return event==Status.READY_TO_COMMUTATE;
             default: return false;
         }
     }

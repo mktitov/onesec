@@ -23,7 +23,7 @@ import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.AudioStream;
 import org.onesec.raven.ivr.InputStreamSource;
 import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.onesec.raven.ivr.impl.AudioFileNode;
+import org.onesec.raven.ivr.impl.IvrUtils;
 import org.raven.log.LogLevel;
 
 /**
@@ -53,13 +53,7 @@ public abstract class AbstractPlayAudioAction extends AsyncAction implements Inp
         if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
             conversation.getOwner().getLogger().debug(
                     logMess("Playing audio from source (%s)", audioFile.getPath()));
-        AudioStream stream = conversation.getAudioStream();
-        if (stream!=null){
-            stream.addSource(this);
-            Thread.sleep(200);
-            while (!hasCancelRequest() && stream.isPlaying())
-                TimeUnit.MILLISECONDS.sleep(100);
-        }
+        IvrUtils.playAudioInAction(this, conversation, this);
         if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
             conversation.getOwner().getLogger().debug(logMess(
                     "Audio source (%s) successfuly played ", audioFile.getPath()));
