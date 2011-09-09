@@ -157,7 +157,7 @@
                 <artifactId>onesec-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
-            
+
             <dependency>
                 <groupId>org.onesec</groupId>
                 <artifactId>onesec-raven</artifactId>
