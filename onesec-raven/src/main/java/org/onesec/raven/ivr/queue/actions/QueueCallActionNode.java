@@ -46,6 +46,9 @@ public class QueueCallActionNode extends BaseNode implements IvrActionNode, Data
     @NotNull @Parameter(defaultValue="true")
     private Boolean continueConversationOnReject;
 
+    @NotNull @Parameter(defaultValue="false")
+    private Boolean playOperatorGreeting;
+
     @Parameter(defaultValue="10")
     private Integer priority;
 
@@ -55,7 +58,7 @@ public class QueueCallActionNode extends BaseNode implements IvrActionNode, Data
     public IvrAction createAction()
     {
         return new QueueCallAction(this, continueConversationOnReadyToCommutate, continueConversationOnReject
-                , priority, queueId);
+                , priority, queueId, playOperatorGreeting);
     }
 
     public boolean getDataImmediate(DataConsumer dataConsumer, DataContext context) {
@@ -101,5 +104,13 @@ public class QueueCallActionNode extends BaseNode implements IvrActionNode, Data
 
     public void setQueueId(String queueId) {
         this.queueId = queueId;
+    }
+
+    public Boolean getPlayOperatorGreeting() {
+        return playOperatorGreeting;
+    }
+
+    public void setPlayOperatorGreeting(Boolean playOperatorGreeting) {
+        this.playOperatorGreeting = playOperatorGreeting;
     }
 }

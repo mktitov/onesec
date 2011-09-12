@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.queue;
 
+import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.IvrConversationScenario;
 import org.raven.tree.Node;
 
@@ -26,8 +27,6 @@ import org.raven.tree.Node;
  */
 public interface CallsQueueOperator extends Node
 {
-//    public final static String CALL_QUEUE_OPERATOR_BINDING = "queueOperator";
-//    public final static String CALL_QUEUE_REQUEST_BINDING = "queueRequest";
     /**
      * Returns the request currently processing by this operator or null
      */
@@ -42,15 +41,5 @@ public interface CallsQueueOperator extends Node
      * then operator is busy for now
      */
     public boolean processRequest(CallsQueue queue, CallQueueRequestWrapper request
-            , IvrConversationScenario conversationScenario);
-//    /**
-//     * Informs about that the operator's conversation is ready to commutation
-//     * @param operatorConversation the operator conversation
-//     */
-//    public void operatorReadyToCommutate(IvrEndpointConversation operatorConversation);
-//    /**
-//     * Informs about that the abonent conversation is ready to commutation
-//     * @param operatorConversation the operator conversation
-//     */
-//    public void abonentReadyToCommutate(IvrEndpointConversation abonentConversation);
+            , IvrConversationScenario conversationScenario, AudioFile greeting);
 }

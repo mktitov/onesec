@@ -17,8 +17,10 @@
 package org.onesec.raven.ivr.queue.actions;
 
 import java.util.concurrent.TimeUnit;
+import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.actions.AsyncAction;
+import org.onesec.raven.ivr.impl.IvrUtils;
 import org.onesec.raven.ivr.queue.CallQueueRequestSender;
 import org.onesec.raven.ivr.queue.QueuedCallStatus;
 import org.onesec.raven.ivr.queue.impl.CallQueueRequestImpl;
@@ -40,10 +42,11 @@ public class QueueCallAction extends AsyncAction
     private final CallQueueRequestSender requestSender;
     private final int priority;
     private final String queueId;
+    private final boolean playOperatorGreeting;
 
     public QueueCallAction(CallQueueRequestSender requestSender
             , boolean continueConversationOnReadyToCommutate, boolean continueConversationOnReject
-            , int priority, String queueId)
+            , int priority, String queueId, boolean playOperatorGreeting)
     {
         super(ACTION_NAME);
         this.continueConversationOnReadyToCommutate = continueConversationOnReadyToCommutate;
@@ -51,6 +54,7 @@ public class QueueCallAction extends AsyncAction
         this.requestSender = requestSender;
         this.priority = priority;
         this.queueId = queueId;
+        this.playOperatorGreeting = playOperatorGreeting;
     }
 
     public boolean isContinueConversationOnReadyToCommutate() {
@@ -87,6 +91,13 @@ public class QueueCallAction extends AsyncAction
             requestSender.sendCallQueueRequest(callStatus);
         } else if (callStatus.isReadyToCommutate() || callStatus.isCommutated()) {
             if (callStatus.isReadyToCommutate()) {
+                if (playOperatorGreeting){
+                    if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
+                        conversation.getOwner().getLogger().debug(logMess("Playing operator greeting"));
+                    AudioFile greeting = callStatus.getOperatorGreeting();
+                    if (greeting!=null)
+                        IvrUtils.playAudioInAction(this, conversation, greeting);
+                }
                 if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
                     conversation.getOwner().getLogger().debug(logMess(
                             "Operator and abonent are ready to commutate. Commutating..."));

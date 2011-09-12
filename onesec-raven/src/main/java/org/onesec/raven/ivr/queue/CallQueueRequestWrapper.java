@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.queue;
 
+import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.queue.event.NumberChangedQueueEvent;
 import org.raven.ds.DataContext;
 
@@ -66,6 +67,10 @@ public interface CallQueueRequestWrapper extends CallQueueRequest
      * Fires when queue tries to call to operator using number passed in the parameter
      */
     public void fireOperatorNumberQueueEvent(String operatorNumber);
+    /**
+     * Sets the operator greeting audio file
+     */
+    public void fireOperatorGreetingQueueEvent(AudioFile greeting);
     /**
      * Returns the wrapped request
      */

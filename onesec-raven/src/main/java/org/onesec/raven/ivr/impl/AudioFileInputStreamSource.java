@@ -18,6 +18,7 @@
 package org.onesec.raven.ivr.impl;
 
 import java.io.InputStream;
+import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.InputStreamSource;
 import org.raven.log.LogLevel;
 import org.raven.tree.DataFileException;
@@ -29,10 +30,10 @@ import org.raven.tree.Node;
  */
 public class AudioFileInputStreamSource implements InputStreamSource
 {
-    private final AudioFileNode fileNode;
+    private final AudioFile fileNode;
     private final Node owner;
 
-    public AudioFileInputStreamSource(AudioFileNode fileNode, Node owner)
+    public AudioFileInputStreamSource(AudioFile fileNode, Node owner)
     {
         this.fileNode = fileNode;
         this.owner = owner;

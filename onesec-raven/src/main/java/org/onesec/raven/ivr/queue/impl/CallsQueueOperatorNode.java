@@ -19,6 +19,7 @@ package org.onesec.raven.ivr.queue.impl;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.IvrConversationsBridgeManager;
 import org.onesec.raven.ivr.IvrEndpointPool;
@@ -58,6 +59,9 @@ public class CallsQueueOperatorNode extends BaseNode
 
     @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
     private IvrConversationsBridgeManager conversationsBridgeManager;
+
+    @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
+    private AudioFile greeting;
     
     private AtomicReference<CallsCommutationManagerImpl> commutationManager;
     private AtomicBoolean busy;
@@ -85,11 +89,12 @@ public class CallsQueueOperatorNode extends BaseNode
 
     //CallQueueOpertor's method
     public boolean processRequest(CallsQueue queue, CallQueueRequestWrapper request
-            , IvrConversationScenario conversationScenario)
+            , IvrConversationScenario conversationScenario, AudioFile greeting)
     {
         if (!Status.STARTED.equals(getStatus()) || !busy.compareAndSet(false, true))
             return false;
         request.fireOperatorQueueEvent(getName());
+        request.fireOperatorGreetingQueueEvent(greeting!=null?greeting:this.greeting);        
         String[] numbers = RavenUtils.split(phoneNumbers, ",");
         this.commutationManager.set(new CallsCommutationManagerImpl(
                 request, queue, endpointWaitTimeout, inviteTimeout, conversationScenario, numbers
@@ -161,5 +166,13 @@ public class CallsQueueOperatorNode extends BaseNode
 
     public void setPhoneNumbers(String phoneNumbers) {
         this.phoneNumbers = phoneNumbers;
+    }
+
+    public AudioFile getGreeting() {
+        return greeting;
+    }
+
+    public void setGreeting(AudioFile greeting) {
+        this.greeting = greeting;
     }
 }

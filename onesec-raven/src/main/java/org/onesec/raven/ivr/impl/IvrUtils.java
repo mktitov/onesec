@@ -18,6 +18,7 @@
 package org.onesec.raven.ivr.impl;
 
 import java.util.concurrent.TimeUnit;
+import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.AudioStream;
 import org.onesec.raven.ivr.InputStreamSource;
 import org.onesec.raven.ivr.IvrEndpointConversation;
@@ -43,5 +44,13 @@ public class IvrUtils
             while (!action.hasCancelRequest() && stream.isPlaying())
                 TimeUnit.MILLISECONDS.sleep(100);
         }
+    }
+
+    public static void playAudioInAction(AsyncAction action, IvrEndpointConversation conversation
+            , AudioFile audio)
+        throws InterruptedException
+    {
+        AudioFileInputStreamSource source = new AudioFileInputStreamSource(audio, conversation.getOwner());
+        playAudioInAction(action, conversation, source);
     }
 }

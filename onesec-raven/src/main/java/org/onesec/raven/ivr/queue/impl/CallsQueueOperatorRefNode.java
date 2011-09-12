@@ -17,6 +17,7 @@
 package org.onesec.raven.ivr.queue.impl;
 
 import org.onesec.raven.ivr.IvrConversationScenario;
+import org.onesec.raven.ivr.impl.AudioFileNode;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.CallsQueueOperator;
@@ -40,6 +41,9 @@ public class CallsQueueOperatorRefNode extends BaseNode implements CallsQueueOpe
     @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
     private IvrConversationScenario conversationScenario;
 
+    @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
+    private AudioFileNode greeting;
+
     public void setOperator(CallsQueueOperator operator) {
         this.operator = operator;
     }
@@ -56,7 +60,15 @@ public class CallsQueueOperatorRefNode extends BaseNode implements CallsQueueOpe
         this.conversationScenario = conversationScenario;
     }
 
+    public AudioFileNode getGreeting() {
+        return greeting;
+    }
+
+    public void setGreeting(AudioFileNode greeting) {
+        this.greeting = greeting;
+    }
+
     public boolean processRequest(CallsQueue queue, CallQueueRequestWrapper request) {
-        return operator.processRequest(queue, request, conversationScenario);
+        return operator.processRequest(queue, request, conversationScenario, greeting);
     }
 }
