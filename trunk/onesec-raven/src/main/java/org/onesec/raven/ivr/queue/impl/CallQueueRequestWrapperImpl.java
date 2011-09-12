@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.queue.impl;
 
+import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.CompletionCode;
 import org.raven.ds.DataContext;
 import org.onesec.raven.ivr.queue.CallsQueue;
@@ -52,6 +53,7 @@ import org.onesec.raven.ivr.queue.event.impl.CallQueuedEventImpl;
 import org.onesec.raven.ivr.queue.event.impl.CommutatedQueueEventImpl;
 import org.onesec.raven.ivr.queue.event.impl.DisconnectedQueueEventImpl;
 import org.onesec.raven.ivr.queue.event.impl.NumberChangedQueueEventImpl;
+import org.onesec.raven.ivr.queue.event.impl.OperatorGreetingQueueEventImpl;
 import org.onesec.raven.ivr.queue.event.impl.OperatorNumberQueueEventImpl;
 import org.onesec.raven.ivr.queue.event.impl.OperatorQueueEventImpl;
 import org.onesec.raven.ivr.queue.event.impl.ReadyToCommutateQueueEventImpl;
@@ -305,6 +307,10 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
 
     public void fireOperatorNumberQueueEvent(String operatorNumber) {
         callQueueChangeEvent(new OperatorNumberQueueEventImpl(queue, requestId, operatorNumber));
+    }
+
+    public void fireOperatorGreetingQueueEvent(AudioFile greeting) {
+        callQueueChangeEvent(new OperatorGreetingQueueEventImpl(queue, requestId, greeting));
     }
     
     private void sendCdrToConsumers()

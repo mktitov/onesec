@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.queue.impl;
 
+import java.io.FileInputStream;
 import java.util.Map;
 import org.onesec.core.StateWaitResult;
 import org.onesec.core.provider.ProviderController;
@@ -35,6 +36,7 @@ import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.IvrEndpointConversationListener;
 import org.onesec.raven.ivr.actions.PauseActionNode;
 import org.onesec.raven.ivr.actions.StopConversationActionNode;
+import org.onesec.raven.ivr.impl.AudioFileNode;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.onesec.raven.ivr.impl.IvrConversationsBridgeManagerNode;
 import org.onesec.raven.ivr.impl.IvrEndpointNode;
@@ -341,7 +343,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
     }
 
     private void createCallsQueues(ExecutorServiceNode executor, IvrConversationScenarioNode operatorScenario
-            , IvrEndpointPoolNode pool, IvrConversationsBridgeManagerNode bridge, RecordSchemaNode schema)
+            , IvrEndpointPoolNode pool, IvrConversationsBridgeManagerNode bridge, RecordSchemaNode schema) throws Exception
     {
         CallsQueuesNode queues = new CallsQueuesNode();
         queues.setName("call queues");
@@ -357,6 +359,8 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         collector.setDataSource(queues);
         assertTrue(collector.start());
 
+        AudioFileNode greeting = createAudioFileNode("operator greeting", "src/test/wav/greeting.wav");
+
         CallsQueueOperatorNode operator = new CallsQueueOperatorNode();
         operator.setName("Titov MK");
         queues.getOperatorsNode().addAndSaveChildren(operator);
@@ -365,6 +369,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         operator.setEndpointPool(pool);
         operator.setConversationsBridgeManager(bridge);
         operator.setLogLevel(LogLevel.TRACE);
+        operator.setGreeting(greeting);
         assertTrue(operator.start());
 
         CallsQueueNode queue = new CallsQueueNode();
@@ -456,6 +461,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         queueCallAction.setContinueConversationOnReadyToCommutate(Boolean.TRUE);
         queueCallAction.setPriority(10);
         queueCallAction.setQueueId("test");
+        queueCallAction.setPlayOperatorGreeting(Boolean.TRUE);
         queueCallAction.setLogLevel(LogLevel.TRACE);
         assertTrue(queueCallAction.start());
 
@@ -489,6 +495,18 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
 
         return operatorScenario;
     }
+    
+    private AudioFileNode createAudioFileNode(String nodeName, String filename) throws Exception
+    {
+        AudioFileNode audioFileNode = new AudioFileNode();
+        audioFileNode.setName(nodeName);
+        tree.getRootNode().addAndSaveChildren(audioFileNode);
+        FileInputStream is = new FileInputStream(filename);
+        audioFileNode.getAudioFile().setDataStream(is);
+        assertTrue(audioFileNode.start());
+        return audioFileNode;
+    }
+
 
     private void waitForProvider() throws Exception
     {

@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.queue.impl;
 
+import org.onesec.raven.ivr.AudioFile;
 import java.util.Map;
 import org.easymock.IArgumentMatcher;
 import org.junit.Before;
@@ -85,7 +86,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
         CallsQueue queue = createMock(CallsQueue.class);
         replay(request, queue);
 
-        assertFalse(operator.processRequest(queue, request, scenario));
+        assertFalse(operator.processRequest(queue, request, scenario, null));
 
         verify(request, queue);
     }
@@ -95,28 +96,31 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
     {
         CallQueueRequestWrapper request = createMock(CallQueueRequestWrapper.class);
         CallsQueue queue = createMock(CallsQueue.class);
+        AudioFile audioFile = createMock(AudioFile.class);
         IvrEndpointPool pool = createMock(IvrEndpointPool.class);
         
         request.addToLog("handling by operator (operator)");
+        request.fireOperatorGreetingQueueEvent(audioFile);
         request.fireOperatorQueueEvent(operator.getName());
         expect(request.logMess(isA(String.class), isA(String.class))).andReturn("log mess").anyTimes();
         pool.requestEndpoint(sendNullEndpoint());
         request.addToLog("no free endpoints in the pool");
         queue.queueCall(request);
 
-        replay(request, queue, pool);
+        replay(request, queue, pool, audioFile);
 
         assertTrue(operator.start());
         endpointPool.setEndpointPool(pool);
-        operator.processRequest(queue, request, scenario);
+        operator.processRequest(queue, request, scenario, audioFile);
         
-        verify(request, queue, pool);
+        verify(request, queue, pool, audioFile);
     }
 
     @Test
     public void inviteTimeoutTest() throws Exception
     {
         CallQueueRequestWrapper request = createMock(CallQueueRequestWrapper.class);
+        AudioFile audioFile = createMock(AudioFile.class);
         CallsQueue queue = createMock(CallsQueue.class);
         IvrEndpointPool pool = createMock(IvrEndpointPool.class);
         IvrEndpoint endpoint = createMock(IvrEndpoint.class);
@@ -124,6 +128,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
         StateWaitResult stateWaitResult = createMock(StateWaitResult.class);
 
         request.fireOperatorQueueEvent(operator.getName());
+        request.fireOperatorGreetingQueueEvent(audioFile);
         request.fireOperatorNumberQueueEvent("88024");
         request.addToLog("handling by operator (operator)");
         pool.requestEndpoint(sendEndpoint(endpoint));
@@ -141,24 +146,25 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
         request.addToLog("operator (operator) didn't handle a call");
         queue.queueCall(request);
 
-        replay(request, queue, pool, endpoint, endpointState, stateWaitResult);
+        replay(request, queue, pool, endpoint, endpointState, stateWaitResult, audioFile);
 
         operator.setInviteTimeout(5);
         assertTrue(operator.start());
         endpointPool.setEndpointPool(pool);
         long startTime = System.currentTimeMillis();
-        operator.processRequest(queue, request, scenario);
+        operator.processRequest(queue, request, scenario, audioFile);
         long endTime = System.currentTimeMillis();
         assertTrue(endTime-startTime>5000);
         assertTrue(endTime-startTime<7000);
 
-        verify(request, queue, pool, endpoint, endpointState, stateWaitResult);
+        verify(request, queue, pool, endpoint, endpointState, stateWaitResult, audioFile);
     }
 
     @Test
     public void commutateTest() throws Exception
     {
         final CallQueueRequestWrapper request = createMock(CallQueueRequestWrapper.class);
+        final AudioFile audioFile = createMock(AudioFile.class);
         IvrEndpointConversation abonentConversation = createMock(
                 "abonentConversation", IvrEndpointConversation.class);
         IvrEndpointConversation operatorConversation = createMock(
@@ -172,6 +178,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
         ConversationResult conversationResult = createMock(ConversationResult.class);
 
         request.fireOperatorQueueEvent(operator.getName());
+        request.fireOperatorGreetingQueueEvent(audioFile);
         request.fireOperatorNumberQueueEvent("88024");
         request.addToLog("handling by operator (operator)");
         expect(request.logMess(isA(String.class))).andReturn("prefix");
@@ -194,7 +201,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
         request.fireDisconnectedQueueEvent();
         
         replay(request, abonentConversation, operatorConversation, queue, pool, operatorEndpoint, 
-            endpointState, manager, bridge, conversationResult);
+            endpointState, manager, bridge, conversationResult, audioFile);
 
         operator.setInviteTimeout(5);
         assertTrue(operator.start());
@@ -203,12 +210,12 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
         new Thread(){
             @Override
             public void run() {
-                operator.processRequest(queue, request, scenario);
+                operator.processRequest(queue, request, scenario, audioFile);
             }
         }.start();
         Thread.sleep(1000);
         //check for busy
-        assertFalse(operator.processRequest(queue, request, scenario));
+        assertFalse(operator.processRequest(queue, request, scenario, audioFile));
         CallsCommutationManagerImpl commutationManager = operator.getCommutationManager();
         commutationManager.operatorReadyToCommutate(operatorConversation);
         Thread.sleep(100);

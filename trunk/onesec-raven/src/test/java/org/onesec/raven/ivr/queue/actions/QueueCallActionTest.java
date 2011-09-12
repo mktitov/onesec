@@ -58,7 +58,7 @@ public class QueueCallActionTest extends Assert
 
         replay(requestSender, conversation, state, owner, bindings);
 
-        QueueCallAction action = new QueueCallAction(requestSender, true, false, 10, "test queue");
+        QueueCallAction action = new QueueCallAction(requestSender, true, false, 10, "test queue", false);
         action.doExecute(conversation);
 
         verify(requestSender, conversation, state, owner, bindings);
@@ -80,13 +80,14 @@ public class QueueCallActionTest extends Assert
         expect(state.getBindings()).andReturn(bindings);
         expect(bindings.get(QueueCallAction.QUEUED_CALL_STATUS_BINDING)).andReturn(callStatus);
         expect(callStatus.isReadyToCommutate()).andReturn(true).anyTimes();
+        expect(callStatus.getOperatorGreeting()).andReturn(null);
         callStatus.replayToReadyToCommutate();
         expect(callStatus.isCommutated()).andReturn(Boolean.TRUE).anyTimes();
         expect(callStatus.isDisconnected()).andReturn(Boolean.TRUE);
 
         replay(requestSender, conversation, state, owner, bindings, callStatus);
 
-        QueueCallAction action = new QueueCallAction(requestSender, true, true, 10, "test queue");
+        QueueCallAction action = new QueueCallAction(requestSender, true, true, 10, "test queue", true);
         action.doExecute(conversation);
 
         verify(requestSender, conversation, state, owner, bindings, callStatus);

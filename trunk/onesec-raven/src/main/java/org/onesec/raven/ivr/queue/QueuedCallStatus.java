@@ -16,6 +16,8 @@
  */
 package org.onesec.raven.ivr.queue;
 
+import org.onesec.raven.ivr.AudioFile;
+
 /**
  *
  * @author Mikhail Titov
@@ -54,4 +56,8 @@ public interface QueuedCallStatus extends CallQueueRequest
     public int getPrevSerialNumber();
 
     public void replayToReadyToCommutate();
+    /**
+     * Returns the operator's greeting audio file.
+     */
+    public AudioFile getOperatorGreeting();
 }

@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.queue.impl;
 
+import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.queue.CallsCommutationManager;
 import org.onesec.raven.ivr.queue.QueuedCallStatus;
@@ -24,6 +25,7 @@ import org.onesec.raven.ivr.queue.event.CallQueueEvent;
 import org.onesec.raven.ivr.queue.event.CommutatedQueueEvent;
 import org.onesec.raven.ivr.queue.event.DisconnectedQueueEvent;
 import org.onesec.raven.ivr.queue.event.NumberChangedQueueEvent;
+import org.onesec.raven.ivr.queue.event.OperatorGreetingQueueEvent;
 import org.onesec.raven.ivr.queue.event.ReadyToCommutateQueueEvent;
 import org.onesec.raven.ivr.queue.event.RejectedQueueEvent;
 
@@ -43,6 +45,7 @@ public class CallQueueRequestImpl implements QueuedCallStatus
     private int serialNumber;
     private int prevSerialNumber;
     private CallsCommutationManager commutationManager;
+    private AudioFile operatorGreeting;
 
     public CallQueueRequestImpl(IvrEndpointConversation conversation, int priority, String queueId,
             boolean continueConversationOnReadyToCommutate, boolean continueConversationOnReject)
@@ -91,7 +94,8 @@ public class CallQueueRequestImpl implements QueuedCallStatus
             status = Status.REJECTED;
             if (continueConversationOnReject)
                 conversation.continueConversation('-');
-        }
+        } else if (event instanceof OperatorGreetingQueueEvent)
+            operatorGreeting = ((OperatorGreetingQueueEvent)event).getOperatorGreeting();
     }
 
     public synchronized void replayToReadyToCommutate()
@@ -138,5 +142,9 @@ public class CallQueueRequestImpl implements QueuedCallStatus
 
     public synchronized int getPrevSerialNumber() {
         return prevSerialNumber;
+    }
+
+    public synchronized AudioFile getOperatorGreeting() {
+        return operatorGreeting;
     }
 }

@@ -50,21 +50,6 @@
     <option name="LOCALE" />
     <option name="OPEN_IN_BROWSER" value="true" />
   </component>
-  <component name="MavenProjectsManager">
-    <option name="originalFiles">
-      <list>
-        <option value="$PROJECT_DIR$/pom.xml" />
-        <option value="$PROJECT_DIR$/../../raven-monitoring/raven-core/pom.xml" />
-        <option value="$PROJECT_DIR$/../../raven-monitoring/raven-ui/pom.xml" />
-      </list>
-    </option>
-    <option name="activeProfiles">
-      <list>
-        <option value="default" />
-        <option value="with-onesec" />
-      </list>
-    </option>
-  </component>
   <component name="Palette2">
     <group name="Swing">
       <item class="com.intellij.uiDesigner.HSpacer" tooltip-text="Horizontal Spacer" icon="/com/intellij/uiDesigner/icons/hspacer.png" removable="false" auto-create-binding="false" can-attach-label="false">
@@ -189,9 +174,6 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/../../play/aeroexpress/Aeroexpress site.iml" filepath="$PROJECT_DIR$/../../play/aeroexpress/Aeroexpress site.iml" />
-      <module fileurl="file://$PROJECT_DIR$/onesec-raven.iml" filepath="$PROJECT_DIR$/onesec-raven.iml" />
-      <module fileurl="file://$PROJECT_DIR$/../../raven-monitoring/raven-core/raven-core.iml" filepath="$PROJECT_DIR$/../../raven-monitoring/raven-core/raven-core.iml" />
-      <module fileurl="file://$PROJECT_DIR$/../../raven-monitoring/raven-ui/raven-ui.iml" filepath="$PROJECT_DIR$/../../raven-monitoring/raven-ui/raven-ui.iml" />
     </modules>
   </component>
   <component name="ProjectResources">
