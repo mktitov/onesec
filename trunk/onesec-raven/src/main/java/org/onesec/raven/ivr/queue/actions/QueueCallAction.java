@@ -87,7 +87,7 @@ public class QueueCallAction extends AsyncAction
             callStatus = new CallQueueRequestImpl(
                     conversation, priority, queueId, continueConversationOnReadyToCommutate
                     , continueConversationOnReject);
-            state.setBinding(QUEUED_CALL_STATUS_BINDING, callStatus, BindingScope.CONVERSATION);
+            state.setBinding(QUEUED_CALL_STATUS_BINDING, callStatus, BindingScope.POINT);
             requestSender.sendCallQueueRequest(callStatus);
         } else if (callStatus.isReadyToCommutate() || callStatus.isCommutated()) {
             if (callStatus.isReadyToCommutate()) {
@@ -105,15 +105,19 @@ public class QueueCallAction extends AsyncAction
                 do {
                     TimeUnit.MILLISECONDS.sleep(10);
                 } while (!callStatus.isCommutated() && !hasCancelRequest());
-
                 if (hasCancelRequest()) return;
             }
             if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
                 conversation.getOwner().getLogger().debug(logMess(
                         "Abonent and operator were commutated. Waiting for disconnected event..."));
-            do {
-                TimeUnit.MILLISECONDS.sleep(10);
-            } while (!callStatus.isDisconnected() && !hasCancelRequest());
+            state.disableDtmfProcessing();
+            try {
+                do {
+                    TimeUnit.MILLISECONDS.sleep(10);
+                } while (!callStatus.isDisconnected() && !hasCancelRequest());
+            } finally {
+                state.enableDtmfProcessing();
+            }
             
             if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
                 conversation.getOwner().getLogger().debug(logMess(

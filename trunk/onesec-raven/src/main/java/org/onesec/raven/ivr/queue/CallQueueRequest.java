@@ -56,4 +56,8 @@ public interface CallQueueRequest
      * Set's the queue id
      */
     public void setQueueId(String queueId);
+    /**
+     * Returns <b>true</b> if the request was canceled from the abonent scenario side
+     */
+    public boolean isCanceled();
 }

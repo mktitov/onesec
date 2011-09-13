@@ -271,12 +271,17 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 IvrConversationScenarioPoint point =
                         (IvrConversationScenarioPoint) conversationState.getNextConversationPoint();
                 String validDtmfs = point.getValidDtmfs();
-                if (dtmfChar!=EMPTY_DTMF && (validDtmfs==null || validDtmfs.indexOf(dtmfChar)<0))
+                if (dtmfChar!=EMPTY_DTMF && (
+                        conversationState.isDtmfProcessingDisabled()
+                        || validDtmfs==null
+                        || validDtmfs.indexOf(dtmfChar)<0))
                 {
                     if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                         owner.getLogger().debug(callLog("Invalid dtmf (%s). Skipping", dtmfChar));
                     return;
                 }
+
+                conversationState.enableDtmfProcessing();
 
                 if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                     owner.getLogger().debug(callLog(

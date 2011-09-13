@@ -53,7 +53,7 @@ public class QueueCallActionTest extends Assert
         expect(state.getBindings()).andReturn(bindings);
         expect(bindings.get(QueueCallAction.QUEUED_CALL_STATUS_BINDING)).andReturn(null);
         state.setBinding(eq(QueueCallAction.QUEUED_CALL_STATUS_BINDING), checkCallQueueRequest()
-                , eq(BindingScope.CONVERSATION));
+                , eq(BindingScope.POINT));
         requestSender.sendCallQueueRequest(isA(CallQueueRequest.class));
 
         replay(requestSender, conversation, state, owner, bindings);
@@ -78,6 +78,8 @@ public class QueueCallActionTest extends Assert
         expect(owner.isLogLevelEnabled((LogLevel)anyObject())).andReturn(false).anyTimes();
         expect(conversation.getConversationScenarioState()).andReturn(state);
         expect(state.getBindings()).andReturn(bindings);
+        state.disableDtmfProcessing();
+        state.enableDtmfProcessing();
         expect(bindings.get(QueueCallAction.QUEUED_CALL_STATUS_BINDING)).andReturn(callStatus);
         expect(callStatus.isReadyToCommutate()).andReturn(true).anyTimes();
         expect(callStatus.getOperatorGreeting()).andReturn(null);

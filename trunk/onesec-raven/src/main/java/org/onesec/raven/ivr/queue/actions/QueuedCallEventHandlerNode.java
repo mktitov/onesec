@@ -57,6 +57,8 @@ public class QueuedCallEventHandlerNode extends BaseNode
     @Override
     public Collection<Node> getEffectiveChildrens()
     {
+        if (getStatus()!=Node.Status.STARTED)
+            return null;
         Bindings bindings = new SimpleBindings();
         formExpressionBindings(bindings);
         QueuedCallStatus status = (QueuedCallStatus)bindings.get(QueueCallAction.QUEUED_CALL_STATUS_BINDING);        
