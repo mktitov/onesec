@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.queue.impl;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.queue.CallsCommutationManager;
@@ -46,6 +47,7 @@ public class CallQueueRequestImpl implements QueuedCallStatus
     private int prevSerialNumber;
     private CallsCommutationManager commutationManager;
     private AudioFile operatorGreeting;
+    private final AtomicBoolean canceledFlag = new AtomicBoolean(false);
 
     public CallQueueRequestImpl(IvrEndpointConversation conversation, int priority, String queueId,
             boolean continueConversationOnReadyToCommutate, boolean continueConversationOnReject)
@@ -102,6 +104,14 @@ public class CallQueueRequestImpl implements QueuedCallStatus
     {
         status = Status.COMMUTATING;
         commutationManager.abonentReadyToCommutate(conversation);
+    }
+
+    public void cancel() {
+        canceledFlag.compareAndSet(false, true);
+    }
+
+    public boolean isCanceled() {
+        return canceledFlag.get();
     }
 
     public int getPriority() {

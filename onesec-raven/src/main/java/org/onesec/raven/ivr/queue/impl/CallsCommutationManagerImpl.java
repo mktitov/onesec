@@ -201,7 +201,7 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager, Ivr
             && callStartTime+inviteTimeout*1000<=System.currentTimeMillis())
         {
             if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                owner.getLogger().debug(logMess("Operator's number ({}) not answered", getNumber()));
+                owner.getLogger().debug(logMess("Operator's number (%s) not answered", getNumber()));
             request.addToLog(String.format("number (%s) not answer", getNumber()));
             //restarting endpoint
             endpoint.stop();

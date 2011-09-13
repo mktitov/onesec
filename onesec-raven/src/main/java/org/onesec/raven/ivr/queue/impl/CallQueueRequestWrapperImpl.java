@@ -113,7 +113,11 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
     }
 
     public boolean isValid() {
-        return valid.get();
+        return valid.get() && !request.isCanceled();
+    }
+
+    public boolean isCanceled() {
+        return request.isCanceled();
     }
     
     private void invalidate()

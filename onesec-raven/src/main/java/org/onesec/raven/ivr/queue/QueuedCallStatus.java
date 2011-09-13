@@ -60,4 +60,8 @@ public interface QueuedCallStatus extends CallQueueRequest
      * Returns the operator's greeting audio file.
      */
     public AudioFile getOperatorGreeting();
+    /**
+     * Cancel call queue request
+     */
+    public void cancel();
 }
