@@ -17,9 +17,12 @@
 
 package org.onesec.raven.ivr.queue.impl;
 
+import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.IvrEndpointConversation;
+import org.onesec.raven.ivr.queue.CallQueueRequestListener;
 import org.onesec.raven.ivr.queue.CallsCommutationManager;
 import org.onesec.raven.ivr.queue.QueuedCallStatus;
 import org.onesec.raven.ivr.queue.event.CallQueueEvent;
@@ -48,6 +51,7 @@ public class CallQueueRequestImpl implements QueuedCallStatus
     private CallsCommutationManager commutationManager;
     private AudioFile operatorGreeting;
     private final AtomicBoolean canceledFlag = new AtomicBoolean(false);
+    private final List<CallQueueRequestListener> listeners = new LinkedList<CallQueueRequestListener>();
 
     public CallQueueRequestImpl(IvrEndpointConversation conversation, int priority, String queueId,
             boolean continueConversationOnReadyToCommutate, boolean continueConversationOnReject)
@@ -60,6 +64,10 @@ public class CallQueueRequestImpl implements QueuedCallStatus
         this.status = Status.QUEUEING;
         this.serialNumber = -1;
         this.prevSerialNumber = -1;
+    }
+
+    public void addRequestListener(CallQueueRequestListener listener) {
+        listeners.add(listener);
     }
 
     public synchronized Status getStatus() {
@@ -108,25 +116,27 @@ public class CallQueueRequestImpl implements QueuedCallStatus
 
     public void cancel() {
         canceledFlag.compareAndSet(false, true);
+        for (CallQueueRequestListener listener: listeners)
+            listener.requestCanceled();
     }
 
     public boolean isCanceled() {
         return canceledFlag.get();
     }
 
-    public int getPriority() {
+    public synchronized int getPriority() {
         return priority;
     }
 
-    public void setPriority(int priority) {
+    public synchronized void setPriority(int priority) {
         this.priority = priority;
     }
 
-    public String getQueueId() {
+    public synchronized String getQueueId() {
         return queueId;
     }
 
-    public void setQueueId(String queueId) {
+    public synchronized void setQueueId(String queueId) {
         this.queueId = queueId;
     }
 
