@@ -19,6 +19,7 @@ package org.onesec.raven.ivr.queue.impl;
 
 import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.CompletionCode;
+import org.onesec.raven.ivr.queue.CallQueueRequestListener;
 import org.raven.ds.DataContext;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import java.util.Collection;
@@ -60,6 +61,7 @@ import org.onesec.raven.ivr.queue.event.impl.ReadyToCommutateQueueEventImpl;
 import org.onesec.raven.ivr.queue.event.impl.RejectedQueueEventImpl;
 import org.raven.ds.Record;
 import org.raven.ds.RecordException;
+import org.raven.ds.impl.DataSourceHelper;
 import org.raven.ds.impl.RecordSchemaNode;
 import org.raven.log.LogLevel;
 
@@ -74,8 +76,9 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
     private final CallQueueRequest request;
     private final CallsQueuesNode owner;
     private final DataContext context;
-    private final ConversationListener listener;
+    private final Listener listener;
     private final long requestId;
+    private final AtomicBoolean cdrSent = new AtomicBoolean(false);
 
     private int priority;
     private String queueId;
@@ -102,7 +105,8 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
         this.onBusyBehaviourStep = 0;
         this.valid = new AtomicBoolean(true);
         this.operatorIndex = -1;
-        listener = new ConversationListener(request.getConversation());
+        listener = new Listener(request.getConversation(), request);
+        request.getConversation().addConversationListener(listener);
         RecordSchemaNode schema = owner.getCdrRecordSchema();
         if (schema!=null) {
             cdr = schema.createRecord();
@@ -110,6 +114,9 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
             cdr.setValue(QUEUED_TIME, getTimestamp());
             cdr.setValue(PRIORITY, request.getPriority());
         }
+    }
+
+    public void addRequestListener(CallQueueRequestListener listener) {
     }
 
     public boolean isValid() {
@@ -123,6 +130,8 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
     private void invalidate()
     {
         if (valid.compareAndSet(true, false)){
+            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                owner.getLogger().debug(logMess("Conversation stopped by abonent"));
             addToLog("conversation stopped by abonent");
             fireDisconnectedQueueEvent();
         }
@@ -217,21 +226,23 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
 
     public void callQueueChangeEvent(CallQueueEvent event)
     {
+        if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+            owner.getLogger().debug(logMess("Received event: %s", event.getClass().getName()));
         try{
             if (cdr!=null){
                 if        (event instanceof DisconnectedQueueEvent) {
-                    if (cdr.getValue(DISCONNECTED_TIME)==null && cdr.getValue(COMMUTATED_TIME)!=null) {
+                    if (cdr.getValue(DISCONNECTED_TIME)==null) {
                         Timestamp ts = getTimestamp();
-                        Timestamp startTs = (Timestamp)cdr.getValue(COMMUTATED_TIME);
                         cdr.setValue(DISCONNECTED_TIME, ts);
-                        long dur = (ts.getTime()-startTs.getTime())/1000;
-                        cdr.setValue(CONVERSATION_DURATION, dur);
-                        cdr.setValue(LOG, log.toString());
+                        if (cdr.getValue(COMMUTATED_TIME)!=null){
+                            Timestamp startTs = (Timestamp)cdr.getValue(COMMUTATED_TIME);
+                            long dur = (ts.getTime()-startTs.getTime())/1000;
+                            cdr.setValue(CONVERSATION_DURATION, dur);
+                        }
                         sendCdrToConsumers();
                     }
                 } else if (event instanceof RejectedQueueEvent) {
                     cdr.setValue(REJECTED_TIME, getTimestamp());
-                    cdr.setValue(LOG, log.toString());
                     sendCdrToConsumers();
                 } else if (event instanceof CallQueuedEvent) {
                     if (cdr.getValue(QUEUED_TIME)==null)
@@ -317,14 +328,13 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
         callQueueChangeEvent(new OperatorGreetingQueueEventImpl(queue, requestId, greeting));
     }
     
-    private void sendCdrToConsumers()
-    {
-        Collection<Node> deps = owner.getDependentNodes();
-        if (deps!=null && !deps.isEmpty()) {
-            for (Node dep: deps)
-                if (dep instanceof DataConsumer && Node.Status.STARTED.equals(dep.getStatus()))
-                    ((DataConsumer)dep).setData(owner, cdr, context);
-        }
+    private void sendCdrToConsumers() throws RecordException {
+        if (!cdrSent.compareAndSet(false, true))
+            return;
+        cdr.setValue(LOG, log.toString());
+        if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+            owner.getLogger().debug(logMess("Sending CDR to consumers"));
+        DataSourceHelper.sendDataToConsumers(owner, cdr, context);
     }
 
     @Override
@@ -340,13 +350,22 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
                 +String.format(message, args);
     }
     
-    private class ConversationListener implements IvrEndpointConversationListener
+    private class Listener implements IvrEndpointConversationListener, CallQueueRequestListener
     {
         private final IvrEndpointConversation conversation;
+        private final CallQueueRequest request;
 
-        public ConversationListener(IvrEndpointConversation conversation) {
+        public Listener(IvrEndpointConversation conversation, CallQueueRequest request) {
             this.conversation = conversation;
+            this.request = request;
             conversation.addConversationListener(this);
+            request.addRequestListener(this);
+            if (request.isCanceled())
+                invalidate();
+        }
+
+        public void requestCanceled() {
+            invalidate();
         }
 
         public void listenerAdded(IvrEndpointConversationEvent event) {

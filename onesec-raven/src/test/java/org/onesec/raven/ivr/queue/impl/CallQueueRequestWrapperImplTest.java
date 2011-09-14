@@ -26,6 +26,7 @@ import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.IvrEndpointConversationListener;
 import org.onesec.raven.ivr.IvrEndpointConversationState;
 import org.onesec.raven.ivr.queue.CallQueueRequest;
+import org.onesec.raven.ivr.queue.CallQueueRequestListener;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.event.DisconnectedQueueEvent;
@@ -74,6 +75,10 @@ public class CallQueueRequestWrapperImplTest extends OnesecRavenTestCase
         IvrEndpointConversationState state = createMock(IvrEndpointConversationState.class);
         CallsQueue queue = createMock(CallsQueue.class);
         expect(req.getConversation()).andReturn(conv).atLeastOnce();
+        req.addRequestListener(isA(CallQueueRequestListener.class));
+        expect(req.isCanceled()).andReturn(false).anyTimes();
+        expect(req.getPriority()).andReturn(1);
+        conv.addConversationListener(isA(IvrEndpointConversationListener.class));
         expect(conv.getCallingNumber()).andReturn("1234").atLeastOnce();
         expect(conv.getObjectName()).andReturn("[7000]").anyTimes();
         expect(state.getId()).andReturn(IvrEndpointConversationState.TALKING);
@@ -99,7 +104,11 @@ public class CallQueueRequestWrapperImplTest extends OnesecRavenTestCase
         CallsQueue queue = createMock(CallsQueue.class);
         IvrEndpointConversationState state = createMock(IvrEndpointConversationState.class);
         
-        expect(request.getConversation()).andReturn(conv).times(2);
+        expect(request.getConversation()).andReturn(conv).atLeastOnce();
+        request.addRequestListener(isA(CallQueueRequestListener.class));
+        expect(request.isCanceled()).andReturn(false).anyTimes();
+        expect(request.getPriority()).andReturn(1);
+        conv.addConversationListener(isA(IvrEndpointConversationListener.class));
         expect(conv.getCallingNumber()).andReturn("1234").atLeastOnce();
         expect(conv.getObjectName()).andReturn("[7000]").anyTimes();
         conv.addConversationListener(callListenerAdded());

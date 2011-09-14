@@ -17,12 +17,14 @@
 
 package org.onesec.raven.ivr.queue.actions;
 
+import javax.script.Bindings;
 import org.onesec.raven.ivr.IvrAction;
 import org.onesec.raven.ivr.IvrActionNode;
 import org.onesec.raven.ivr.impl.AudioFileNode;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
+import org.raven.expr.impl.BindingSupportImpl;
 import org.raven.tree.Node;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
@@ -35,6 +37,8 @@ import org.weda.annotations.constraints.NotNull;
 @NodeClass(parentNode=IvrConversationScenarioNode.class)
 public class SayNumberInQueueActionNode extends BaseNode implements IvrActionNode
 {
+    public final static String ACCEPT_SAY_NUMBER_ATTR = "acceptSayNumber";
+
     @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
     private Node numbersNode;
 
@@ -44,8 +48,33 @@ public class SayNumberInQueueActionNode extends BaseNode implements IvrActionNod
     @NotNull @Parameter(defaultValue="10")
     private Long pauseBeetweenWords;
 
+    @NotNull @Parameter(defaultValue="true")
+    private Boolean acceptSayNumber;
+
+    private BindingSupportImpl bindingSupport;
+
+    @Override
+    protected void initFields() {
+        super.initFields();
+        bindingSupport = new BindingSupportImpl();
+    }
+
+    @Override
+    public void formExpressionBindings(Bindings bindings) {
+        super.formExpressionBindings(bindings);
+        bindingSupport.addTo(bindings);
+    }
+
     public IvrAction createAction() {
-        return new SayNumberInQueueAction(this, numbersNode, pauseBeetweenWords, preambleAudio);
+        return new SayNumberInQueueAction(this, bindingSupport, numbersNode, pauseBeetweenWords, preambleAudio);
+    }
+
+    public Boolean getAcceptSayNumber() {
+        return acceptSayNumber;
+    }
+
+    public void setAcceptSayNumber(Boolean acceptSayNumber) {
+        this.acceptSayNumber = acceptSayNumber;
     }
 
     public Node getNumbersNode() {

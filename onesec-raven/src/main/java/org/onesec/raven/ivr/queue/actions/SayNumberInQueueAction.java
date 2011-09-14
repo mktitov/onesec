@@ -26,6 +26,7 @@ import org.onesec.raven.ivr.actions.AbstractSayNumberAction;
 import org.onesec.raven.ivr.impl.AudioFileNode;
 import org.onesec.raven.ivr.queue.QueuedCallStatus;
 import org.raven.RavenUtils;
+import org.raven.expr.BindingSupport;
 import org.raven.tree.Node;
 
 /**
@@ -38,14 +39,16 @@ public class SayNumberInQueueAction extends AbstractSayNumberAction
     private final static String NAME = "Say number in queue action";
 
     private final AudioFileNode preambleAudio;
-    private final Node owner;
+    private final SayNumberInQueueActionNode owner;
+    private final BindingSupport bindingSupport;
 
-    public SayNumberInQueueAction(Node owner, Node numbersNode, long pauseBetweenWords
-            , AudioFileNode preambleAudio)
+    public SayNumberInQueueAction(SayNumberInQueueActionNode owner, BindingSupport bindingSupport
+            , Node numbersNode, long pauseBetweenWords, AudioFileNode preambleAudio)
     {
         super(NAME, numbersNode, pauseBetweenWords);
         this.preambleAudio = preambleAudio;
         this.owner = owner;
+        this.bindingSupport = bindingSupport;
     }
 
     @Override
@@ -60,12 +63,19 @@ public class SayNumberInQueueAction extends AbstractSayNumberAction
         {
             return null;
         }
-
         int num = callStatus.getSerialNumber();
-        List words = new ArrayList();
-        words.add(preambleAudio);
-        words.addAll(NumberToDigitConverter.getDigits(num));
-        bindings.put(key, num);
-        return words;
+        bindingSupport.putAll(bindings);
+        try {
+            Boolean accept = owner.getAcceptSayNumber();
+            if (accept==null || !accept)
+                return null;
+            List words = new ArrayList();
+            words.add(preambleAudio);
+            words.addAll(NumberToDigitConverter.getDigits(num));
+            bindings.put(key, num);
+            return words;
+        } finally {
+            bindingSupport.reset();
+        }
     }
 }
