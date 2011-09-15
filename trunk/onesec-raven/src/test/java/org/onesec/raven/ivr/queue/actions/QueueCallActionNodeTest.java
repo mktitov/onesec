@@ -51,7 +51,7 @@ public class QueueCallActionNodeTest extends OnesecRavenTestCase
         QueueCallAction queueAction = (QueueCallAction)action;
         assertTrue(queueAction.isContinueConversationOnReadyToCommutate());
         assertFalse(queueAction.isContinueConversationOnReject());
-        assertEquals(actionNode.getPriority().intValue(), queueAction.getPriority());
+        assertEquals(10, queueAction.getPriority());
         assertEquals("test queue", queueAction.getQueueId());
         assertSame(actionNode, queueAction.getRequestSender());
     }
