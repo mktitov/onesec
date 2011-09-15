@@ -186,19 +186,19 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
     }
     
     public int getPriority() {
-        return priority;
+        return request.getPriority();
     }
 
     public void setPriority(int priority) {
-        this.priority = priority;
+        request.setPriority(priority);
     }
 
     public String getQueueId() {
-        return queueId;
+        return request.getQueueId();
     }
 
     public void setQueueId(String queueId) {
-        this.queueId = queueId;
+        request.setQueueId(queueId);
     }
 
     public long getRequestId() {
