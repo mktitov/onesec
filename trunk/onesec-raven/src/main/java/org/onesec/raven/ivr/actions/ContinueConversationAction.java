@@ -40,6 +40,7 @@ public class ContinueConversationAction extends AsyncAction {
     @Override
     protected void doExecute(IvrEndpointConversation conversation) throws Exception {
         setStatus(IvrActionStatus.EXECUTED);
+        conversation.getConversationScenarioState().switchToNextConversationPoint();
         conversation.continueConversation(IvrEndpointConversation.EMPTY_DTMF);
     }
 }
