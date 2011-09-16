@@ -30,14 +30,14 @@ import org.raven.tree.impl.BaseNode;
 
 import javax.script.Bindings;
 import java.util.Collection;
-import org.onesec.raven.ivr.IvrConversationScenario;
+import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.raven.annotations.NodeClass;
 
 /**
  *
  * @author Mikhail Titov
  */
-@NodeClass(parentNode=IvrConversationScenario.class)
+@NodeClass(parentNode=IvrConversationScenarioNode.class)
 public class SendDataActionNode extends BaseNode implements IvrActionNode, DataSource
 {
     @Parameter(valueHandlerType=ScriptAttributeValueHandlerFactory.TYPE)

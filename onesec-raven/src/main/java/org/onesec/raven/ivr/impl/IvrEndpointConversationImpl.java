@@ -268,8 +268,9 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                                 + "Current conversation state is %s", state.getIdName()));
                     return;
                 }
+
                 IvrConversationScenarioPoint point =
-                        (IvrConversationScenarioPoint) conversationState.getNextConversationPoint();
+                        (IvrConversationScenarioPoint) conversationState.getConversationPoint();
                 String validDtmfs = point.getValidDtmfs();
                 if (dtmfChar!=EMPTY_DTMF && (
                         conversationState.isDtmfProcessingDisabled()
@@ -278,6 +279,13 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 {
                     if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                         owner.getLogger().debug(callLog("Invalid dtmf (%s). Skipping", dtmfChar));
+                    return;
+                }
+
+                if (actionsExecutor.hasDtmfProcessPoint(dtmfChar)) {
+                    if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                        owner.getLogger().debug("Collecting DTMF chars. Collected: "
+                                +actionsExecutor.getCollectedDtmfs().toString());
                     return;
                 }
 
@@ -318,7 +326,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             catch(Exception e)
             {
                 if (owner.isLogLevelEnabled(LogLevel.ERROR))
-                    owner.getLogger().error(callLog("Error continue conversation using dtmf %s", dtmfChar));
+                    owner.getLogger().error(callLog("Error continue conversation using dtmf %s", dtmfChar), e);
             }
         }
         finally
