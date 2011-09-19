@@ -20,17 +20,27 @@ package org.onesec.raven.ivr.impl;
 import java.util.Map;
 import com.cisco.jtapi.extensions.CiscoAddress;
 import com.cisco.jtapi.extensions.CiscoCall;
+import com.cisco.jtapi.extensions.CiscoTermInServiceEv;
+import com.cisco.jtapi.extensions.CiscoTerminal;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.media.protocol.FileTypeDescriptor;
 import javax.telephony.Call;
 import javax.telephony.Connection;
+import javax.telephony.InvalidStateException;
+import javax.telephony.MethodNotSupportedException;
+import javax.telephony.TerminalObserver;
 import javax.telephony.callcontrol.CallControlCall;
 import javax.telephony.callcontrol.CallControlConnection;
+import javax.telephony.events.TermEv;
+import org.onesec.core.provider.ProviderController;
+import org.onesec.core.services.ProviderRegistry;
 import org.onesec.raven.ivr.AudioStream;
 import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.CompletionCode;
@@ -43,6 +53,7 @@ import org.onesec.raven.ivr.IvrEndpointConversationEvent;
 import org.onesec.raven.ivr.IvrEndpointConversationListener;
 import org.onesec.raven.ivr.OutgoingRtpStream;
 import org.onesec.raven.ivr.RtpStreamException;
+import org.onesec.raven.ivr.SendMessageDirection;
 import org.raven.conv.ConversationScenario;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
@@ -67,6 +78,9 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
 {
     @Service
     private static Tree tree;
+
+    @Service
+    private static ProviderRegistry providerRegistry;
 
     private final Node owner;
     private final ExecutorService executor;
@@ -409,6 +423,19 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         }
     }
 
+    public void sendMessage(String message, String encoding, SendMessageDirection direction) {
+        try{
+            String address = direction==SendMessageDirection.CALLED_PARTY?
+                getCalledNumber() : getCallingNumber();
+            ProviderController controller =  providerRegistry.getProviderController(address);
+            CiscoTerminal term = (CiscoTerminal)controller.getProvider().getAddress(address).getTerminals()[0];
+            term.addObserver(new SendTerminalObserver(message, encoding));
+        } catch (Throwable e){
+            if (owner.isLogLevelEnabled(LogLevel.WARN))
+                owner.getLogger().warn(callLog("Can't send message to %s", direction), e);
+        }
+    }
+
     public ConversationScenarioState getConversationScenarioState() {
         return conversationState;
     }
@@ -517,6 +544,35 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                     new IvrEndpointConversationTransferedEventImpl(this, address);
             for (IvrEndpointConversationListener listener: listeners)
                 listener.conversationTransfered(event);
+        }
+    }
+
+    private class SendTerminalObserver implements TerminalObserver
+    {
+        private final String message;
+        private final String encoding;
+
+        public SendTerminalObserver(String message, String encoding) {
+            this.message = String.format("<CiscoIPPhoneText><Text>%s</Text></CiscoIPPhoneText>", message);
+            this.encoding = encoding;
+        }
+
+        public void terminalChangedEvent(TermEv[] eventList)
+        {
+            for (TermEv ev: eventList){
+                if (ev.getID()==CiscoTermInServiceEv.ID) {
+                    try {
+                        try {
+                            ((CiscoTerminal) ev.getTerminal()).sendData(message.getBytes(encoding));
+                        } finally {
+                            ev.getTerminal().removeObserver(this);
+                        }
+                    } catch (Exception ex) {
+                        if (owner.isLogLevelEnabled(LogLevel.WARN))
+                            owner.getLogger().warn(callLog("Can't send message"), ex);
+                    }
+                }
+            }
         }
     }
 }

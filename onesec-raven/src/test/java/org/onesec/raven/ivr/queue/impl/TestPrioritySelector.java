@@ -18,6 +18,7 @@ package org.onesec.raven.ivr.queue.impl;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
 import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviour;
 import org.onesec.raven.ivr.queue.CallsQueueOperatorRef;
 import org.onesec.raven.ivr.queue.CallsQueuePrioritySelector;
@@ -42,6 +43,10 @@ public class TestPrioritySelector extends BaseNode implements CallsQueuePriority
         operatorRefs = new ArrayList<CallsQueueOperatorRef>();
     }
 
+    public int getStartIndex(CallQueueRequestWrapper request) {
+        return request.getOperatorIndex()+1;
+    }
+
     public Integer getPriority() {
         return priority;
     }
@@ -56,6 +61,9 @@ public class TestPrioritySelector extends BaseNode implements CallsQueuePriority
 
     public CallsQueueOnBusyBehaviour getOnBusyBehaviour() {
         return onBusyBehaviour;
+    }
+
+    public void rebuildIndex(List<CallsQueueOperatorRef> operators, int handledByOperator) {
     }
     
 }

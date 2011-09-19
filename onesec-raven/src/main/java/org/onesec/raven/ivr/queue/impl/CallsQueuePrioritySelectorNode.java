@@ -16,10 +16,13 @@
  */
 package org.onesec.raven.ivr.queue.impl;
 
+import java.util.Collections;
 import java.util.List;
+import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
 import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviour;
 import org.onesec.raven.ivr.queue.CallsQueueOperatorRef;
 import org.onesec.raven.ivr.queue.CallsQueuePrioritySelector;
+import org.onesec.raven.ivr.queue.OperatorsUsagePolicy;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.tree.impl.BaseNode;
@@ -36,6 +39,9 @@ public class CallsQueuePrioritySelectorNode extends BaseNode implements CallsQue
     @NotNull @Parameter()
     private Integer priority;
     
+    @NotNull @Parameter(defaultValue="SEQUENCE_USAGE")
+    private OperatorsUsagePolicy operatorsUsagePolicy;
+
     private CallsQueueOnBusyBehaviourNode onBusyBehaviour;
 
     @Override
@@ -64,8 +70,26 @@ public class CallsQueuePrioritySelectorNode extends BaseNode implements CallsQue
         return onBusyBehaviour;
     }
     
-    public List<CallsQueueOperatorRef> getOperatorsRefs() {
-        return NodeUtils.getChildsOfType(this, CallsQueueOperatorRef.class);
+    public List<CallsQueueOperatorRef> getOperatorsRefs() 
+    {
+        List<CallsQueueOperatorRef> operators = NodeUtils.getChildsOfType(this, CallsQueueOperatorRef.class);
+        if (operatorsUsagePolicy==OperatorsUsagePolicy.UNIFORM_USAGE)
+            Collections.sort(operators, new OperatorRefComparator());
+        return operators;
+    }
+
+    public void rebuildIndex(List<CallsQueueOperatorRef> operators, int handledByOperator) 
+    {
+        if (operatorsUsagePolicy==OperatorsUsagePolicy.SEQUENCE_USAGE)
+            return;
+        operators.add(operators.remove(handledByOperator));
+        int i=0;
+        for (CallsQueueOperatorRef operator: operators)
+            operator.setSortIndex(i++);
+    }
+
+    public int getStartIndex(CallQueueRequestWrapper request){
+        return operatorsUsagePolicy==OperatorsUsagePolicy.UNIFORM_USAGE? 0 : request.getOperatorIndex()+1;
     }
 
     public void setPriority(Integer priority) {
@@ -75,4 +99,13 @@ public class CallsQueuePrioritySelectorNode extends BaseNode implements CallsQue
     public Integer getPriority() {
         return priority;
     }
+
+    public OperatorsUsagePolicy getOperatorsUsagePolicy() {
+        return operatorsUsagePolicy;
+    }
+
+    public void setOperatorsUsagePolicy(OperatorsUsagePolicy operatorsUsagePolicy) {
+        this.operatorsUsagePolicy = operatorsUsagePolicy;
+    }
+
 }

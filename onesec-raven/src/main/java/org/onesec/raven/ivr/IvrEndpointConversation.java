@@ -97,7 +97,12 @@ public interface IvrEndpointConversation extends ObjectDescription
      * @param callStartTimeout
      * @param callEndTimeout
      */
-    public void transfer(
-            String address, boolean monitorTransfer, long callStartTimeout, long callEndTimeout);
-
+    public void transfer(String address, boolean monitorTransfer, long callStartTimeout, long callEndTimeout);
+    /**
+     * Sends text message to the one of the conversation participants. 
+     * @param message the message that will be sent to terminal
+     * @param encoding in this encoding message will be sent to the terminal
+     * @param direction point to the terminal to which the message will be sent
+     */
+    public void sendMessage(String message, String encoding, SendMessageDirection direction);
 }

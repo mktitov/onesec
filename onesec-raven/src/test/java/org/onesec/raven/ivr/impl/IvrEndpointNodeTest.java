@@ -22,6 +22,8 @@ import java.io.FileInputStream;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.junit.Before;
 import org.junit.Test;
 import org.onesec.core.StateWaitResult;
@@ -33,7 +35,12 @@ import org.onesec.raven.impl.CCMCallOperatorNode;
 import org.onesec.raven.impl.ProviderNode;
 import org.onesec.raven.ivr.ConversationCompletionCallback;
 import org.onesec.raven.ivr.ConversationResult;
+import org.onesec.raven.ivr.IvrEndpointConversationEvent;
+import org.onesec.raven.ivr.IvrEndpointConversationListener;
+import org.onesec.raven.ivr.IvrEndpointConversationStoppedEvent;
+import org.onesec.raven.ivr.IvrEndpointConversationTransferedEvent;
 import org.onesec.raven.ivr.IvrEndpointState;
+import org.onesec.raven.ivr.SendMessageDirection;
 import org.onesec.raven.ivr.actions.DtmfProcessPointActionNode;
 import org.onesec.raven.ivr.actions.PauseActionNode;
 import org.onesec.raven.ivr.actions.PlayAudioActionNode;
@@ -141,7 +148,7 @@ public class IvrEndpointNodeTest
         assertFalse(res.isWaitInterrupted());
     }
 
-//    @Test
+    @Test
     public void simpleConversationTest() throws Exception
     {
         AudioFileNode audioFileNode = new AudioFileNode();
@@ -164,6 +171,8 @@ public class IvrEndpointNodeTest
         
         waitForProvider();
         assertTrue(endpoint.start());
+        endpoint.addConversationListener(new SendMessageConversationListener(
+                "Привет Мир!!! Hello World", SendMessageDirection.CALLING_PARTY));
         StateWaitResult res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.IN_SERVICE}, 2000);
         res = endpoint.getEndpointState().waitForState(
@@ -175,7 +184,7 @@ public class IvrEndpointNodeTest
         Thread.sleep(1000);
     }
 
-    @Test
+//    @Test
     public void simpleConversationWithConversationPointTest() throws Exception
     {
         AudioFileNode audioFileNode = createAudioFileNode("audio file", "src/test/wav/test.wav");
@@ -596,5 +605,38 @@ public class IvrEndpointNodeTest
         System.out.println("transfer conversation start time: "+new Date(res.getTransferConversationStartTime()));
         System.out.println("transfer conversation duration: "+res.getTransferConversationDuration());
         System.out.println("----------------------------------------------\n");
+    }
+
+    private static class SendMessageConversationListener implements IvrEndpointConversationListener
+    {
+        private final String message;
+        private final SendMessageDirection direction;
+
+        public SendMessageConversationListener(String Message, SendMessageDirection direction) {
+            this.message = Message;
+            this.direction = direction;
+        }
+
+        public void listenerAdded(IvrEndpointConversationEvent event) {
+        }
+
+        public void conversationStarted(final IvrEndpointConversationEvent event) {
+            new Thread(new Runnable() {
+                public void run() {
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException ex) {
+                        Logger.getLogger(IvrEndpointNodeTest.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                    event.getConversation().sendMessage(message, "windows-1251", direction);
+                }
+            }).start();
+        }
+
+        public void conversationStopped(IvrEndpointConversationStoppedEvent event) {
+        }
+
+        public void conversationTransfered(IvrEndpointConversationTransferedEvent event) {
+        }
     }
 }
