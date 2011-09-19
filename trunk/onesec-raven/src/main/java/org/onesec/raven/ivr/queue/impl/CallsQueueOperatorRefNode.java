@@ -44,6 +44,22 @@ public class CallsQueueOperatorRefNode extends BaseNode implements CallsQueueOpe
     @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
     private AudioFileNode greeting;
 
+    private int sortIndex;
+
+    @Override
+    protected void doStart() throws Exception {
+        super.doStart();
+        sortIndex = 0;
+    }
+
+    public int getSortIndex() {
+        return sortIndex;
+    }
+
+    public void setSortIndex(int sortIndex) {
+        this.sortIndex = sortIndex;
+    }
+
     public void setOperator(CallsQueueOperator operator) {
         this.operator = operator;
     }

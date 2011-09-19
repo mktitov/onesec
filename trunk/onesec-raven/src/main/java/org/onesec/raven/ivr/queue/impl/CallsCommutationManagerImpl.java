@@ -138,7 +138,7 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager, Ivr
             try {
                 boolean callHandled = false;
                 for (int i=0; i<numbers.length; ++i) {
-                        numberIndex=i;
+                    numberIndex=i;
                     if (callToOperator(endpoint, bindings)) {
                         callHandled = true;
                         break;

@@ -14,20 +14,18 @@
  *  limitations under the License.
  *  under the License.
  */
-package org.onesec.raven.ivr.queue;
+
+package org.onesec.raven.ivr.queue.impl;
+
+import java.util.Comparator;
+import org.onesec.raven.ivr.queue.CallsQueueOperatorRef;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface CallsQueueOperatorRef
-{
-    /**
-     * Returns the operator 
-     */
-    public boolean processRequest(CallsQueue queue, CallQueueRequestWrapper request);
-
-    public int getSortIndex();
-
-    public void setSortIndex(int sortIndex);
+public class OperatorRefComparator implements Comparator<CallsQueueOperatorRef>{
+    public int compare(CallsQueueOperatorRef o1, CallsQueueOperatorRef o2) {
+        return o1.getSortIndex()-o2.getSortIndex();
+    }
 }

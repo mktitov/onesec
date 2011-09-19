@@ -38,4 +38,8 @@ public interface CallsQueuePrioritySelector extends Node
      * Returns "on busy" behaviour for this selector
      */
     public CallsQueueOnBusyBehaviour getOnBusyBehaviour();
+
+    public void rebuildIndex(List<CallsQueueOperatorRef> operators, int handledByOperator);
+
+    public int getStartIndex(CallQueueRequestWrapper request);
 }

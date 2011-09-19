@@ -32,6 +32,7 @@ import org.onesec.raven.ivr.IvrEndpointConversationListener;
 import org.onesec.raven.ivr.IvrEndpointConversationState;
 import org.onesec.raven.ivr.IvrEndpointException;
 import org.onesec.raven.ivr.IvrEndpointState;
+import org.onesec.raven.ivr.SendMessageDirection;
 import org.onesec.raven.ivr.impl.ConcatDataSource;
 import org.raven.annotations.Parameter;
 import org.raven.conv.ConversationScenarioState;
@@ -145,6 +146,10 @@ public class TestEndpointConversationNode extends BaseNode implements IvrEndpoin
 
     public void setConversationScenarioState(ConversationScenarioState conversationScenarioState) {
         this.conversationScenarioState = conversationScenarioState;
+    }
+
+    public void sendMessage(String message, String encoding, SendMessageDirection direction) {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     public ConversationScenarioState getConversationScenarioState() {

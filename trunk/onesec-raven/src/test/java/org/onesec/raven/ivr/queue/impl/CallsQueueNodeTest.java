@@ -37,6 +37,7 @@ import static org.easymock.EasyMock.*;
 public class CallsQueueNodeTest extends RavenCoreTestCase
 {
     private CallsQueueNode queue;
+    private CallsQueueNode queuesManager;
     private ExecutorServiceNode executor;
     
     
@@ -341,6 +342,14 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         verify(req, operatorRef, operator, operatorRef1, onBusyBehaviour);
     }
     
+    @Test
+    public void uniformOperatorUsageTest() throws Exception
+    {
+        executor.stop();
+
+        
+    }
+
     private TestPrioritySelector addPrioritySelector(
             String name, int priority, CallsQueueOnBusyBehaviour onBusyBehaviour)
     {

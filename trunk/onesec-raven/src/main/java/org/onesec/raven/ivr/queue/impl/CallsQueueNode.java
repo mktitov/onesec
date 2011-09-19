@@ -21,7 +21,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -31,6 +30,7 @@ import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviour;
 import org.onesec.raven.ivr.queue.CallsQueueOperatorRef;
 import org.onesec.raven.ivr.queue.CallsQueuePrioritySelector;
+import org.onesec.raven.ivr.queue.OperatorsUsagePolicy;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.log.LogLevel;
@@ -54,7 +54,7 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
 
     @NotNull @Parameter(valueHandlerType=SystemSchedulerValueHandlerFactory.TYPE)
     private ExecutorService executor;
-    
+
     private AtomicReference<String> statusMessage;
     private AtomicBoolean stopProcessing;
     AtomicBoolean processingThreadRunning;
@@ -203,12 +203,13 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
                             //looking up for operator that will process the request
                             List<CallsQueueOperatorRef> operatorRefs = selector.getOperatorsRefs();
                             boolean processed = false;
-                            int startIndex = request.getOperatorIndex()+1;
+                            int startIndex = selector.getStartIndex(request);
                             if (startIndex<operatorRefs.size())
                                 for (int i=startIndex; i<operatorRefs.size(); ++i){
                                     if (operatorRefs.get(i).processRequest(this, request)) {
                                         request.setOperatorIndex(i);
                                         processed = true;
+                                        selector.rebuildIndex(operatorRefs, i);
                                         break;
                                     }
                                 }

@@ -14,20 +14,14 @@
  *  limitations under the License.
  *  under the License.
  */
-package org.onesec.raven.ivr.queue;
+
+package org.onesec.raven.ivr;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface CallsQueueOperatorRef
+public enum SendMessageDirection
 {
-    /**
-     * Returns the operator 
-     */
-    public boolean processRequest(CallsQueue queue, CallQueueRequestWrapper request);
-
-    public int getSortIndex();
-
-    public void setSortIndex(int sortIndex);
+    CALLING_PARTY, CALLED_PARTY
 }
