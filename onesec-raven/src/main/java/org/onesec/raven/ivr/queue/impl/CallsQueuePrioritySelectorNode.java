@@ -88,8 +88,11 @@ public class CallsQueuePrioritySelectorNode extends BaseNode implements CallsQue
             operator.setSortIndex(i++);
     }
 
-    public int getStartIndex(CallQueueRequestWrapper request){
-        return operatorsUsagePolicy==OperatorsUsagePolicy.UNIFORM_USAGE? 0 : request.getOperatorIndex()+1;
+    public int getStartIndex(CallQueueRequestWrapper request, int operatorsCount){
+        if (operatorsUsagePolicy==OperatorsUsagePolicy.SEQUENCE_USAGE)
+            return request.getOperatorIndex()+1;
+        else 
+            return request.getOperatorHops()<operatorsCount? 0 : operatorsCount;
     }
 
     public void setPriority(Integer priority) {

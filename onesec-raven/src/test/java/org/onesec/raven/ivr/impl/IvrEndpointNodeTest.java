@@ -148,7 +148,7 @@ public class IvrEndpointNodeTest
         assertFalse(res.isWaitInterrupted());
     }
 
-    @Test
+//    @Test
     public void simpleConversationTest() throws Exception
     {
         AudioFileNode audioFileNode = new AudioFileNode();
@@ -257,9 +257,10 @@ public class IvrEndpointNodeTest
         Thread.sleep(1000);
     }
 
-//    @Test
+    @Test
     public void simpleConversationTest2() throws Exception
     {
+        scenario.setValidDtmfs("-#");
         AudioFileNode audioNode1 = createAudioFileNode("audio1", "src/test/wav/test2.wav");
         AudioFileNode audioNode2 = createAudioFileNode("audio2", "src/test/wav/test.wav");
 

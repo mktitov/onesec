@@ -17,32 +17,37 @@
 
 package org.onesec.raven.ivr.queue.impl;
 
-import org.onesec.raven.ivr.AudioFile;
-import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
 import org.onesec.raven.ivr.queue.CallsQueue;
-import org.onesec.raven.ivr.queue.CallsQueueOperator;
+import org.onesec.raven.ivr.queue.CallsQueueOperatorRef;
 import org.raven.tree.impl.BaseNode;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class TestOperator extends BaseNode implements CallsQueueOperator
+public class TestOperatorRef extends BaseNode implements CallsQueueOperatorRef
 {
+    private CallsQueueOperatorRef operatorRef;
+    private int sortIndex = 0;
 
-    public CallQueueRequestWrapper getProcessingRequest() {
-        return null;
+    public CallsQueueOperatorRef getOperatorRef() {
+        return operatorRef;
     }
 
-    public long getProcessedRequestCount() {
-        return 0l;
+    public void setOperatorRef(CallsQueueOperatorRef operatorRef) {
+        this.operatorRef = operatorRef;
     }
 
-    public boolean processRequest(CallsQueue queue, CallQueueRequestWrapper request
-            , IvrConversationScenario conversationScenario, AudioFile greeting)
-    {
-        return true;
+    public boolean processRequest(CallsQueue queue, CallQueueRequestWrapper request) {
+        return operatorRef.processRequest(queue, request);
     }
 
+    public int getSortIndex() {
+        return sortIndex;
+    }
+
+    public void setSortIndex(int sortIndex) {
+        this.sortIndex = sortIndex;
+    }
 }

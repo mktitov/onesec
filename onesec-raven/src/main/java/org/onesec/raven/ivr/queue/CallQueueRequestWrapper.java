@@ -134,4 +134,12 @@ public interface CallQueueRequestWrapper extends CallQueueRequest
      * @return
      */
     public long getLastQueuedTime();
+    /**
+     * Increases the number of operators who passed through the request in current queue
+     */
+    public void incOperatorHops();
+    /**
+     * Returns the number of operators who passed through the request in current queue
+     */
+    public int getOperatorHops();
 }

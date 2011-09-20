@@ -40,6 +40,8 @@ public interface CallsQueuePrioritySelector extends Node
     public CallsQueueOnBusyBehaviour getOnBusyBehaviour();
 
     public void rebuildIndex(List<CallsQueueOperatorRef> operators, int handledByOperator);
-
-    public int getStartIndex(CallQueueRequestWrapper request);
+    /**
+     * Returns the index of operator (in the operators list) with which to process begin the request
+     */
+    public int getStartIndex(CallQueueRequestWrapper request, int operatorsCount);
 }

@@ -18,13 +18,9 @@
 package org.onesec.raven.ivr.queue.impl;
 
 import org.onesec.raven.ivr.AudioFile;
-import org.onesec.raven.ivr.CompletionCode;
 import org.onesec.raven.ivr.queue.CallQueueRequestListener;
 import org.raven.ds.DataContext;
 import org.onesec.raven.ivr.queue.CallsQueue;
-import java.util.Collection;
-import org.raven.ds.DataConsumer;
-import org.raven.tree.Node;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -40,7 +36,6 @@ import org.onesec.raven.ivr.queue.CallQueueRequest;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
 import org.onesec.raven.ivr.queue.CallsCommutationManager;
 import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviour;
-import org.onesec.raven.ivr.queue.CallsQueueOperator;
 import org.onesec.raven.ivr.queue.event.CallQueuedEvent;
 import org.onesec.raven.ivr.queue.event.CommutatedQueueEvent;
 import org.onesec.raven.ivr.queue.event.DisconnectedQueueEvent;
@@ -49,7 +44,6 @@ import org.onesec.raven.ivr.queue.event.OperatorNumberQueueEvent;
 import org.onesec.raven.ivr.queue.event.OperatorQueueEvent;
 import org.onesec.raven.ivr.queue.event.ReadyToCommutateQueueEvent;
 import org.onesec.raven.ivr.queue.event.RejectedQueueEvent;
-import org.onesec.raven.ivr.queue.event.impl.CallQueueEventImpl;
 import org.onesec.raven.ivr.queue.event.impl.CallQueuedEventImpl;
 import org.onesec.raven.ivr.queue.event.impl.CommutatedQueueEventImpl;
 import org.onesec.raven.ivr.queue.event.impl.DisconnectedQueueEventImpl;
@@ -90,6 +84,7 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
     private CallsQueueOnBusyBehaviour onBusyBehaviour;
     private AtomicBoolean valid;
     private int operatorIndex;
+    private int operatorHops;
     private long lastQueuedTime;
 
     public CallQueueRequestWrapperImpl(
@@ -105,6 +100,7 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
         this.onBusyBehaviourStep = 0;
         this.valid = new AtomicBoolean(true);
         this.operatorIndex = -1;
+        this.operatorHops = 0;
         listener = new Listener(request.getConversation(), request);
         request.getConversation().addConversationListener(listener);
         RecordSchemaNode schema = owner.getCdrRecordSchema();
@@ -143,6 +139,16 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
 
     public void setOperatorIndex(int index) {
         this.operatorIndex = index;
+        if (index==-1)
+            operatorHops = 0;
+    }
+
+    public void incOperatorHops() {
+        operatorHops++;
+    }
+
+    public int getOperatorHops() {
+        return operatorHops;
     }
 
     public CallsQueueOnBusyBehaviour getOnBusyBehaviour() {
@@ -218,6 +224,7 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
         if (queue!=this.queue){
 //            requestId=0;
             operatorIndex=-1;
+            operatorHops = 0;
             lastQueuedTime = System.currentTimeMillis();
             addToLog(String.format("moved to queue (%s)", queue.getName()));
         }

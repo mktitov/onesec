@@ -42,7 +42,7 @@ public class SendMessageActionNode extends BaseNode implements IvrActionNode
     @NotNull @Parameter
     private String message;
 
-    @NotNull
+    @NotNull @Parameter
     private SendMessageDirection sendDirection;
 
     private BindingSupportImpl bindingSupport;
