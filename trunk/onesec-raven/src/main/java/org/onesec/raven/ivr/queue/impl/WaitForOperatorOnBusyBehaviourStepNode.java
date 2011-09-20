@@ -41,7 +41,7 @@ public class WaitForOperatorOnBusyBehaviourStepNode extends BaseNode implements 
     {
         StepPolicy stepPolicy = System.currentTimeMillis()-request.getLastQueuedTime()<=waitTimeout*1000?
             StepPolicy.LEAVE_AT_THIS_STEP : StepPolicy.IMMEDIATELY_EXECUTE_NEXT_STEP;
-        if (stepPolicy==StepPolicy.LEAVE_AT_THIS_STEP)
+        if (stepPolicy==StepPolicy.LEAVE_AT_THIS_STEP) 
             request.setOperatorIndex(-1);
         return new BehaviourResultImpl(true, stepPolicy);
     }

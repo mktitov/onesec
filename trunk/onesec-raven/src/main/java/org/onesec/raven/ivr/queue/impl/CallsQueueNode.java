@@ -203,9 +203,10 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
                             //looking up for operator that will process the request
                             List<CallsQueueOperatorRef> operatorRefs = selector.getOperatorsRefs();
                             boolean processed = false;
-                            int startIndex = selector.getStartIndex(request);
+                            int startIndex = selector.getStartIndex(request, operatorRefs.size());
                             if (startIndex<operatorRefs.size())
                                 for (int i=startIndex; i<operatorRefs.size(); ++i){
+                                    request.incOperatorHops();
                                     if (operatorRefs.get(i).processRequest(this, request)) {
                                         request.setOperatorIndex(i);
                                         processed = true;

@@ -43,7 +43,7 @@ public class TestPrioritySelector extends BaseNode implements CallsQueuePriority
         operatorRefs = new ArrayList<CallsQueueOperatorRef>();
     }
 
-    public int getStartIndex(CallQueueRequestWrapper request) {
+    public int getStartIndex(CallQueueRequestWrapper request, int operatorsCount) {
         return request.getOperatorIndex()+1;
     }
 

@@ -51,7 +51,7 @@ public class SendDataAction extends AsyncAction
             Object context = bindingSupport.get(BindingNames.DATA_CONTEXT_BINDING);
             if (context==null || !(context instanceof DataContext)) {
                 dataContext = new DataContextImpl();
-                bindingSupport.put(BindingNames.DATA_CONTEXT_BINDING, context);
+                bindingSupport.put(BindingNames.DATA_CONTEXT_BINDING, dataContext);
             } else
                 dataContext = (DataContext) context;
             Object data = actionNode.getExpression();

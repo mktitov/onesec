@@ -64,7 +64,9 @@ import org.onesec.raven.ivr.IvrEndpointConversationTransferedEvent;
 import org.onesec.raven.ivr.RtpStreamManager;
 import org.onesec.raven.ivr.actions.ContinueConversationAction;
 import org.raven.conv.BindingScope;
+import org.raven.conv.ConversationScenarioPoint;
 import org.raven.conv.ConversationScenarioState;
+import org.raven.conv.impl.GotoNode;
 import org.raven.expr.impl.BindingSupportImpl;
 import org.raven.tree.Tree;
 import org.weda.internal.annotations.Service;
@@ -320,14 +322,12 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                     bindingSupport.putAll(conversationState.getBindings());
                     bindingSupport.put(DTMF_BINDING, ""+dtmfChar);
                     for (Node node: actions)
-                        if (node instanceof IvrActionNode)
-                        {
+                        if (node instanceof IvrActionNode) {
                             IvrAction action = ((IvrActionNode)node).createAction();
                             if (action!=null)
                                 ivrActions.add(action);
-                        }
-                    if (conversationState.hasImmediateTransition())
-                        ivrActions.add(new ContinueConversationAction());
+                        } else if (node instanceof GotoNode || node instanceof ConversationScenarioPoint)
+                            ivrActions.add(new ContinueConversationAction());
                     actionsExecutor.executeActions(ivrActions);
                 }
                 finally
