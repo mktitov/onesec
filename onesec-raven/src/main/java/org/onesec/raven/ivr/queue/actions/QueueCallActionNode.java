@@ -69,9 +69,13 @@ public class QueueCallActionNode extends BaseNode implements IvrActionNode, Data
         return null;
     }
 
-    public void sendCallQueueRequest(CallQueueRequest request)
+    public void sendCallQueueRequest(CallQueueRequest request, DataContext context)
     {
-        DataSourceHelper.sendDataToConsumers(this, request, new DataContextImpl());
+        DataSourceHelper.sendDataToConsumers(this, request, context);
+    }
+
+    public DataContext createDataContext() {
+        return new DataContextImpl();
     }
 
     public Boolean getContinueConversationOnReadyToCommutate() {

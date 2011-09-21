@@ -126,6 +126,9 @@ public class IvrMultichannelEndpointNode extends BaseNode
     @NotNull @Parameter(defaultValue="0")
     private Integer rtpMaxSendAheadPacketsCount;
 
+    @NotNull @Parameter(defaultValue="false")
+    private Boolean enableIncomingRtp;
+
     private Map<Integer, IvrEndpointConversationImpl> calls;
     private ReentrantReadWriteLock callsLock; 
     private IvrMultichannelEndpointStateImpl endpointState;
@@ -381,6 +384,14 @@ public class IvrMultichannelEndpointNode extends BaseNode
 
     public void setRtpMaxSendAheadPacketsCount(Integer rtpMaxSendAheadPacketsCount) {
         this.rtpMaxSendAheadPacketsCount = rtpMaxSendAheadPacketsCount;
+    }
+
+    public Boolean getEnableIncomingRtp() {
+        return enableIncomingRtp;
+    }
+
+    public void setEnableIncomingRtp(Boolean enableIncomingRtp) {
+        this.enableIncomingRtp = enableIncomingRtp;
     }
 
     public Codec getCodec() {
@@ -744,8 +755,8 @@ public class IvrMultichannelEndpointNode extends BaseNode
             if (callsLock.writeLock().tryLock(LOCK_WAIT_TIMEOUT, TimeUnit.MILLISECONDS)) {
                 try {
                     IvrEndpointConversationImpl conversation = new IvrEndpointConversationImpl(
-                                    this, executorService, conversationScenario, rtpStreamManager
-                                    , null);
+                                    this, executorService, conversationScenario, rtpStreamManager,
+                                    enableIncomingRtp , null);
                     CiscoRTPParams params = new CiscoRTPParams(
                             conversation.getIncomingRtpStream().getAddress()
                             , conversation.getIncomingRtpStream().getPort());

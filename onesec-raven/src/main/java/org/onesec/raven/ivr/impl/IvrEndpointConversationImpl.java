@@ -88,6 +88,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     private final ExecutorService executor;
     private final ConversationScenario scenario;
     private final RtpStreamManager streamManager;
+    private final boolean enableIncomingRtpStream;
     private Map<String, Object> additionalBindings;
     private Codec codec;
 
@@ -110,6 +111,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     public IvrEndpointConversationImpl(
             Node owner, ExecutorService executor
             , ConversationScenario scenario, RtpStreamManager streamManager
+            , boolean enableIncomingRtpStream
             , Map<String, Object> additionalBindings)
         throws Exception
     {
@@ -118,8 +120,10 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         this.scenario = scenario;
         this.streamManager = streamManager;
         this.additionalBindings = additionalBindings;
+        this.enableIncomingRtpStream = enableIncomingRtpStream;
 
-        incomingRtpStream = streamManager.getIncomingRtpStream(owner);
+        if (enableIncomingRtpStream)
+            incomingRtpStream = streamManager.getIncomingRtpStream(owner);
         
         state = new IvrEndpointConversationStateImpl(this);
         state.setState(INVALID);
@@ -186,7 +190,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
 
         outgoingRtpStream = streamManager.getOutgoingRtpStream(owner);
         outgoingRtpStream.setLogPrefix(callId+" : ");
-        incomingRtpStream.setLogPrefix(callId+" : ");
+        if (enableIncomingRtpStream)
+            incomingRtpStream.setLogPrefix(callId+" : ");
         conversationState = scenario.createConversationState();
         conversationState.setBinding(DTMF_BINDING, "-", BindingScope.REQUEST);
         conversationState.setBindingDefaultValue(DTMF_BINDING, "-");
@@ -244,7 +249,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             {
                 outgoingRtpStream.open(remoteAddress, remotePort, audioStream);
                 outgoingRtpStream.start();
-                incomingRtpStream.open(remoteAddress);
+                if (enableIncomingRtpStream)
+                    incomingRtpStream.open(remoteAddress);
                 
                 state.setState(TALKING);
                 fireEvent(true, null);

@@ -119,6 +119,9 @@ public class IvrEndpointNode extends BaseNode
     @NotNull @Parameter(valueHandlerType=SystemSchedulerValueHandlerFactory.TYPE)
     private ExecutorService executorService;
 
+    @NotNull @Parameter(defaultValue="false")
+    private Boolean enableIncomingRtp;
+
     //ip address and port for outgoing rtp stream
     private RtpAddress rtpAddress;
 
@@ -388,7 +391,7 @@ public class IvrEndpointNode extends BaseNode
 
                         conversation = new IvrEndpointConversationImpl(
                                 this, executorService, conversationScenario, rtpStreamManager
-                                , bindings);
+                                , enableIncomingRtp, bindings);
                         conversation.addConversationListener(this);
 
                         conversationResult = new ConversationResultImpl();
@@ -1007,6 +1010,14 @@ public class IvrEndpointNode extends BaseNode
         this.executorService = executorService;
     }
 
+    public Boolean getEnableIncomingRtp() {
+        return enableIncomingRtp;
+    }
+
+    public void setEnableIncomingRtp(Boolean enableIncomingRtp) {
+        this.enableIncomingRtp = enableIncomingRtp;
+    }
+
     private void startConversation()
     {
         lock.lock();
@@ -1048,7 +1059,7 @@ public class IvrEndpointNode extends BaseNode
                         if (!handlingOutgoingCall) {
                             conversation = new IvrEndpointConversationImpl(
                                             this, executorService, conversationScenario
-                                            , rtpStreamManager, null);
+                                            , rtpStreamManager, enableIncomingRtp, null);
                             conversation.addConversationListener(this);
                         }
                         CiscoRTPParams params = new CiscoRTPParams(

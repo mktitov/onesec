@@ -277,7 +277,7 @@ public class IvrEndpointConversationImplTest extends OnesecRavenTestCase
                         if (conversation==null){
                             conversation = new IvrEndpointConversationImpl(
                                     conversationOwner, executor, scenario
-                                    , manager, null);
+                                    , manager, true, null);
                             conversation.init(
                                     call, props.getRemoteAddress().getHostAddress(), props.getRemotePort()
                                     , props.getPacketSize()*8, 5, 0, Codec.G711_MU_LAW);

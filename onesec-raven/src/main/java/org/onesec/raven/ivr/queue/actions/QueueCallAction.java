@@ -26,6 +26,8 @@ import org.onesec.raven.ivr.queue.QueuedCallStatus;
 import org.onesec.raven.ivr.queue.impl.CallQueueRequestImpl;
 import org.raven.conv.BindingScope;
 import org.raven.conv.ConversationScenarioState;
+import org.raven.ds.DataContext;
+import org.raven.ds.impl.DataContextImpl;
 import org.raven.log.LogLevel;
 
 /**
@@ -84,11 +86,12 @@ public class QueueCallAction extends AsyncAction
         QueuedCallStatus callStatus = (QueuedCallStatus) state.getBindings().get(
                 QUEUED_CALL_STATUS_BINDING);
         if (callStatus==null){
+            DataContext context = requestSender.createDataContext();
             callStatus = new CallQueueRequestImpl(
                     conversation, priority, queueId, continueConversationOnReadyToCommutate
-                    , continueConversationOnReject);
+                    , continueConversationOnReject, context);
             state.setBinding(QUEUED_CALL_STATUS_BINDING, callStatus, BindingScope.POINT);
-            requestSender.sendCallQueueRequest(callStatus);
+            requestSender.sendCallQueueRequest(callStatus, context);
         } else if (callStatus.isReadyToCommutate() || callStatus.isCommutated()) {
             if (callStatus.isReadyToCommutate()) {
                 if (playOperatorGreeting){

@@ -69,7 +69,6 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
 {
     private final CallQueueRequest request;
     private final CallsQueuesNode owner;
-    private final DataContext context;
     private final Listener listener;
     private final long requestId;
     private final AtomicBoolean cdrSent = new AtomicBoolean(false);
@@ -88,12 +87,11 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
     private long lastQueuedTime;
 
     public CallQueueRequestWrapperImpl(
-            CallsQueuesNode owner, CallQueueRequest request, DataContext context, long requestId)
+            CallsQueuesNode owner, CallQueueRequest request, long requestId)
         throws RecordException
     {
         this.owner = owner;
         this.request = request;
-        this.context = context;
         this.requestId = requestId;
         this.queue = null;
         this.positionInQueue = 0;
@@ -168,7 +166,7 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
     }
 
     public DataContext getContext() {
-        return context;
+        return request.getContext();
     }
 
     public CallQueueRequest getWrappedRequest() {
@@ -341,7 +339,7 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
         cdr.setValue(LOG, log.toString());
         if (owner.isLogLevelEnabled(LogLevel.DEBUG))
             owner.getLogger().debug(logMess("Sending CDR to consumers"));
-        DataSourceHelper.sendDataToConsumers(owner, cdr, context);
+        DataSourceHelper.sendDataToConsumers(owner, cdr, request.getContext());
     }
 
     @Override
