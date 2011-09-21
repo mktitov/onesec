@@ -32,6 +32,7 @@ import org.onesec.raven.ivr.queue.event.NumberChangedQueueEvent;
 import org.onesec.raven.ivr.queue.event.OperatorGreetingQueueEvent;
 import org.onesec.raven.ivr.queue.event.ReadyToCommutateQueueEvent;
 import org.onesec.raven.ivr.queue.event.RejectedQueueEvent;
+import org.raven.ds.DataContext;
 
 /**
  *
@@ -52,9 +53,11 @@ public class CallQueueRequestImpl implements QueuedCallStatus
     private AudioFile operatorGreeting;
     private final AtomicBoolean canceledFlag = new AtomicBoolean(false);
     private final List<CallQueueRequestListener> listeners = new LinkedList<CallQueueRequestListener>();
+    private final DataContext context;
 
     public CallQueueRequestImpl(IvrEndpointConversation conversation, int priority, String queueId,
-            boolean continueConversationOnReadyToCommutate, boolean continueConversationOnReject)
+            boolean continueConversationOnReadyToCommutate, boolean continueConversationOnReject,
+            DataContext context)
     {
         this.conversation = conversation;
         this.priority = priority;
@@ -64,6 +67,7 @@ public class CallQueueRequestImpl implements QueuedCallStatus
         this.status = Status.QUEUEING;
         this.serialNumber = -1;
         this.prevSerialNumber = -1;
+        this.context = context;
     }
 
     public void addRequestListener(CallQueueRequestListener listener) {
@@ -84,6 +88,10 @@ public class CallQueueRequestImpl implements QueuedCallStatus
 
     public IvrEndpointConversation getConversation() {
         return conversation;
+    }
+
+    public DataContext getContext() {
+        return context;
     }
 
     public synchronized void callQueueChangeEvent(CallQueueEvent event)

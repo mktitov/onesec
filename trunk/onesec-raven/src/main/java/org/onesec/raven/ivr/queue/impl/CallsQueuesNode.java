@@ -49,7 +49,7 @@ import static org.onesec.raven.ivr.queue.impl.CallQueueCdrRecordSchemaNode.*;
  * @author Mikhail Titov
  */
 @NodeClass
-public class CallsQueuesNode  extends BaseNode implements CallsQueues, DataPipe
+public class CallsQueuesNode  extends BaseNode implements DataPipe
 {
     @Parameter(valueHandlerType=RecordSchemaValueTypeHandlerFactory.TYPE)
     private RecordSchemaNode cdrRecordSchema;
@@ -87,18 +87,14 @@ public class CallsQueuesNode  extends BaseNode implements CallsQueues, DataPipe
         }
     }
 
-    public void queueCall(CallQueueRequest request) throws CallQueueException {
-        queueCall(request, new DataContextImpl());
-    }
-
-    private void queueCall(CallQueueRequest request, DataContext context) throws CallQueueException
+    private void queueCall(CallQueueRequest request) throws CallQueueException
     {
         if (isLogLevelEnabled(LogLevel.DEBUG))
             getLogger().debug("{}. CallsQueues. Queueing call to the queue {}"
                     , request.getConversation().getObjectName(), request.getQueueId());
         try{
             CallQueueRequestWrapper requestWrapper = 
-                    new CallQueueRequestWrapperImpl(this, request, context, requestIdSeq.incrementAndGet());
+                    new CallQueueRequestWrapperImpl(this, request, requestIdSeq.incrementAndGet());
             if (!Status.STARTED.equals(getStatus())){
                 if (isLogLevelEnabled(LogLevel.WARN))
                     getLogger().warn(
@@ -162,7 +158,7 @@ public class CallsQueuesNode  extends BaseNode implements CallsQueues, DataPipe
         if (!(data instanceof CallQueueRequest))
             return;
         try {
-            queueCall((CallQueueRequest)data, context);
+            queueCall((CallQueueRequest)data);
         } catch (CallQueueException ex) {
             if (isLogLevelEnabled(LogLevel.ERROR))
                 getLogger().error(

@@ -19,6 +19,7 @@ package org.onesec.raven.ivr.queue;
 
 import org.onesec.raven.ivr.queue.event.CallQueueEvent;
 import org.onesec.raven.ivr.IvrEndpointConversation;
+import org.raven.ds.DataContext;
 
 /**
  *
@@ -62,4 +63,8 @@ public interface CallQueueRequest
     public boolean isCanceled();
 
     public void addRequestListener(CallQueueRequestListener listener);
+    /**
+     * Returns data context
+     */
+    public DataContext getContext();
 }

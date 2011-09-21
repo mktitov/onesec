@@ -17,11 +17,14 @@
 
 package org.onesec.raven.ivr.queue;
 
+import org.raven.ds.DataContext;
+
 /**
  *
  * @author Mikhail Titov
  */
 public interface CallQueueRequestSender
 {
-    public void sendCallQueueRequest(CallQueueRequest request);
+    public DataContext createDataContext();
+    public void sendCallQueueRequest(CallQueueRequest request, DataContext context);
 }

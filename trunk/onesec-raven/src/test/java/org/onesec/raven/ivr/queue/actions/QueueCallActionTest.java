@@ -28,6 +28,7 @@ import org.onesec.raven.ivr.queue.QueuedCallStatus;
 import org.onesec.raven.ivr.queue.impl.CallQueueRequestImpl;
 import org.raven.conv.BindingScope;
 import org.raven.conv.ConversationScenarioState;
+import org.raven.ds.DataContext;
 import org.raven.log.LogLevel;
 import org.raven.tree.Node;
 import static org.easymock.EasyMock.*;
@@ -43,6 +44,7 @@ public class QueueCallActionTest extends Assert
     {
         CallQueueRequestSender requestSender = createMock(CallQueueRequestSender.class);
         IvrEndpointConversation conversation = createMock(IvrEndpointConversation.class);
+        DataContext context = createMock(DataContext.class);
         ConversationScenarioState state = createMock(ConversationScenarioState.class);
         Node owner = createMock(Node.class);
         Bindings bindings = createMock(Bindings.class);
@@ -54,14 +56,15 @@ public class QueueCallActionTest extends Assert
         expect(bindings.get(QueueCallAction.QUEUED_CALL_STATUS_BINDING)).andReturn(null);
         state.setBinding(eq(QueueCallAction.QUEUED_CALL_STATUS_BINDING), checkCallQueueRequest()
                 , eq(BindingScope.POINT));
-        requestSender.sendCallQueueRequest(isA(CallQueueRequest.class));
+        expect(requestSender.createDataContext()).andReturn(context);
+        requestSender.sendCallQueueRequest(isA(CallQueueRequest.class), isA(DataContext.class));
 
-        replay(requestSender, conversation, state, owner, bindings);
+        replay(requestSender, conversation, state, owner, bindings, context);
 
         QueueCallAction action = new QueueCallAction(requestSender, true, false, 10, "test queue", false);
         action.doExecute(conversation);
 
-        verify(requestSender, conversation, state, owner, bindings);
+        verify(requestSender, conversation, state, owner, bindings, context);
     }
 
     @Test
