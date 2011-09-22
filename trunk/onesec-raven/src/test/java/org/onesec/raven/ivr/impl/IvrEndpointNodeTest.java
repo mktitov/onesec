@@ -126,6 +126,7 @@ public class IvrEndpointNodeTest
 //        endpoint.setCodec(Codec.G711_A_LAW);
         endpoint.setRtpStreamManager(manager);
         endpoint.setLogLevel(LogLevel.TRACE);
+        endpoint.setEnableIncomingCalls(Boolean.TRUE);
     }
 
 //    @Test(timeout=10000)
@@ -260,6 +261,7 @@ public class IvrEndpointNodeTest
     @Test
     public void simpleConversationTest2() throws Exception
     {
+        endpoint.setEnableIncomingRtp(Boolean.TRUE);
         scenario.setValidDtmfs("-#");
         AudioFileNode audioNode1 = createAudioFileNode("audio1", "src/test/wav/test2.wav");
         AudioFileNode audioNode2 = createAudioFileNode("audio2", "src/test/wav/test.wav");
@@ -281,9 +283,9 @@ public class IvrEndpointNodeTest
         StateWaitResult res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.IN_SERVICE}, 2000);
         res = endpoint.getEndpointState().waitForState(
-                new int[]{IvrEndpointState.ACCEPTING_CALL}, 200000);
+                new int[]{IvrEndpointState.ACCEPTING_CALL}, 20000);
         res = endpoint.getEndpointState().waitForState(
-                new int[]{IvrEndpointState.TALKING}, 250000);
+                new int[]{IvrEndpointState.TALKING}, 25000);
         res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.IN_SERVICE}, 50000);
 

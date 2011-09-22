@@ -122,8 +122,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         this.additionalBindings = additionalBindings;
         this.enableIncomingRtpStream = enableIncomingRtpStream;
 
-        if (enableIncomingRtpStream)
-            incomingRtpStream = streamManager.getIncomingRtpStream(owner);
+        incomingRtpStream = streamManager.getIncomingRtpStream(owner);
         
         state = new IvrEndpointConversationStateImpl(this);
         state.setState(INVALID);
@@ -190,8 +189,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
 
         outgoingRtpStream = streamManager.getOutgoingRtpStream(owner);
         outgoingRtpStream.setLogPrefix(callId+" : ");
-        if (enableIncomingRtpStream)
-            incomingRtpStream.setLogPrefix(callId+" : ");
+        incomingRtpStream.setLogPrefix(callId+" : ");
         conversationState = scenario.createConversationState();
         conversationState.setBinding(DTMF_BINDING, "-", BindingScope.REQUEST);
         conversationState.setBindingDefaultValue(DTMF_BINDING, "-");

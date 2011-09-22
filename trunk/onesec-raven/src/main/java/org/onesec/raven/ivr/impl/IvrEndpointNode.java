@@ -143,6 +143,8 @@ public class IvrEndpointNode extends BaseNode
     @NotNull @Parameter(defaultValue="0")
     private Integer rtpMaxSendAheadPacketsCount;
 
+    @NotNull @Parameter(defaultValue="false")
+    private Boolean enableIncomingCalls;
 
     private IvrEndpointStateImpl endpointState;
     private Address terminalAddress;
@@ -614,6 +616,14 @@ public class IvrEndpointNode extends BaseNode
         this.conversationScenario = conversationNode;
     }
 
+    public Boolean getEnableIncomingCalls() {
+        return enableIncomingCalls;
+    }
+
+    public void setEnableIncomingCalls(Boolean enableIncomingCalls) {
+        this.enableIncomingCalls = enableIncomingCalls;
+    }
+
     public void terminalChangedEvent(TermEv[] events)
     {
         if (isLogLevelEnabled(LogLevel.DEBUG))
@@ -719,7 +729,7 @@ public class IvrEndpointNode extends BaseNode
                 getLogger().debug("Accepting incoming call");
             if (lock.tryLock(LOCK_TIMEOUT, TimeUnit.MILLISECONDS)) {
                 try {
-                    if (!handlingOutgoingCall) {
+                    if (!handlingOutgoingCall && enableIncomingCalls) {
                         CallCtlConnOfferedEv offEvent = (CallCtlConnOfferedEv)event;
                         CallControlConnection conn = (CallControlConnection) offEvent.getConnection();
     //                    if (conversation==null || handlingOutgoingCall) {
@@ -738,6 +748,11 @@ public class IvrEndpointNode extends BaseNode
     //                            getLogger().debug("Can't accept. Already handling a call");
     //                        conn.disconnect();
     //                    }
+                    } else if (isLogLevelEnabled(LogLevel.DEBUG)) {
+                        if (!enableIncomingCalls)
+                            getLogger().debug("Can't accept. Handling of incoming calls are disabled");
+                        if (handlingOutgoingCall)
+                            getLogger().debug("Can't accept. Already handling a call");
                     }
                 } finally {
                     lock.unlock();
