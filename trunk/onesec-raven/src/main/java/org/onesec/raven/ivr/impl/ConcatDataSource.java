@@ -331,6 +331,9 @@ public class ConcatDataSource
                         PushBufferStream s = ds.getStreams()[0];
                         s.setTransferHandler(this);
                         ds.start();
+//                        p.prefetch();
+//                        ControllerStateWaiter.waitForState(p, Processor.Prefetched, WAIT_STATE_TIMEOUT);
+//                        p.syncStart(new Time(System.currentTimeMillis()/1000-1));
                         p.start();
                         if (owner.isLogLevelEnabled(LogLevel.TRACE))
                             owner.getLogger().debug(logMess(

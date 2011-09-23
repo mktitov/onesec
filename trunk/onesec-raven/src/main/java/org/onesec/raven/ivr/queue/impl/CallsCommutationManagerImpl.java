@@ -121,6 +121,7 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager, Ivr
 
     public void processRequest(IvrEndpoint endpoint)
     {
+        boolean callHandled = false;
         try{
             if (endpoint==null) {
                 if (owner.isLogLevelEnabled(LogLevel.WARN))
@@ -136,7 +137,6 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager, Ivr
             bindings.put(CALLS_COMMUTATION_MANAGER_BINDING, this);
             bindings.put(CALL_QUEUE_REQUEST_BINDING, request);
             try {
-                boolean callHandled = false;
                 for (int i=0; i<numbers.length; ++i) {
                     numberIndex=i;
                     if (callToOperator(endpoint, bindings)) {
@@ -158,7 +158,7 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager, Ivr
             }
             freeResources();
         } finally {
-            owner.requestProcessed(this);
+            owner.requestProcessed(this, callHandled);
         }
     }
 

@@ -17,10 +17,13 @@
 
 package org.onesec.raven.ivr.queue.actions;
 
+import java.util.Date;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.actions.AsyncAction;
 import org.onesec.raven.ivr.impl.IvrUtils;
@@ -41,6 +44,7 @@ public class WaitForCallCommutationAction extends AsyncAction implements CallsCo
 
     private final Lock lock = new ReentrantLock();
     private final Condition abonentReadyCondition = lock.newCondition();
+    private final Condition preamblePlayedCondition = lock.newCondition();
 
     public WaitForCallCommutationAction() {
         super(NAME);
@@ -70,6 +74,7 @@ public class WaitForCallCommutationAction extends AsyncAction implements CallsCo
                             preamblePlayed = true;
                             IvrUtils.playAudioInAction(
                                     this, conversation, new ResourceInputStreamSource(BEEP_RESOURCE_NAME));
+                            preamblePlayedCondition.signal();
                         }
                     } finally {
                         lock.unlock();
@@ -91,9 +96,11 @@ public class WaitForCallCommutationAction extends AsyncAction implements CallsCo
         lock.lock();
         try {
             abonentReadyCondition.signal();
+            try {
+                preamblePlayedCondition.await();
+            } catch (InterruptedException ex) { }
         } finally {
             lock.unlock();
         }
     }
-
 }
