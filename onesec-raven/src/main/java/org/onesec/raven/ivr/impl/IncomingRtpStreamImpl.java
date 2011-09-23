@@ -125,7 +125,6 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
             InetAddress dest = InetAddress.getByName(remoteHost);
             destAddress = new SessionAddress(dest, SessionAddress.ANY_PORT);
             rtpManager.addTarget(destAddress);
-
         }
         catch(Exception e)
         {

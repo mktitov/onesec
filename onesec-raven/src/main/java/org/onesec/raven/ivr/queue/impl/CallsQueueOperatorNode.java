@@ -65,7 +65,12 @@ public class CallsQueueOperatorNode extends BaseNode
     
     private AtomicReference<CallsCommutationManagerImpl> commutationManager;
     private AtomicBoolean busy;
-    private AtomicLong processedRequestCount;
+
+    private AtomicLong totalRequests;
+    private AtomicLong handledRequests;
+    private AtomicLong onBusyRequests;
+    private AtomicLong onNoFreeEndpointRequests;
+    private AtomicLong onNoAnswerRequests;
 
     @Override
     protected void initFields()
@@ -73,13 +78,13 @@ public class CallsQueueOperatorNode extends BaseNode
         super.initFields();
         commutationManager = new AtomicReference<CallsCommutationManagerImpl>();
         busy = new AtomicBoolean(false);
-        processedRequestCount = new AtomicLong();
+        totalRequests = new AtomicLong();
+        handledRequests = new AtomicLong();
+        onBusyRequests = new AtomicLong();
+        onNoFreeEndpointRequests = new AtomicLong();
+        onNoAnswerRequests = new AtomicLong();
     }
     
-    public long getProcessedRequestCount() {
-        return processedRequestCount.get();
-    }
-
     /**
      * for test purposes
      */
@@ -114,10 +119,13 @@ public class CallsQueueOperatorNode extends BaseNode
         }
     }
 
-    void requestProcessed(CallsCommutationManagerImpl commutationManager)
+    void requestProcessed(CallsCommutationManagerImpl commutationManager, boolean callHandled)
     {
         if (this.commutationManager.compareAndSet(commutationManager, null)) {
-            processedRequestCount.incrementAndGet();
+            if (callHandled)
+                handledRequests.incrementAndGet();
+            else
+                onNoAnswerRequests.incrementAndGet();
             busy.set(false);
         }
     }

@@ -97,6 +97,13 @@ public class ControllerStateWaiter implements ControllerListener
         }
     }
 
+    public static void waitForState(Controller controller, int state, int stateWaitTimeout) throws Exception
+    {
+        ControllerStateWaiter waiter = new ControllerStateWaiter(
+                new int[]{state}, controller, stateWaitTimeout);
+        waiter.waitForNextState();
+    }
+
     public static Processor createRealizedProcessor(
             DataSource source, Format format, int stateWaitTimeout, ContentDescriptor contentDescriptor)
         throws Exception

@@ -28,13 +28,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.media.protocol.FileTypeDescriptor;
 import javax.telephony.Call;
 import javax.telephony.Connection;
-import javax.telephony.InvalidStateException;
-import javax.telephony.MethodNotSupportedException;
 import javax.telephony.TerminalObserver;
 import javax.telephony.callcontrol.CallControlCall;
 import javax.telephony.callcontrol.CallControlConnection;
@@ -104,6 +100,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     private BindingSupportImpl bindingSupport;
     private IvrEndpointConversationStateImpl state;
     private String callingNumber;
+    private String calledNumber;
     private Collection<IvrEndpointConversationListener> listeners;
 
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
@@ -154,22 +151,12 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
 
     public String getCallingNumber()
     {
-        lock.readLock().lock();
-        try {
-            return call!=null? call.getCallingAddress().getName() : null;
-        } finally {
-            lock.readLock().unlock();
-        }
+        return callingNumber;
     }
 
     public String getCalledNumber()
     {
-        lock.readLock().lock();
-        try {
-            return call!=null? call.getCalledAddress().getName() : null;
-        } finally {
-            lock.readLock().unlock();
-        }
+        return calledNumber;
     }
 
     public IvrEndpointConversationState getState()
@@ -185,6 +172,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         this.remotePort = remotePort;
         this.call = (CiscoCall)call;
         this.callingNumber = call.getCallingAddress().getName();
+        this.calledNumber = call.getCalledAddress().getName();
         callId = getCallId();
 
         outgoingRtpStream = streamManager.getOutgoingRtpStream(owner);

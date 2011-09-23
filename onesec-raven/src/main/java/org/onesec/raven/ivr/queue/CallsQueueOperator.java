@@ -32,10 +32,6 @@ public interface CallsQueueOperator extends Node
      */
     public CallQueueRequestWrapper getProcessingRequest();
     /**
-     * Returns processed request count
-     */
-    public long getProcessedRequestCount();
-    /**
      * Process call queue request
      * Returns true if operator (this object) taken request for processing. If method returns false
      * then operator is busy for now

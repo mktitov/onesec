@@ -406,6 +406,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         endpoint.setConversationScenario(scenario);
         endpoint.setExecutorService(executor);
         endpoint.setRtpStreamManager(manager);
+        endpoint.setEnableIncomingRtp(Boolean.TRUE);
         assertTrue(endpoint.start());
     }
 
@@ -420,6 +421,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         endpoint.setConversationScenario(scenario);
         endpoint.setAddress(address);
         endpoint.setLogLevel(LogLevel.TRACE);
+        endpoint.setEnableIncomingRtp(Boolean.TRUE);
         assertTrue(endpoint.start());
     }
 
