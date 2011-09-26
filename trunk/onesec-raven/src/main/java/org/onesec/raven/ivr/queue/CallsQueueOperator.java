@@ -31,6 +31,32 @@ public interface CallsQueueOperator extends Node
      * Returns the request currently processing by this operator or null
      */
     public CallQueueRequestWrapper getProcessingRequest();
+
+    /**
+     * Returns the total requests count received by operator
+     */
+    public int getTotalRequests();
+    /**
+     * Returns the count of the requests handled by operator
+     */
+    public int getHandledRequests();
+    /**
+     * Returns the requests count that operator received when it was busy
+     */
+    public int getOnBusyRequests();
+    /**
+     * Returns the requests count that operator rejected because of no free endpoints in the pool
+     */
+    public int getOnNoFreeEndpointsRequests();
+    /**
+     * Returns the number of requests that were returned back to the queue because of operator not picked up
+     */
+    public int getOnNoAnswerRequests();
+    /**
+     * Returns the number of requests that where returned back to the queue because of operator's not in the
+     * not started state
+     */
+    public int getOnNotStartedRequests();
     /**
      * Process call queue request
      * Returns true if operator (this object) taken request for processing. If method returns false
