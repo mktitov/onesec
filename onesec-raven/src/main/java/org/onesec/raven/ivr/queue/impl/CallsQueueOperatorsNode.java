@@ -16,20 +16,43 @@
  */
 package org.onesec.raven.ivr.queue.impl;
 
+import java.util.List;
+import java.util.Map;
+import org.onesec.raven.ivr.queue.CallsQueueOperator;
 import org.raven.annotations.NodeClass;
+import org.raven.tree.NodeAttribute;
+import org.raven.tree.Viewable;
+import org.raven.tree.ViewableObject;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.InvisibleNode;
+import org.raven.util.NodeUtils;
 
 /**
  *
  * @author Mikhail Titov
  */
 @NodeClass(parentNode=InvisibleNode.class)
-public class CallsQueueOperatorsNode extends BaseNode
+public class CallsQueueOperatorsNode extends BaseNode implements Viewable
 {
     public static final String NAME = "Operators";
     
     public CallsQueueOperatorsNode() {
         super(NAME);
+    }
+
+    public Map<String, NodeAttribute> getRefreshAttributes() throws Exception {
+        return null;
+    }
+
+    public List<ViewableObject> getViewableObjects(Map<String, NodeAttribute> refreshAttributes) 
+            throws Exception
+    {
+        List<CallsQueueOperator> operators =NodeUtils.getChildsOfType(this, CallsQueueOperator.class, false);
+        
+        return null;
+    }
+
+    public Boolean getAutoRefresh() {
+        return true;
     }
 }

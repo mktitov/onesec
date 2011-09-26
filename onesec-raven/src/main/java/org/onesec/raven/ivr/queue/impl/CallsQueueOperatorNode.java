@@ -17,7 +17,7 @@
 package org.onesec.raven.ivr.queue.impl;
 
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.IvrConversationScenario;
@@ -66,11 +66,12 @@ public class CallsQueueOperatorNode extends BaseNode
     private AtomicReference<CallsCommutationManagerImpl> commutationManager;
     private AtomicBoolean busy;
 
-    private AtomicLong totalRequests;
-    private AtomicLong handledRequests;
-    private AtomicLong onBusyRequests;
-    private AtomicLong onNoFreeEndpointRequests;
-    private AtomicLong onNoAnswerRequests;
+    private AtomicInteger totalRequests;
+    private AtomicInteger handledRequests;
+    private AtomicInteger onBusyRequests;
+    private AtomicInteger onNoFreeEndpointRequests;
+    private AtomicInteger onNoAnswerRequests;
+    private AtomicInteger onNotStartedRequests;
 
     @Override
     protected void initFields()
@@ -78,11 +79,12 @@ public class CallsQueueOperatorNode extends BaseNode
         super.initFields();
         commutationManager = new AtomicReference<CallsCommutationManagerImpl>();
         busy = new AtomicBoolean(false);
-        totalRequests = new AtomicLong();
-        handledRequests = new AtomicLong();
-        onBusyRequests = new AtomicLong();
-        onNoFreeEndpointRequests = new AtomicLong();
-        onNoAnswerRequests = new AtomicLong();
+        totalRequests = new AtomicInteger();
+        handledRequests = new AtomicInteger();
+        onBusyRequests = new AtomicInteger();
+        onNoFreeEndpointRequests = new AtomicInteger();
+        onNoAnswerRequests = new AtomicInteger();
+        onNotStartedRequests = new AtomicInteger();
     }
     
     /**
@@ -96,8 +98,15 @@ public class CallsQueueOperatorNode extends BaseNode
     public boolean processRequest(CallsQueue queue, CallQueueRequestWrapper request
             , IvrConversationScenario conversationScenario, AudioFile greeting)
     {
-        if (!Status.STARTED.equals(getStatus()) || !busy.compareAndSet(false, true))
+        totalRequests.incrementAndGet();
+        if (!Status.STARTED.equals(getStatus())) {
+            onNotStartedRequests.incrementAndGet();
             return false;
+        }
+        if (!busy.compareAndSet(false, true)){
+            onBusyRequests.incrementAndGet();
+            return false;
+        }
         request.fireOperatorQueueEvent(getName());
         request.fireOperatorGreetingQueueEvent(greeting!=null?greeting:this.greeting);        
         String[] numbers = RavenUtils.split(phoneNumbers, ",");
@@ -114,6 +123,7 @@ public class CallsQueueOperatorNode extends BaseNode
             if (isLogLevelEnabled(LogLevel.ERROR))
                 getLogger().error(commutationManager.get().logMess("Get endpoint from pool error"), ex);
             request.addToLog("get endpoint from pool error");
+            onNoFreeEndpointRequests.incrementAndGet();
             busy.set(false);
             return false;
         }
@@ -128,6 +138,30 @@ public class CallsQueueOperatorNode extends BaseNode
                 onNoAnswerRequests.incrementAndGet();
             busy.set(false);
         }
+    }
+
+    public int getHandledRequests() {
+        return handledRequests.get();
+    }
+
+    public int getOnBusyRequests() {
+        return onBusyRequests.get();
+    }
+
+    public int getOnNoAnswerRequests() {
+        return onNoAnswerRequests.get();
+    }
+
+    public int getOnNoFreeEndpointsRequests() {
+        return onNoFreeEndpointRequests.get();
+    }
+
+    public int getTotalRequests() {
+        return totalRequests.get();
+    }
+
+    public int getOnNotStartedRequests() {
+        return onNotStartedRequests.get();
     }
 
     public CallQueueRequestWrapper getProcessingRequest()
