@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010 Mikhail Titov.
+ *  Copyright 2011 Mikhail Titov.
  * 
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -17,11 +17,21 @@
 
 package org.onesec.raven.ivr;
 
+import org.onesec.core.StateListener;
+import org.onesec.core.provider.ProviderControllerState;
+
 /**
  *
  * @author Mikhail Titov
  */
-public interface IvrMultichannelEndpoint extends IvrTerminal
+public interface TerminalStateMonitoringService extends StateListener<ProviderControllerState>
 {
-
+    /**
+     * Adds terminal to the service
+     */
+    public void addTerminal(IvrTerminal terminal);
+    /**
+     * Removes terminal from service
+     */
+    public void removeTerminal(IvrTerminal terminal);
 }

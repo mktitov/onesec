@@ -22,10 +22,13 @@ import org.apache.tapestry5.ioc.ServiceBinder;
 import org.apache.tapestry5.ioc.annotations.EagerLoad;
 import org.onesec.core.StateListenerConfiguration;
 import org.onesec.core.impl.StateListenerConfigurationImpl;
+import org.onesec.core.provider.ProviderControllerState;
 import org.onesec.raven.impl.RavenProviderConfiguratorImpl;
 import org.onesec.core.services.ProviderConfiguratorListeners;
 import org.onesec.raven.impl.StateToNodeLoggerImpl;
+import org.onesec.raven.ivr.TerminalStateMonitoringService;
 import org.onesec.raven.ivr.RTPManagerService;
+import org.onesec.raven.ivr.impl.TerminalStateMonitoringServiceImpl;
 import org.onesec.raven.ivr.impl.RTPManagerServiceImpl;
 import org.slf4j.Logger;
 
@@ -38,6 +41,7 @@ public class OnesecRavenModule
     public static void bind(ServiceBinder binder)
     {
         binder.bind(StateToNodeLogger.class, StateToNodeLoggerImpl.class);
+        binder.bind(TerminalStateMonitoringService.class, TerminalStateMonitoringServiceImpl.class);
     }
 
     public RavenProviderConfigurator buildRavenProviderConfigurator(
@@ -54,8 +58,10 @@ public class OnesecRavenModule
 
     public static void contributeStateListenersCoordinator(
             Configuration<StateListenerConfiguration> config
-            , StateToNodeLogger stateToNodeLogger)
+            , StateToNodeLogger stateToNodeLogger
+            , TerminalStateMonitoringService terminalSSS)
     {
         config.add(new StateListenerConfigurationImpl(stateToNodeLogger, null));
+        config.add(new StateListenerConfigurationImpl(terminalSSS, new Class[]{ProviderControllerState.class}));
     }
 }

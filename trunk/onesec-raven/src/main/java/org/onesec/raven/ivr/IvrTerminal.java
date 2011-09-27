@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010 Mikhail Titov.
+ *  Copyright 2011 Mikhail Titov.
  * 
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -17,11 +17,17 @@
 
 package org.onesec.raven.ivr;
 
+import org.onesec.core.ObjectDescription;
+import org.raven.tree.Node;
+
 /**
  *
  * @author Mikhail Titov
  */
-public interface IvrMultichannelEndpoint extends IvrTerminal
+public interface IvrTerminal extends Node, ObjectDescription
 {
-
+    /**
+     * Returns the terminal address (number)
+     */
+    public String getAddress();
 }
