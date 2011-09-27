@@ -36,5 +36,4 @@ public class ProviderControllerStateImpl
         addIdName(OUT_OF_SERVICE, "OUT_OF_SERVICE");
         addIdName(STOPED, "STOPED");
     }
-
 }
