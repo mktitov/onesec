@@ -49,8 +49,8 @@ public class StateListenerCoordinatorTest extends Assert {
         
         StateListenersCoordinator coordinator = new StateListenersCoordinatorImpl(configurations);
         
-        coordinator.addListenersToState(state1);
-        coordinator.addListenersToState(state2);
+        coordinator.addListenersToState(state1, State.class);
+        coordinator.addListenersToState(state2, state2.getClass());
         
         verify(state1, state2, listenerForAllStates, listenerForState2);
     }

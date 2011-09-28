@@ -58,8 +58,8 @@ public class StateListenersCoordinatorImpl implements StateListenersCoordinator 
         return list;
     }
 
-    public void addListenersToState(State state) {
-        for (Class stateClass: new Class[]{null, state.getClass()}) {
+    public void addListenersToState(State state, Class<? extends State> stateInterface) {
+        for (Class stateClass: new Class[]{null, stateInterface}) {
             List<StateListener> listeners = configurations.get(stateClass);
             if (listeners!=null)
                 for (StateListener listener: listeners)

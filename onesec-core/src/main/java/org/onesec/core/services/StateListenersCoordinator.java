@@ -25,6 +25,6 @@ import org.onesec.core.State;
  */
 public interface StateListenersCoordinator {
 
-    public void addListenersToState(State state);
+    public void addListenersToState(State state, Class<? extends State> stateInterface);
     
 }
