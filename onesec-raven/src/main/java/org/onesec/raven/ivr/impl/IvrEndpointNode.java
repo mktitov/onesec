@@ -75,6 +75,7 @@ import org.onesec.raven.ivr.IvrEndpointConversationTransferedEvent;
 import org.onesec.raven.ivr.IvrEndpointException;
 import org.onesec.raven.ivr.IvrEndpointState;
 import org.onesec.raven.ivr.RtpAddress;
+import org.onesec.raven.ivr.TerminalStateMonitoringService;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.expr.impl.BindingSupportImpl;
@@ -107,6 +108,9 @@ public class IvrEndpointNode extends BaseNode
     @Service
     protected static Operator operator;
 
+    @Service
+    protected static TerminalStateMonitoringService terminalStateMonitoringService;
+
     @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
     private RtpStreamManagerNode rtpStreamManager;
 
@@ -124,12 +128,6 @@ public class IvrEndpointNode extends BaseNode
 
     //ip address and port for outgoing rtp stream
     private RtpAddress rtpAddress;
-
-//    @NotNull @Parameter
-//    private String ip;
-//
-//    @NotNull @Parameter(defaultValue="1234")
-//    private Integer port;
 
     @NotNull @Parameter(defaultValue="AUTO")
     private Codec codec;
@@ -188,13 +186,19 @@ public class IvrEndpointNode extends BaseNode
         terminal = null;
         terminalAddress = null;
         endpointState = new IvrEndpointStateImpl(this);
-        stateListenersCoordinator.addListenersToState(endpointState);
+        stateListenersCoordinator.addListenersToState(endpointState, IvrEndpointState.class);
         bindingSupport = new BindingSupportImpl();
         lock = new ReentrantLock();
         conversationListeners = new HashSet<IvrEndpointConversationListener>();
         listenersLock = new ReentrantReadWriteLock();
         resetStates();
         resetConversationFields();
+    }
+
+    @Override
+    protected void doInit() throws Exception {
+        super.doInit();
+        terminalStateMonitoringService.addTerminal(this);
     }
 
     public void resetStates()
@@ -254,11 +258,11 @@ public class IvrEndpointNode extends BaseNode
         resetStates();
     }
 
-    @Override
-    public boolean isAutoStart()
-    {
-        return false;
-    }
+//    @Override
+//    public boolean isAutoStart()
+//    {
+//        return false;
+//    }
 
     private void removeCallObserver()
     {

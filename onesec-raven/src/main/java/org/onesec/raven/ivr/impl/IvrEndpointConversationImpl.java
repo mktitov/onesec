@@ -207,8 +207,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         try
         {
             if (IvrEndpointConversationState.READY!=state.getId()) {
-                if (owner.isLogLevelEnabled(LogLevel.WARN))
-                    owner.getLogger().warn(String.format(
+                if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                    owner.getLogger().debug(String.format(
                             "Can't start conversation. Conversation is already started or not ready. " +
                             "Current conversation state is %s", state.getIdName()));
                 return state;
