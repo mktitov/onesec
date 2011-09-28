@@ -30,6 +30,7 @@ import org.onesec.raven.ivr.TerminalStateMonitoringService;
 import org.onesec.raven.ivr.RTPManagerService;
 import org.onesec.raven.ivr.impl.TerminalStateMonitoringServiceImpl;
 import org.onesec.raven.ivr.impl.RTPManagerServiceImpl;
+import org.raven.tree.TreeListener;
 import org.slf4j.Logger;
 
 /**
@@ -62,6 +63,13 @@ public class OnesecRavenModule
             , TerminalStateMonitoringService terminalSSS)
     {
         config.add(new StateListenerConfigurationImpl(stateToNodeLogger, null));
-        config.add(new StateListenerConfigurationImpl(terminalSSS, new Class[]{ProviderControllerState.class}));
+        config.add(new StateListenerConfigurationImpl(
+                terminalSSS, new Class[]{ProviderControllerState.class}));
+    }
+
+    public static void contributeTreeListeners(Configuration<TreeListener> conf
+            , TerminalStateMonitoringService terminalStateMonitoringService)
+    {
+        conf.add(terminalStateMonitoringService);
     }
 }

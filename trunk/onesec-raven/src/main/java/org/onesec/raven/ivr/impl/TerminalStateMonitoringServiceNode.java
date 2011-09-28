@@ -15,24 +15,24 @@
  *  under the License.
  */
 
-package org.onesec.raven.ivr;
+package org.onesec.raven.ivr.impl;
 
-import org.onesec.core.StateListener;
-import org.onesec.core.provider.ProviderControllerState;
-import org.raven.tree.TreeListener;
+import org.onesec.raven.ivr.TerminalStateMonitoringService;
+import org.raven.tree.impl.BaseNode;
+import org.weda.internal.annotations.Service;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface TerminalStateMonitoringService extends StateListener<ProviderControllerState>, TreeListener
+public class TerminalStateMonitoringServiceNode extends BaseNode 
 {
-    /**
-     * Adds terminal to the service
-     */
-    public void addTerminal(IvrTerminal terminal);
-    /**
-     * Removes terminal from service
-     */
-    public void removeTerminal(IvrTerminal terminal);
+    public final static String NAME = "Terminal state monitoring";
+
+    @Service
+    private static TerminalStateMonitoringService service;
+
+    public TerminalStateMonitoringServiceNode() {
+        super(NAME);
+    }
 }

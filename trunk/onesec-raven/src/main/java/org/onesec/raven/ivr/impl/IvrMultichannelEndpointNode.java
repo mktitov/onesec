@@ -70,6 +70,7 @@ import org.onesec.raven.ivr.CompletionCode;
 import org.onesec.raven.ivr.IvrEndpointState;
 import org.onesec.raven.ivr.IvrMultichannelEndpoint;
 import org.onesec.raven.ivr.IvrMultichannelEndpointState;
+import org.onesec.raven.ivr.TerminalStateMonitoringService;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.log.LogLevel;
@@ -101,6 +102,9 @@ public class IvrMultichannelEndpointNode extends BaseNode
 
     @Service
     protected static StateListenersCoordinator stateListenersCoordinator;
+
+    @Service
+    protected static TerminalStateMonitoringService terminalStateMonitoringService;
 
     @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
     private RtpStreamManagerNode rtpStreamManager;
@@ -157,8 +161,14 @@ public class IvrMultichannelEndpointNode extends BaseNode
         calls = new HashMap<Integer, IvrEndpointConversationImpl>();
         callsLock = new ReentrantReadWriteLock();
         resetStates();
-        stateListenersCoordinator.addListenersToState(endpointState);
+        stateListenersCoordinator.addListenersToState(endpointState, IvrMultichannelEndpointState.class);
         callsCount = new AtomicInteger();
+    }
+
+    @Override
+    protected void doInit() throws Exception {
+        super.doInit();
+        terminalStateMonitoringService.addTerminal(this);
     }
 
     public void resetStates()
@@ -193,11 +203,11 @@ public class IvrMultichannelEndpointNode extends BaseNode
         resetStates();
     }
 
-    @Override
-    public boolean isAutoStart()
-    {
-        return false;
-    }
+//    @Override
+//    public boolean isAutoStart()
+//    {
+//        return false;
+//    }
 
     public Boolean getAutoRefresh() {
         return Boolean.TRUE;
