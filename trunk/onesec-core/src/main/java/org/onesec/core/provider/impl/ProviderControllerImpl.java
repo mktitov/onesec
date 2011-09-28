@@ -69,7 +69,7 @@ public class ProviderControllerImpl implements ProviderController, ProviderObser
         this.host = host;
         
         state = new ProviderControllerStateImpl(this);
-        stateListenersCoordinator.addListenersToState(state);
+        stateListenersCoordinator.addListenersToState(state, ProviderControllerState.class);
         state.setState(ProviderControllerState.CONNECTING);
     }
 

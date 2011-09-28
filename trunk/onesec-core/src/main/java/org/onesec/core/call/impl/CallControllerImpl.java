@@ -78,7 +78,7 @@ public class CallControllerImpl
 
         state = new CallStateImpl(this);
         state.addStateListener(this);
-        listenersCoordinator.addListenersToState(state);        
+        listenersCoordinator.addListenersToState(state, CallState.class);
         state.setState(CallState.PREPARING);
 
         try {
