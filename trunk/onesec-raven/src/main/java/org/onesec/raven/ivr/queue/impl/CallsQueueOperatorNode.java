@@ -44,6 +44,12 @@ public class CallsQueueOperatorNode extends BaseNode
         implements CallsQueueOperator
 {
     public final static String SEARCHING_FOR_ENDPOINT_MSG = "Looking up for free endpoint in the pool (%s)";
+    public final static String TOTAL_REQUESTS_ATTR = "totalRequests";
+    public final static String HANDLED_REQUESTS_ATTR = "handledRequests";
+    public final static String ON_BUSY_REQUESTS_ATTR = "onBusyRequests";
+    public final static String ON_NO_FREE_ENDPOINTS_REQUESTS_ATTR = "onNoFreeEndpointsRequests";
+    public final static String ON_NO_ANSWER_REQUESTS = "onNoAnswerRequests";
+    public final static String ON_NOT_STARTED_REQUESTS = "onNotStartedRequests";
     
     @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
     private IvrEndpointPool endpointPool;
@@ -69,7 +75,7 @@ public class CallsQueueOperatorNode extends BaseNode
     private AtomicInteger totalRequests;
     private AtomicInteger handledRequests;
     private AtomicInteger onBusyRequests;
-    private AtomicInteger onNoFreeEndpointRequests;
+    private AtomicInteger onNoFreeEndpointsRequests;
     private AtomicInteger onNoAnswerRequests;
     private AtomicInteger onNotStartedRequests;
 
@@ -82,7 +88,7 @@ public class CallsQueueOperatorNode extends BaseNode
         totalRequests = new AtomicInteger();
         handledRequests = new AtomicInteger();
         onBusyRequests = new AtomicInteger();
-        onNoFreeEndpointRequests = new AtomicInteger();
+        onNoFreeEndpointsRequests = new AtomicInteger();
         onNoAnswerRequests = new AtomicInteger();
         onNotStartedRequests = new AtomicInteger();
     }
@@ -123,7 +129,7 @@ public class CallsQueueOperatorNode extends BaseNode
             if (isLogLevelEnabled(LogLevel.ERROR))
                 getLogger().error(commutationManager.get().logMess("Get endpoint from pool error"), ex);
             request.addToLog("get endpoint from pool error");
-            onNoFreeEndpointRequests.incrementAndGet();
+            onNoFreeEndpointsRequests.incrementAndGet();
             busy.set(false);
             return false;
         }
@@ -140,26 +146,32 @@ public class CallsQueueOperatorNode extends BaseNode
         }
     }
 
+    @Parameter(readOnly=true)
     public int getHandledRequests() {
         return handledRequests.get();
     }
 
+    @Parameter(readOnly=true)
     public int getOnBusyRequests() {
         return onBusyRequests.get();
     }
 
+    @Parameter(readOnly=true)
     public int getOnNoAnswerRequests() {
         return onNoAnswerRequests.get();
     }
 
+    @Parameter(readOnly=true)
     public int getOnNoFreeEndpointsRequests() {
-        return onNoFreeEndpointRequests.get();
+        return onNoFreeEndpointsRequests.get();
     }
 
+    @Parameter(readOnly=true)
     public int getTotalRequests() {
         return totalRequests.get();
     }
 
+    @Parameter(readOnly=true)
     public int getOnNotStartedRequests() {
         return onNotStartedRequests.get();
     }

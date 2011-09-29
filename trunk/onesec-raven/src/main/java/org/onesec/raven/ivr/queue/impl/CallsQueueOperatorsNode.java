@@ -16,16 +16,17 @@
  */
 package org.onesec.raven.ivr.queue.impl;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import org.onesec.raven.ivr.queue.CallsQueueOperator;
 import org.raven.annotations.NodeClass;
 import org.raven.tree.NodeAttribute;
 import org.raven.tree.Viewable;
 import org.raven.tree.ViewableObject;
 import org.raven.tree.impl.BaseNode;
+import org.raven.tree.impl.ChildsAsTableViewableObject;
 import org.raven.tree.impl.InvisibleNode;
-import org.raven.util.NodeUtils;
+import static org.onesec.raven.ivr.queue.impl.CallsQueueOperatorNode.*;
 
 /**
  *
@@ -47,9 +48,10 @@ public class CallsQueueOperatorsNode extends BaseNode implements Viewable
     public List<ViewableObject> getViewableObjects(Map<String, NodeAttribute> refreshAttributes) 
             throws Exception
     {
-        List<CallsQueueOperator> operators =NodeUtils.getChildsOfType(this, CallsQueueOperator.class, false);
-        
-        return null;
+        String[] attrNames = new String[]{"nodeTitle", TOTAL_REQUESTS_ATTR, HANDLED_REQUESTS_ATTR
+                , ON_BUSY_REQUESTS_ATTR, ON_NOT_STARTED_REQUESTS, ON_NO_FREE_ENDPOINTS_REQUESTS_ATTR
+                , ON_NOT_STARTED_REQUESTS};
+        return Arrays.asList((ViewableObject)new ChildsAsTableViewableObject(this, attrNames, attrNames));
     }
 
     public Boolean getAutoRefresh() {
