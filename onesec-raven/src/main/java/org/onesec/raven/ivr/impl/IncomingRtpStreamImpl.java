@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.impl;
 
+import com.sun.media.rtp.RTPReceiver;
 import java.net.InetAddress;
 import java.util.LinkedList;
 import java.util.List;
@@ -32,6 +33,7 @@ import javax.media.format.AudioFormat;
 import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.DataSource;
 import javax.media.protocol.SourceCloneable;
+import javax.media.rtp.GlobalReceptionStats;
 import javax.media.rtp.RTPControl;
 import javax.media.rtp.RTPManager;
 import javax.media.rtp.ReceiveStream;
@@ -100,8 +102,12 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
                     for (Consumer consumer: consumers)
                         consumer.fireStreamClosingEvent();
             }finally{
-                if (rtpManager!=null)
+                if (rtpManager!=null) {
+                    GlobalReceptionStats stats = rtpManager.getGlobalReceptionStats();
+                    incHandledBytesBy(stats.getBytesRecd());
+                    incHandledPacketsBy(stats.getPacketsRecd());
                     rtpManager.removeTargets("Disconnected");
+                }
             }
         }finally{
             if (rtpManager!=null)
