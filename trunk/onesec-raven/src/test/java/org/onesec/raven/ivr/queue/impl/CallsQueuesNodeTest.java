@@ -417,7 +417,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         endpoint.setName(address);
         owner.addAndSaveChildren(endpoint);
         endpoint.setRtpStreamManager(manager);
-        endpoint.setExecutorService(executor);
+        endpoint.setExecutor(executor);
         endpoint.setConversationScenario(scenario);
         endpoint.setAddress(address);
         endpoint.setLogLevel(LogLevel.TRACE);

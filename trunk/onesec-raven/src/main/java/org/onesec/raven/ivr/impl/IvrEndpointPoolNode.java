@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +34,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.EndpointRequest;
 import org.onesec.raven.ivr.IvrEndpoint;
 import org.onesec.raven.ivr.IvrEndpointPool;
@@ -84,6 +86,30 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
 
     @Parameter(readOnly=true)
     private AtomicInteger auxiliaryPoolUsageCount;
+
+    @Parameter
+    private String addressRanges;
+
+    @Parameter
+    private IvrConversationScenarioNode conversationScenario;
+
+    @NotNull @Parameter(defaultValue="false")
+    private Boolean enableIncomingRtp;
+
+    @NotNull @Parameter(defaultValue="AUTO")
+    private Codec codec;
+
+    @Parameter
+    private Integer rtpPacketSize;
+
+    @NotNull @Parameter(defaultValue="5")
+    private Integer rtpInitialBuffer;
+
+    @NotNull @Parameter(defaultValue="0")
+    private Integer rtpMaxSendAheadPacketsCount;
+
+    @NotNull @Parameter(defaultValue="false")
+    private Boolean enableIncomingCalls;
 
     private ReadWriteLock lock;
     private Condition endpointReleased;
@@ -151,6 +177,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         busyEndpoints.clear();
         usageCounters.clear();
         stopManagerTask.set(false);
+        synchEndpointsWithAddressRanges();
         executor.execute(this);
         loadAverage = new LoadAverageStatistic(LOADAVERAGE_INTERVAL, getChildrenCount());
     }
@@ -294,6 +321,70 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
 
     public AtomicInteger getAuxiliaryPoolUsageCount() {
         return auxiliaryPoolUsageCount;
+    }
+
+    public String getAddressRanges() {
+        return addressRanges;
+    }
+
+    public void setAddressRanges(String addressRanges) {
+        this.addressRanges = addressRanges;
+    }
+
+    public Codec getCodec() {
+        return codec;
+    }
+
+    public void setCodec(Codec codec) {
+        this.codec = codec;
+    }
+
+    public IvrConversationScenarioNode getConversationScenario() {
+        return conversationScenario;
+    }
+
+    public void setConversationScenario(IvrConversationScenarioNode conversationScenario) {
+        this.conversationScenario = conversationScenario;
+    }
+
+    public Boolean getEnableIncomingCalls() {
+        return enableIncomingCalls;
+    }
+
+    public void setEnableIncomingCalls(Boolean enableIncomingCalls) {
+        this.enableIncomingCalls = enableIncomingCalls;
+    }
+
+    public Boolean getEnableIncomingRtp() {
+        return enableIncomingRtp;
+    }
+
+    public void setEnableIncomingRtp(Boolean enableIncomingRtp) {
+        this.enableIncomingRtp = enableIncomingRtp;
+    }
+
+    public Integer getRtpInitialBuffer() {
+        return rtpInitialBuffer;
+    }
+
+    public void setRtpInitialBuffer(Integer rtpInitialBuffer) {
+        this.rtpInitialBuffer = rtpInitialBuffer;
+    }
+
+    public Integer getRtpMaxSendAheadPacketsCount() {
+        return rtpMaxSendAheadPacketsCount;
+    }
+
+    public void setRtpMaxSendAheadPacketsCount(Integer rtpMaxSendAheadPacketsCount) {
+        this.rtpMaxSendAheadPacketsCount = rtpMaxSendAheadPacketsCount;
+    }
+
+    public Integer getRtpPacketSize() {
+        return rtpPacketSize;
+    }
+
+    public void setRtpPacketSize(Integer rtpPacketSize) {
+        this.rtpPacketSize = rtpPacketSize;
     }
 
     private void releaseEndpoint(IvrEndpoint endpoint, long duration)
@@ -538,6 +629,50 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
             {
                 lock.writeLock().unlock();
             }
+        }
+    }
+
+    private void synchEndpointsWithAddressRanges() throws Exception
+    {
+        if (addressRanges==null)
+            return;
+        try{
+            String[] ranges = addressRanges.split("\\s*,\\s*");
+            HashSet<String> legalAddresses = new HashSet<String>();
+            for (String rangeStr: ranges) {
+                String[] range = rangeStr.split("\\s*-\\s*");
+                for (int addr = Integer.parseInt(range[0]); addr<=Integer.parseInt(range[1]); ++addr){
+                    String addrStr = ""+addr;
+                    legalAddresses.add(addrStr);
+                    IvrEndpointNode term = (IvrEndpointNode) getChildren(addrStr);
+                    if (term==null){
+                        if (isLogLevelEnabled(LogLevel.DEBUG))
+                            getLogger().debug("Creating endpoint with address ({})", addrStr);
+                        term = new IvrEndpointNode();
+                        term.setName(addrStr);
+                        addAndSaveChildren(term);
+                    } else if (Status.STARTED.equals(term.getStatus()))
+                        term.stop();
+                    term.setAddress(addrStr);
+                    term.setEnableIncomingCalls(null);
+                    term.setEnableIncomingRtp(null);
+                    term.setCodec(null);
+                    term.setRtpInitialBuffer(null);
+                    term.setRtpMaxSendAheadPacketsCount(null);
+                    term.setRtpPacketSize(null);
+                    term.start();
+                }
+            }
+            for (Node term: getSortedChildrens())
+                if (!legalAddresses.contains(term.getName())) {
+                    if (isLogLevelEnabled(LogLevel.DEBUG))
+                        getLogger().debug("Removing endpoint ({}) from the pool", term.getName());
+                    if (Status.STARTED.equals(term.getStatus()))
+                        term.stop();
+                    tree.remove(term);
+                }
+        } catch(Throwable e){
+            throw new Exception(String.format("Invalid addressRanges format: (%s)", addressRanges));
         }
     }
 

@@ -90,6 +90,8 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         TimeUnit.SECONDS.sleep(2);
 
         verify(req);
+        
+        TimeUnit.SECONDS.sleep(2);
     }
 
 //    @Test(timeout=25000)
@@ -184,7 +186,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         verify(req);
     }
 
-    @Test
+//    @Test
     public void priorityTest() throws InterruptedException
     {
         pool.setLogLevel(LogLevel.DEBUG);
@@ -269,6 +271,21 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         Thread.sleep(1000);
 
         verify(req1, req2);
+    }
+
+    @Test
+    public void addressRangesTest() throws Exception
+    {
+        pool.stop();
+        TimeUnit.SECONDS.sleep(2);
+        assertEquals(Node.Status.INITIALIZED, pool.getStatus());
+        pool.setAddressRanges("88014 - 88014, 88015-88016");
+        assertTrue(pool.start());
+        assertNull(pool.getChildren("88013"));
+        assertNotNull(pool.getChildren("88014"));
+        assertEquals("88014", pool.getChildren("88014").getName());
+        assertNotNull(pool.getChildren("88015"));
+        assertNotNull(pool.getChildren("88016"));
     }
 
     public static IvrEndpoint checkEndpoint(final List<String> order, final String req)

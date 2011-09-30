@@ -121,7 +121,7 @@ public class IvrEndpointNode extends BaseNode
     private IvrConversationScenarioNode conversationScenario;
 
     @NotNull @Parameter(valueHandlerType=SystemSchedulerValueHandlerFactory.TYPE)
-    private ExecutorService executorService;
+    private ExecutorService executor;
 
     @NotNull @Parameter(defaultValue="false")
     private Boolean enableIncomingRtp;
@@ -396,7 +396,7 @@ public class IvrEndpointNode extends BaseNode
                         this.opponentNumber = opponentNumber;
 
                         conversation = new IvrEndpointConversationImpl(
-                                this, executorService, conversationScenario, rtpStreamManager
+                                this, executor, conversationScenario, rtpStreamManager
                                 , enableIncomingRtp, bindings);
                         conversation.addConversationListener(this);
 
@@ -1019,14 +1019,14 @@ public class IvrEndpointNode extends BaseNode
         return buf.toString();
     }
 
-    public ExecutorService getExecutorService() 
+    public ExecutorService getExecutor()
     {
-        return executorService;
+        return executor;
     }
 
-    public void setExecutorService(ExecutorService executorService)
+    public void setExecutor(ExecutorService executorService)
     {
-        this.executorService = executorService;
+        this.executor = executorService;
     }
 
     public Boolean getEnableIncomingRtp() {
@@ -1077,7 +1077,7 @@ public class IvrEndpointNode extends BaseNode
                         callId = event.getCiscoRTPHandle().getHandle();
                         if (!handlingOutgoingCall) {
                             conversation = new IvrEndpointConversationImpl(
-                                            this, executorService, conversationScenario
+                                            this, executor, conversationScenario
                                             , rtpStreamManager, enableIncomingRtp, null);
                             conversation.addConversationListener(this);
                         }

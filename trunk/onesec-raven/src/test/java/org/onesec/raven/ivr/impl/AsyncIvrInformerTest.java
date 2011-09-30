@@ -511,7 +511,7 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
         endpoint.setName(address);
         pool.addAndSaveChildren(endpoint);
         endpoint.setRtpStreamManager(manager);
-        endpoint.setExecutorService(executor);
+        endpoint.setExecutor(executor);
         endpoint.setConversationScenario(scenario);
         endpoint.setAddress(address);
         endpoint.setLogLevel(LogLevel.TRACE);
