@@ -258,7 +258,7 @@ public class IvrEndpointNodeTest
         Thread.sleep(1000);
     }
 
-    @Test
+//    @Test
     public void simpleConversationTest2() throws Exception
     {
         endpoint.setEnableIncomingRtp(Boolean.TRUE);
@@ -291,7 +291,7 @@ public class IvrEndpointNodeTest
 
     }
 
-//    @Test(timeout=120000)
+    @Test(timeout=120000)
     public void inviteTest() throws Exception
     {
         AudioFileNode audioNode1 = createAudioFileNode("audio1", "/home/tim/Documents/raven/зенит 2/судья_resampled.wav");
@@ -589,7 +589,7 @@ public class IvrEndpointNodeTest
         ProviderController provider = providerRegistry.getProviderControllers().iterator().next();
         assertNotNull(provider);
         StateWaitResult res = provider.getState().waitForState(
-                new int[]{ProviderControllerState.IN_SERVICE}, 20000);
+                new int[]{ProviderControllerState.IN_SERVICE}, 30000);
         assertFalse(res.isWaitInterrupted());
     }
 

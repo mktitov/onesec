@@ -65,6 +65,7 @@ import org.onesec.core.services.StateListenersCoordinator;
 import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.CompletionCode;
 import org.onesec.raven.ivr.ConversationCompletionCallback;
+import org.onesec.raven.ivr.ConversationResult;
 import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.IvrEndpoint;
 import org.onesec.raven.ivr.IvrEndpointConversationEvent;
@@ -1278,6 +1279,8 @@ public class IvrEndpointNode extends BaseNode
     {
         listenersLock.readLock().lock();
         try {
+            if (handlingOutgoingCall)
+                conversationResult.setConversationStartTime(System.currentTimeMillis());
             for (IvrEndpointConversationListener listener: conversationListeners)
                 listener.conversationStarted(event);
         } finally {
@@ -1303,15 +1306,20 @@ public class IvrEndpointNode extends BaseNode
 
     public void conversationStopped(IvrEndpointConversationStoppedEvent event)
     {
-        if (handlingOutgoingCall)
-        {
+        if (handlingOutgoingCall) {
             conversationResult.setCompletionCode(event.getCompletionCode());
             conversationResult.setCallEndTime(System.currentTimeMillis());
-            completionCallback.conversationCompleted(conversationResult);
         }
+        //saving state of the conversation. This needed to make conversation completion callback
+        ConversationResult _conversationResult = conversationResult;
+        ConversationCompletionCallback _completionCallback = completionCallback;
+        boolean _handlingOutgoingCall = handlingOutgoingCall;
+        //reseting conversation state
         resetConversationFields();
         endpointState.setState(IvrEndpointState.IN_SERVICE);
-        conversation = null;
+        //using saved state to make conversation completion callback
+        if (_handlingOutgoingCall)
+            _completionCallback.conversationCompleted(_conversationResult);
         listenersLock.readLock().lock();
         try {
             for (IvrEndpointConversationListener listener: conversationListeners)
