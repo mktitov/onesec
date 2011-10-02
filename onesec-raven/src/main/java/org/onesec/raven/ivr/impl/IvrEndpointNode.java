@@ -416,6 +416,11 @@ public class IvrEndpointNode extends BaseNode
                             debug(String.format(
                                     "Error inviting opponent (%s) to conversation", opponentNumber)
                                 , e);
+                        if (conversation!=null)
+                            //it is neñessary to close incoming rtp stream.
+                            conversation.stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
+                        //stop conversation will not fire the conversationStopped event so we call this event
+                        //manually
                         conversationStopped(new IvrEndpointConversationStoppedEventImpl(
                                 conversation, CompletionCode.OPPONENT_UNKNOWN_ERROR));
                     }
@@ -676,16 +681,10 @@ public class IvrEndpointNode extends BaseNode
         {
             switch (event.getID())
             {
-                case CallCtlConnOfferedEv.ID: 
-                    acceptIncomingCall((CallCtlConnOfferedEv) event); break;
-                case TermConnRingingEv.ID:
-                    answerOnIncomingCall((TermConnRingingEv)event); break;
-                case CallCtlConnEstablishedEv.ID:
-                    startConversation();
-                    break;
-                case TermConnDroppedEv.ID:
-                    stopConversation(CompletionCode.COMPLETED_BY_OPPONENT);
-                    break;
+                case CallCtlConnOfferedEv.ID: acceptIncomingCall((CallCtlConnOfferedEv) event); break;
+                case TermConnRingingEv.ID: answerOnIncomingCall((TermConnRingingEv)event); break;
+                case CallCtlConnEstablishedEv.ID: startConversation(); break;
+                case TermConnDroppedEv.ID: stopConversation(CompletionCode.COMPLETED_BY_OPPONENT); break;
                 case MediaTermConnDtmfEv.ID:
                     continueConversation(((MediaTermConnDtmfEv)event).getDtmfDigit());
                     break;
@@ -1081,6 +1080,12 @@ public class IvrEndpointNode extends BaseNode
                                             this, executor, conversationScenario
                                             , rtpStreamManager, enableIncomingRtp, null);
                             conversation.addConversationListener(this);
+                        } else if (conversation==null) {
+                            if (isLogLevelEnabled(LogLevel.DEBUG))
+                                getLogger().debug("Can't open logical channel for outgoing call "
+                                        + "because of conversation already stopped");
+                            callId=0;
+                            return;
                         }
                         CiscoRTPParams params = new CiscoRTPParams(
                                 conversation.getIncomingRtpStream().getAddress()
@@ -1090,6 +1095,9 @@ public class IvrEndpointNode extends BaseNode
                         terminal.setRTPParams(event.getCiscoRTPHandle(), params);
                     }catch(Exception e){
                         callId = 0;
+                        if (conversation!=null)
+                            //it is neñessary to close incoming rtp stream
+                            conversation.stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
                         conversation = null;
                         throw e;
                     }

@@ -660,6 +660,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                     term.setRtpInitialBuffer(null);
                     term.setRtpMaxSendAheadPacketsCount(null);
                     term.setRtpPacketSize(null);
+                    term.setLogLevel(getLogLevel());
                     term.start();
                 }
             }
