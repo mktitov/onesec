@@ -333,7 +333,7 @@ public class IvrEndpointNode extends BaseNode
             provider = providerController.getProvider();
             if (provider==null || provider.getState()!=Provider.IN_SERVICE)
                 throw new Exception(String.format(
-                        "Provider (%s) not IN_SERVICE", providerController.getName()));
+                        "Provider (%s) is not IN_SERVICE", providerController.getName()));
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 debug("Checking terminal address...");
             terminalAddress = provider.getAddress(address);
@@ -419,7 +419,7 @@ public class IvrEndpointNode extends BaseNode
                         if (conversation!=null)
                             //it is neñessary to close incoming rtp stream.
                             conversation.stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
-                        //stop conversation will not fire the conversationStopped event so we call this event
+                        //stopConversation will not fire the conversationStopped event so we call this event
                         //manually
                         conversationStopped(new IvrEndpointConversationStoppedEventImpl(
                                 conversation, CompletionCode.OPPONENT_UNKNOWN_ERROR));
