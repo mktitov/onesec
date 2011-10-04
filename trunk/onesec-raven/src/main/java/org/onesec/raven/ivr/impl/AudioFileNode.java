@@ -23,6 +23,7 @@ import java.util.Map;
 import org.onesec.raven.ivr.AudioFile;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
+import org.raven.expr.BindingSupport;
 import org.raven.tree.DataFile;
 import org.raven.tree.NodeAttribute;
 import org.raven.tree.Viewable;
@@ -69,6 +70,10 @@ public class AudioFileNode extends BaseNode implements Viewable, AudioFile
         ViewableObject obj = new DataFileViewableObject(audioFile, this);
 
         return Arrays.asList(obj);
+    }
+
+    public BindingSupport getBindingSupport() {
+        return null;
     }
 
     public Boolean getAutoRefresh()

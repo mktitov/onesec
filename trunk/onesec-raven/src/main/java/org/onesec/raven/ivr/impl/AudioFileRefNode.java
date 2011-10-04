@@ -19,10 +19,13 @@ package org.onesec.raven.ivr.impl;
 
 import java.util.List;
 import java.util.Map;
+import javax.script.Bindings;
 import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.AudioFileRef;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
+import org.raven.expr.BindingSupport;
+import org.raven.expr.impl.BindingSupportImpl;
 import org.raven.tree.DataFile;
 import org.raven.tree.NodeAttribute;
 import org.raven.tree.Viewable;
@@ -42,6 +45,18 @@ public class AudioFileRefNode extends BaseNode implements AudioFile, Viewable
     @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
     private AudioFile audioFileNode;
 
+    private BindingSupportImpl bindingSupport;
+
+    @Override
+    protected void initFields() {
+        super.initFields();
+        bindingSupport = new BindingSupportImpl();
+    }
+
+    public BindingSupport getBindingSupport() {
+        return bindingSupport;
+    }
+
     public Map<String, NodeAttribute> getRefreshAttributes() throws Exception {
         return null;
     }
@@ -57,6 +72,10 @@ public class AudioFileRefNode extends BaseNode implements AudioFile, Viewable
         return true;
     }
 
+    public AudioFile getAudioFileNode() {
+        return audioFileNode;
+    }
+
     public void setAudioFileNode(AudioFile audioFileNode) {
         this.audioFileNode = audioFileNode;
     }
@@ -65,4 +84,9 @@ public class AudioFileRefNode extends BaseNode implements AudioFile, Viewable
         return audioFileNode.getAudioFile();
     }
 
+    @Override
+    public void formExpressionBindings(Bindings bindings) {
+        super.formExpressionBindings(bindings);
+        bindingSupport.addTo(bindings);
+    }
 }

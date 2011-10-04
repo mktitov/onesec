@@ -185,6 +185,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         conversationState.setBinding(
                 CONVERSATION_STATE_BINDING, conversationState, BindingScope.CONVERSATION);
         conversationState.setBinding(NUMBER_BINDING, callingNumber, BindingScope.CONVERSATION);
+        conversationState.setBinding(CALLED_NUMBER_BINDING, calledNumber, BindingScope.CONVERSATION);
         if (additionalBindings!=null)
             for (Map.Entry<String, Object> b: additionalBindings.entrySet())
                 conversationState.setBinding(b.getKey(), b.getValue(), BindingScope.CONVERSATION);
