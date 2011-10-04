@@ -19,11 +19,13 @@ package org.onesec.raven.ivr.actions;
 
 import java.io.InputStream;
 import java.util.concurrent.TimeUnit;
+import javax.script.Bindings;
 import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.AudioStream;
 import org.onesec.raven.ivr.InputStreamSource;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.impl.IvrUtils;
+import org.raven.expr.BindingSupport;
 import org.raven.log.LogLevel;
 
 /**
@@ -33,6 +35,7 @@ import org.raven.log.LogLevel;
 public abstract class AbstractPlayAudioAction extends AsyncAction implements InputStreamSource
 {
     private AudioFile audioFile;
+    private Bindings bindings;
 
     public AbstractPlayAudioAction(String actionName)
     {
@@ -45,6 +48,7 @@ public abstract class AbstractPlayAudioAction extends AsyncAction implements Inp
     protected void doExecute(IvrEndpointConversation conversation) throws Exception
     {
         audioFile = getAudioFile(conversation);
+        bindings = conversation.getConversationScenarioState().getBindings();
         if (audioFile==null){
             if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
                 conversation.getOwner().getLogger().debug(logMess("Nothing to play"));
@@ -66,7 +70,15 @@ public abstract class AbstractPlayAudioAction extends AsyncAction implements Inp
     public InputStream getInputStream()
     {
         try {
-            return audioFile.getAudioFile().getDataStream();
+            BindingSupport bindingSupport = audioFile.getBindingSupport();
+            try {
+                if (bindingSupport!=null)
+                    bindingSupport.putAll(bindings);
+                return audioFile.getAudioFile().getDataStream();
+            } finally {
+                if (bindingSupport!=null)
+                    bindingSupport.reset();
+            }
         }
         catch (Exception ex) {
             if (conversation.getOwner().isLogLevelEnabled(LogLevel.ERROR))

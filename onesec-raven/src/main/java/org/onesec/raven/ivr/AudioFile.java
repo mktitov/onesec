@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr;
 
+import org.raven.expr.BindingSupport;
 import org.raven.tree.DataFile;
 import org.raven.tree.Node;
 
@@ -27,4 +28,5 @@ import org.raven.tree.Node;
 public interface AudioFile extends Node
 {
     public DataFile getAudioFile();
+    public BindingSupport getBindingSupport();
 }
