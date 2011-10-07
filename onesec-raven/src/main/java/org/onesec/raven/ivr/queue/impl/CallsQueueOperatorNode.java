@@ -68,6 +68,9 @@ public class CallsQueueOperatorNode extends BaseNode
 
     @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
     private AudioFile greeting;
+
+    @NotNull @Parameter(defaultValue="true")
+    private Boolean active;
     
     private AtomicReference<CallsCommutationManagerImpl> commutationManager;
     private AtomicBoolean busy;
@@ -105,7 +108,7 @@ public class CallsQueueOperatorNode extends BaseNode
             , IvrConversationScenario conversationScenario, AudioFile greeting)
     {
         totalRequests.incrementAndGet();
-        if (!Status.STARTED.equals(getStatus())) {
+        if (!Status.STARTED.equals(getStatus()) || !active) {
             onNotStartedRequests.incrementAndGet();
             return false;
         }
@@ -228,5 +231,13 @@ public class CallsQueueOperatorNode extends BaseNode
 
     public void setGreeting(AudioFile greeting) {
         this.greeting = greeting;
+    }
+
+    public Boolean getActive() {
+        return active;
+    }
+
+    public void setActive(Boolean active) {
+        this.active = active;
     }
 }

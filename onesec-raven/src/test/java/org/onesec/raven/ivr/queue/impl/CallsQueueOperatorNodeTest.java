@@ -92,6 +92,20 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
     }
     
     @Test
+    public void requestOnNotActiveNode()
+    {
+        CallQueueRequestWrapper request = createMock(CallQueueRequestWrapper.class);
+        CallsQueue queue = createMock(CallsQueue.class);
+        replay(request, queue);
+
+        operator.setActive(Boolean.FALSE);
+        assertTrue(operator.start());
+        assertFalse(operator.processRequest(queue, request, scenario, null));
+
+        verify(request, queue);
+    }
+
+    @Test
     public void noFreeEndpointInThePoolTest() throws ExecutorServiceException
     {
         CallQueueRequestWrapper request = createMock(CallQueueRequestWrapper.class);
