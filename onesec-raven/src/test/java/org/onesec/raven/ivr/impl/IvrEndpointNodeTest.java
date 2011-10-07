@@ -313,12 +313,12 @@ public class IvrEndpointNodeTest
         assertTrue(stopConversationActionNode.start());
 
         waitForProvider();
-        assertTrue(endpoint.start());
+//        assertTrue(endpoint.start());
         StateWaitResult res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.IN_SERVICE}, 10000);
         assertFalse(res.isWaitInterrupted());
-//        endpoint.invite("88024", scenario, this, null);
-        endpoint.invite("089128672947", scenario, this, null);
+        endpoint.invite("88027", scenario, this, null);
+//        endpoint.invite("089128672947", scenario, this, null);
         res = endpoint.getEndpointState().waitForState(
                 new int[]{IvrEndpointState.INVITING}, 30000);
         assertFalse(res.isWaitInterrupted());
