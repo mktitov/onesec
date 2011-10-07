@@ -327,12 +327,16 @@ public class ConcatDataSource
                         PushBufferDataSource ds = (PushBufferDataSource)p.getDataOutput();
                         endOfSource.set(false);
                         initialBuffer.clear();
-                        initialBufferInitialized = false;
+//                        initialBufferInitialized = false;
                         PushBufferStream s = ds.getStreams()[0];
                         s.setTransferHandler(this);
                         ds.start();
-//                        p.prefetch();
-//                        ControllerStateWaiter.waitForState(p, Processor.Prefetched, WAIT_STATE_TIMEOUT);
+                        long ts2 = System.currentTimeMillis();
+                        p.prefetch();
+                        ControllerStateWaiter.waitForState(p, Processor.Prefetched, WAIT_STATE_TIMEOUT);
+                        if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                            owner.getLogger().debug(logMess(
+                                    "Prefetching time is %s ms", System.currentTimeMillis()-ts2));
 //                        p.syncStart(new Time(System.currentTimeMillis()/1000-1));
                         p.start();
                         if (owner.isLogLevelEnabled(LogLevel.TRACE))
@@ -351,12 +355,12 @@ public class ConcatDataSource
                                     break;
                                 }
                             }
-                        if (!initialBufferInitialized && !initialBuffer.isEmpty())
-                        {
-                            initialBufferInitialized = true;
-                            buffers.addAll(initialBuffer);
-                            initialBuffer.clear();
-                        }
+//                            if (!initialBufferInitialized && !initialBuffer.isEmpty())
+//                            {
+//                                initialBufferInitialized = true;
+//                                buffers.addAll(initialBuffer);
+//                                initialBuffer.clear();
+//                            }
                         } finally {
                             source.stop();
                             p.stop();
@@ -435,16 +439,16 @@ public class ConcatDataSource
                     endOfSource.set(true);
                     buffer.setEOM(false);
                 }
-                if (!initialBufferInitialized) {
-                    initialBuffer.add(buffer);
-                    if (initialBuffer.size()==rtpInitialBufferSize)
-                    {
-                        initialBufferInitialized = true;
-                        buffers.addAll(initialBuffer);
-                        initialBuffer.clear();
-                    }
-                }
-                else
+//                if (!initialBufferInitialized) {
+//                    initialBuffer.add(buffer);
+//                    if (initialBuffer.size()==rtpInitialBufferSize)
+//                    {
+//                        initialBufferInitialized = true;
+//                        buffers.addAll(initialBuffer);
+//                        initialBuffer.clear();
+//                    }
+//                }
+//                else
                     buffers.add(buffer);
                 ++bufferCount;
             }

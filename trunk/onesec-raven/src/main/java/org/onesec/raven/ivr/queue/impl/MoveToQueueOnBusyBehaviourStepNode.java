@@ -37,6 +37,9 @@ public class MoveToQueueOnBusyBehaviourStepNode extends BaseNode implements Call
     @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
     private CallsQueueNode callsQueue;
 
+    @NotNull @Parameter(defaultValue="false")
+    private Boolean resetOnBusyBehaviour;
+
     public CallsQueueNode getCallsQueue() {
         return callsQueue;
     }
@@ -45,9 +48,19 @@ public class MoveToQueueOnBusyBehaviourStepNode extends BaseNode implements Call
         this.callsQueue = callsQueue;
     }
 
+    public Boolean getResetOnBusyBehaviour() {
+        return resetOnBusyBehaviour;
+    }
+
+    public void setResetOnBusyBehaviour(Boolean resetOnBusyBehaviour) {
+        this.resetOnBusyBehaviour = resetOnBusyBehaviour;
+    }
+
     public BehaviourResult handleBehaviour(CallsQueue queue, CallQueueRequestWrapper request)
     {
         this.callsQueue.queueCall(request);
+        if (resetOnBusyBehaviour)
+            request.setOnBusyBehaviour(null);
         return new BehaviourResultImpl(false, BehaviourResult.StepPolicy.GOTO_NEXT_STEP);
     }
 }
