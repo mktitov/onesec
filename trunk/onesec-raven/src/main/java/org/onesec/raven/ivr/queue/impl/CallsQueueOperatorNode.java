@@ -50,6 +50,7 @@ public class CallsQueueOperatorNode extends BaseNode
     public final static String ON_NO_FREE_ENDPOINTS_REQUESTS_ATTR = "onNoFreeEndpointsRequests";
     public final static String ON_NO_ANSWER_REQUESTS = "onNoAnswerRequests";
     public final static String ON_NOT_STARTED_REQUESTS = "onNotStartedRequests";
+    public final static String ACTIVE_ATTR = "active";
     
     @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
     private IvrEndpointPool endpointPool;
