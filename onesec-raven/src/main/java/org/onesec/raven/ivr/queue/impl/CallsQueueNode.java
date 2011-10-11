@@ -30,7 +30,6 @@ import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviour;
 import org.onesec.raven.ivr.queue.CallsQueueOperatorRef;
 import org.onesec.raven.ivr.queue.CallsQueuePrioritySelector;
-import org.onesec.raven.ivr.queue.OperatorsUsagePolicy;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.log.LogLevel;
