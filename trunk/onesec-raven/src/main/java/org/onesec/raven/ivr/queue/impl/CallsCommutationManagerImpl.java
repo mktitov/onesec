@@ -184,6 +184,9 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager, Ivr
                     commutateCalls();
             }
 
+            if (!checkState() && endpoint.getEndpointState().getId()==IvrEndpointState.INVITING)
+                restartEndpoint(endpoint);
+
             if (commutated) {
                 request.fireDisconnectedQueueEvent();
                 return true;
@@ -204,13 +207,7 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager, Ivr
                 owner.getLogger().debug(logMess("Operator's number (%s) not answered", getNumber()));
             request.addToLog(String.format("number (%s) not answer", getNumber()));
             //restarting endpoint
-            endpoint.stop();
-            TimeUnit.SECONDS.sleep(1);
-            endpoint.start();
-            StateWaitResult res = endpoint.getEndpointState().waitForState(
-                    new int[]{IvrEndpointState.IN_SERVICE}, 10000);
-            if (res.isWaitInterrupted())
-                throw new Exception("Wait for IN_SERVICE timeout");
+            restartEndpoint(endpoint);
             return false;
         }
         return true;
@@ -306,5 +303,16 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager, Ivr
     {
         for (CallsCommutationManagerListener listener: listeners)
             listener.abonentReady();
+    }
+
+    private void restartEndpoint(IvrEndpoint endpoint) throws Exception
+    {
+        endpoint.stop();
+        TimeUnit.SECONDS.sleep(1);
+        endpoint.start();
+        StateWaitResult res = endpoint.getEndpointState().waitForState(
+                new int[]{IvrEndpointState.IN_SERVICE}, 10000);
+        if (res.isWaitInterrupted())
+            throw new Exception("Wait for IN_SERVICE timeout");
     }
 }

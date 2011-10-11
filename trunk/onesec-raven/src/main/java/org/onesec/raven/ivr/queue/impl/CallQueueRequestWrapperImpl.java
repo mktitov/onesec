@@ -155,6 +155,7 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
 
     public void setOnBusyBehaviour(CallsQueueOnBusyBehaviour onBusyBehaviour) {
         this.onBusyBehaviour = onBusyBehaviour;
+        this.onBusyBehaviourStep = 0;
     }
 
     public int getOnBusyBehaviourStep() {
