@@ -406,7 +406,6 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                     owner.getLogger().debug(callLog("Conversation stoped (%s)", completionCode));
                 
-                fireEvent(false, completionCode);
             }
         }
         finally
@@ -414,6 +413,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             state.setState(INVALID);
             lock.writeLock().unlock();
         }
+        fireEvent(false, completionCode);
     }
 
     public void sendMessage(String message, String encoding, SendMessageDirection direction) {

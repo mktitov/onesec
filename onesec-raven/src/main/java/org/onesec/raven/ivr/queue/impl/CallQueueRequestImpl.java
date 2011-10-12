@@ -94,26 +94,31 @@ public class CallQueueRequestImpl implements QueuedCallStatus
         return context;
     }
 
-    public synchronized void callQueueChangeEvent(CallQueueEvent event)
+    public void callQueueChangeEvent(CallQueueEvent event)
     {
-        if (event instanceof ReadyToCommutateQueueEvent) {
-            status = Status.READY_TO_COMMUTATE;
-            commutationManager = ((ReadyToCommutateQueueEvent)event).getCommutationManager();
-            if (continueConversationOnReadyToCommutate)
-                conversation.continueConversation('-');
-        } else if (event instanceof CommutatedQueueEvent) {
-            status = Status.COMMUTATED;
-        } else if (event instanceof DisconnectedQueueEvent) {
-            status = Status.DISCONNECTED;
-        } else if (event instanceof NumberChangedQueueEvent) {
-            prevSerialNumber = serialNumber;
-            serialNumber = ((NumberChangedQueueEvent)event).getCurrentNumber();
-        } else if (event instanceof RejectedQueueEvent) {
-            status = Status.REJECTED;
-            if (continueConversationOnReject)
-                conversation.continueConversation('-');
-        } else if (event instanceof OperatorGreetingQueueEvent)
-            operatorGreeting = ((OperatorGreetingQueueEvent)event).getOperatorGreeting();
+        boolean continueConversation = false;
+        synchronized(this){
+            if (event instanceof ReadyToCommutateQueueEvent) {
+                status = Status.READY_TO_COMMUTATE;
+                commutationManager = ((ReadyToCommutateQueueEvent)event).getCommutationManager();
+                if (continueConversationOnReadyToCommutate)
+                    continueConversation = true;
+            } else if (event instanceof CommutatedQueueEvent) {
+                status = Status.COMMUTATED;
+            } else if (event instanceof DisconnectedQueueEvent) {
+                status = Status.DISCONNECTED;
+            } else if (event instanceof NumberChangedQueueEvent) {
+                prevSerialNumber = serialNumber;
+                serialNumber = ((NumberChangedQueueEvent)event).getCurrentNumber();
+            } else if (event instanceof RejectedQueueEvent) {
+                status = Status.REJECTED;
+                if (continueConversationOnReject)
+                    continueConversation = true;
+            } else if (event instanceof OperatorGreetingQueueEvent)
+                operatorGreeting = ((OperatorGreetingQueueEvent)event).getOperatorGreeting();
+        }
+        if (continueConversation)
+            conversation.continueConversation('-');
     }
 
     public synchronized void replayToReadyToCommutate()
