@@ -71,10 +71,10 @@ public class IvrMultichannelEndpointNodeTest extends OnesecRavenTestCase
         assertTrue(callOperator.start());
 
         ProviderNode provider = new ProviderNode();
-        provider.setName("88037 provider");
+        provider.setName("88049 provider");
         callOperator.getProvidersNode().addAndSaveChildren(provider);
         provider.setFromNumber(88013);
-        provider.setToNumber(88037);
+        provider.setToNumber(88049);
 //        provider.setFromNumber(68050);
 //        provider.setToNumber(68050);
         provider.setHost("10.16.15.1");
@@ -98,7 +98,7 @@ public class IvrMultichannelEndpointNodeTest extends OnesecRavenTestCase
         endpoint.setName("endpoint");
         tree.getRootNode().addAndSaveChildren(endpoint);
         endpoint.setLogLevel(LogLevel.TRACE);
-        endpoint.setAddress("88037");
+        endpoint.setAddress("88049");
         endpoint.setConversationScenario(scenario);
         endpoint.setExecutorService(executor);
         endpoint.setRtpStreamManager(manager);

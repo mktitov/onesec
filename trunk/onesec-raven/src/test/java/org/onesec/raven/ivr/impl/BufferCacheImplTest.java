@@ -1,5 +1,5 @@
 /*
- *  Copyright 2009 Mikhail Titov.
+ *  Copyright 2011 Mikhail Titov.
  * 
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -18,28 +18,26 @@
 package org.onesec.raven.ivr.impl;
 
 import java.io.IOException;
-import java.io.InputStream;
-import org.apache.commons.io.IOUtils;
+import javax.media.Buffer;
+import org.junit.Assert;
 import org.junit.Test;
-import org.onesec.raven.ivr.BufferCache;
-import static org.junit.Assert.*;
+import org.onesec.raven.ivr.Codec;
+import org.slf4j.LoggerFactory;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class ResourceInputStreamSourceTest
+public class BufferCacheImplTest extends Assert
 {
     @Test
     public void test() throws IOException
     {
-        ResourceInputStreamSource source =
-                new ResourceInputStreamSource(BufferCacheImpl.SILENCE_RESOURCE_NAME);
-        InputStream is = source.getInputStream();
-        assertNotNull(is);
-
-        byte[] bytes = IOUtils.toByteArray(is);
-        assertNotNull(bytes);
-        assertTrue(bytes.length>0);
+        RTPManagerServiceImpl manager = new RTPManagerServiceImpl(LoggerFactory.getLogger("Rtp Manager"));
+        BufferCacheImpl cache = new BufferCacheImpl(manager, LoggerFactory.getLogger(BufferCacheImpl.class));
+        Buffer silentBuffer = cache.getSilentBuffer(Codec.G711_A_LAW, 160);
+        assertNotNull(silentBuffer);
+        Buffer silentBuffer2 = cache.getSilentBuffer(Codec.G711_A_LAW, 160);
+        assertSame(silentBuffer2, silentBuffer);
     }
 }

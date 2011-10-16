@@ -1,5 +1,5 @@
 /*
- *  Copyright 2009 Mikhail Titov.
+ *  Copyright 2011 Mikhail Titov.
  * 
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -15,31 +15,24 @@
  *  under the License.
  */
 
-package org.onesec.raven.ivr.impl;
+package org.onesec.raven.ivr;
 
-import java.io.IOException;
-import java.io.InputStream;
-import org.apache.commons.io.IOUtils;
+import javax.media.Buffer;
 import org.junit.Test;
-import org.onesec.raven.ivr.BufferCache;
-import static org.junit.Assert.*;
+import org.onesec.raven.OnesecRavenTestCase;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class ResourceInputStreamSourceTest
+public class BufferCacheTest extends OnesecRavenTestCase
 {
     @Test
-    public void test() throws IOException
+    public void serviceTest()
     {
-        ResourceInputStreamSource source =
-                new ResourceInputStreamSource(BufferCacheImpl.SILENCE_RESOURCE_NAME);
-        InputStream is = source.getInputStream();
-        assertNotNull(is);
-
-        byte[] bytes = IOUtils.toByteArray(is);
-        assertNotNull(bytes);
-        assertTrue(bytes.length>0);
+        BufferCache cache = registry.getService(BufferCache.class);
+        assertNotNull(cache);
+        Buffer silentBuffer = cache.getSilentBuffer(Codec.G711_A_LAW, 160);
+        assertNotNull(silentBuffer);
     }
 }

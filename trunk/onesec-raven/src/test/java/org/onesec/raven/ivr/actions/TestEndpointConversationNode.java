@@ -22,6 +22,7 @@ import javax.media.Player;
 import javax.media.protocol.FileTypeDescriptor;
 import org.onesec.raven.JMFHelper;
 import org.onesec.raven.ivr.AudioStream;
+import org.onesec.raven.ivr.BufferCache;
 import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.CompletionCode;
 import org.onesec.raven.ivr.ConversationCompletionCallback;
@@ -40,6 +41,7 @@ import org.raven.sched.ExecutorService;
 import org.raven.tree.Node;
 import org.raven.tree.impl.BaseNode;
 import org.weda.annotations.constraints.NotNull;
+import org.weda.internal.annotations.Service;
 
 /**
  *
@@ -49,6 +51,9 @@ public class TestEndpointConversationNode extends BaseNode implements IvrEndpoin
 {
     @NotNull @Parameter()
     private ExecutorService executorService;
+
+    @Service
+    private static BufferCache bufferCache;
 
     private ConcatDataSource audioStream;
     private Player player;
@@ -61,7 +66,7 @@ public class TestEndpointConversationNode extends BaseNode implements IvrEndpoin
     {
         super.doStart();
         audioStream = new ConcatDataSource(
-                FileTypeDescriptor.WAVE, executorService, Codec.LINEAR, 240, 5, 5, this);
+                FileTypeDescriptor.WAVE, executorService, Codec.LINEAR, 240, 5, 5, this, bufferCache);
         audioStream.start();
 //        player = Manager.createPlayer(audioStream);
         operationController = JMFHelper.writeToFile(audioStream, fileName);

@@ -41,7 +41,7 @@ public class SilenceTest implements ControllerListener
     public void test() throws Exception
     {
         InputStreamSource source =
-                new ResourceInputStreamSource(ConcatDataSource.SILENCE_RESOURCE_NAME);
+                new ResourceInputStreamSource(BufferCacheImpl.SILENCE_RESOURCE_NAME);
         IssDataSource dataSource = new IssDataSource(source, FileTypeDescriptor.WAVE);
 
         Processor processor = Manager.createProcessor(dataSource);
