@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.impl;
 
+import org.onesec.raven.ivr.BufferCache;
 import java.util.Map;
 import com.cisco.jtapi.extensions.CiscoAddress;
 import com.cisco.jtapi.extensions.CiscoCall;
@@ -79,6 +80,9 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
 
     @Service
     private static ProviderRegistry providerRegistry;
+
+    @Service
+    private static BufferCache bufferCache;
 
     private final Node owner;
     private final ExecutorService executor;
@@ -193,7 +197,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
 
         audioStream = new ConcatDataSource(
                 FileTypeDescriptor.WAVE, executor, codec, packetSize, initialBufferSize
-                , maxSendAheadPacketsCount, owner);
+                , maxSendAheadPacketsCount, owner, bufferCache);
         audioStream.setLogPrefix(callId+" : ");
         actionsExecutor = new IvrActionsExecutor(this, executor);
         actionsExecutor.setLogPrefix(callId+" : ");
@@ -214,7 +218,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                             "Current conversation state is %s", state.getIdName()));
                 return state;
             } else if (owner.isLogLevelEnabled(LogLevel.DEBUG)) 
-                owner.getLogger().debug(callLog("Triyng to start conversation"));
+                owner.getLogger().debug(callLog("Trying to start conversation"));
             int activeConnections = 0;
             Connection[] connections = call.getConnections();
             if (connections!=null)

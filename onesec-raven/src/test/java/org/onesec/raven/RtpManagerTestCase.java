@@ -20,6 +20,7 @@ package org.onesec.raven;
 import java.net.InetAddress;
 import javax.media.protocol.FileTypeDescriptor;
 import org.junit.Before;
+import org.onesec.raven.ivr.BufferCache;
 import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.InputStreamSource;
 import org.onesec.raven.ivr.OutgoingRtpStream;
@@ -82,7 +83,8 @@ public class RtpManagerTestCase extends OnesecRavenTestCase
         logger.debug("Sending RTP stream to the ({}:{}) ", host, port);
 
         final ConcatDataSource audioSource =
-                new ConcatDataSource(FileTypeDescriptor.WAVE, executor, codec, 240, 5, 5, manager);
+                new ConcatDataSource(FileTypeDescriptor.WAVE, executor, codec, 240, 5, 5, manager
+                , registry.getService(BufferCache.class));
         final OutgoingRtpStream sendStream = manager.getOutgoingRtpStream(manager);
         sendStream.open(host, port, audioSource);
         Thread runner = new Thread(){

@@ -67,6 +67,7 @@ import org.onesec.core.services.ProviderRegistry;
 import org.onesec.core.services.StateListenersCoordinator;
 import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.CompletionCode;
+import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.IvrEndpointState;
 import org.onesec.raven.ivr.IvrMultichannelEndpoint;
 import org.onesec.raven.ivr.IvrMultichannelEndpointState;
@@ -75,6 +76,8 @@ import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
+import org.raven.sched.ExecutorServiceException;
+import org.raven.sched.impl.AbstractTask;
 import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
 import org.raven.table.TableImpl;
 import org.raven.tree.NodeAttribute;
@@ -568,12 +571,22 @@ public class IvrMultichannelEndpointNode extends BaseNode
                 } finally {
                     callsLock.readLock().unlock();
                 }
-                if (conversation!=null)
-                    conversation.startConversation();
+                if (conversation!=null) {
+                    final IvrEndpointConversationImpl _conversation = conversation;
+                    executorService.execute(new AbstractTask(this, "Starting conversation") {
+                        @Override
+                        public void doRun() throws Exception {
+                            _conversation.startConversation();
+                        }
+                    });
+                }
             }
         } catch (InterruptedException ex) {
             if (isLogLevelEnabled(LogLevel.ERROR))
                 error(callLog(event.getCall(), "Error acquire calls read lock"), ex);
+        } catch (ExecutorServiceException ex){
+            if (isLogLevelEnabled(LogLevel.ERROR))
+                error(callLog(event.getCall(), "Can't start conversation"), ex);
         }
     }
 
@@ -597,7 +610,7 @@ public class IvrMultichannelEndpointNode extends BaseNode
         }
     }
 
-    private void continueConversation(MediaTermConnDtmfEv event)
+    private void continueConversation(final MediaTermConnDtmfEv event)
     {
         try {
             if (callsLock.readLock().tryLock(LOCK_WAIT_TIMEOUT, TimeUnit.MILLISECONDS)) {
@@ -607,12 +620,22 @@ public class IvrMultichannelEndpointNode extends BaseNode
                 } finally {
                     callsLock.readLock().unlock();
                 }
-                if (conversation!=null)
-                    conversation.continueConversation(event.getDtmfDigit());
+                if (conversation!=null) {
+                    final IvrEndpointConversation _conversation = conversation;
+                    executorService.execute(new AbstractTask(this, "continue conversation") {
+                        @Override
+                        public void doRun() throws Exception {
+                            _conversation.continueConversation(event.getDtmfDigit());
+                        }
+                    });
+                }
             }
         } catch (InterruptedException ex) {
             if (isLogLevelEnabled(LogLevel.ERROR))
                 error(callLog(event.getCall(), "Error acquire calls read lock"), ex);
+        } catch (ExecutorServiceException ex){
+            if (isLogLevelEnabled(LogLevel.ERROR))
+                error(callLog(event.getCall(), "Can't continue conversation"), ex);
         }
     }
 
@@ -680,7 +703,7 @@ public class IvrMultichannelEndpointNode extends BaseNode
         }
     }
 
-    private void initConversation(CiscoRTPOutputStartedEv event)
+    private void initConversation(final CiscoRTPOutputStartedEv event)
     {
         Call call = event.getCallID().getCall();
         if (isLogLevelEnabled(LogLevel.DEBUG))
@@ -697,7 +720,7 @@ public class IvrMultichannelEndpointNode extends BaseNode
                 }
                 if (conversation!=null)
                 {
-                    CiscoRTPOutputProperties props = event.getRTPOutputProperties();
+                    final CiscoRTPOutputProperties props = event.getRTPOutputProperties();
                     if (isLogLevelEnabled(LogLevel.DEBUG)){
                         debug(callLog(call, "Initializing conversation"));
                         debug(callLog(call,
@@ -716,13 +739,20 @@ public class IvrMultichannelEndpointNode extends BaseNode
                         debug(callLog(call,
                                 "Choosed RTP params: packetSize (%s), codec (%s), audioFormat (%s)"
                                 , psize, streamCodec, streamCodec.getAudioFormat()));
-                    conversation.init(
-                            event.getCallID().getCall()
-                            , props.getRemoteAddress().getHostAddress(), props.getRemotePort()
-                            , psize, rtpInitialBuffer, rtpMaxSendAheadPacketsCount, streamCodec);
-                    if (isLogLevelEnabled(LogLevel.DEBUG))
-                        debug(callLog(event.getCallID().getCall(), "Conversation initialized"));
-                    conversation.startConversation();
+                    final IvrEndpointConversationImpl _conversation = conversation;
+                    final int _psize = psize;
+                    final Codec _streamCodec = streamCodec;
+                    executorService.execute(new AbstractTask(this, "Initializing conversation") {
+                        public void doRun() throws Exception {
+                            _conversation.init(
+                                    event.getCallID().getCall()
+                                    , props.getRemoteAddress().getHostAddress(), props.getRemotePort()
+                                    , _psize, rtpInitialBuffer, rtpMaxSendAheadPacketsCount, _streamCodec);
+                            if (isLogLevelEnabled(LogLevel.DEBUG))
+                                debug(callLog(event.getCallID().getCall(), "Conversation initialized"));
+                            _conversation.startConversation();
+                        }
+                    });
                 }
             }
         } catch (Exception ex) {

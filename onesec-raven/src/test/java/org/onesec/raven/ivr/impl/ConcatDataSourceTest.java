@@ -18,14 +18,18 @@
 package org.onesec.raven.ivr.impl;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 import javax.media.Manager;
 import javax.media.protocol.DataSource;
 import javax.media.protocol.FileTypeDescriptor;
 import org.easymock.EasyMock;
 import org.easymock.IArgumentMatcher;
+import org.junit.Before;
 import org.junit.Test;
 import org.onesec.raven.JMFHelper;
+import org.onesec.raven.ivr.BufferCache;
 import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.InputStreamSource;
 import org.raven.log.LogLevel;
@@ -33,21 +37,32 @@ import org.raven.sched.ExecutorService;
 import org.raven.sched.Task;
 import org.raven.tree.Node;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 /**
  *
  * @author Mikhail Titov
  */
 public class ConcatDataSourceTest extends EasyMock
 {
+    private Logger logger;
+    private BufferCache bufferCache;
+
+    @Before
+    public void prepare() throws IOException{
+        Logger log = LoggerFactory.getLogger(ConcatDataSourceTest.class);
+        RTPManagerServiceImpl rtpManagerService = new RTPManagerServiceImpl(log);
+        bufferCache = new BufferCacheImpl(rtpManagerService, log);
+    }
+
     @Test
-    public void addInputStreamSourceTest() throws Exception
-    {
+    public void addInputStreamSourceTest() throws Exception {
         Node owner = createMock("node", Node.class);
         ExecutorService executorService = createMock("executor", ExecutorService.class);
-        Logger logger = createMock("logger", Logger.class);
+        logger = createMock("logger", Logger.class);
 
         executorService.execute(executeTask());
-        expectLastCall().times(2);
+        expectLastCall().atLeastOnce();
+        expect(executorService.executeQuietly(executeTask())).andReturn(true).atLeastOnce();
         expect(owner.isLogLevelEnabled((LogLevel)anyObject())).andReturn(Boolean.TRUE).anyTimes();
 //        expect(owner.isLogLevelEnabled(eq(LogLevel.DEBUG))).andReturn(Boolean.TRUE).anyTimes();
         expect(owner.getLogger()).andReturn(logger).anyTimes();
@@ -65,22 +80,20 @@ public class ConcatDataSourceTest extends EasyMock
         InputStreamSource source3 = new TestInputStreamSource("src/test/wav/test.wav");
 
         ConcatDataSource dataSource = new ConcatDataSource(
-                FileTypeDescriptor.WAVE, executorService, Codec.G711_MU_LAW, 240, 5, 5, owner);
+                FileTypeDescriptor.WAVE, executorService, Codec.G711_MU_LAW, 240, 5, 5, owner, bufferCache);
 
         dataSource.start();
-        JMFHelper.OperationController control  = JMFHelper.writeToFile(
-                dataSource, "target/iss_test.wav");
-        dataSource.addSource(source1);
-        dataSource.addSource(source2);
+        JMFHelper.OperationController control = JMFHelper.writeToFile(dataSource, "target/iss_test.wav");
+        addSourceAndWait(dataSource, source1);
+        addSourceAndWait(dataSource, source2);
         TimeUnit.SECONDS.sleep(5);
         dataSource.reset();
-        dataSource.addSource(source3);
+        addSourceAndWait(dataSource, source3);
         TimeUnit.SECONDS.sleep(5);
         dataSource.close();
         control.stop();
 
         verify(owner, executorService, logger);
-
     }
 
 //    @Test
@@ -106,7 +119,7 @@ public class ConcatDataSourceTest extends EasyMock
         DataSource ids = Manager.createDataSource(new File("src/test/wav/test.wav").toURI().toURL());
 
         ConcatDataSource dataSource = new ConcatDataSource(
-                FileTypeDescriptor.WAVE, executorService, Codec.G711_MU_LAW, 240, 5, 5, owner);
+                FileTypeDescriptor.WAVE, executorService, Codec.G711_MU_LAW, 240, 5, 5, owner, bufferCache);
 
         dataSource.start();
         JMFHelper.OperationController control  = JMFHelper.writeToFile(
@@ -119,6 +132,16 @@ public class ConcatDataSourceTest extends EasyMock
         verify(owner, executorService, logger);
     }
 
+    private void addSourceAndWait(ConcatDataSource audioStream, InputStreamSource source)
+            throws InterruptedException
+    {
+        audioStream.addSource(source);
+        while (audioStream.isPlaying()){
+            TimeUnit.MILLISECONDS.sleep(10);
+//            logger.debug("Waiting...");
+        }
+    }
+
     private static Task executeTask()
     {
         reportMatcher(new IArgumentMatcher()
@@ -128,9 +151,13 @@ public class ConcatDataSourceTest extends EasyMock
                 new Thread(){
 
                     @Override
-                    public void run()
-                    {
-                        ((Task)argument).run();
+                    public void run() {
+                        new Thread(){
+                            @Override public void run() {
+                                super.run();
+                                ((Task)argument).run();
+                            }
+                        }.start();
                     }
 
                 }.start();

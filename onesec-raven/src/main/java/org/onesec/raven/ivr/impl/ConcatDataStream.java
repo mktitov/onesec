@@ -38,6 +38,7 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
 {
     public static int MAX_SILENCE_BUFFER_COUNT = 1500;
 
+    private final Buffer silentBuffer;
     private final Queue<Buffer> bufferQueue;
     private final ConcatDataSource dataSource;
     private final ContentDescriptor contentDescriptor;
@@ -45,7 +46,6 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
     private final int packetLength;
     private final int maxSendAheadPacketsCount;
     private BufferTransferHandler transferHandler;
-    private Buffer silentBuffer;
     private Buffer bufferToSend;
     private String action;
     private long packetNumber;
@@ -55,7 +55,7 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
 
     public ConcatDataStream(
             Queue<Buffer> bufferQueue, ConcatDataSource dataSource, Node owner
-            , int packetSize, int maxSendAheadPacketsCount)
+            , int packetSize, int maxSendAheadPacketsCount, Buffer silentBuffer)
     {
         this.bufferQueue = bufferQueue;
         this.dataSource = dataSource;
@@ -63,6 +63,7 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
         this.owner = owner;
         this.packetLength = packetSize/8;
         this.maxSendAheadPacketsCount = maxSendAheadPacketsCount;
+        this.silentBuffer = silentBuffer;
     }
 
     public String getLogPrefix() {
@@ -73,100 +74,71 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
         this.logPrefix = logPrefix;
     }
 
-    public Format getFormat()
-    {
+    public Format getFormat() {
         return dataSource.getFormat();
     }
 
     public void read(Buffer buffer) throws IOException
     {
-//        Buffer queueBuf = bufferQueue.poll();
         action = "reading buffer";
-        if (bufferToSend==null)
-        {
-            if (silentBuffer==null)
-                buffer.setDiscard(true);
-            else
-            {
-                silencePacketCount.incrementAndGet();
-                buffer.copy(silentBuffer);
-            }
-        }
-        else
-        {
+        if (bufferToSend==null) {
+            silencePacketCount.incrementAndGet();
+            buffer.copy(silentBuffer);
+        } else {
             silencePacketCount.set(0);
-            if (silentBuffer==null)
-            {
-                silentBuffer = new Buffer();
-                silentBuffer.copy(bufferToSend);
-                if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                    owner.getLogger().debug(logMess("Silence buffer added to stream"));
-                dataSource.setSilenceBufferInitialized(true);
-            }
             buffer.copy(bufferToSend);
         }
     }
 
-    public void setTransferHandler(BufferTransferHandler transferHandler)
-    {
+    public void setTransferHandler(BufferTransferHandler transferHandler) {
         this.transferHandler = transferHandler;
     }
 
-    public ContentDescriptor getContentDescriptor()
-    {
+    public ContentDescriptor getContentDescriptor() {
         return contentDescriptor;
     }
 
-    public long getContentLength()
-    {
+    public long getContentLength() {
         return LENGTH_UNKNOWN;
     }
 
-    public boolean endOfStream()
-    {
-        return bufferQueue.size()==0 && dataSource.isDataConcated();
+    public boolean endOfStream() {
+        return bufferQueue.size()==0 && dataSource.isClosed();
     }
 
-    public Object[] getControls()
-    {
+    public Object[] getControls() {
         return new Object[0];
     }
 
-    public Object getControl(String controlType)
-    {
+    public Object getControl(String controlType) {
         return null;
     }
 
-    public void transferData(PushBufferStream stream)
-    {
+    public void transferData(PushBufferStream stream) {
         if (transferHandler!=null)
             transferHandler.transferData(this);
     }
 
-    public Node getTaskNode()
-    {
+    public Node getTaskNode() {
         return owner;
     }
 
-    public String getStatusMessage()
-    {
+    public String getStatusMessage() {
         return String.format(logMess(
                 "Transfering buffers to rtp session. Action: %s. packetCount: %s; sleepTime: %s"
                 , action, packetNumber, sleepTime));
     }
 
-    public void run()
-    {
+    public void run() {
         dataSource.setStreamThreadRunning(true);
         try
         {
             long startTime = System.currentTimeMillis();
             packetNumber = 0;
-            while ((!dataSource.isDataConcated() || !bufferQueue.isEmpty())
+            while ((!dataSource.isClosed() || !bufferQueue.isEmpty())
                     && silencePacketCount.get()<MAX_SILENCE_BUFFER_COUNT)
             {
-                try
-                {
+                try {
                     action = "getting new buffer from queue";
                     bufferToSend = bufferQueue.poll();
                     action = "sending transfer event";
@@ -178,26 +150,22 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
                             (bufferToSend==null? 0 : maxSendAheadPacketsCount))*packetLength;
                     if (sleepTime>0)
                         TimeUnit.MILLISECONDS.sleep(sleepTime);
-                }
-                catch (InterruptedException ex) {
+                } catch (InterruptedException ex) {
                     if (owner.isLogLevelEnabled(LogLevel.ERROR))
-                        owner.getLogger().error(logMess("Transfer buffers to rtp session task was interrupted"), ex);
+                        owner.getLogger().error(logMess(
+                                "Transfer buffers to rtp session task was interrupted"), ex);
                     Thread.currentThread().interrupt();
                     break;
                 }
             }
             if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                 owner.getLogger().debug(logMess("Transfer buffers to rtp session task was finished"));
-        }
-        finally
-        {
+        } finally {
             dataSource.setStreamThreadRunning(false);
         }
     }
 
-    private String logMess(String mess, Object... args)
-    {
+    private String logMess(String mess, Object... args) {
         return dataSource.logMess(mess, args);
-//        return (logPrefix==null? "" : logPrefix)+"AudioStream. "+String.format(mess, args);
     }
 }

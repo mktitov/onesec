@@ -17,6 +17,9 @@
 
 package org.onesec.raven.ivr.impl;
 
+import java.io.IOException;
+import org.junit.Before;
+import org.onesec.raven.ivr.BufferCache;
 import com.cisco.jtapi.extensions.CiscoMediaCapability;
 import com.cisco.jtapi.extensions.CiscoMediaTerminal;
 import com.cisco.jtapi.extensions.CiscoRTPInputStartedEv;
@@ -63,6 +66,7 @@ import org.raven.sched.ExecutorService;
 import org.raven.sched.Task;
 import org.raven.tree.Node;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static org.easymock.EasyMock.*;
 
 /**
@@ -71,6 +75,15 @@ import static org.easymock.EasyMock.*;
  */
 public class RTPSessionTest extends EasyMock implements ReceiveStreamListener, SessionListener
 {
+    private BufferCache bufferCache;
+    private Logger logger = LoggerFactory.getLogger(RTPSessionTest.class);
+
+    @Before
+    public void prepare() throws IOException {
+        RTPManagerServiceImpl rtpManagerService = new RTPManagerServiceImpl(logger);
+        bufferCache = new BufferCacheImpl(rtpManagerService, logger);
+    }
+
     @Test 
     public void test() throws Exception
     {
@@ -106,7 +119,7 @@ public class RTPSessionTest extends EasyMock implements ReceiveStreamListener, S
         InputStreamSource source3 = new TestInputStreamSource("src/test/wav/test_16.wav");
 
         ConcatDataSource dataSource = new ConcatDataSource(
-                FileTypeDescriptor.WAVE, executorService, Codec.G711_MU_LAW, 240, 5, 0, owner);
+                FileTypeDescriptor.WAVE, executorService, Codec.G711_MU_LAW, 240, 5, 0, owner, bufferCache);
 
 //        RTPSession session = new RTPSession("127.0.0.1", 1234, dataSource);
         
@@ -164,7 +177,7 @@ public class RTPSessionTest extends EasyMock implements ReceiveStreamListener, S
         InputStreamSource source3 = new TestInputStreamSource("src/test/wav/test.wav");
 
         ConcatDataSource dataSource = new ConcatDataSource(
-                FileTypeDescriptor.WAVE, executorService, Codec.G711_MU_LAW, 240, 5, 5, owner);
+                FileTypeDescriptor.WAVE, executorService, Codec.G711_MU_LAW, 240, 5, 5, owner, bufferCache);
 
         dataSource.addSource(source1);
 //        dataSource.addSource(source2);

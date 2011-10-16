@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.impl;
 
+import org.onesec.raven.ivr.BufferCache;
 import java.io.IOException;
 import org.onesec.raven.JMFHelper;
 import javax.media.protocol.ContentDescriptor;
@@ -196,7 +197,8 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         {
             this.filename = filename;
             this.codec = codec;
-            ds = new ConcatDataSource(FileTypeDescriptor.WAVE, executor, codec, 240, 0, 0, manager);
+            ds = new ConcatDataSource(FileTypeDescriptor.WAVE, executor, codec, 240, 0, 0, manager,
+                    registry.getService(BufferCache.class));
             ds.start();
             writeControl = JMFHelper.writeToFile(ds, filename);
         }

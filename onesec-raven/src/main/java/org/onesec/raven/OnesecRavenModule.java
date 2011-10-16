@@ -26,8 +26,10 @@ import org.onesec.core.provider.ProviderControllerState;
 import org.onesec.raven.impl.RavenProviderConfiguratorImpl;
 import org.onesec.core.services.ProviderConfiguratorListeners;
 import org.onesec.raven.impl.StateToNodeLoggerImpl;
+import org.onesec.raven.ivr.BufferCache;
 import org.onesec.raven.ivr.TerminalStateMonitoringService;
 import org.onesec.raven.ivr.RTPManagerService;
+import org.onesec.raven.ivr.impl.BufferCacheImpl;
 import org.onesec.raven.ivr.impl.TerminalStateMonitoringServiceImpl;
 import org.onesec.raven.ivr.impl.RTPManagerServiceImpl;
 import org.raven.tree.TreeListener;
@@ -52,9 +54,12 @@ public class OnesecRavenModule
     }
 
     @EagerLoad
-    public RTPManagerService buildRTPManagerService(Logger logger) throws Exception
-    {
+    public RTPManagerService buildRTPManagerService(Logger logger) throws Exception {
         return new RTPManagerServiceImpl(logger);
+    }
+
+    public BufferCache buildBufferCache(RTPManagerService rtpManagerService, Logger logger) {
+        return new BufferCacheImpl(rtpManagerService, logger);
     }
 
     public static void contributeStateListenersCoordinator(
