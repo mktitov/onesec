@@ -20,6 +20,7 @@ package org.onesec.raven.ivr.impl;
 import java.util.concurrent.TimeUnit;
 import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.AudioStream;
+import org.onesec.raven.ivr.Cacheable;
 import org.onesec.raven.ivr.InputStreamSource;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.actions.AsyncAction;
@@ -37,10 +38,20 @@ public class IvrUtils
             , InputStreamSource audio)
         throws InterruptedException
     {
+        playAudioInAction(action, conversation, audio, null);
+    }
+
+    public static void playAudioInAction(AsyncAction action, IvrEndpointConversation conversation
+            , InputStreamSource audio, Cacheable cacheInfo)
+        throws InterruptedException
+    {
         AudioStream stream = conversation.getAudioStream();
         if (stream!=null){
-            stream.addSource(audio);
-            Thread.sleep(200);
+            if (cacheInfo==null || !cacheInfo.isCacheable())
+                stream.addSource(audio);
+            else
+                stream.addSource(cacheInfo.getCacheKey(), cacheInfo.getCacheChecksum(), audio);
+//            Thread.sleep(200);
             while (!action.hasCancelRequest() && stream.isPlaying())
                 TimeUnit.MILLISECONDS.sleep(100);
         }
@@ -51,6 +62,6 @@ public class IvrUtils
         throws InterruptedException
     {
         AudioFileInputStreamSource source = new AudioFileInputStreamSource(audio, conversation.getOwner());
-        playAudioInAction(action, conversation, source);
+        playAudioInAction(action, conversation, source, audio);
     }
 }

@@ -18,10 +18,8 @@
 package org.onesec.raven.ivr.actions;
 
 import java.io.InputStream;
-import java.util.concurrent.TimeUnit;
 import javax.script.Bindings;
 import org.onesec.raven.ivr.AudioFile;
-import org.onesec.raven.ivr.AudioStream;
 import org.onesec.raven.ivr.InputStreamSource;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.impl.IvrUtils;
@@ -57,7 +55,7 @@ public abstract class AbstractPlayAudioAction extends AsyncAction implements Inp
         if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
             conversation.getOwner().getLogger().debug(
                     logMess("Playing audio from source (%s)", audioFile.getPath()));
-        IvrUtils.playAudioInAction(this, conversation, this);
+        IvrUtils.playAudioInAction(this, conversation, this, audioFile);
         if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
             conversation.getOwner().getLogger().debug(logMess(
                     "Audio source (%s) successfuly played ", audioFile.getPath()));

@@ -24,6 +24,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.onesec.raven.ivr.Cacheable;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.actions.AsyncAction;
 import org.onesec.raven.ivr.impl.IvrUtils;
@@ -36,7 +37,8 @@ import org.onesec.raven.ivr.queue.CallsCommutationManagerListener;
  *       до тех пор пока оператор не положит трубку или пока коммутация активна (абонент не положит трубку)
  * @author Mikhail Titov
  */
-public class WaitForCallCommutationAction extends AsyncAction implements CallsCommutationManagerListener
+public class WaitForCallCommutationAction extends AsyncAction 
+        implements CallsCommutationManagerListener, Cacheable
 {
     private final static String NAME = "Wait for commutation action";
     private final static String BEEP_RESOURCE_NAME = "/org/onesec/raven/ivr/phone_beep.wav";
@@ -102,5 +104,17 @@ public class WaitForCallCommutationAction extends AsyncAction implements CallsCo
         } finally {
             lock.unlock();
         }
+    }
+
+    public String getCacheKey() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public long getCacheChecksum() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public boolean isCacheable() {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 }
