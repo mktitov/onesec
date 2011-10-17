@@ -17,13 +17,10 @@
 
 package org.onesec.raven.ivr.queue.actions;
 
-import java.util.Date;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.onesec.raven.ivr.Cacheable;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.actions.AsyncAction;
@@ -74,8 +71,8 @@ public class WaitForCallCommutationAction extends AsyncAction
                     try {
                         if (abonentReadyCondition.await(WAIT_TIMEOUT, TimeUnit.MILLISECONDS)) {
                             preamblePlayed = true;
-                            IvrUtils.playAudioInAction(
-                                    this, conversation, new ResourceInputStreamSource(BEEP_RESOURCE_NAME));
+                            IvrUtils.playAudioInAction(this, conversation
+                                    , new ResourceInputStreamSource(BEEP_RESOURCE_NAME), this);
                             preamblePlayedCondition.signal();
                         }
                     } finally {
@@ -107,14 +104,14 @@ public class WaitForCallCommutationAction extends AsyncAction
     }
 
     public String getCacheKey() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return BEEP_RESOURCE_NAME;
     }
 
     public long getCacheChecksum() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return 1;
     }
 
     public boolean isCacheable() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return true;
     }
 }

@@ -207,11 +207,11 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         {
             if (dataSource==null) 
                 logger.error("CopyDsConcatDataSource. Received null dataSource");
-            else{
-                try{
+            else {
+                try {
                     this.dataSource = dataSource;
                     ds.addSource(dataSource);
-                }catch(Exception e){
+                } catch(Exception e){
                     logger.error("CopyDsConcatDataSource. Error creating ConcatDataSource", e);
                 }
             }
