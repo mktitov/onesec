@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.impl;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.media.Buffer;
@@ -40,6 +41,7 @@ public class BufferCacheImpl implements BufferCache
     public final static int WAIT_STATE_TIMEOUT = 2000;
 
     private final Map<String, Buffer> silentBuffers = new ConcurrentHashMap<String, Buffer>();
+    private final Map<String, CacheEntity>  buffersCache = new ConcurrentHashMap<String, CacheEntity>();
     private final RTPManagerService rtpManagerService;
     private final Logger logger;
 
@@ -57,6 +59,19 @@ public class BufferCacheImpl implements BufferCache
                 res = createSilentBuffer(codec, packetSize, key);
         }
         return res;
+    }
+
+    public void cacheBuffers(String key, long checksum, Codec codec, int packetSize, Collection<Buffer> buffers) {
+        buffersCache.put(formCacheKey(key, codec, packetSize), new CacheEntity(checksum, buffers));
+    }
+
+    public Buffer[] getCachedBuffers(String key, long checksum, Codec codec, int packetSize) {
+        CacheEntity entity = buffersCache.get(formCacheKey(key, codec, packetSize));
+        return entity!=null && entity.checksum==checksum? entity.buffers : null;
+    }
+
+    private String formCacheKey(String key, Codec codec, int packetSize){
+        return key+"_"+codec+"_"+packetSize;
     }
 
     private Buffer createSilentBuffer(Codec codec, int packetSize, String key) {
@@ -97,6 +112,17 @@ public class BufferCacheImpl implements BufferCache
                         , codec, packetSize)
                         , ex);
             return null;
+        }
+    }
+
+    private class CacheEntity {
+        private final long checksum;
+        private final Buffer[] buffers;
+
+        public CacheEntity(long checksum, Collection<Buffer> buffers) {
+            this.checksum = checksum;
+            this.buffers = new Buffer[buffers.size()];
+            buffers.toArray(this.buffers);
         }
     }
 }

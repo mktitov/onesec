@@ -17,16 +17,13 @@
 
 package org.onesec.raven.ivr;
 
-import org.raven.expr.BindingSupport;
-import org.raven.tree.DataFile;
-import org.raven.tree.Node;
-
 /**
  *
  * @author Mikhail Titov
  */
-public interface AudioFile extends Node, Cacheable
+public interface Cacheable
 {
-    public DataFile getAudioFile();
-    public BindingSupport getBindingSupport();
+    public String getCacheKey();
+    public long getCacheChecksum();
+    public boolean isCacheable();
 }

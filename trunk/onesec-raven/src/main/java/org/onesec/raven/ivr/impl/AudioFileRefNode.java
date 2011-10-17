@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.Map;
 import javax.script.Bindings;
 import org.onesec.raven.ivr.AudioFile;
-import org.onesec.raven.ivr.AudioFileRef;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.expr.BindingSupport;
@@ -66,6 +65,18 @@ public class AudioFileRefNode extends BaseNode implements AudioFile, Viewable
     {
         return Status.STARTED.equals(getStatus()) && audioFileNode instanceof Viewable?
             ((Viewable)audioFileNode).getViewableObjects(refreshAttributes) : null;
+    }
+
+    public long getCacheChecksum() {
+        return audioFileNode.getCacheChecksum();
+    }
+
+    public String getCacheKey() {
+        return audioFileNode.getCacheKey();
+    }
+
+    public boolean isCacheable() {
+        return audioFileNode.isCacheable();
     }
 
     public Boolean getAutoRefresh() {

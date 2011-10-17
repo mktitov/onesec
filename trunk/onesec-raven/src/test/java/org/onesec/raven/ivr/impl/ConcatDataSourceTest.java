@@ -135,7 +135,7 @@ public class ConcatDataSourceTest extends EasyMock
     private void addSourceAndWait(ConcatDataSource audioStream, InputStreamSource source)
             throws InterruptedException
     {
-        audioStream.addSource(source);
+        audioStream.addSource("audio1", 10, source);
         while (audioStream.isPlaying()){
             TimeUnit.MILLISECONDS.sleep(10);
 //            logger.debug("Waiting...");

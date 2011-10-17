@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr;
 
+import java.util.Collection;
 import javax.media.Buffer;
 
 /**
@@ -31,4 +32,8 @@ public interface BufferCache
      * @param packetSize of silent buffer
      */
     public Buffer getSilentBuffer(Codec codec, int packetSize);
+    
+    public Buffer[] getCachedBuffers(String key, long checksum, Codec codec, int packetSize);
+    
+    public void cacheBuffers(String key, long checksum, Codec codec, int packetSize, Collection<Buffer> buffers);
 }

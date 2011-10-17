@@ -20,11 +20,14 @@ package org.onesec.raven.ivr.impl;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.onesec.raven.ivr.AudioFile;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.expr.BindingSupport;
 import org.raven.tree.DataFile;
+import org.raven.tree.DataFileException;
 import org.raven.tree.NodeAttribute;
 import org.raven.tree.Viewable;
 import org.raven.tree.ViewableObject;
@@ -43,18 +46,42 @@ public class AudioFileNode extends BaseNode implements Viewable, AudioFile
     @NotNull @Parameter(valueHandlerType=DataFileValueHandlerFactory.TYPE)
     private DataFile audioFile;
 
-    public DataFile getAudioFile()
-    {
+    @NotNull @Parameter(defaultValue="true")
+    private Boolean cacheEnabled;
+
+    public DataFile getAudioFile() {
         return audioFile;
     }
 
-    public void setAudioFile(DataFile audioFile)
-    {
+    public void setAudioFile(DataFile audioFile) {
         this.audioFile = audioFile;
     }
 
-    public Map<String, NodeAttribute> getRefreshAttributes() throws Exception
-    {
+    public Boolean getCacheEnabled() {
+        return cacheEnabled;
+    }
+
+    public void setCacheEnabled(Boolean cacheEnabled) {
+        this.cacheEnabled = cacheEnabled;
+    }
+
+    public String getCacheKey() {
+        return ""+getId();
+    }
+
+    public boolean isCacheable() {
+        return cacheEnabled;
+    }
+
+    public long getCacheChecksum() {
+        try {
+            return audioFile.getChecksum();
+        } catch (DataFileException ex) {
+            return 0l;
+        }
+    }
+
+    public Map<String, NodeAttribute> getRefreshAttributes() throws Exception {
         return null;
     }
 

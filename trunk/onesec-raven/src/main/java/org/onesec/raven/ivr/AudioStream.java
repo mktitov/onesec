@@ -27,6 +27,8 @@ public interface AudioStream
 {
     public void addSource(InputStreamSource source);
     public void addSource(DataSource source);
+    public void addSource(String key, long checksum, DataSource source);
+    public void addSource(String key, long checksum, InputStreamSource source);
     /**
      * Returns true if audio stream has buffers that not played yet.
      */
