@@ -18,8 +18,10 @@
 package org.onesec.raven.ivr.impl;
 
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import javax.media.Buffer;
 import javax.media.Processor;
 import javax.media.control.PacketSizeControl;
@@ -27,6 +29,7 @@ import javax.media.protocol.FileTypeDescriptor;
 import javax.media.protocol.PushBufferDataSource;
 import javax.media.protocol.PushBufferStream;
 import org.onesec.raven.ivr.BufferCache;
+import org.onesec.raven.ivr.BuffersCacheEntity;
 import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.RTPManagerService;
 import org.slf4j.Logger;
@@ -39,11 +42,14 @@ public class BufferCacheImpl implements BufferCache
 {
     public final static String SILENCE_RESOURCE_NAME = "/org/onesec/raven/ivr/silence.wav";
     public final static int WAIT_STATE_TIMEOUT = 2000;
+    public final static long DEFAULT_MAX_CACHE_IDLE_TIME = 3600l;
 
     private final Map<String, Buffer> silentBuffers = new ConcurrentHashMap<String, Buffer>();
-    private final Map<String, CacheEntity>  buffersCache = new ConcurrentHashMap<String, CacheEntity>();
+    private final Map<String, BuffersCacheEntity>  buffersCache = new ConcurrentHashMap<String, BuffersCacheEntity>();
     private final RTPManagerService rtpManagerService;
     private final Logger logger;
+
+    private AtomicLong maxCacheIdleTime = new AtomicLong(DEFAULT_MAX_CACHE_IDLE_TIME);
 
     public BufferCacheImpl(RTPManagerService rtpManagerService, Logger logger) {
         this.rtpManagerService = rtpManagerService;
@@ -61,13 +67,34 @@ public class BufferCacheImpl implements BufferCache
         return res;
     }
 
+    public Map<String, BuffersCacheEntity> getCacheEntities() {
+        return buffersCache;
+    }
+
+    public long getMaxCacheIdleTime() {
+        return maxCacheIdleTime.get();
+    }
+
+    public void removeOldCaches() {
+        Iterator<Map.Entry<String, BuffersCacheEntity>> it = buffersCache.entrySet().iterator();
+        while (it.hasNext())
+            if (it.next().getValue().isInvalid())
+                it.remove();
+    }
+
+    public void setMaxCacheIdleTime(long time) {
+        maxCacheIdleTime.set(time);
+    }
+
     public void cacheBuffers(String key, long checksum, Codec codec, int packetSize, Collection<Buffer> buffers) {
-        buffersCache.put(formCacheKey(key, codec, packetSize), new CacheEntity(checksum, buffers));
+        buffersCache.put(
+                formCacheKey(key, codec, packetSize)
+                , new CacheEntity(key, codec, packetSize, checksum, buffers));
     }
 
     public Buffer[] getCachedBuffers(String key, long checksum, Codec codec, int packetSize) {
-        CacheEntity entity = buffersCache.get(formCacheKey(key, codec, packetSize));
-        return entity!=null && entity.checksum==checksum? entity.buffers : null;
+        BuffersCacheEntity entity = buffersCache.get(formCacheKey(key, codec, packetSize));
+        return entity!=null && entity.getChecksum()==checksum? entity.getBuffers() : null;
     }
 
     private String formCacheKey(String key, Codec codec, int packetSize){
@@ -81,7 +108,7 @@ public class BufferCacheImpl implements BufferCache
             IssDataSource source = null;
             try {
                 ResourceInputStreamSource silenceSource=new ResourceInputStreamSource(SILENCE_RESOURCE_NAME);
-                source =  new IssDataSource(silenceSource, FileTypeDescriptor.WAVE);
+                source = new IssDataSource(silenceSource, FileTypeDescriptor.WAVE);
 
                 processor = ControllerStateWaiter.createRealizedProcessor(
                         source, codec.getAudioFormat(), WAIT_STATE_TIMEOUT);
@@ -115,14 +142,60 @@ public class BufferCacheImpl implements BufferCache
         }
     }
 
-    private class CacheEntity {
+    private class CacheEntity implements BuffersCacheEntity {
+        private final String key;
+        private final Codec codec;
+        private final int packetSize;
         private final long checksum;
         private final Buffer[] buffers;
+        private final AtomicLong ts = new AtomicLong(System.currentTimeMillis());
+        private final AtomicLong usageCount = new AtomicLong(1);
 
-        public CacheEntity(long checksum, Collection<Buffer> buffers) {
+        public CacheEntity(String key, Codec codec, int packetSize, long checksum, Collection<Buffer> buffers)
+        {
+            this.key = key;
+            this.codec = codec;
+            this.packetSize = packetSize;
             this.checksum = checksum;
             this.buffers = new Buffer[buffers.size()];
             buffers.toArray(this.buffers);
+        }
+
+        public int getBuffersCount() {
+            return buffers.length;
+        }
+
+        public long getChecksum() {
+            return checksum;
+        }
+
+        public Codec getCodec() {
+            return codec;
+        }
+
+        public long getIdleTime() {
+            return (System.currentTimeMillis()-ts.get())/1000;
+        }
+
+        public String getKey() {
+            return key;
+        }
+
+        public int getPacketSize() {
+            return packetSize;
+        }
+
+        public boolean isInvalid(){
+            return (System.currentTimeMillis()-ts.get())/1000>maxCacheIdleTime.get();
+        }
+
+        public Buffer[] getBuffers(){
+            ts.set(System.currentTimeMillis());
+            return buffers;
+        }
+
+        public long getUsageCount(){
+            return usageCount.get();
         }
     }
 }

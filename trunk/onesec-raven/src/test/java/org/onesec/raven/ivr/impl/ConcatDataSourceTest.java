@@ -20,7 +20,6 @@ package org.onesec.raven.ivr.impl;
 import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
 import javax.media.Manager;
 import javax.media.protocol.DataSource;
 import javax.media.protocol.FileTypeDescriptor;

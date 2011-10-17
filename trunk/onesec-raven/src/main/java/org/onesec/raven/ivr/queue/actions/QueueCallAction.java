@@ -27,7 +27,6 @@ import org.onesec.raven.ivr.queue.impl.CallQueueRequestImpl;
 import org.raven.conv.BindingScope;
 import org.raven.conv.ConversationScenarioState;
 import org.raven.ds.DataContext;
-import org.raven.ds.impl.DataContextImpl;
 import org.raven.log.LogLevel;
 
 /**

@@ -20,8 +20,6 @@ package org.onesec.raven.ivr.impl;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.onesec.raven.ivr.AudioFile;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
@@ -66,7 +64,7 @@ public class AudioFileNode extends BaseNode implements Viewable, AudioFile
     }
 
     public String getCacheKey() {
-        return ""+getId();
+        return getPath();
     }
 
     public boolean isCacheable() {
