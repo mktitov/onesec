@@ -17,8 +17,10 @@
 
 package org.onesec.raven.ivr.impl;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -67,8 +69,12 @@ public class BufferCacheImpl implements BufferCache
         return res;
     }
 
-    public Map<String, BuffersCacheEntity> getCacheEntities() {
-        return buffersCache;
+    public List<String> getSilentBuffersKeys() {
+        return new ArrayList<String>(silentBuffers.keySet());
+    }
+
+    public List<BuffersCacheEntity> getCacheEntities() {
+        return new ArrayList<BuffersCacheEntity>(buffersCache.values());
     }
 
     public long getMaxCacheIdleTime() {
@@ -149,7 +155,7 @@ public class BufferCacheImpl implements BufferCache
         private final long checksum;
         private final Buffer[] buffers;
         private final AtomicLong ts = new AtomicLong(System.currentTimeMillis());
-        private final AtomicLong usageCount = new AtomicLong(1);
+        private final AtomicLong usageCount = new AtomicLong(0);
 
         public CacheEntity(String key, Codec codec, int packetSize, long checksum, Collection<Buffer> buffers)
         {
@@ -191,6 +197,7 @@ public class BufferCacheImpl implements BufferCache
 
         public Buffer[] getBuffers(){
             ts.set(System.currentTimeMillis());
+            usageCount.incrementAndGet();
             return buffers;
         }
 

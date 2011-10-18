@@ -27,9 +27,11 @@ import org.onesec.raven.impl.RavenProviderConfiguratorImpl;
 import org.onesec.core.services.ProviderConfiguratorListeners;
 import org.onesec.raven.impl.StateToNodeLoggerImpl;
 import org.onesec.raven.ivr.BufferCache;
+import org.onesec.raven.ivr.OnesecSystemNodesInitializer;
 import org.onesec.raven.ivr.TerminalStateMonitoringService;
 import org.onesec.raven.ivr.RTPManagerService;
 import org.onesec.raven.ivr.impl.BufferCacheImpl;
+import org.onesec.raven.ivr.impl.OnesecSystemNodesInitializerImpl;
 import org.onesec.raven.ivr.impl.TerminalStateMonitoringServiceImpl;
 import org.onesec.raven.ivr.impl.RTPManagerServiceImpl;
 import org.raven.tree.TreeListener;
@@ -45,6 +47,7 @@ public class OnesecRavenModule
     {
         binder.bind(StateToNodeLogger.class, StateToNodeLoggerImpl.class);
         binder.bind(TerminalStateMonitoringService.class, TerminalStateMonitoringServiceImpl.class);
+        binder.bind(OnesecSystemNodesInitializer.class, OnesecSystemNodesInitializerImpl.class);
     }
 
     public RavenProviderConfigurator buildRavenProviderConfigurator(
@@ -73,8 +76,10 @@ public class OnesecRavenModule
     }
 
     public static void contributeTreeListeners(Configuration<TreeListener> conf
-            , TerminalStateMonitoringService terminalStateMonitoringService)
+            , TerminalStateMonitoringService terminalStateMonitoringService
+            , OnesecSystemNodesInitializer nodesInitializer)
     {
         conf.add(terminalStateMonitoringService);
+        conf.add(nodesInitializer);
     }
 }

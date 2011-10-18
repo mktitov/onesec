@@ -18,6 +18,7 @@
 package org.onesec.raven.ivr;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import javax.media.Buffer;
 
@@ -64,5 +65,7 @@ public interface BufferCache
      */
     public long getMaxCacheIdleTime();
 
-    public Map<String, BuffersCacheEntity> getCacheEntities();
+    public List<BuffersCacheEntity> getCacheEntities();
+
+    public List<String> getSilentBuffersKeys();
 }

@@ -15,22 +15,20 @@
  *  under the License.
  */
 
-package org.onesec.raven.ivr;
+package org.onesec.raven;
 
-import javax.media.Buffer;
+import java.util.Collection;
+import org.raven.sched.Scheduler;
+import org.raven.tree.NodeAttribute;
+import org.raven.tree.impl.BaseNode;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface BuffersCacheEntity {
-    public String getKey();
-    public Codec getCodec();
-    public long getChecksum();
-    public int getPacketSize();
-    public int getBuffersCount();
-    public long getIdleTime();
-    public long getUsageCount();
-    public boolean isInvalid();
-    public Buffer[] getBuffers();
+public class TestSchedulerNode extends BaseNode implements Scheduler
+{
+    public Collection<NodeAttribute> generateAttributes() {
+        return null;
+    }
 }

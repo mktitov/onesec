@@ -506,58 +506,44 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         Record rec = (Record) data;
         if (isLogLevelEnabled(LogLevel.DEBUG))
             debug("Tring to inform abonent: "+getRecordInfo(rec));
-        try
-        {
-            if (dataLock.writeLock().tryLock(2, TimeUnit.SECONDS))
-            {
-                try
-                {
+        try {
+            if (dataLock.writeLock().tryLock(2, TimeUnit.SECONDS)) {
+                try {
                     List<Record> recordsChain = null;
-                    if (rec!=null)
-                    {
+                    if (rec!=null) {
                         String _groupField = groupField;
-                        if (_groupField!=null)
-                        {
+                        if (_groupField!=null) {
                             if (records==null)
                                 records = new ArrayList<Record>();
-                            if (records.isEmpty() || ObjectUtils.equals(rec.getValue(_groupField), records.get(0).getValue(_groupField)))
+                            if (records.isEmpty() || ObjectUtils.equals(
+                                    rec.getValue(_groupField), records.get(0).getValue(_groupField)))
                                 records.add(rec);
-                            else
-                            {
+                            else {
                                 recordsChain = records;
                                 records = new ArrayList();
                                 records.add(rec);
                             }
-                        }
-                        else
-                        {
+                        } else {
                             recordsChain = Arrays.asList(rec);
                         }
-                    }
-                    else if (records!=null)
-                    {
+                    } else if (records!=null) {
                         recordsChain = records;
                         records = null;
                     }
-
-                    if (recordsChain!=null)
-                    {
+                    if (recordsChain!=null) {
                         try{
                             for (Record record: recordsChain)
                                 initFields(record);
                             createSession(recordsChain, context);
-                        }finally{
+                        } finally{
                             recordsChain = null;
                         }
                     }
-                }
-                finally
-                {
+                } finally {
                     dataLock.writeLock().unlock();
                 }
             }
-        } catch (Exception ex)
-        {
+        } catch (Exception ex) {
             if (isLogLevelEnabled(LogLevel.ERROR))
                 error("Error while triyng to inform abonent: "+getRecordInfo(rec), ex);
         }
@@ -749,28 +735,22 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
     private IvrInformerSession createSession(List<Record> records, DataContext context) throws Exception
     {
         boolean alreadyInforming = false;
-        for (Record record: records)
-        {
-            if (isAlreadyInforming(record))
-            {
+        for (Record record: records) {
+            if (isAlreadyInforming(record)) {
                 alreadyInforming = true;
                 break;
             }
         }
-        if (alreadyInforming)
-        {
-            for (Record record: records)
-            {
+        if (alreadyInforming) {
+            for (Record record: records) {
                 record.setValue(COMPLETION_CODE_FIELD, ALREADY_INFORMING);
                 sendRecordToConsumers(record, context);
             }
             return null;
         }
         
-        if (sessions.size()>=maxSessionsCount && !waitForSession)
-        {
-            for (Record record: records)
-            {
+        if (sessions.size()>=maxSessionsCount && !waitForSession) {
+            for (Record record: records) {
                 record.setValue(COMPLETION_CODE_FIELD, ERROR_TOO_MANY_SESSIONS);
                 sendRecordToConsumers(record, context);
             }
