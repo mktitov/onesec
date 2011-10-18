@@ -274,8 +274,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             try
             {
                 if (IvrEndpointConversationState.TALKING!=state.getId()) {
-                    if (owner.isLogLevelEnabled(LogLevel.WARN))
-                        owner.getLogger().warn(callLog(
+                    if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                        owner.getLogger().debug(callLog(
                                 "Can't continue conversation. "
                                 + "Conversation is not started. "
                                 + "Current conversation state is %s", state.getIdName()));

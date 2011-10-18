@@ -381,6 +381,9 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
                     }
                 }
                 ++bufferCount;
+                if (theEnd && owner.isLogLevelEnabled(LogLevel.DEBUG))
+                    owner.getLogger().debug(String.format(
+                            "Source processing time is %s ms", System.currentTimeMillis()-startTs));
             }catch (Exception e){
                 if (owner.isLogLevelEnabled(LogLevel.ERROR))
                     owner.getLogger().debug(logMess("Error reading buffer from source"), e);
