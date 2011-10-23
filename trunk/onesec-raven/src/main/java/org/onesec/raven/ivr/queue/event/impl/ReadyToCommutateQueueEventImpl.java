@@ -17,7 +17,7 @@
 
 package org.onesec.raven.ivr.queue.event.impl;
 
-import org.onesec.raven.ivr.queue.CallsCommutationManager;
+import org.onesec.raven.ivr.queue.CommutationManagerCall;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.event.ReadyToCommutateQueueEvent;
 
@@ -27,16 +27,16 @@ import org.onesec.raven.ivr.queue.event.ReadyToCommutateQueueEvent;
  */
 public class ReadyToCommutateQueueEventImpl extends CallQueueEventImpl implements ReadyToCommutateQueueEvent
 {
-    private final CallsCommutationManager commutationManager;
+    private final CommutationManagerCall commutationManager;
 
     public ReadyToCommutateQueueEventImpl(CallsQueue callsQueue, long requestId
-            , CallsCommutationManager operator)
+            , CommutationManagerCall operator)
     {
         super(callsQueue, requestId);
         this.commutationManager = operator;
     }
 
-    public CallsCommutationManager getCommutationManager() {
+    public CommutationManagerCall getCommutationManager() {
         return commutationManager;
     }
 }

@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.queue.CallQueueRequestListener;
-import org.onesec.raven.ivr.queue.CallsCommutationManager;
+import org.onesec.raven.ivr.queue.CommutationManagerCall;
 import org.onesec.raven.ivr.queue.QueuedCallStatus;
 import org.onesec.raven.ivr.queue.event.CallQueueEvent;
 import org.onesec.raven.ivr.queue.event.CommutatedQueueEvent;
@@ -49,7 +49,7 @@ public class CallQueueRequestImpl implements QueuedCallStatus
     private Status status;
     private int serialNumber;
     private int prevSerialNumber;
-    private CallsCommutationManager commutationManager;
+    private CommutationManagerCall commutationManager;
     private AudioFile operatorGreeting;
     private final AtomicBoolean canceledFlag = new AtomicBoolean(false);
     private final List<CallQueueRequestListener> listeners = new LinkedList<CallQueueRequestListener>();

@@ -48,9 +48,12 @@ public interface CallQueueRequestWrapper extends CallQueueRequest
      */
     public void fireCallQueuedEvent();
     /**
-     * Fires "ReadyToCommutateQueueEvent" for the request
+     * Fires "ReadyToCommutateQueueEvent" for the request.
+     * @return <b>true</b> if the request is not assigned to operator. If method return <b>false</b> then
+     *      request is already handling by operator (commutated or commutation is in process), in this case
+     *      commutation manager call must terminate the call to operator
      */
-    public void fireReadyToCommutateQueueEvent(CallsCommutationManager operator);
+    public boolean fireReadyToCommutateQueueEvent(CommutationManagerCall operator);
     /**
      * Fires when operator and abonent where commutated
      */
@@ -115,6 +118,10 @@ public interface CallQueueRequestWrapper extends CallQueueRequest
      * <b>false</b> then queue must cancel request processing.
      */
     public boolean isValid();
+    /**
+     * Returns <b>true</b> if the request where assigned to the operator and operator are ready to commutate
+     */
+    public boolean isHandlingByOperator();
     /**
      * Sets the index to the last operator that tried to handle the request. The queue must take the
      * next operator in the next attempt.

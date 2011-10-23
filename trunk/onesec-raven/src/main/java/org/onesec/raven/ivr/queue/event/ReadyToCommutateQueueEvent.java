@@ -17,7 +17,7 @@
 
 package org.onesec.raven.ivr.queue.event;
 
-import org.onesec.raven.ivr.queue.CallsCommutationManager;
+import org.onesec.raven.ivr.queue.CommutationManagerCall;
 import org.onesec.raven.ivr.queue.CallsQueueOperator;
 
 /**
@@ -29,5 +29,5 @@ public interface ReadyToCommutateQueueEvent extends CallQueueEvent
     /**
      * Return the call queue operator that controls the commutation
      */
-    public CallsCommutationManager getCommutationManager();
+    public CommutationManagerCall getCommutationManager();
 }

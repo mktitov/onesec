@@ -26,11 +26,11 @@ import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.actions.AsyncAction;
 import org.onesec.raven.ivr.impl.IvrUtils;
 import org.onesec.raven.ivr.impl.ResourceInputStreamSource;
-import org.onesec.raven.ivr.queue.CallsCommutationManager;
+import org.onesec.raven.ivr.queue.CommutationManagerCall;
 import org.onesec.raven.ivr.queue.CallsCommutationManagerListener;
 
 /**
- * Цель: проинформировать {@link CallsCommutationManager} о том, что оператор готов к коммутации и ждать
+ * Цель: проинформировать {@link CommutationManagerCall} о том, что оператор готов к коммутации и ждать
  *       до тех пор пока оператор не положит трубку или пока коммутация активна (абонент не положит трубку)
  * @author Mikhail Titov
  */
@@ -52,10 +52,10 @@ public class WaitForCallCommutationAction extends AsyncAction
     @Override
     protected void doExecute(IvrEndpointConversation conversation) throws Exception
     {
-        CallsCommutationManager commutationManager = (CallsCommutationManager) conversation
+        CommutationManagerCall commutationManager = (CommutationManagerCall) conversation
                 .getConversationScenarioState()
                 .getBindings()
-                .get(CallsCommutationManager.CALLS_COMMUTATION_MANAGER_BINDING);
+                .get(CommutationManagerCall.CALLS_COMMUTATION_MANAGER_BINDING);
 
         if (commutationManager==null)
             throw new Exception("CallsCommutationManager not found in the conversation scenario state");
