@@ -22,7 +22,7 @@ import javax.script.Bindings;
 import org.junit.Assert;
 import org.junit.Test;
 import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.onesec.raven.ivr.queue.CallsCommutationManager;
+import org.onesec.raven.ivr.queue.CommutationManagerCall;
 import org.raven.conv.ConversationScenarioState;
 import static org.easymock.EasyMock.*;
 
@@ -41,7 +41,7 @@ public class WaitForCallCommutationActionTest extends Assert
 
         expect(conv.getConversationScenarioState()).andReturn(state);
         expect(state.getBindings()).andReturn(bindings);
-        expect(bindings.get(CallsCommutationManager.CALLS_COMMUTATION_MANAGER_BINDING)).andReturn(null);
+        expect(bindings.get(CommutationManagerCall.CALLS_COMMUTATION_MANAGER_BINDING)).andReturn(null);
 
         replay(conv, state, bindings);
 
@@ -61,11 +61,11 @@ public class WaitForCallCommutationActionTest extends Assert
         final IvrEndpointConversation conv = createMock(IvrEndpointConversation.class);
         ConversationScenarioState state = createMock(ConversationScenarioState.class);
         Bindings bindings = createMock(Bindings.class);
-        CallsCommutationManager manager = createMock(CallsCommutationManager.class);
+        CommutationManagerCall manager = createMock(CommutationManagerCall.class);
         
         expect(conv.getConversationScenarioState()).andReturn(state);
         expect(state.getBindings()).andReturn(bindings);
-        expect(bindings.get(CallsCommutationManager.CALLS_COMMUTATION_MANAGER_BINDING)).andReturn(manager);
+        expect(bindings.get(CommutationManagerCall.CALLS_COMMUTATION_MANAGER_BINDING)).andReturn(manager);
         manager.operatorReadyToCommutate(conv);
         expect(manager.isCommutationValid()).andReturn(Boolean.TRUE).anyTimes();
         
@@ -100,11 +100,11 @@ public class WaitForCallCommutationActionTest extends Assert
         final IvrEndpointConversation conv = createMock(IvrEndpointConversation.class);
         ConversationScenarioState state = createMock(ConversationScenarioState.class);
         Bindings bindings = createMock(Bindings.class);
-        CallsCommutationManager manager = createMock(CallsCommutationManager.class);
+        CommutationManagerCall manager = createMock(CommutationManagerCall.class);
 
         expect(conv.getConversationScenarioState()).andReturn(state);
         expect(state.getBindings()).andReturn(bindings);
-        expect(bindings.get(CallsCommutationManager.CALLS_COMMUTATION_MANAGER_BINDING)).andReturn(manager);
+        expect(bindings.get(CommutationManagerCall.CALLS_COMMUTATION_MANAGER_BINDING)).andReturn(manager);
         manager.operatorReadyToCommutate(conv);
         expect(manager.isCommutationValid()).andReturn(Boolean.TRUE).times(5).andReturn(Boolean.FALSE);
 

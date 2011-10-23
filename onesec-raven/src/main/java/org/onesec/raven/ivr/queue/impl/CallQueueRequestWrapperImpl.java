@@ -34,7 +34,7 @@ import org.onesec.raven.ivr.IvrEndpointConversationTransferedEvent;
 import org.onesec.raven.ivr.queue.event.CallQueueEvent;
 import org.onesec.raven.ivr.queue.CallQueueRequest;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
-import org.onesec.raven.ivr.queue.CallsCommutationManager;
+import org.onesec.raven.ivr.queue.CommutationManagerCall;
 import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviour;
 import org.onesec.raven.ivr.queue.event.CallQueuedEvent;
 import org.onesec.raven.ivr.queue.event.CommutatedQueueEvent;
@@ -82,6 +82,7 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
     private int onBusyBehaviourStep;
     private CallsQueueOnBusyBehaviour onBusyBehaviour;
     private AtomicBoolean valid;
+    private AtomicBoolean handlingByOperator = new AtomicBoolean();
     private int operatorIndex;
     private int operatorHops;
     private long lastQueuedTime;
@@ -115,6 +116,10 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
 
     public boolean isValid() {
         return valid.get() && !request.isCanceled();
+    }
+
+    public boolean isHandlingByOperator() {
+        return handlingByOperator.get();
     }
 
     public boolean isCanceled() {
@@ -314,8 +319,12 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
         callQueueChangeEvent(new DisconnectedQueueEventImpl(queue, requestId));
     }
 
-    public void fireReadyToCommutateQueueEvent(CallsCommutationManager operator) {
-        callQueueChangeEvent(new ReadyToCommutateQueueEventImpl(queue, requestId, operator));
+    public boolean fireReadyToCommutateQueueEvent(CommutationManagerCall operator) {
+        if (handlingByOperator.compareAndSet(false, true)) {
+            callQueueChangeEvent(new ReadyToCommutateQueueEventImpl(queue, requestId, operator));
+            return true;
+        } 
+        return false;
     }
 
     public void fireCommutatedEvent() {

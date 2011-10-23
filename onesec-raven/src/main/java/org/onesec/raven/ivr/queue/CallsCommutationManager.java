@@ -17,37 +17,22 @@
 
 package org.onesec.raven.ivr.queue;
 
-import org.onesec.raven.ivr.IvrEndpointConversation;
+import org.onesec.raven.ivr.IvrConversationScenario;
+import org.onesec.raven.ivr.IvrConversationsBridgeManager;
+import org.onesec.raven.ivr.IvrEndpointPool;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface CallsCommutationManager
-{
-    public final static String CALLS_COMMUTATION_MANAGER_BINDING = "queueCommutationManager";
-    public final static String CALL_QUEUE_REQUEST_BINDING = "queueRequest";
-    
-    /**
-     * Informs about that the operator's conversation is ready to commutation
-     * @param operatorConversation the operator conversation
-     */
-    public void operatorReadyToCommutate(IvrEndpointConversation operatorConversation);
-    /**
-     * Informs about that the abonent conversation is ready to commutation
-     * @param operatorConversation the operator conversation
-     */
-    public void abonentReadyToCommutate(IvrEndpointConversation abonentConversation);
-    /**
-     * Returns <b>true</b> while the state of the communication between two calls is valid
-     */
-    public boolean isCommutationValid();
-    /**
-     * Adds listener for commutation manager events
-     */
-    public void addListener(CallsCommutationManagerListener listener);
-    /**
-     * Removes listener of the commutation manager events
-     */
-    public void removeListener(CallsCommutationManagerListener listener);
+public interface CallsCommutationManager {
+    public void callFinished(CommutationManagerCall call, boolean successfull);
+    public CallsQueueOperator getOperator();
+    public long getWaitTimeout();
+    public int getInviteTimeout();
+    public IvrConversationsBridgeManager getConversationsBridgeManager();
+    public IvrEndpointPool getEndpointPool();
+    public IvrConversationScenario getConversationScenario();
+    public CallQueueRequestWrapper getRequest();
+    public CallsQueue getQueue();
 }

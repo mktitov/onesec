@@ -26,6 +26,7 @@ import org.onesec.raven.ivr.IvrEndpointPool;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.CallsQueueOperator;
+import org.onesec.raven.ivr.queue.CommutationManagerCall;
 import org.raven.RavenUtils;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
@@ -73,7 +74,7 @@ public class CallsQueueOperatorNode extends BaseNode
     @NotNull @Parameter(defaultValue="true")
     private Boolean active;
     
-    private AtomicReference<CallsCommutationManagerImpl> commutationManager;
+    private AtomicReference<CommutationManagerCallImpl> commutationManager;
     private AtomicBoolean busy;
 
     private AtomicInteger totalRequests;
@@ -87,7 +88,7 @@ public class CallsQueueOperatorNode extends BaseNode
     protected void initFields()
     {
         super.initFields();
-        commutationManager = new AtomicReference<CallsCommutationManagerImpl>();
+        commutationManager = new AtomicReference<CommutationManagerCallImpl>();
         busy = new AtomicBoolean(false);
         totalRequests = new AtomicInteger();
         handledRequests = new AtomicInteger();
@@ -100,7 +101,7 @@ public class CallsQueueOperatorNode extends BaseNode
     /**
      * for test purposes
      */
-    CallsCommutationManagerImpl getCommutationManager(){
+    CommutationManagerCallImpl getCommutationManager(){
         return commutationManager.get();
     }
 
@@ -120,7 +121,7 @@ public class CallsQueueOperatorNode extends BaseNode
         request.fireOperatorQueueEvent(getName());
         request.fireOperatorGreetingQueueEvent(greeting!=null?greeting:this.greeting);        
         String[] numbers = RavenUtils.split(phoneNumbers, ",");
-        this.commutationManager.set(new CallsCommutationManagerImpl(
+        this.commutationManager.set(new CommutationManagerCallImpl(
                 request, queue, endpointWaitTimeout, inviteTimeout, conversationScenario, numbers
                 , conversationsBridgeManager, this));
         request.addToLog(String.format("handling by operator (%s)", getName()));
@@ -182,7 +183,7 @@ public class CallsQueueOperatorNode extends BaseNode
 
     public CallQueueRequestWrapper getProcessingRequest()
     {
-        CallsCommutationManagerImpl manager = commutationManager.get();
+        CommutationManagerCallImpl manager = commutationManager.get();
         return manager==null? null : manager.getRequest();
     }
 
