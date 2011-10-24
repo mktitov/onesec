@@ -1200,7 +1200,6 @@ public class IvrEndpointNode extends BaseNode
 //            continueConversation(EMPTY_DTMF);
 //        } catch (Exception ex)
 //        {
-//            //TODO: Нужна дополнитьльная обработка? Например положить трубку
 //            if (isLogLevelEnabled(LogLevel.ERROR))
 //                error("Error creating rtp session", ex);
 //            stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);

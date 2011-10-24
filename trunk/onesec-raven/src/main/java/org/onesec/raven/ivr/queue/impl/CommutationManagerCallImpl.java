@@ -127,7 +127,6 @@ public class CommutationManagerCallImpl implements CommutationManagerCall, IvrCo
                             "Can't process call queue request because of no free endpoints in the pool (%s)"
                             , manager.getEndpointPool().getName()));
                 manager.getRequest().addToLog("no free endpoints in the pool");
-                manager.callFinished(this, false);
                 return;
             }
 

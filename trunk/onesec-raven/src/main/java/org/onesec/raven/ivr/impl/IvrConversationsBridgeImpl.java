@@ -194,7 +194,7 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
             this.conv = conv;
             conv.addConversationListener(this);
             try {
-                conv.getIncomingRtpStream().addDataSourceListener(this, null, null);
+                conv.getIncomingRtpStream().addDataSourceListener(this, null);
             } catch (Throwable ex) {
                 convStopped(conv);
             }

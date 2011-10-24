@@ -69,7 +69,7 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         IncomingRtpStream irtp = manager.getIncomingRtpStream(manager);
         String address = getInterfaceAddress().getHostName();
         irtp.open(address);
-        irtp.addDataSourceListener(listener, new ContentDescriptor(FileTypeDescriptor.WAVE), null);
+        irtp.addDataSourceListener(listener, null);
         OperationState sendControl = sendOverRtp(
                 "src/test/wav/test.wav", Codec.G711_MU_LAW, address, irtp.getPort());
         sendControl.join();
@@ -84,7 +84,7 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         IncomingRtpStream irtp = manager.getIncomingRtpStream(manager);
         String address = getInterfaceAddress().getHostName();
         DataSourceListener fileWriter = new DataSourceListener("target/recorded.wav");
-        irtp.addDataSourceListener(fileWriter, new ContentDescriptor(FileTypeDescriptor.WAVE), null);
+        irtp.addDataSourceListener(fileWriter, null);
         irtp.open(address);
 //        OperationState sendControl = sendOverRtp(
 //                "src/test/wav/test.wav", Codec.G711_MU_LAW, address, irtp.getPort());
@@ -100,7 +100,7 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         String address = getInterfaceAddress().getHostName();
         irtp.open(address);
         DataSourceListener fileWriter = new DataSourceListener("target/recorded.wav");
-        irtp.addDataSourceListener(fileWriter, new ContentDescriptor(FileTypeDescriptor.WAVE), null);
+        irtp.addDataSourceListener(fileWriter, null);
         OperationState sendControl = sendOverRtp(
                 "src/test/wav/test.wav", Codec.G711_MU_LAW, address, irtp.getPort());
         sendControl.join();
@@ -117,8 +117,7 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         int i=0;
         for (;i<5;++i){
             DataSourceListener fileWriter = new DataSourceListener("target/recorded_"+i+".wav");
-            irtp.addDataSourceListener(
-                    fileWriter, new ContentDescriptor(FileTypeDescriptor.WAVE), null);
+            irtp.addDataSourceListener(fileWriter, null);
         }
         OperationState sendControl = sendOverRtp(
                 "src/test/wav/test.wav", Codec.G711_MU_LAW, address, irtp.getPort());
@@ -126,8 +125,7 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         for (;i<10;++i){
 //            Thread.sleep(100);
             DataSourceListener fileWriter = new DataSourceListener("target/recorded_"+i+".wav");
-            irtp.addDataSourceListener(
-                    fileWriter, new ContentDescriptor(FileTypeDescriptor.WAVE), null);
+            irtp.addDataSourceListener(fileWriter, null);
         }
         sendControl.join();
         irtp.release();
@@ -142,7 +140,7 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         CopyDsConcatDataSource fileWriter = new CopyDsConcatDataSource(
                 "target/copy_to_concatDs.wav", codec);
         Thread.sleep(1000);
-        irtp.addDataSourceListener(fileWriter, new ContentDescriptor(ContentDescriptor.RAW), null);
+        irtp.addDataSourceListener(fileWriter, null);
         OperationState sendControl = sendOverRtp(
                 "src/test/wav/test.wav", Codec.G711_MU_LAW, address, irtp.getPort());
         irtp.open(address);

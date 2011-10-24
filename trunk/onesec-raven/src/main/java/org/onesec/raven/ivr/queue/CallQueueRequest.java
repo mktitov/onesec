@@ -67,4 +67,12 @@ public interface CallQueueRequest
      * Returns data context
      */
     public DataContext getContext();
+    /**
+     * Returns the operator phone numbers
+     */
+    public String getOperatorPhoneNumbers();
+    /**
+     * Sets the operator phone numbers
+     */
+    public void setOperatorPhoneNumbers(String phoneNumbers);
 }

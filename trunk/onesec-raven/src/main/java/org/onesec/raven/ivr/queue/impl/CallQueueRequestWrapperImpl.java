@@ -211,6 +211,14 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
         request.setQueueId(queueId);
     }
 
+    public String getOperatorPhoneNumbers() {
+        return request.getOperatorPhoneNumbers();
+    }
+
+    public void setOperatorPhoneNumbers(String phoneNumbers) {
+        request.setOperatorPhoneNumbers(phoneNumbers);
+    }
+
     public long getRequestId() {
         return requestId;
     }
