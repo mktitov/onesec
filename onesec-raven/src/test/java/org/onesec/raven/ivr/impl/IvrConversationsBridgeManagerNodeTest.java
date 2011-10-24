@@ -224,8 +224,7 @@ public class IvrConversationsBridgeManagerNodeTest extends OnesecRavenTestCase
         expect(mocks.conv.getState()).andReturn(mocks.state);
         expect(mocks.state.getId()).andReturn(IvrEndpointConversationState.TALKING);
         expect(mocks.conv.getIncomingRtpStream()).andReturn(mocks.rtpStream);
-        mocks.rtpStream.addDataSourceListener(
-                checkDataSourceListener(), (ContentDescriptor) isNull(), (AudioFormat) isNull());
+        mocks.rtpStream.addDataSourceListener(checkDataSourceListener(), (AudioFormat) isNull());
         expectLastCall().andReturn(true);
 //        expect(mocks.conv.getAudioStream()).andReturn(mocks.audioStream);
 //        mocks.audioStream.addSource(isA(DataSource.class));

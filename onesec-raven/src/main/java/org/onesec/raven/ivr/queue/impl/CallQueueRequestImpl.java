@@ -46,6 +46,7 @@ public class CallQueueRequestImpl implements QueuedCallStatus
     private final boolean continueConversationOnReject;
     private int priority;
     private String queueId;
+    private String operatorPhoneNumbers;
     private Status status;
     private int serialNumber;
     private int prevSerialNumber;
@@ -151,6 +152,14 @@ public class CallQueueRequestImpl implements QueuedCallStatus
 
     public synchronized void setQueueId(String queueId) {
         this.queueId = queueId;
+    }
+
+    public String getOperatorPhoneNumbers() {
+        return operatorPhoneNumbers;
+    }
+
+    public void setOperatorPhoneNumbers(String operatorPhoneNumbers) {
+        this.operatorPhoneNumbers = operatorPhoneNumbers;
     }
 
     public synchronized boolean isQueueing() {

@@ -36,6 +36,7 @@ import org.raven.sched.impl.AbstractTask;
  *
  * @author Mikhail Titov
  */
+//TODO: Если используется режим паралелльного набора, тогда timeout должен вычисляться хитро.
 public class CallsCommutationManagerImpl implements CallsCommutationManager {
     private final ExecutorService executor;
     private final CallQueueRequestWrapper req;
@@ -46,7 +47,7 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager {
     private final String[] numbers;
     private final IvrConversationScenario conversationScenario;
     private final IvrConversationsBridgeManager conversationBridgeManager;
-    private final CallsQueueOperatorNode operator;
+    private final AbstractOperatorNode operator;
     private final IvrEndpointPool endpointPool;
 
     private final Set<CommutationManagerCall> calls = new HashSet<CommutationManagerCall>();
@@ -58,7 +59,7 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager {
             , String[] numbers, IvrConversationScenario conversationScenario
             , IvrConversationsBridgeManager conversationsBridgeManager
             , IvrEndpointPool endpointPool
-            , CallsQueueOperatorNode operator)
+            , AbstractOperatorNode operator)
     {
         this.executor = executor;
         this.req = req;

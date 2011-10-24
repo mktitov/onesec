@@ -17,7 +17,6 @@
 
 package org.onesec.raven.ivr.impl;
 
-import com.sun.media.rtp.RTPReceiver;
 import java.net.InetAddress;
 import java.util.LinkedList;
 import java.util.List;
@@ -141,9 +140,7 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
         }
     }
 
-    public boolean addDataSourceListener(
-            IncomingRtpStreamDataSourceListener listener, ContentDescriptor contentDescriptor
-            , AudioFormat format)
+    public boolean addDataSourceListener(IncomingRtpStreamDataSourceListener listener, AudioFormat format)
         throws RtpStreamException
     {
         try{
@@ -152,7 +149,7 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
                     if (status==Status.CLOSED)
                         return false;
                     else if (status==Status.OPENED || status==Status.INITIALIZING){
-                        Consumer consumer = new Consumer(listener, contentDescriptor, format);
+                        Consumer consumer = new Consumer(listener, format);
                         consumers.add(consumer);
                         if (status==Status.OPENED)
                             consumer.fireDataSourceCreatedEvent();
@@ -290,10 +287,8 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
         }
     }
 
-    private class Consumer
-    {
+    private class Consumer {
         private final IncomingRtpStreamDataSourceListener listener;
-        private final ContentDescriptor contentDescriptor;
         private final AudioFormat format;
 
         private boolean createEventFired = false;
@@ -301,12 +296,8 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
         private DataSource inDataSource;
         private DataSource outDataSource;
 
-        public Consumer(
-                IncomingRtpStreamDataSourceListener listener, ContentDescriptor contentDescriptor
-                , AudioFormat format)
-        {
+        public Consumer(IncomingRtpStreamDataSourceListener listener, AudioFormat format) {
             this.listener = listener;
-            this.contentDescriptor = contentDescriptor;
             this.format = format==null? FORMAT : format; 
         }
 

@@ -28,11 +28,6 @@ import org.raven.tree.Node;
 public interface CallsQueueOperator extends Node
 {
     /**
-     * Returns the request currently processing by this operator or null
-     */
-    public CallQueueRequestWrapper getProcessingRequest();
-
-    /**
      * Returns the total requests count received by operator
      */
     public int getTotalRequests();

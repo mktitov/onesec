@@ -18,7 +18,6 @@
 package org.onesec.raven.ivr;
 
 import javax.media.format.AudioFormat;
-import javax.media.protocol.ContentDescriptor;
 
 /**
  *
@@ -37,12 +36,9 @@ public interface IncomingRtpStream extends RtpStream
      * Returns <b>true</b> if listener was successfully added or <b>false</b> if incoming rtp stream
      * is already closed.
      * @param listener the listener
-     * @param desc not using //TODO: убрать параметр
      * @param format the audio format 
      * @throws RtpStreamException
      */
-    public boolean addDataSourceListener(
-            IncomingRtpStreamDataSourceListener listener, ContentDescriptor desc
-            , AudioFormat format)
-        throws RtpStreamException;
+    public boolean addDataSourceListener(IncomingRtpStreamDataSourceListener listener, AudioFormat format)
+            throws RtpStreamException;
 }

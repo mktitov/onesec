@@ -26,7 +26,7 @@ import org.raven.tree.ViewableObject;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.ChildsAsTableViewableObject;
 import org.raven.tree.impl.InvisibleNode;
-import static org.onesec.raven.ivr.queue.impl.CallsQueueOperatorNode.*;
+import static org.onesec.raven.ivr.queue.impl.AbstractOperatorNode.*;
 
 /**
  *
