@@ -44,10 +44,11 @@ public class QueueCallAction extends AsyncAction
     private final int priority;
     private final String queueId;
     private final boolean playOperatorGreeting;
+    private final String operatorPhoneNumbers;
 
     public QueueCallAction(CallQueueRequestSender requestSender
             , boolean continueConversationOnReadyToCommutate, boolean continueConversationOnReject
-            , int priority, String queueId, boolean playOperatorGreeting)
+            , int priority, String queueId, boolean playOperatorGreeting, String operatorPhoneNumbers)
     {
         super(ACTION_NAME);
         this.continueConversationOnReadyToCommutate = continueConversationOnReadyToCommutate;
@@ -56,6 +57,7 @@ public class QueueCallAction extends AsyncAction
         this.priority = priority;
         this.queueId = queueId;
         this.playOperatorGreeting = playOperatorGreeting;
+        this.operatorPhoneNumbers = operatorPhoneNumbers;
     }
 
     public boolean isContinueConversationOnReadyToCommutate() {
@@ -87,7 +89,8 @@ public class QueueCallAction extends AsyncAction
         if (callStatus==null){
             DataContext context = requestSender.createDataContext();
             callStatus = new CallQueueRequestImpl(
-                    conversation, priority, queueId, continueConversationOnReadyToCommutate
+                    conversation, priority, queueId, operatorPhoneNumbers
+                    , continueConversationOnReadyToCommutate
                     , continueConversationOnReject, context);
             state.setBinding(QUEUED_CALL_STATUS_BINDING, callStatus, BindingScope.POINT);
             requestSender.sendCallQueueRequest(callStatus, context);

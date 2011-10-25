@@ -37,7 +37,6 @@ import org.onesec.raven.ivr.IvrEndpointPool;
 import org.onesec.raven.ivr.IvrEndpointState;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
-import org.onesec.raven.ivr.queue.CallsCommutationManager;
 import org.onesec.raven.ivr.queue.CommutationManagerCall;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.CallsQueueOperator;
@@ -59,8 +58,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
     private static final AtomicBoolean flag = new AtomicBoolean();
 
     @Before
-    public void prepare()
-    {
+    public void prepare() {
         bridgeManager = new TestConversationsBridgeManager();
         bridgeManager.setName("conversations bridge");
         tree.getRootNode().addAndSaveChildren(bridgeManager);
@@ -145,7 +143,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
         verify(request, queue, pool, audioFile);
     }
 
-//    @Test(timeout=10000)
+    @Test(timeout=10000)
     public void inviteTimeoutTest() throws Exception
     {
         CallQueueRequestWrapper request = createMock(CallQueueRequestWrapper.class);
@@ -186,14 +184,16 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
         operator.processRequest(queue, request, scenario, audioFile);
         while (!flag.get())
             Thread.sleep(100);
-        long endTime = System.currentTimeMillis();
-        assertTrue(endTime-startTime>5000);
-        assertTrue(endTime-startTime<7000);
+        long diff = System.currentTimeMillis() - startTime;
+        System.out.println("diff:"+diff);
+        assertTrue(diff>5000);
+        assertTrue(diff<7000);
 
         verify(request, queue, pool, endpoint, endpointState, stateWaitResult, audioFile);
     }
 
-    @Test
+//    @Test(timeout=10000)
+//    @Test()
     public void commutateTest() throws Exception
     {
         final CallQueueRequestWrapper request = createMock(CallQueueRequestWrapper.class);
@@ -217,12 +217,15 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
         expect(request.logMess(isA(String.class))).andReturn("prefix");
         pool.requestEndpoint(sendEndpoint(operatorEndpoint));
         operatorEndpoint.invite(eq("88024"), same(scenario), isA(CommutationManagerCallImpl.class)
-                , checkBindings(operator, request));
+                , checkBindings(operator, request, operatorConversation));
         expect(request.isValid()).andReturn(Boolean.TRUE).anyTimes();
+        expect(request.isHandlingByOperator()).andReturn(false).anyTimes();
         expect(operatorEndpoint.getEndpointState()).andReturn(endpointState).anyTimes();
         expect(endpointState.getId()).andReturn(IvrEndpointState.TALKING).anyTimes();
         request.addToLog("op. number (88024) ready to commutate");
-        request.fireReadyToCommutateQueueEvent(processReadyToCommutate(operatorConversation, abonentConversation, conversationResult));
+        expect(request.fireReadyToCommutateQueueEvent(
+                processReadyToCommutate(operatorConversation, abonentConversation, conversationResult))
+        ).andReturn(Boolean.TRUE);
         request.addToLog("abonent ready to commutate");
         expect(request.getConversation()).andReturn(abonentConversation);
         expect(manager.createBridge(abonentConversation, operatorConversation, "prefix")).andReturn(bridge);
@@ -240,22 +243,21 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
         assertTrue(operator.start());
         endpointPool.setEndpointPool(pool);
         bridgeManager.setManager(manager);
-        new Thread(){
-            @Override
-            public void run() {
-                operator.processRequest(queue, request, scenario, audioFile);
-            }
-        }.start();
+        operator.processRequest(queue, request, scenario, audioFile);
         Thread.sleep(1000);
         //check for busy
         assertFalse(operator.processRequest(queue, request, scenario, audioFile));
-        CallsCommutationManager commutationManager = operator.getCommutationManager();
-        commutationManager.operatorReadyToCommutate(operatorConversation);
-        Thread.sleep(100);
-        commutationManager.abonentReadyToCommutate(abonentConversation);
-        Thread.sleep(100);
-        commutationManager.conversationCompleted(conversationResult);
-        Thread.sleep(100);
+//        flag.set(false);
+//        while (!flag.get())
+//            Thread.sleep(100);
+        Thread.sleep(1000);
+//        CallsCommutationManager commutationManager = operator.getCommutationManager();
+//        commutationManager.operatorReadyToCommutate(operatorConversation);
+//        Thread.sleep(100);
+//        commutationManager.abonentReadyToCommutate(abonentConversation);
+//        Thread.sleep(100);
+//        commutationManager.conversationCompleted(conversationResult);
+//        Thread.sleep(100);
 
         verify(request, abonentConversation, operatorConversation, queue, pool, operatorEndpoint,
             endpointState, manager, bridge, conversationResult);
@@ -276,13 +278,39 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
     }
 
     public static Map<String, Object> checkBindings(
+            final CallsQueueOperator operator, final CallQueueRequestWrapper request
+            , final IvrEndpointConversation operatorConversation)
+    {
+        reportMatcher(new IArgumentMatcher() {
+            public boolean matches(Object argument) {
+                Map<String, Object> bindings = (Map<String, Object>) argument;
+                Object obj = bindings.get(CommutationManagerCall.CALLS_COMMUTATION_MANAGER_BINDING);
+                assertTrue(obj instanceof CommutationManagerCall);
+                assertSame(bindings.get(CommutationManagerCall.CALL_QUEUE_REQUEST_BINDING), request);
+                final CommutationManagerCall call = (CommutationManagerCall)obj;
+                new Thread(){
+                    @Override public void run() {
+                        call.operatorReadyToCommutate(operatorConversation);
+                    }
+                }.start();
+                return true;
+            }
+            public void appendTo(StringBuffer buffer) {
+            }
+        });
+        return null;
+    }
+
+    public static Map<String, Object> checkBindings(
             final CallsQueueOperator operator, final CallQueueRequestWrapper request)
     {
         reportMatcher(new IArgumentMatcher() {
             public boolean matches(Object argument) {
                 Map<String, Object> bindings = (Map<String, Object>) argument;
-                assertTrue(bindings.get(CommutationManagerCall.CALLS_COMMUTATION_MANAGER_BINDING)
-                        instanceof CommutationManagerCall);
+                Object obj = bindings.get(CommutationManagerCall.CALLS_COMMUTATION_MANAGER_BINDING);
+                assertTrue(obj instanceof CommutationManagerCall);
+//                CommutationManagerCall call = (CommutationManagerCall)obj;
+//                call.operatorReadyToCommutate(operatorConversation);
                 assertSame(bindings.get(CommutationManagerCall.CALL_QUEUE_REQUEST_BINDING), request);
                 return true;
             }
@@ -344,12 +372,11 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
                     @Override
                     public void run() {
                         try {
-                            commutationManager.operatorReadyToCommutate(operatorConversation);
-                            Thread.sleep(100);
                             commutationManager.abonentReadyToCommutate(abonentConversation);
                             Thread.sleep(100);
                             commutationManager.conversationCompleted(conversationResult);
                             Thread.sleep(100);
+                            flag.set(true);
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }

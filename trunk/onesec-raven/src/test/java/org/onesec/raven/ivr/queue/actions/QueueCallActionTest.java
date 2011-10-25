@@ -61,7 +61,7 @@ public class QueueCallActionTest extends Assert
 
         replay(requestSender, conversation, state, owner, bindings, context);
 
-        QueueCallAction action = new QueueCallAction(requestSender, true, false, 10, "test queue", false);
+        QueueCallAction action = new QueueCallAction(requestSender, true, false, 10, "test queue", false, "1001");
         action.doExecute(conversation);
 
         verify(requestSender, conversation, state, owner, bindings, context);
@@ -92,7 +92,7 @@ public class QueueCallActionTest extends Assert
 
         replay(requestSender, conversation, state, owner, bindings, callStatus);
 
-        QueueCallAction action = new QueueCallAction(requestSender, true, true, 10, "test queue", true);
+        QueueCallAction action = new QueueCallAction(requestSender, true, true, 10, "test queue", true, "1001");
         action.doExecute(conversation);
 
         verify(requestSender, conversation, state, owner, bindings, callStatus);
@@ -110,6 +110,7 @@ public class QueueCallActionTest extends Assert
                 assertTrue(request.isContinueConversationOnReadyToCommutate());
                 assertFalse(request.isContinueConversationOnReject());
                 assertTrue(request.isQueueing());
+                assertEquals("1001", request.getOperatorPhoneNumbers());
                 return true;
             }
             public void appendTo(StringBuffer buffer) {

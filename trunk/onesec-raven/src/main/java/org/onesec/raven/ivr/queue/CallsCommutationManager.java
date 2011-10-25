@@ -29,7 +29,7 @@ public interface CallsCommutationManager {
     public void callFinished(CommutationManagerCall call, boolean successfull);
     public CallsQueueOperator getOperator();
     public long getWaitTimeout();
-    public int getInviteTimeout();
+    public long getInviteTimeout();
     public IvrConversationsBridgeManager getConversationsBridgeManager();
     public IvrEndpointPool getEndpointPool();
     public IvrConversationScenario getConversationScenario();

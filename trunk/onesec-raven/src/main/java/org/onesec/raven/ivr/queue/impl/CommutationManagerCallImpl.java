@@ -192,9 +192,7 @@ public class CommutationManagerCallImpl implements CommutationManagerCall, IvrCo
 
     private boolean checkInviteTimeout(long callStartTime, IvrEndpoint endpoint) throws Exception
     {
-        if (endpoint.getEndpointState().getId()==IvrEndpointState.INVITING
-            && callStartTime+manager.getInviteTimeout()*1000<=System.currentTimeMillis())
-        {
+        if (endpoint.getEndpointState().getId()==IvrEndpointState.INVITING && manager.getInviteTimeout()<=0) {
             if (manager.getOperator().isLogLevelEnabled(LogLevel.DEBUG))
                 manager.getOperator().getLogger().debug(logMess("Operator's number (%s) not answered", getNumber()));
             manager.getRequest().addToLog(String.format("number (%s) not answer", getNumber()));

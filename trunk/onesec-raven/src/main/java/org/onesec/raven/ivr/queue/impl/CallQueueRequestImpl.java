@@ -57,6 +57,7 @@ public class CallQueueRequestImpl implements QueuedCallStatus
     private final DataContext context;
 
     public CallQueueRequestImpl(IvrEndpointConversation conversation, int priority, String queueId,
+            String operatorPhoneNumbers,
             boolean continueConversationOnReadyToCommutate, boolean continueConversationOnReject,
             DataContext context)
     {
@@ -69,6 +70,7 @@ public class CallQueueRequestImpl implements QueuedCallStatus
         this.serialNumber = -1;
         this.prevSerialNumber = -1;
         this.context = context;
+        this.operatorPhoneNumbers = operatorPhoneNumbers;
     }
 
     public void addRequestListener(CallQueueRequestListener listener) {

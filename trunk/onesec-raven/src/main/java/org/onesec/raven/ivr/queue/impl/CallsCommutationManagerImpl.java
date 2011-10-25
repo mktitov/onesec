@@ -40,7 +40,8 @@ import org.raven.sched.impl.AbstractTask;
 public class CallsCommutationManagerImpl implements CallsCommutationManager {
     private final ExecutorService executor;
     private final CallQueueRequestWrapper req;
-    private final int inviteTimeout;
+    private final long inviteTimeout;
+    private long inviteEndTime;
     private final Integer parallelCallAfter;
     private final CallsQueue queue;
     private final long waitTimeout;
@@ -63,7 +64,7 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager {
     {
         this.executor = executor;
         this.req = req;
-        this.inviteTimeout = inviteTimeout;
+        this.inviteTimeout = inviteTimeout*1000;
         this.parallelCallAfter = parallelCallAfter;
         this.queue = queue;
         this.waitTimeout = waitTimeout;
@@ -72,6 +73,7 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager {
         this.endpointPool = endpointPool;
         this.conversationScenario = conversationScenario;
         this.conversationBridgeManager = conversationsBridgeManager;
+        this.inviteEndTime = System.currentTimeMillis()+this.inviteTimeout;
     }
 
     public void commutate(){
@@ -89,8 +91,10 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager {
         callHandled.compareAndSet(false, successfull);
         synchronized(calls){
             calls.remove(call);
-            if (parallelCallAfter==null && ++numberPos<numbers.length)
+            if (parallelCallAfter==null && ++numberPos<numbers.length) {
+                inviteEndTime = System.currentTimeMillis()+inviteTimeout;
                 tryCommutateWithNumber(numbers[numberPos]);
+            }
             if (calls.isEmpty()) {
                 if (!callHandled.get())
                     queue.queueCall(req);
@@ -136,8 +140,12 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager {
         return endpointPool;
     }
 
-    public int getInviteTimeout() {
-        return inviteTimeout;
+    /**
+     * Returns invite timeout in milliseconds. If method returns the result that equals or less than 0 so the
+     * time wait for invite was ended
+     */
+    public long getInviteTimeout() {
+        return inviteEndTime-System.currentTimeMillis();
     }
 
     public CallsQueueOperator getOperator() {
