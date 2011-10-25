@@ -53,12 +53,15 @@ public class QueueCallActionNode extends BaseNode implements IvrActionNode, Data
     private Integer priority;
 
     @Parameter()
+    private String operatorPhoneNumbers;
+
+    @Parameter()
     private String queueId;
 
     public IvrAction createAction()
     {
         return new QueueCallAction(this, continueConversationOnReadyToCommutate, continueConversationOnReject
-                , priority, queueId, playOperatorGreeting);
+                , priority, queueId, playOperatorGreeting, operatorPhoneNumbers);
     }
 
     public boolean getDataImmediate(DataConsumer dataConsumer, DataContext context) {

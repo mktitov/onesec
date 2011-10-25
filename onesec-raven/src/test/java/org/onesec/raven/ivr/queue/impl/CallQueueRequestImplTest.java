@@ -32,7 +32,7 @@ public class CallQueueRequestImplTest
         CallQueueRequestListener listener = createMock(CallQueueRequestListener.class);
         listener.requestCanceled();
         replay(listener);
-        CallQueueRequestImpl req = new CallQueueRequestImpl(null, 1, "1", true, true, null);
+        CallQueueRequestImpl req = new CallQueueRequestImpl(null, 1, "1", null, true, true, null);
         req.addRequestListener(listener);
         req.cancel();
         verify(listener);
