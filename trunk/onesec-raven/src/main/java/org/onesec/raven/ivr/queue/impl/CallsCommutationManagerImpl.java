@@ -36,7 +36,6 @@ import org.raven.sched.impl.AbstractTask;
  *
  * @author Mikhail Titov
  */
-//TODO: Если используется режим паралелльного набора, тогда timeout должен вычисляться хитро.
 public class CallsCommutationManagerImpl implements CallsCommutationManager {
     private final ExecutorService executor;
     private final CallQueueRequestWrapper req;
@@ -77,9 +76,8 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager {
     }
 
     public void commutate(){
-        if (parallelCallAfter==null)
-            tryCommutateWithNumber(numbers[numberPos]);
-        else
+        tryCommutateWithNumber(numbers[numberPos]);
+        if (parallelCallAfter!=null)
             executor.executeQuietly(parallelCallAfter*1000, new AbstractTask(operator, "Waiting for parallel call") {
                 @Override public void doRun() throws Exception {
                     commutateWithOtherNumbers();
@@ -126,6 +124,10 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager {
             for (int i=1; i<numbers.length; ++i)
                 tryCommutateWithNumber(numbers[i]);
         }
+    }
+
+    public void incOnNoFreeEndpointsRequests() {
+        operator.incOnNoFreeEndpointsRequests();
     }
 
     public IvrConversationScenario getConversationScenario() {

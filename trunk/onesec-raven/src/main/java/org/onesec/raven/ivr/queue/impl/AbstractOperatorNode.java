@@ -37,7 +37,6 @@ import org.weda.annotations.constraints.NotNull;
  *
  * @author Mikhail Titov
  */
-//TODO: восстановить работу параметра статистики onNoFreeEndpointsRequests
 public abstract class AbstractOperatorNode extends BaseNode implements CallsQueueOperator {
     public final static String SEARCHING_FOR_ENDPOINT_MSG = "Looking up for free endpoint in the pool (%s)";
     public final static String TOTAL_REQUESTS_ATTR = "totalRequests";
@@ -46,6 +45,7 @@ public abstract class AbstractOperatorNode extends BaseNode implements CallsQueu
     public final static String ON_NO_FREE_ENDPOINTS_REQUESTS_ATTR = "onNoFreeEndpointsRequests";
     public final static String ON_NO_ANSWER_REQUESTS = "onNoAnswerRequests";
     public final static String ON_NOT_STARTED_REQUESTS = "onNotStartedRequests";
+    public final static String PROCESSING_REQUEST_COUNT = "processingRequestCount";
     public final static String ACTIVE_ATTR = "active";
     
     @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
@@ -79,6 +79,7 @@ public abstract class AbstractOperatorNode extends BaseNode implements CallsQueu
     protected AtomicInteger onNoFreeEndpointsRequests;
     protected AtomicInteger onNoAnswerRequests;
     protected AtomicInteger onNotStartedRequests;
+    protected AtomicInteger processingRequestCount;
 
     @Override
     protected void initFields() {
@@ -89,6 +90,7 @@ public abstract class AbstractOperatorNode extends BaseNode implements CallsQueu
         onNoFreeEndpointsRequests = new AtomicInteger();
         onNoAnswerRequests = new AtomicInteger();
         onNotStartedRequests = new AtomicInteger();
+        processingRequestCount = new AtomicInteger();
     }
     
     //CallQueueOpertor's method
@@ -100,7 +102,14 @@ public abstract class AbstractOperatorNode extends BaseNode implements CallsQueu
             onNotStartedRequests.incrementAndGet();
             return false;
         }
-        return doProcessRequest(queue, request, conversationScenario, greeting);
+        boolean res =  doProcessRequest(queue, request, conversationScenario, greeting);
+        if (res)
+            processingRequestCount.incrementAndGet();
+        return res;
+    }
+
+    void incOnNoFreeEndpointsRequests(){
+        onNoFreeEndpointsRequests.incrementAndGet();
     }
 
     protected abstract boolean doProcessRequest(CallsQueue queue, CallQueueRequestWrapper request
@@ -127,6 +136,7 @@ public abstract class AbstractOperatorNode extends BaseNode implements CallsQueu
             handledRequests.incrementAndGet();
         else
             onNoAnswerRequests.incrementAndGet();
+        processingRequestCount.decrementAndGet();
         doRequestProcessed(commutationManager, callHandled);
     }
 
@@ -160,6 +170,11 @@ public abstract class AbstractOperatorNode extends BaseNode implements CallsQueu
     @Parameter(readOnly=true)
     public int getOnNotStartedRequests() {
         return onNotStartedRequests.get();
+    }
+
+    @Parameter(readOnly=true)
+    public int getProcessingRequestCount() {
+        return processingRequestCount.get();
     }
 
     public IvrConversationsBridgeManager getConversationsBridgeManager() {

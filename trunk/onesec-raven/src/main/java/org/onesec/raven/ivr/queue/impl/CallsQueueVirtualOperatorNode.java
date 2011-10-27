@@ -28,7 +28,7 @@ import org.raven.log.LogLevel;
  *
  * @author Mikhail Titov
  */
-//TODO: tests and documentation
+//TODO: tests and documentation and icon
 @NodeClass(parentNode=CallsQueueOperatorsNode.class)
 public class CallsQueueVirtualOperatorNode extends AbstractOperatorNode {
 

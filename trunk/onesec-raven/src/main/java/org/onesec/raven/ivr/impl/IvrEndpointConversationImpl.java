@@ -129,8 +129,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         state.setState(INVALID);
     }
 
-    public void addConversationListener(IvrEndpointConversationListener listener)
-    {
+    public void addConversationListener(IvrEndpointConversationListener listener) {
         lock.writeLock().lock();
         try {
             if (listeners==null)
@@ -142,8 +141,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         }
     }
 
-    public void removeConversationListener(IvrEndpointConversationListener listener)
-    {
+    public void removeConversationListener(IvrEndpointConversationListener listener) {
         lock.writeLock().lock();
         try {
             if (listeners!=null)
@@ -153,18 +151,15 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         }
     }
 
-    public String getCallingNumber()
-    {
+    public String getCallingNumber() {
         return callingNumber;
     }
 
-    public String getCalledNumber()
-    {
+    public String getCalledNumber() {
         return calledNumber;
     }
 
-    public IvrEndpointConversationState getState()
-    {
+    public IvrEndpointConversationState getState() {
         return state;
     }
 
@@ -209,8 +204,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     public IvrEndpointConversationState startConversation()
     {
         lock.writeLock().lock();
-        try
-        {
+        try {
             if (IvrEndpointConversationState.READY!=state.getId()) {
                 if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                     owner.getLogger().debug(String.format(
@@ -227,8 +221,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                     if (((CallControlConnection)connection).getCallControlState() == CallControlConnection.ESTABLISHED)
                         ++activeConnections;
 
-            if (activeConnections!=2)
-            {
+            if (activeConnections!=2) {
                 if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                     owner.getLogger().debug(callLog(
                             "Not all participant are ready for conversation. Ready (%s) participant(s)"
@@ -236,8 +229,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 return state;
             }
 
-            try
-            {
+            try {
                 outgoingRtpStream.open(remoteAddress, remotePort, audioStream);
                 outgoingRtpStream.start();
                 if (enableIncomingRtpStream)
@@ -250,18 +242,14 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                     owner.getLogger().debug(callLog("Conversation successfully started"));
 
                 continueConversation(EMPTY_DTMF);
-            }
-            catch (RtpStreamException ex)
-            {
+            } catch (RtpStreamException ex) {
                 if (owner.isLogLevelEnabled(LogLevel.ERROR))
                     owner.getLogger().error(ex.getMessage(), ex);
                 stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
             }
 
             return state;
-        }
-        finally
-        {
+        } finally {
             lock.writeLock().unlock();
         }
     }
