@@ -120,4 +120,12 @@ public class QueueCallActionNode extends BaseNode implements IvrActionNode, Data
     public void setPlayOperatorGreeting(Boolean playOperatorGreeting) {
         this.playOperatorGreeting = playOperatorGreeting;
     }
+
+    public String getOperatorPhoneNumbers() {
+        return operatorPhoneNumbers;
+    }
+
+    public void setOperatorPhoneNumbers(String operatorPhoneNumbers) {
+        this.operatorPhoneNumbers = operatorPhoneNumbers;
+    }
 }

@@ -48,9 +48,9 @@ public class CallsQueueOperatorsNode extends BaseNode implements Viewable
     public List<ViewableObject> getViewableObjects(Map<String, NodeAttribute> refreshAttributes) 
             throws Exception
     {
-        String[] attrNames = new String[]{"nodeTitle", ACTIVE_ATTR, TOTAL_REQUESTS_ATTR, HANDLED_REQUESTS_ATTR
-                , ON_BUSY_REQUESTS_ATTR, ON_NOT_STARTED_REQUESTS, ON_NO_FREE_ENDPOINTS_REQUESTS_ATTR
-                , ON_NOT_STARTED_REQUESTS};
+        String[] attrNames = new String[]{"nodeTitle", ACTIVE_ATTR, PROCESSING_REQUEST_COUNT
+                , TOTAL_REQUESTS_ATTR, HANDLED_REQUESTS_ATTR, ON_BUSY_REQUESTS_ATTR, ON_NOT_STARTED_REQUESTS
+                , ON_NO_FREE_ENDPOINTS_REQUESTS_ATTR, ON_NOT_STARTED_REQUESTS};
         return Arrays.asList((ViewableObject)new ChildsAsTableViewableObject(this, attrNames, attrNames));
     }
 

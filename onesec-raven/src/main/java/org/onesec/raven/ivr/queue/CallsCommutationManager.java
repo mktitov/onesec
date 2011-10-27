@@ -35,4 +35,5 @@ public interface CallsCommutationManager {
     public IvrConversationScenario getConversationScenario();
     public CallQueueRequestWrapper getRequest();
     public CallsQueue getQueue();
+    public void incOnNoFreeEndpointsRequests();
 }

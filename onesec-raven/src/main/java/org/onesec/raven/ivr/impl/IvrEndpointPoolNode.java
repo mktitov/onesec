@@ -191,12 +191,13 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
 
     public void requestEndpoint(EndpointRequest request) 
     {
-        if (!Status.STARTED.equals(getStatus()) || stopManagerTask.get())
+        if (!Status.STARTED.equals(getStatus()) || stopManagerTask.get()) {
             request.processRequest(null);
+            return;
+        }
         if (isLogLevelEnabled(LogLevel.DEBUG))
             debug("New request added to the queue from ({})", request.getOwner().getPath());
-        if (!queue.offer(new RequestInfo(request)))
-        {
+        if (!queue.offer(new RequestInfo(request))) {
             if (isLogLevelEnabled(LogLevel.WARN))
                 warn(String.format(
                         "The queue size was exceeded. The request from the (%s) was ignored."

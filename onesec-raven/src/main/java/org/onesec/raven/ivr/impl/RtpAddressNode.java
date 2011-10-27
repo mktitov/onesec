@@ -29,7 +29,7 @@ import org.weda.annotations.constraints.NotNull;
 @NodeClass(parentNode=RtpStreamManagerNode.class)
 public class RtpAddressNode extends BaseNode
 {
-    @NotNull @Parameter
+    @NotNull @Parameter(defaultValue="16384")
     private Integer startingPort;
 
     public Integer getStartingPort()

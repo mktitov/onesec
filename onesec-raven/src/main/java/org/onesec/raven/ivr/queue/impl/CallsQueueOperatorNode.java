@@ -69,7 +69,8 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
 
     @Override
     protected void doRequestProcessed(CallsCommutationManagerImpl manager, boolean callHandled) {
-        commutationManager.compareAndSet(manager, null);
+        if (commutationManager.compareAndSet(manager, null))
+            busy.set(false);
     }
     
     /**
