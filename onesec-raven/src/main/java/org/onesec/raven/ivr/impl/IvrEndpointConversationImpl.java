@@ -17,6 +17,10 @@
 
 package org.onesec.raven.ivr.impl;
 
+import javax.telephony.InvalidStateException;
+import javax.telephony.MethodNotSupportedException;
+import javax.telephony.PrivilegeViolationException;
+import javax.telephony.ResourceUnavailableException;
 import org.onesec.raven.ivr.BufferCache;
 import java.util.Map;
 import com.cisco.jtapi.extensions.CiscoAddress;
@@ -334,78 +338,87 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         }
     }
 
-    public void stopConversation(CompletionCode completionCode)
-    {
+    public void stopIncomingRtpStream() {
         lock.writeLock().lock();
-        try
-        {
+        try {
             if (incomingRtpStream!=null){
                 incomingRtpStream.release();
                 incomingRtpStream=null;
             }
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    public void stopOutgoingRtpStream() {
+        lock.writeLock();
+        try {
+            if (outgoingRtpStream!=null) {
+                outgoingRtpStream.release();
+                outgoingRtpStream = null;
+            }
+        } finally {
+
+        }
+    }
+
+    public void stopConversation(CompletionCode completionCode)
+    {
+        lock.writeLock().lock();
+        try {
+            stopIncomingRtpStream();
             if (state.getId()==INVALID)
                 return;
-            try
-            {
-
+            try {
                 if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                     owner.getLogger().debug(callLog("Stoping the conversation"));
-                outgoingRtpStream.release();
+                stopOutgoingRtpStream();
                 audioStream.close();
-                try
-                {
+                try {
                     actionsExecutor.cancelActionsExecution();
-                }
-                catch (InterruptedException ex)
-                {
+                } catch (InterruptedException ex) {
                     if (owner.isLogLevelEnabled(LogLevel.ERROR))
                         owner.getLogger().error(callLog(
                                 "Error canceling actions executor while stoping conversation"), ex);
                 }
-                try
-                {
-                    if (call.getState()==Call.ACTIVE){
-                        if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                            owner.getLogger().debug(callLog("Droping the call"));
-                        Connection[] connections = call.getConnections();
-                        if (connections!=null && connections.length>0)
-                            for (Connection connection: connections){
-                                if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                                    owner.getLogger().debug(callLog(
-                                            "Disconnecting connection for address (%s)",
-                                            connection.getAddress().getName()));
-                                if ( ((    CiscoAddress)connection.getAddress()).getState()
-                                        == CiscoAddress.IN_SERVICE)
-                                {
-                                    connection.disconnect();
-                                }
-                                else if (owner.getLogger().isDebugEnabled())
-                                    owner.getLogger().debug(callLog(
-                                            "Can't disconnect address not IN_SERVICE"));
-
-                            }
-                    }
-                }
-                catch (Exception ex)
-                {
+                try {
+                    dropCallConnections();
+                } catch (Exception ex) {
                     if (owner.isLogLevelEnabled(LogLevel.ERROR))
                         owner.getLogger().error(callLog(
                                 "Error droping a call while stoping conversation"), ex);
                 }
             }
-            finally
-            {
+            finally {
                 if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                     owner.getLogger().debug(callLog("Conversation stoped (%s)", completionCode));
-                
             }
-        }
-        finally
-        {
+        } finally {
             state.setState(INVALID);
             lock.writeLock().unlock();
         }
         fireEvent(false, completionCode);
+    }
+
+    private void dropCallConnections() throws PrivilegeViolationException, MethodNotSupportedException, ResourceUnavailableException, InvalidStateException {
+        if (call.getState() == Call.ACTIVE) {
+            if (owner.isLogLevelEnabled(LogLevel.DEBUG)) {
+                owner.getLogger().debug(callLog("Droping the call"));
+            }
+            Connection[] connections = call.getConnections();
+            if (connections != null && connections.length > 0) {
+                for (Connection connection : connections) {
+                    if (owner.isLogLevelEnabled(LogLevel.DEBUG)) {
+                        owner.getLogger().debug(callLog("Disconnecting connection for address (%s)", connection.getAddress().getName()));
+                    }
+                    if (((CiscoAddress) connection.getAddress()).getState() == CiscoAddress.IN_SERVICE) {
+                        connection.disconnect();
+                    } else if (owner.getLogger().isDebugEnabled()) {
+                        owner.getLogger().debug(callLog("Can't disconnect address not IN_SERVICE"));
+                    }
+                }
+            }
+        }
     }
 
     public void sendMessage(String message, String encoding, SendMessageDirection direction) {

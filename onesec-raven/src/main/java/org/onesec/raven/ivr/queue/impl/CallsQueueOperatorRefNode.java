@@ -24,6 +24,7 @@ import org.onesec.raven.ivr.queue.CallsQueueOperator;
 import org.onesec.raven.ivr.queue.CallsQueueOperatorRef;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
+import org.raven.log.LogLevel;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
 import org.weda.annotations.constraints.NotNull;
@@ -85,6 +86,15 @@ public class CallsQueueOperatorRefNode extends BaseNode implements CallsQueueOpe
     }
 
     public boolean processRequest(CallsQueue queue, CallQueueRequestWrapper request) {
-        return operator.processRequest(queue, request, conversationScenario, greeting);
+        try {
+            return operator.processRequest(queue, request, conversationScenario, greeting);
+        } catch (Throwable e) {
+            if (isLogLevelEnabled(LogLevel.ERROR))
+                getLogger().error(
+                        String.format("Error occurred while processing request by operator (%s)"
+                            , operator.getPath())
+                        , e);
+            return false;
+        }
     }
 }
