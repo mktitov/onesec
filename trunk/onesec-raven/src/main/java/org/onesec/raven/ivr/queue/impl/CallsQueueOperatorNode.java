@@ -31,7 +31,6 @@ import org.weda.annotations.constraints.NotNull;
  *
  * @author Mikhail Titov
  */
-//TODO: documentation
 @NodeClass(parentNode=CallsQueueOperatorsNode.class)
 public class CallsQueueOperatorNode extends AbstractOperatorNode {
     @NotNull @Parameter
