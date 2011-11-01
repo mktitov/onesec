@@ -45,9 +45,11 @@ import org.raven.annotations.Parameter;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.ExecutorServiceException;
+import org.raven.sched.ManagedTask;
 import org.raven.sched.Schedulable;
 import org.raven.sched.Scheduler;
 import org.raven.sched.Task;
+import org.raven.sched.TaskRestartPolicy;
 import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
 import org.raven.table.TableImpl;
 import org.raven.tree.Node;
@@ -66,7 +68,7 @@ import org.weda.internal.annotations.Message;
  * @author Mikhail Titov
  */
 @NodeClass(childNodes=IvrEndpointNode.class)
-public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Viewable, Task, Schedulable
+public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Viewable, ManagedTask, Schedulable
 {
     public static final int LOADAVERAGE_INTERVAL = 60000;
     @NotNull @Parameter(defaultValue="100")
@@ -187,6 +189,12 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     {
         super.doStop();
         stopManagerTask.set(true);
+        while (!managerThreadStoped.get())
+            TimeUnit.MILLISECONDS.sleep(100);
+    }
+
+    public TaskRestartPolicy getTaskRestartPolicy() {
+        return TaskRestartPolicy.RESTART_NODE;
     }
 
     public void requestEndpoint(EndpointRequest request) 
@@ -509,18 +517,15 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         return vos;
     }
 
-    public Boolean getAutoRefresh()
-    {
+    public Boolean getAutoRefresh() {
         return true;
     }
 
-    public Node getTaskNode()
-    {
+    public Node getTaskNode() {
         return this;
     }
 
-    public String getStatusMessage()
-    {
+    public String getStatusMessage() {
         return statusMessage.get();
     }
 
@@ -573,26 +578,20 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     public void run()
     {
         managerThreadStoped.set(false);
-        try
-        {
+        try {
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 debug("Manager task started");
             try {
                 while (!stopManagerTask.get())
-                {
                     processRequest();
-                }
-            } catch (InterruptedException interruptedException)
-            {
+            } catch (InterruptedException e) {
                 if (isLogLevelEnabled(LogLevel.WARN))
                     warn("Manager task was interrupted");
                 Thread.currentThread().interrupt();
             }
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 debug("Manager task stoped");
-        }
-        finally
-        {
+        } finally {
             clearQueue();
             managerThreadStoped.set(true);
         }

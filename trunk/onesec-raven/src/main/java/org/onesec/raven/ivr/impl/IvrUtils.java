@@ -53,7 +53,8 @@ public class IvrUtils
                 stream.addSource(cacheInfo.getCacheKey(), cacheInfo.getCacheChecksum(), audio);
 //            Thread.sleep(200);
             while (!action.hasCancelRequest() && stream.isPlaying())
-                TimeUnit.MILLISECONDS.sleep(100);
+                TimeUnit.MILLISECONDS.sleep(10);
+            TimeUnit.MILLISECONDS.sleep(20);
         }
     }
 

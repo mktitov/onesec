@@ -23,6 +23,7 @@ import org.onesec.raven.ivr.AudioStream;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.impl.AudioFileInputStreamSource;
 import org.onesec.raven.ivr.impl.AudioFileNode;
+import org.onesec.raven.ivr.impl.IvrUtils;
 import org.raven.log.LogLevel;
 import org.raven.tree.Node;
 
@@ -57,42 +58,31 @@ public abstract class AbstractSayNumberAction extends AsyncAction
             return;
         
         int i=0;
-        AudioFileInputStreamSource[] audioSources = new AudioFileInputStreamSource[words.size()];
-        for (Object word: words)
-        {
-            Node node = null;
+        AudioFileNode[] audioSources = new AudioFileNode[words.size()];
+        for (Object word: words) {
+            AudioFileNode audio = null;
             if (word instanceof AudioFileNode)
-                node = (Node) word;
+                audio = (AudioFileNode) word;
             else if (word instanceof String) {
-                node = numbersNode.getChildren((String)word);
-                if (!(node instanceof AudioFileNode))
-                {
+                Node child = numbersNode.getChildren((String)word);
+                if (!(child instanceof AudioFileNode)) {
                     if (conversation.getOwner().isLogLevelEnabled(LogLevel.ERROR))
                         conversation.getOwner().getLogger().error(logMess(
                                 "Can not say the amount because of not found " +
                                 "the AudioFileNode (%s) node in the (%s) numbers node"
                                 , word, numbersNode.getPath()));
                     return;
-                }
+                } else
+                    audio = (AudioFileNode) child;
             }            
-            audioSources[i] = new AudioFileInputStreamSource((AudioFileNode)node, conversation.getOwner());
-            ++i;
+            audioSources[i++] = audio;
         }
 
-        for (AudioFileInputStreamSource audioSource: audioSources) {
-            if (!playAudio(audioSource, conversation.getAudioStream()))
+        for (AudioFileNode audioFile: audioSources) {
+            IvrUtils.playAudioInAction(this, conversation, audioFile);
+            if (hasCancelRequest())
                 return;
             TimeUnit.MILLISECONDS.sleep(pauseBetweenWords);
         }
-        TimeUnit.MILLISECONDS.sleep(100);
-    }
-
-    protected boolean playAudio(AudioFileInputStreamSource audioSource, AudioStream stream)
-            throws InterruptedException
-    {
-        stream.addSource(audioSource);
-        while (!hasCancelRequest() && stream.isPlaying())
-            TimeUnit.MILLISECONDS.sleep(10);
-        return !hasCancelRequest();
     }
 }

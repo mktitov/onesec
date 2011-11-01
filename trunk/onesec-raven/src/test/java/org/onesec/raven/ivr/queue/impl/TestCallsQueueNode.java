@@ -24,12 +24,11 @@ import org.raven.tree.impl.BaseNode;
  *
  * @author Mikhail Titov
  */
-public class TestCallsQueueNode extends BaseNode implements CallsQueue
-{
+public class TestCallsQueueNode extends BaseNode implements CallsQueue {
+
     CallQueueRequestWrapper lastRequest;
     
-    public void queueCall(CallQueueRequestWrapper request) 
-    {
+    public void queueCall(CallQueueRequestWrapper request) {
         this.lastRequest = request;
     }
 }

@@ -23,6 +23,8 @@ import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviourStep;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
+import org.raven.sched.ExecutorService;
+import org.raven.sched.impl.AbstractTask;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
 import org.weda.annotations.constraints.NotNull;
@@ -35,16 +37,27 @@ import org.weda.annotations.constraints.NotNull;
 public class MoveToQueueOnBusyBehaviourStepNode extends BaseNode implements CallsQueueOnBusyBehaviourStep
 {
     @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
-    private CallsQueueNode callsQueue;
+    private CallsQueue callsQueue;
 
     @NotNull @Parameter(defaultValue="false")
     private Boolean resetOnBusyBehaviour;
 
-    public CallsQueueNode getCallsQueue() {
+    @NotNull @Parameter
+    private ExecutorService executor;
+
+    public ExecutorService getExecutor() {
+        return executor;
+    }
+
+    public void setExecutor(ExecutorService executor) {
+        this.executor = executor;
+    }
+
+    public CallsQueue getCallsQueue() {
         return callsQueue;
     }
 
-    public void setCallsQueue(CallsQueueNode callsQueue) {
+    public void setCallsQueue(CallsQueue callsQueue) {
         this.callsQueue = callsQueue;
     }
 
@@ -56,11 +69,16 @@ public class MoveToQueueOnBusyBehaviourStepNode extends BaseNode implements Call
         this.resetOnBusyBehaviour = resetOnBusyBehaviour;
     }
 
-    public BehaviourResult handleBehaviour(CallsQueue queue, CallQueueRequestWrapper request)
+    public BehaviourResult handleBehaviour(final CallsQueue queue, final CallQueueRequestWrapper request)
     {
-        this.callsQueue.queueCall(request);
         if (resetOnBusyBehaviour)
             request.setOnBusyBehaviour(null);
+        final CallsQueue _callsQueue = callsQueue;
+        executor.executeQuietly(new AbstractTask(this, request.logMess("Moving to the queue (%s)", _callsQueue.getName())) {
+            @Override public void doRun() throws Exception {
+                _callsQueue.queueCall(request);
+            }
+        });
         return new BehaviourResultImpl(false, BehaviourResult.StepPolicy.GOTO_NEXT_STEP);
     }
 }

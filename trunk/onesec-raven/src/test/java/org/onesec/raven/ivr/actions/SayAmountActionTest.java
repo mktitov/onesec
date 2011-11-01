@@ -63,7 +63,7 @@ public class SayAmountActionTest extends OnesecRavenTestCase
     @Test(timeout=15000)
     public void test() throws IvrActionException, InterruptedException
     {
-        SayAmountAction action = new SayAmountAction(numbers, 1., 100);
+        SayAmountAction action = new SayAmountAction(numbers, 11239.42, 0);
         action.execute(conv);
         Thread.sleep(10000);
     }
