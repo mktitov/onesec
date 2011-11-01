@@ -166,7 +166,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         verify(req, req2);
     }
 
-//    @Test(timeout=20000)
+    @Test(timeout=20000)
     public void watchdogTest() throws Exception
     {
         EndpointRequest req = createMock(EndpointRequest.class);
@@ -273,7 +273,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         verify(req1, req2);
     }
 
-    @Test
+//    @Test
     public void addressRangesTest() throws Exception
     {
         pool.stop();

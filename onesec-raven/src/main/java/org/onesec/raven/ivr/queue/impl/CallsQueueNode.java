@@ -34,7 +34,8 @@ import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
-import org.raven.sched.Task;
+import org.raven.sched.ManagedTask;
+import org.raven.sched.TaskRestartPolicy;
 import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
 import org.raven.tree.Node;
 import org.raven.tree.impl.BaseNode;
@@ -46,7 +47,7 @@ import org.weda.annotations.constraints.NotNull;
  * @author Mikhail Titov
  */
 @NodeClass(parentNode=CallsQueuesContainerNode.class)
-public class CallsQueueNode extends BaseNode implements CallsQueue, Task
+public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask
 {
     @NotNull @Parameter(defaultValue="10")
     private Integer maxQueueSize;
@@ -89,6 +90,12 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
     protected void doStop() throws Exception {
         super.doStop();
         stopProcessing.set(true);
+        while(processingThreadRunning.get())
+            TimeUnit.MILLISECONDS.sleep(100);
+    }
+
+    public TaskRestartPolicy getTaskRestartPolicy() {
+        return TaskRestartPolicy.RESTART_NODE;
     }
     
     public void queueCall(CallQueueRequestWrapper request) 
@@ -159,10 +166,12 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 debug("Manager task started");
             try {
-                while (!stopProcessing.get())
+                while (!stopProcessing.get()) {
+                    statusMessage.set("Waiting for request...");
                     processRequest();
-            } catch (InterruptedException e)
-            {
+                    TimeUnit.MILLISECONDS.sleep(100);
+                }
+            } catch (InterruptedException e) {
                 if (isLogLevelEnabled(LogLevel.WARN))
                     warn("Manager task was interrupted");
                 Thread.currentThread().interrupt();
@@ -175,15 +184,15 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Task
         }
     }
     
-    void processRequest() throws InterruptedException
-    {
+    void processRequest() throws InterruptedException {
         if (lock.writeLock().tryLock(100, TimeUnit.MILLISECONDS)) 
             try {
                 requestAddedCondition.await(1, TimeUnit.SECONDS);
                 boolean leaveInQueue = false;
                 try {
                     CallQueueRequestWrapper request = queue.peek();
-                    if (request!=null){
+                    if (request!=null && request.isValid()){
+                        statusMessage.set(request.logMess("Processing request..."));
                         if (isLogLevelEnabled(LogLevel.DEBUG))
                             getLogger().debug(logMess(request, "Processing request"));
                         CallsQueuePrioritySelector selector = searchForPrioritySelector(request);
