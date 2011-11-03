@@ -349,7 +349,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
                 }
             } catch (Exception e) {
                 if (owner.isLogLevelEnabled(LogLevel.ERROR))
-                    owner.getLogger().error(logMess("Error stopping source processor"));
+                    owner.getLogger().error(logMess("Error stopping source processor"), e);
             }
         }
 

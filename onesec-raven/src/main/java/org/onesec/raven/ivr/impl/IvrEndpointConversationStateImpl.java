@@ -33,9 +33,10 @@ public class IvrEndpointConversationStateImpl
     {
         super(observableObject);
 
+        addIdName(INVALID, "INVALID");
         addIdName(READY, "READY");
+        addIdName(CONNECTING, "CONNECTING");
         addIdName(TALKING, "TALKING");
         addIdName(TRANSFERING, "TRANSFERING");
-        addIdName(INVALID, "INVALID");
     }
 }
