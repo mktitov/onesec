@@ -312,13 +312,13 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
                 outDataSource = processor.getDataOutput();
                 processor.start();
 
-                listener.dataSourceCreated(outDataSource);
+                listener.dataSourceCreated(IncomingRtpStreamImpl.this, outDataSource);
 
             }catch(Exception e){
                 if (owner.isLogLevelEnabled(LogLevel.ERROR))
                     owner.getLogger().error(logMess(
                             "Error creating data source for consumer"), e);
-                listener.dataSourceCreated(null);
+                listener.dataSourceCreated(IncomingRtpStreamImpl.this, null);
             }
         }
 
@@ -329,7 +329,7 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
                     try{
                         try{
                             try{
-                                listener.streamClosing();
+                                listener.streamClosing(IncomingRtpStreamImpl.this);
                             }finally{
                                 inDataSource.stop();
                             }

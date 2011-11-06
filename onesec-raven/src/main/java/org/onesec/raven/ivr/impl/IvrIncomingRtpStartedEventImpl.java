@@ -15,17 +15,27 @@
  *  under the License.
  */
 
-package org.onesec.raven.ivr;
+package org.onesec.raven.ivr.impl;
+
+import org.onesec.raven.ivr.IncomingRtpStream;
+import org.onesec.raven.ivr.IvrEndpointConversation;
+import org.onesec.raven.ivr.IvrIncomingRtpStartedEvent;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class IvrEndpointConversationRtpStateException extends IvrEndpointConversationException {
+public class IvrIncomingRtpStartedEventImpl extends IvrEndpointConversationEventImpl 
+        implements IvrIncomingRtpStartedEvent
+{
+    private final IncomingRtpStream inRtp;
 
-    public IvrEndpointConversationRtpStateException(String mess, String expectedStates, String currentState)
-    {
-        super(String.format("%s. Invalid RTP stream STATE. Expected one of (%s) but was (%s)"
-                , mess, expectedStates, currentState));
+    public IvrIncomingRtpStartedEventImpl(IvrEndpointConversation conversation) {
+        super(conversation);
+        this.inRtp = conversation.getIncomingRtpStream();
+    }
+
+    public IncomingRtpStream getIncomingRtpStream() {
+        return inRtp;
     }
 }

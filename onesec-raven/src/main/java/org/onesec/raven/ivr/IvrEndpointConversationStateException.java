@@ -26,6 +26,6 @@ public class IvrEndpointConversationStateException extends IvrEndpointConversati
     public IvrEndpointConversationStateException(String mess, String expectedStates, String currentState)
     {
         super(String.format("%s. Invalid conversation STATE. Expected one of (%s) but was (%s)"
-                , expectedStates, currentState));
+                , mess, expectedStates, currentState));
     }
 }
