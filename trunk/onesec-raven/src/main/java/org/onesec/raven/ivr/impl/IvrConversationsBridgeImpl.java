@@ -20,7 +20,10 @@ package org.onesec.raven.ivr.impl;
 import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.media.protocol.DataSource;
+import org.onesec.raven.ivr.IncomingRtpStream;
 import org.onesec.raven.ivr.IncomingRtpStreamDataSourceListener;
 import org.onesec.raven.ivr.IvrConversationsBridge;
 import org.onesec.raven.ivr.IvrConversationsBridgeListener;
@@ -31,6 +34,7 @@ import org.onesec.raven.ivr.IvrEndpointConversationListener;
 import org.onesec.raven.ivr.IvrEndpointConversationState;
 import org.onesec.raven.ivr.IvrEndpointConversationStoppedEvent;
 import org.onesec.raven.ivr.IvrEndpointConversationTransferedEvent;
+import org.onesec.raven.ivr.IvrIncomingRtpStartedEvent;
 import org.onesec.raven.ivr.RtpStreamException;
 import org.raven.log.LogLevel;
 import org.raven.tree.Node;
@@ -41,6 +45,8 @@ import org.raven.tree.Node;
  */
 public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Comparable<IvrConversationsBridgeImpl>
 {
+    public enum ConnectionState {INITIALIZING, ACTIVE, INVALID}
+
     private final IvrEndpointConversation conv1;
     private final IvrEndpointConversation conv2;
     private final Node owner;
@@ -178,6 +184,10 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
         return conv==conv1? conv.getCallingNumber() : conv.getCalledNumber();
     }
 
+    private void checkBridgeState() {
+        
+    }
+
     private String logMess(String message, Object... args)
     {
         return (logPrefix==null?"":logPrefix)+"Bridge. "
@@ -220,5 +230,75 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
         }
 
         public void conversationTransfered(IvrEndpointConversationTransferedEvent event) { }
+    }
+
+    private class BridgeConnection 
+            implements IvrEndpointConversationListener, IncomingRtpStreamDataSourceListener
+    {
+        private final IvrEndpointConversation conv1;
+        private final IvrEndpointConversation conv2;
+        private IncomingRtpStream inRtp;
+        private ConnectionState state = ConnectionState.INITIALIZING;
+
+        public BridgeConnection(IvrEndpointConversation conv1, IvrEndpointConversation conv2) {
+            this.conv1 = conv1;
+            this.conv2 = conv2;
+            conv1.addConversationListener(this);
+        }
+
+        public void listenerAdded(IvrEndpointConversationEvent ev) {
+            int convState = ev.getConversation().getState().getId();
+            if (convState==IvrEndpointConversationState.INVALID) {
+                state = ConnectionState.INVALID;
+                checkBridgeState();
+            } else {
+                inRtp = ev.getConversation().getIncomingRtpStream();
+                addListenerToRtpStream();
+            }
+        }
+
+        public void conversationStarted(IvrEndpointConversationEvent event) {
+        }
+
+        public void conversationStopped(IvrEndpointConversationStoppedEvent event) {
+            state = ConnectionState.INVALID;
+            checkBridgeState();
+        }
+
+        public void conversationTransfered(IvrEndpointConversationTransferedEvent event) {
+        }
+
+        public void incomingRtpStarted(IvrIncomingRtpStartedEvent event) {
+            if (event.getIncomingRtpStream()!=inRtp) {
+                inRtp = event.getIncomingRtpStream();
+                addListenerToRtpStream();
+            }
+        }
+
+        public void dataSourceCreated(IncomingRtpStream stream, DataSource dataSource) {
+            if (stream==inRtp && state!=ConnectionState.INVALID) {
+                conv2.getAudioStream().addSource(dataSource);
+                state = ConnectionState.ACTIVE;
+                checkBridgeState();
+            }
+        }
+
+        public void streamClosing(IncomingRtpStream stream) {
+            if (state != ConnectionState.INVALID) {
+                state = ConnectionState.INITIALIZING;
+                inRtp = null;
+                checkBridgeState();
+            }
+        }
+
+        private void addListenerToRtpStream() {
+            try {
+                inRtp.addDataSourceListener(this, null);
+            } catch (RtpStreamException ex) {
+                //TODO: add log
+                state = ConnectionState.INVALID;
+                checkBridgeState();
+            }
+        }
     }
 }

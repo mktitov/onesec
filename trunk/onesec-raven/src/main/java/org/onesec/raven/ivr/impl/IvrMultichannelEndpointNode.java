@@ -576,7 +576,7 @@ public class IvrMultichannelEndpointNode extends BaseNode
                     executorService.execute(new AbstractTask(this, "Starting conversation") {
                         @Override
                         public void doRun() throws Exception {
-                            _conversation.startConversation();
+//                            _conversation.startConversation();
                         }
                     });
                 }
@@ -744,13 +744,13 @@ public class IvrMultichannelEndpointNode extends BaseNode
                     final Codec _streamCodec = streamCodec;
                     executorService.execute(new AbstractTask(this, "Initializing conversation") {
                         public void doRun() throws Exception {
-                            _conversation.init(
-                                    event.getCallID().getCall()
-                                    , props.getRemoteAddress().getHostAddress(), props.getRemotePort()
-                                    , _psize, rtpInitialBuffer, rtpMaxSendAheadPacketsCount, _streamCodec);
-                            if (isLogLevelEnabled(LogLevel.DEBUG))
-                                debug(callLog(event.getCallID().getCall(), "Conversation initialized"));
-                            _conversation.startConversation();
+//                            _conversation.init(
+//                                    event.getCallID().getCall()
+//                                    , props.getRemoteAddress().getHostAddress(), props.getRemotePort()
+//                                    , _psize, rtpInitialBuffer, rtpMaxSendAheadPacketsCount, _streamCodec);
+//                            if (isLogLevelEnabled(LogLevel.DEBUG))
+//                                debug(callLog(event.getCallID().getCall(), "Conversation initialized"));
+//                            _conversation.startConversation();
                         }
                     });
                 }

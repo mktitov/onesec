@@ -21,8 +21,11 @@ import com.cisco.jtapi.extensions.CiscoAddrInServiceEv;
 import com.cisco.jtapi.extensions.CiscoAddrOutOfServiceEv;
 import com.cisco.jtapi.extensions.CiscoMediaOpenLogicalChannelEv;
 import com.cisco.jtapi.extensions.CiscoMediaTerminal;
+import com.cisco.jtapi.extensions.CiscoRTPInputStartedEv;
+import com.cisco.jtapi.extensions.CiscoRTPInputStoppedEv;
 import com.cisco.jtapi.extensions.CiscoRTPOutputProperties;
 import com.cisco.jtapi.extensions.CiscoRTPOutputStartedEv;
+import com.cisco.jtapi.extensions.CiscoRTPOutputStoppedEv;
 import com.cisco.jtapi.extensions.CiscoRTPParams;
 import com.cisco.jtapi.extensions.CiscoTermInServiceEv;
 import com.cisco.jtapi.extensions.CiscoTermOutOfServiceEv;
@@ -41,14 +44,15 @@ import javax.telephony.AddressObserver;
 import javax.telephony.Call;
 import javax.telephony.Provider;
 import javax.telephony.Terminal;
+import javax.telephony.callcontrol.CallControlCall;
 import javax.telephony.callcontrol.CallControlCallObserver;
 import javax.telephony.callcontrol.CallControlConnection;
-import javax.telephony.callcontrol.events.CallCtlConnEstablishedEv;
 import javax.telephony.callcontrol.events.CallCtlConnFailedEv;
 import javax.telephony.callcontrol.events.CallCtlConnOfferedEv;
 import javax.telephony.callcontrol.events.CallCtlTermConnDroppedEv;
 import javax.telephony.events.AddrEv;
 import javax.telephony.events.AddrObservationEndedEv;
+import javax.telephony.events.CallActiveEv;
 import javax.telephony.events.CallEv;
 import javax.telephony.events.CallObservationEndedEv;
 import javax.telephony.events.TermConnDroppedEv;
@@ -66,11 +70,11 @@ import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.CompletionCode;
 import org.onesec.raven.ivr.ConversationCompletionCallback;
 import org.onesec.raven.ivr.ConversationResult;
+import org.onesec.raven.ivr.IncomingRtpStream;
 import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.IvrEndpoint;
 import org.onesec.raven.ivr.IvrEndpointConversationEvent;
 import org.onesec.raven.ivr.IvrEndpointConversationListener;
-import org.onesec.raven.ivr.IvrEndpointConversationState;
 import org.onesec.raven.ivr.IvrEndpointConversationStoppedEvent;
 import org.onesec.raven.ivr.IvrEndpointConversationTransferedEvent;
 import org.onesec.raven.ivr.IvrEndpointException;
@@ -448,20 +452,21 @@ public class IvrEndpointNode extends BaseNode
         if (isLogLevelEnabled(LogLevel.DEBUG))
             debug("Recieved terminal events: "+eventsToString(events));
         for (TermEv event: events)
-        {
-            switch (event.getID())
-            {
+            switch (event.getID()) {
                 case CiscoTermInServiceEv.ID: terminalInService = true; checkStatus(); break;
                 case CiscoTermOutOfServiceEv.ID: terminalInService = false; checkStatus(); break;
                 case CiscoMediaOpenLogicalChannelEv.ID:
-                    openLogicalChannel((CiscoMediaOpenLogicalChannelEv)event);
+                    initIncomingRtp((CiscoMediaOpenLogicalChannelEv)event);
+//                    openLogicalChannel((CiscoMediaOpenLogicalChannelEv)event);
                     break;
                 case CiscoRTPOutputStartedEv.ID: 
-                    initConversation((CiscoRTPOutputStartedEv) event); break;
-//                case CiscoRTPOutputStoppedEv.ID: closeRtpSession(); break;
+                    initAndStartOutgoingRtp((CiscoRTPOutputStartedEv) event); break;
+//                    initConversation((CiscoRTPOutputStartedEv) event); break;
+                case CiscoRTPInputStartedEv.ID: startIncomingRtp(); break;
+                case CiscoRTPOutputStoppedEv.ID: stopOutgoingRtp(); break;
+                case CiscoRTPInputStoppedEv.ID: stopIncomingRtp(); break;
                 case TermObservationEndedEv.ID: observingTerminal.set(false); break;
             }
-        }
     }
 
     public void addressChangedEvent(AddrEv[] events) {
@@ -488,9 +493,10 @@ public class IvrEndpointNode extends BaseNode
         {
             switch (event.getID())
             {
+                case CallActiveEv.ID: createConversation(((CallActiveEv)event).getCall()); break;
                 case CallCtlConnOfferedEv.ID: acceptIncomingCall((CallCtlConnOfferedEv) event); break;
                 case TermConnRingingEv.ID: answerOnIncomingCall((TermConnRingingEv)event); break;
-                case CallCtlConnEstablishedEv.ID: startConversation(); break;
+//                case CallCtlConnEstablishedEv.ID: startConversation(); break;
                 case TermConnDroppedEv.ID: stopConversation(CompletionCode.COMPLETED_BY_OPPONENT); break;
                 case MediaTermConnDtmfEv.ID:
                     continueConversation(((MediaTermConnDtmfEv)event).getDtmfDigit());
@@ -635,16 +641,80 @@ public class IvrEndpointNode extends BaseNode
         this.enableIncomingRtp = enableIncomingRtp;
     }
 
-    private void startConversation() {
+    //TODO: use conversation event listener to change endpoint status to TALKING
+//    private void startConversation() {
+//        lock.lock();
+//        try {
+//            if (conversation!=null) {
+//                conversation.startConversation();
+//                if (conversation.getState().getId()==IvrEndpointConversationState.TALKING)
+//                    endpointState.setState(IvrEndpointState.TALKING);
+//            }
+//        } finally {
+//            lock.unlock();
+//        }
+//    }
+
+    private void createConversation(Call call) {
         lock.lock();
         try {
-            if (conversation!=null) {
-                conversation.startConversation();
-                if (conversation.getState().getId()==IvrEndpointConversationState.TALKING)
-                    endpointState.setState(IvrEndpointState.TALKING);
+            if (conversationCall!=null) {
+                if (isLogLevelEnabled(LogLevel.WARN)) 
+                    getLogger().warn("Can't create conversation, because of "
+                            + "of already handling a call (id:{})", conversationCall);
+                return;
+            }
+            IvrConversationScenarioNode scenario = conversationScenario;
+            if (!handlingOutgoingCall && scenario==null) {
+                if (isLogLevelEnabled(LogLevel.WARN))
+                    getLogger().warn(
+                        "Can not open logical channel for incoming call because of "
+                        + "does not have conversation scenario");
+                return;
+            }
+            try {
+                if (!handlingOutgoingCall) {
+                    conversation = new IvrEndpointConversationImpl(
+                                    this, executor, conversationScenario
+                                    , rtpStreamManager, enableIncomingRtp, null);
+                    conversation.addConversationListener(this);
+                } else if (conversation==null) {
+                    if (isLogLevelEnabled(LogLevel.DEBUG))
+                        getLogger().debug("Can't open logical channel for outgoing call "
+                                + "because of conversation already stopped");
+                    conversationCall = null;
+                    return;
+                }
+                conversation.setCall((CallControlCall)call);
+                conversationCall = call;
+            } catch (Exception e){
+                if (isLogLevelEnabled(LogLevel.ERROR))
+                    error("Error creating conversation", e);
             }
         } finally {
             lock.unlock();
+        }
+    }
+
+    private void initIncomingRtp(CiscoMediaOpenLogicalChannelEv event) {
+        lock.lock();
+        try {
+            if (conversationCall==null) {
+                if (isLogLevelEnabled(LogLevel.WARN))
+                    getLogger().warn("Can't init incoming RTP because of no active conversation call");
+                return;
+            }
+            try {
+                IncomingRtpStream rtp = conversation.initIncomingRtp();
+                CiscoRTPParams params = new CiscoRTPParams(rtp.getAddress(), rtp.getPort());
+                terminal.setRTPParams(event.getCiscoRTPHandle(), params);
+            } catch (Exception e) {
+                if (isLogLevelEnabled(LogLevel.ERROR))
+                    getLogger().error("Error initializing incoming RTP stream", e);
+                conversation.stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
+            }
+        } finally {
+            
         }
     }
 
@@ -707,46 +777,114 @@ public class IvrEndpointNode extends BaseNode
         }
     }
 
-    private void initConversation(CiscoRTPOutputStartedEv ev) {
+    private void stopIncomingRtp() {
         lock.lock();
         try {
+            if (conversation!=null)
+                conversation.stopIncomingRtp();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    private void stopOutgoingRtp() {
+        lock.lock();
+        try {
+            if (conversation!=null)
+                conversation.stopOutgoingRtp();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    private void startIncomingRtp() {
+        lock.lock();
+        try {
+            if (conversation==null)
+                return;
             try {
-                if (conversation!=null) {
-                    if (conversationCall!=null)
-                        getLogger().debug(String.format("%s == %s is %s", conversationCall, ev.getCallID().getCall(), conversationCall==ev.getCallID().getCall()));
-                    else
-                        conversationCall=ev.getCallID().getCall();
-                    if (IvrEndpointConversationState.INVALID==conversation.getState().getId()) {
-                        CiscoRTPOutputProperties props = ev.getRTPOutputProperties();
-                        Integer psize = rtpPacketSize;
-                        if (psize==null)
-                            psize = props.getPacketSize()*8;
-                        Codec streamCodec = Codec.getCodecByCiscoPayload(props.getPayloadType());
-                        if (streamCodec==null)
-                            throw new Exception(String.format(
-                                    "Not supported payload type (%s)", props.getPayloadType()));
-                        if (isLogLevelEnabled(LogLevel.DEBUG))
-                            debug(String.format(
-                                "Choosed RTP params: packetSize (%s), codec (%s), audioFormat (%s)"
-                                , psize, streamCodec, streamCodec.getAudioFormat()));
-                        conversation.init(
-                                ev.getCallID().getCall()
-                                , props.getRemoteAddress().getHostAddress(), props.getRemotePort()
-                                , psize, rtpInitialBuffer, rtpMaxSendAheadPacketsCount
-                                , streamCodec);
-                        if (isLogLevelEnabled(LogLevel.DEBUG))
-                            debug("Conversation initialized");
-                    }
-                    startConversation();
-                }
-            } catch (Exception e) {
+                conversation.startIncomingRtp();
+            } catch (Throwable e) {
                 if (isLogLevelEnabled(LogLevel.ERROR))
-                    error("Error initializing/start conversation", e);
+                    error("Error creating conversation", e);
+                conversation.stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
             }
         } finally {
             lock.unlock();
         }
     }
+
+    private void initAndStartOutgoingRtp(CiscoRTPOutputStartedEv ev) {
+        lock.lock();
+        try {
+            if (conversation==null)
+                return;
+            try {
+                CiscoRTPOutputProperties props = ev.getRTPOutputProperties();
+                Integer psize = rtpPacketSize;
+                if (psize==null)
+                    psize = props.getPacketSize()*8;
+                Codec streamCodec = Codec.getCodecByCiscoPayload(props.getPayloadType());
+                if (streamCodec==null)
+                    throw new Exception(String.format(
+                            "Not supported payload type (%s)", props.getPayloadType()));
+                if (isLogLevelEnabled(LogLevel.DEBUG))
+                    debug(String.format(
+                        "Choosed RTP params: packetSize (%s), codec (%s), audioFormat (%s)"
+                        , psize, streamCodec, streamCodec.getAudioFormat()));
+                conversation.initOutgoingRtp(props.getRemoteAddress().getHostAddress(), props.getRemotePort()
+                        , psize, rtpMaxSendAheadPacketsCount, streamCodec);
+                conversation.startOutgoingRtp();
+            } catch (Throwable e) {
+                if (isLogLevelEnabled(LogLevel.ERROR))
+                    getLogger().error("Error initializing and starting outgoing RTP stream", e);
+                conversation.stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
+//    private void initConversation(CiscoRTPOutputStartedEv ev) {
+//        lock.lock();
+//        try {
+//            try {
+//                if (conversation!=null) {
+//                    if (conversationCall!=null)
+//                        getLogger().debug(String.format("%s == %s is %s", conversationCall, ev.getCallID().getCall(), conversationCall==ev.getCallID().getCall()));
+//                    else
+//                        conversationCall=ev.getCallID().getCall();
+//                    if (IvrEndpointConversationState.INVALID==conversation.getState().getId()) {
+//                        CiscoRTPOutputProperties props = ev.getRTPOutputProperties();
+//                        Integer psize = rtpPacketSize;
+//                        if (psize==null)
+//                            psize = props.getPacketSize()*8;
+//                        Codec streamCodec = Codec.getCodecByCiscoPayload(props.getPayloadType());
+//                        if (streamCodec==null)
+//                            throw new Exception(String.format(
+//                                    "Not supported payload type (%s)", props.getPayloadType()));
+//                        if (isLogLevelEnabled(LogLevel.DEBUG))
+//                            debug(String.format(
+//                                "Choosed RTP params: packetSize (%s), codec (%s), audioFormat (%s)"
+//                                , psize, streamCodec, streamCodec.getAudioFormat()));
+//                        conversation.init(
+//                                ev.getCallID().getCall()
+//                                , props.getRemoteAddress().getHostAddress(), props.getRemotePort()
+//                                , psize, rtpInitialBuffer, rtpMaxSendAheadPacketsCount
+//                                , streamCodec);
+//                        if (isLogLevelEnabled(LogLevel.DEBUG))
+//                            debug("Conversation initialized");
+//                    }
+////                    startConversation();
+//                }
+//            } catch (Exception e) {
+//                if (isLogLevelEnabled(LogLevel.ERROR))
+//                    error("Error initializing/start conversation", e);
+//            }
+//        } finally {
+//            lock.unlock();
+//        }
+//    }
 
     public String getObjectName() {
         return getPath();

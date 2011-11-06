@@ -31,11 +31,11 @@ public interface IncomingRtpStreamDataSourceListener
      * @param dataSource unique data source for this listener.
      * @see IncomingRtpStream
      */
-    public void dataSourceCreated(DataSource dataSource);
+    public void dataSourceCreated(IncomingRtpStream stream, DataSource dataSource);
     /**
      * Fires when the incoming rtp stream closing.
      * @param dataSource
      * @see IncomingRtpStream
      */
-    public void streamClosing();
+    public void streamClosing(IncomingRtpStream stream);
 }
