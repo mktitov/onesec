@@ -18,6 +18,7 @@
 package org.onesec.raven.ivr.queue.impl;
 
 import org.onesec.raven.ivr.AudioFile;
+import org.onesec.raven.ivr.IvrIncomingRtpStartedEvent;
 import org.onesec.raven.ivr.queue.CallQueueRequestListener;
 import org.raven.ds.DataContext;
 import org.onesec.raven.ivr.queue.CallsQueue;
@@ -395,9 +396,10 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
             if (conversation.getState().getId()==IvrEndpointConversationState.INVALID)
                 invalidate();
         }
+
+        public void incomingRtpStarted(IvrIncomingRtpStartedEvent event) { }
         
-        public void conversationStarted(IvrEndpointConversationEvent event) {
-        }
+        public void conversationStarted(IvrEndpointConversationEvent event) { }
 
         public void conversationStopped(IvrEndpointConversationStoppedEvent event) {
             invalidate();

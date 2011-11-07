@@ -55,9 +55,12 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
     private AtomicLong activatingTimestamp;
     private AtomicLong activatedTimestamp;
     private LinkedList<IvrConversationsBridgeListener> listeners;
-    private Listener listener1;
-    private Listener listener2;
-    private int dataSourceCounter;
+//    private Listener listener1;
+//    private Listener listener2;
+    private BridgeConnection conn1;
+    private BridgeConnection conn2;
+    private boolean activated = false;
+//    private int dataSourceCounter;
     private AtomicReference<IvrConversationsBridgeStatus> status;
 
     public IvrConversationsBridgeImpl(
@@ -71,7 +74,7 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
         activatingTimestamp = new AtomicLong();
         activatedTimestamp = new AtomicLong();
         listeners = new LinkedList<IvrConversationsBridgeListener>();
-        dataSourceCounter = 0;
+//        dataSourceCounter = 0;
         status = new AtomicReference<IvrConversationsBridgeStatus>(IvrConversationsBridgeStatus.CREATED);
     }
 
@@ -128,8 +131,10 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
             owner.getLogger().debug(logMess("Activating bridge"));
         activatingTimestamp.set(System.currentTimeMillis());
         status.set(IvrConversationsBridgeStatus.ACTIVATING);
-        listener1 = new Listener(conv1);
-        listener2 = new Listener(conv2);
+        conn1 = new BridgeConnection(conv1, conv2);
+        conn2 = new BridgeConnection(conv2, conv1);
+//        listener1 = new Listener(conv1);
+//        listener2 = new Listener(conv2);
     }
 
     public void deactivateBridge() {
@@ -141,51 +146,67 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
         listeners.add(listener);
     }
 
-    private void fireBridgeActivatedEvent()
-    {
+    private void fireBridgeActivatedEvent() {
         for (IvrConversationsBridgeListener listener: listeners)
-            listener.bridgeActivated(this);
+            if (!activated)
+                listener.bridgeActivated(this);
+            else
+                listener.bridgeReactivated(this);
     }
 
-    private void fireBridgeDeactivatedEvent()
-    {
+    private void fireBridgeDeactivatedEvent() {
         for (IvrConversationsBridgeListener listener: listeners)
             listener.bridgeDeactivated(this);
     }
     
-    private synchronized void convStopped(IvrEndpointConversation conv)
-    {
-        status.set(IvrConversationsBridgeStatus.DEACTIVATED);
-        if (owner.isLogLevelEnabled(LogLevel.INFO))
-            owner.getLogger().info(logMess("Bridge successfully deactivated"));
-        fireBridgeDeactivatedEvent();
-    }
+//    private synchronized void convStopped(IvrEndpointConversation conv)
+//    {
+//        status.set(IvrConversationsBridgeStatus.DEACTIVATED);
+//        if (owner.isLogLevelEnabled(LogLevel.INFO))
+//            owner.getLogger().info(logMess("Bridge successfully deactivated"));
+//        fireBridgeDeactivatedEvent();
+//    }
 
-    private synchronized void dsCreated(IvrEndpointConversation conv, DataSource dataSource)
-    {
-        IvrEndpointConversation targetConv = conv==conv1? conv2 : conv1;
-        targetConv.getAudioStream().addSource(dataSource);
-        dataSourceCounter++;
-        if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-            owner.getLogger().debug(logMess(
-                    "Incoming RTP stream from %s routed to the outgoing RTP of the %s"
-                    , getNumber(conv), getNumber(targetConv)));
-        if (dataSourceCounter==2){
-            status.set(IvrConversationsBridgeStatus.ACTIVATED);
-            activatedTimestamp.set(System.currentTimeMillis());
-            fireBridgeActivatedEvent();
-            if (owner.isLogLevelEnabled(LogLevel.INFO))
-                owner.getLogger().info(logMess("Bridge successfully activated"));
-        }
-    }
+//    private synchronized void dsCreated(IvrEndpointConversation conv, DataSource dataSource)
+//    {
+//        IvrEndpointConversation targetConv = conv==conv1? conv2 : conv1;
+//        targetConv.getAudioStream().addSource(dataSource);
+//        dataSourceCounter++;
+//        if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+//            owner.getLogger().debug(logMess(
+//                    "Incoming RTP stream from %s routed to the outgoing RTP of the %s"
+//                    , getNumber(conv), getNumber(targetConv)));
+//        if (dataSourceCounter==2){
+//            status.set(IvrConversationsBridgeStatus.ACTIVATED);
+//            activatedTimestamp.set(System.currentTimeMillis());
+//            fireBridgeActivatedEvent();
+//            if (owner.isLogLevelEnabled(LogLevel.INFO))
+//                owner.getLogger().info(logMess("Bridge successfully activated"));
+//        }
+//    }
 
-    private String getNumber(IvrEndpointConversation conv)
-    {
+    private String getNumber(IvrEndpointConversation conv) {
         return conv==conv1? conv.getCallingNumber() : conv.getCalledNumber();
     }
 
-    private void checkBridgeState() {
-        
+    private synchronized void checkBridgeState() {
+        if (status.get()==IvrConversationsBridgeStatus.DEACTIVATED)
+            return;
+        if (conn1.state==ConnectionState.INVALID || conn2.state==ConnectionState.INVALID) {
+            status.set(IvrConversationsBridgeStatus.DEACTIVATED);
+            fireBridgeDeactivatedEvent();
+            if (owner.isLogLevelEnabled(LogLevel.INFO))
+                owner.getLogger().info(logMess("Bridge deactivated"));
+        } else if (conn1.state==ConnectionState.ACTIVE && conn2.state==ConnectionState.ACTIVE) {
+            status.set(IvrConversationsBridgeStatus.ACTIVATED);
+            activatedTimestamp.set(System.currentTimeMillis());
+            fireBridgeActivatedEvent();
+            activated = true;
+            if (owner.isLogLevelEnabled(LogLevel.INFO))
+                owner.getLogger().info(logMess("Bridge successfully activated"));
+        } else {
+            status.set(IvrConversationsBridgeStatus.ACTIVATING);
+        }
     }
 
     private String logMess(String message, Object... args)
@@ -194,45 +215,7 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
                 +conv1.getCallingNumber()+" >-< "+conv2.getCalledNumber()+" : "
                 +String.format(message, args);
     }
-
-    private class Listener implements IncomingRtpStreamDataSourceListener, IvrEndpointConversationListener
-    {
-        private final IvrEndpointConversation conv;
-
-        public Listener(IvrEndpointConversation conv)
-        {
-            this.conv = conv;
-            conv.addConversationListener(this);
-            try {
-                conv.getIncomingRtpStream().addDataSourceListener(this, null);
-            } catch (Throwable ex) {
-                convStopped(conv);
-            }
-        }
-
-        public void dataSourceCreated(DataSource dataSource) {
-            dsCreated(conv, dataSource);
-        }
-
-        public void streamClosing() {
-            convStopped(conv);
-        }
-
-        public void listenerAdded(IvrEndpointConversationEvent event) {
-            if (conv.getState().getId()!=IvrEndpointConversationState.TALKING)
-                convStopped(conv);
-        }
-
-        public void conversationStarted(IvrEndpointConversationEvent event) { }
-
-        public void conversationStopped(IvrEndpointConversationStoppedEvent event) {
-            convStopped(conv);
-        }
-
-        public void conversationTransfered(IvrEndpointConversationTransferedEvent event) { }
-    }
-
-    private class BridgeConnection 
+    private class BridgeConnection
             implements IvrEndpointConversationListener, IncomingRtpStreamDataSourceListener
     {
         private final IvrEndpointConversation conv1;
@@ -247,18 +230,17 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
         }
 
         public void listenerAdded(IvrEndpointConversationEvent ev) {
-            int convState = ev.getConversation().getState().getId();
+            int convState = conv1.getState().getId();
             if (convState==IvrEndpointConversationState.INVALID) {
                 state = ConnectionState.INVALID;
                 checkBridgeState();
             } else {
-                inRtp = ev.getConversation().getIncomingRtpStream();
+                inRtp = conv1.getIncomingRtpStream();
                 addListenerToRtpStream();
             }
         }
 
-        public void conversationStarted(IvrEndpointConversationEvent event) {
-        }
+        public void conversationStarted(IvrEndpointConversationEvent event) { }
 
         public void conversationStopped(IvrEndpointConversationStoppedEvent event) {
             state = ConnectionState.INVALID;
@@ -269,8 +251,9 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
         }
 
         public void incomingRtpStarted(IvrIncomingRtpStartedEvent event) {
-            if (event.getIncomingRtpStream()!=inRtp) {
-                inRtp = event.getIncomingRtpStream();
+            IncomingRtpStream rtp = event.getIncomingRtpStream();
+            if (rtp!=inRtp) {
+                inRtp = rtp;
                 addListenerToRtpStream();
             }
         }
@@ -279,6 +262,10 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
             if (stream==inRtp && state!=ConnectionState.INVALID) {
                 conv2.getAudioStream().addSource(dataSource);
                 state = ConnectionState.ACTIVE;
+                if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                    owner.getLogger().debug(logMess(
+                            "Incoming RTP stream from %s routed to the outgoing RTP of the %s"
+                            , getNumber(conv1), getNumber(conv2)));
                 checkBridgeState();
             }
         }
@@ -295,10 +282,50 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
             try {
                 inRtp.addDataSourceListener(this, null);
             } catch (RtpStreamException ex) {
-                //TODO: add log
+                if (owner.isLogLevelEnabled(LogLevel.ERROR))
+                    owner.getLogger().error(logMess("Error adding rtp data source listener"), ex);
                 state = ConnectionState.INVALID;
                 checkBridgeState();
             }
         }
     }
+    
+//    private class Listener implements IncomingRtpStreamDataSourceListener, IvrEndpointConversationListener
+//    {
+//        private final IvrEndpointConversation conv;
+//
+//        public Listener(IvrEndpointConversation conv)
+//        {
+//            this.conv = conv;
+//            conv.addConversationListener(this);
+//            try {
+//                conv.getIncomingRtpStream().addDataSourceListener(this, null);
+//            } catch (Throwable ex) {
+//                convStopped(conv);
+//            }
+//        }
+//
+//        public void dataSourceCreated(DataSource dataSource) {
+//            dsCreated(conv, dataSource);
+//        }
+//
+//        public void streamClosing() {
+//            convStopped(conv);
+//        }
+//
+//        public void listenerAdded(IvrEndpointConversationEvent event) {
+//            if (conv.getState().getId()!=IvrEndpointConversationState.TALKING)
+//                convStopped(conv);
+//        }
+//
+//        public void conversationStarted(IvrEndpointConversationEvent event) { }
+//
+//        public void conversationStopped(IvrEndpointConversationStoppedEvent event) {
+//            convStopped(conv);
+//        }
+//
+//        public void conversationTransfered(IvrEndpointConversationTransferedEvent event) { }
+//    }
+
+
 }

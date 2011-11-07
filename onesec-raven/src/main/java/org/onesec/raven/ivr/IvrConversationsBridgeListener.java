@@ -28,6 +28,11 @@ public interface IvrConversationsBridgeListener
      */
     public void bridgeActivated(IvrConversationsBridge bridge);
     /**
+     * Fires when bridge was reactivated. For instance, when call were transfered or call hold activated or
+     * something that stops rtp and starts it again
+     */
+    public void bridgeReactivated(IvrConversationsBridge bridge);
+    /**
      * Fires when bridge was deactivated
      */
     public void bridgeDeactivated(IvrConversationsBridge bridge);

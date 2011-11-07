@@ -131,8 +131,6 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         this.additionalBindings = additionalBindings;
         this.enableIncomingRtpStream = enableIncomingRtpStream;
 
-//        inRtpStream =  = streamManager.getIncomingRtpStream(owner);
-        
         state = new IvrEndpointConversationStateImpl(this);
         state.setState(INVALID);
     }
@@ -188,6 +186,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                     state.setState(INVALID);
                 } else if (inRtpStatus == RtpStatus.CONNECTED && outRtpStatus == RtpStatus.CONNECTED) {
                     state.setState(TALKING);
+                    fireEvent(true, null);
                     startConversation();
                 } else if (inRtpStatus == RtpStatus.WAITING_FOR_START && outRtpStatus.ordinal() >= RtpStatus.CREATED.ordinal())
                     startIncomingRtp();
@@ -282,6 +281,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 if (outRtpStatus.ordinal()>=RtpStatus.CREATED.ordinal()) {
                     if (enableIncomingRtpStream)
                         inRtp.open(remoteAddress);
+                    fireIncomingRtpStartedEvent();
                     inRtpStatus = RtpStatus.CONNECTED;
                     checkState();
                 } else
@@ -353,7 +353,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
 
     //TODO: Не пересоздавать actionExecutor, conversationState и bindings при
     public void stopOutgoingRtp() {
-        lock.writeLock();
+        lock.writeLock().lock();
         try {
 //            if (state.getId()!=CONNECTING || state.getId()!=TALKING)
 //                throw new IvrEndpointConversationStateException(
@@ -369,7 +369,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                     audioStream.close();
                     audioStream = null;
                     actionsExecutor.cancelActionsExecution();
-                    actionsExecutor = null;
+//                    actionsExecutor = null;
                     checkState();
                 }
             } catch (Throwable e) {
@@ -383,31 +383,36 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
 
     private void startConversation() throws IvrEndpointConversationException {
         try {
-            initConversation();
+            boolean initialized = initConversation();
+            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                owner.getLogger().debug(callLog("Conversation %s", initialized?"started":"restarted"));
             continueConversation(EMPTY_DTMF);
         } catch (Throwable e) {
-            //TODO: handle exception
             stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
         }
         
     }
 
-    private void initConversation() throws Exception {
-        conversationState = scenario.createConversationState();
-        conversationState.setBinding(DTMF_BINDING, "-", BindingScope.REQUEST);
-        conversationState.setBindingDefaultValue(DTMF_BINDING, "-");
-        conversationState.setBinding(VARS_BINDING, new HashMap(), BindingScope.CONVERSATION);
-        conversationState.setBinding(
-                CONVERSATION_STATE_BINDING, conversationState, BindingScope.CONVERSATION);
-        conversationState.setBinding(NUMBER_BINDING, callingNumber, BindingScope.CONVERSATION);
-        conversationState.setBinding(CALLED_NUMBER_BINDING, calledNumber, BindingScope.CONVERSATION);
-        if (additionalBindings!=null)
-            for (Map.Entry<String, Object> b: additionalBindings.entrySet())
-                conversationState.setBinding(b.getKey(), b.getValue(), BindingScope.CONVERSATION);
-        additionalBindings = null;
-        actionsExecutor = new IvrActionsExecutor(this, executor);
-        actionsExecutor.setLogPrefix(callId+" : ");
-        this.bindingSupport = new BindingSupportImpl();        
+    private boolean initConversation() throws Exception {
+        if (conversationState==null) {
+            conversationState = scenario.createConversationState();
+            conversationState.setBinding(DTMF_BINDING, "-", BindingScope.REQUEST);
+            conversationState.setBindingDefaultValue(DTMF_BINDING, "-");
+            conversationState.setBinding(VARS_BINDING, new HashMap(), BindingScope.CONVERSATION);
+            conversationState.setBinding(
+                    CONVERSATION_STATE_BINDING, conversationState, BindingScope.CONVERSATION);
+            conversationState.setBinding(NUMBER_BINDING, callingNumber, BindingScope.CONVERSATION);
+            conversationState.setBinding(CALLED_NUMBER_BINDING, calledNumber, BindingScope.CONVERSATION);
+            if (additionalBindings!=null)
+                for (Map.Entry<String, Object> b: additionalBindings.entrySet())
+                    conversationState.setBinding(b.getKey(), b.getValue(), BindingScope.CONVERSATION);
+            additionalBindings = null;
+            actionsExecutor = new IvrActionsExecutor(this, executor);
+            actionsExecutor.setLogPrefix(callId+" : ");
+            this.bindingSupport = new BindingSupportImpl();
+            return true;
+        }
+        return false;
     }
 
 //    public void init(CallControlCall call, String remoteAddress, int remotePort, int packetSize
@@ -590,6 +595,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         } finally {
             lock.writeLock().unlock();
         }
+        fireEvent(false, completionCode);
     }
     
     private void dropCallConnections()  {
@@ -776,6 +782,15 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                     new IvrEndpointConversationTransferedEventImpl(this, address);
             for (IvrEndpointConversationListener listener: listeners)
                 listener.conversationTransfered(event);
+        }
+    }
+
+    private void fireIncomingRtpStartedEvent()
+    {
+        if (listeners!=null && !listeners.isEmpty()) {
+            IvrIncomingRtpStartedEventImpl ev = new IvrIncomingRtpStartedEventImpl(this);
+            for (IvrEndpointConversationListener listener: listeners)
+                listener.incomingRtpStarted(ev);
         }
     }
 

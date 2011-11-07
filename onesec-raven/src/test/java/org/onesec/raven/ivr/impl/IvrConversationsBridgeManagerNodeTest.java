@@ -49,6 +49,7 @@ import org.onesec.raven.ivr.IvrEndpointConversationState;
 import org.onesec.raven.ivr.IvrEndpointConversationStoppedEvent;
 import org.onesec.raven.ivr.IvrEndpointConversationTransferedEvent;
 import org.onesec.raven.ivr.IvrEndpointState;
+import org.onesec.raven.ivr.IvrIncomingRtpStartedEvent;
 import org.onesec.raven.ivr.RtpStreamException;
 import org.onesec.raven.ivr.actions.PauseActionNode;
 import org.raven.log.LogLevel;
@@ -98,7 +99,7 @@ public class IvrConversationsBridgeManagerNodeTest extends OnesecRavenTestCase
 
 //        for (IncomingRtpStreamDataSourceListener listener: sourceListeners)
 //            listener.dataSourceCreated(dataSource);
-        sourceListeners.get(0).streamClosing();
+        sourceListeners.get(0).streamClosing(conv1Mocks.rtpStream);
         assertEquals(0, manager.getBridges().size());
 
 
@@ -263,6 +264,8 @@ public class IvrConversationsBridgeManagerNodeTest extends OnesecRavenTestCase
     public void conversationCompleted(ConversationResult conversationResult) {
         bridgeActive.set(false);
     }
+
+    public void incomingRtpStarted(IvrIncomingRtpStartedEvent event) { }
 
     public void listenerAdded(IvrEndpointConversationEvent event) {
     }
