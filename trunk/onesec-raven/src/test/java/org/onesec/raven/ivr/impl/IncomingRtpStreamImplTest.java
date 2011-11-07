@@ -20,7 +20,6 @@ package org.onesec.raven.ivr.impl;
 import org.onesec.raven.ivr.BufferCache;
 import java.io.IOException;
 import org.onesec.raven.JMFHelper;
-import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.DataSource;
 import javax.media.protocol.FileTypeDescriptor;
 import org.junit.After;
@@ -59,14 +58,15 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
 //    @Test
     public void dataSourceListenerEventsTest() throws Exception
     {
+        IncomingRtpStream irtp = manager.getIncomingRtpStream(manager);
+
         IncomingRtpStreamDataSourceListener listener = createMock(
                 IncomingRtpStreamDataSourceListener.class);
-        listener.dataSourceCreated(isA(DataSource.class));
-        listener.streamClosing();
+        listener.dataSourceCreated(same(irtp), isA(DataSource.class));
+        listener.streamClosing(irtp);
 
         replay(listener);
 
-        IncomingRtpStream irtp = manager.getIncomingRtpStream(manager);
         String address = getInterfaceAddress().getHostName();
         irtp.open(address);
         irtp.addDataSourceListener(listener, null);
@@ -162,8 +162,7 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
             this.writeControl = null;
         }
 
-        public void dataSourceCreated(DataSource dataSource)
-        {
+        public void dataSourceCreated(IncomingRtpStream stream, DataSource dataSource) {
             logger.debug("Received dataSourceCreated event");
             if (dataSource!=null)
                 try {
@@ -175,8 +174,7 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
 
         }
 
-        public void streamClosing()
-        {
+        public void streamClosing(IncomingRtpStream stream) {
             if (writeControl!=null)
                 writeControl.stop();
         }
@@ -201,7 +199,7 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
             writeControl = JMFHelper.writeToFile(ds, filename);
         }
 
-        public void dataSourceCreated(DataSource dataSource)
+        public void dataSourceCreated(IncomingRtpStream stream, DataSource dataSource)
         {
             if (dataSource==null) 
                 logger.error("CopyDsConcatDataSource. Received null dataSource");
@@ -215,7 +213,7 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
             }
         }
 
-        public void streamClosing()
+        public void streamClosing(IncomingRtpStream stream)
         {
             try {
 //                dataSource.stop();

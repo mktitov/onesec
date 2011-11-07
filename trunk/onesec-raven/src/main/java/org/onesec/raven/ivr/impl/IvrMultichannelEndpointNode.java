@@ -439,14 +439,11 @@ public class IvrMultichannelEndpointNode extends BaseNode
         this.address = address;
     }
 
-    public void terminalChangedEvent(TermEv[] events)
-    {
+    public void terminalChangedEvent(TermEv[] events) {
         if (isLogLevelEnabled(LogLevel.DEBUG))
             debug("Received terminal events: "+eventsToString(events));
-        for (TermEv event: events)
-        {
-            switch (event.getID())
-            {
+        for (TermEv event: events) 
+            switch (event.getID()) {
                 case CiscoTermInServiceEv.ID: terminalInService = true; checkStatus(); break;
                 case CiscoTermOutOfServiceEv.ID: terminalInService = false; checkStatus(); break;
                 case CiscoMediaOpenLogicalChannelEv.ID: 
@@ -457,35 +454,14 @@ public class IvrMultichannelEndpointNode extends BaseNode
 //                case CiscoRTPOutputStoppedEv.ID: closeRtpSession(); break;
                 case TermObservationEndedEv.ID: observingTerminal.set(false); break;
             }
-        }
     }
-
-    public void addressChangedEvent(AddrEv[] events)
-    {
-        if (isLogLevelEnabled(LogLevel.DEBUG))
-            debug("Received address events: "+eventsToString(events));
-        for (AddrEv event: events)
-        {
-            switch (event.getID())
-            {
-                case CiscoAddrInServiceEv.ID:
-                    terminalAddressInService = true; checkStatus(); break;
-                case CiscoAddrOutOfServiceEv.ID:
-                    terminalAddressInService = false; checkStatus(); break;
-                case AddrObservationEndedEv.ID:
-                    observingTerminalAddress.set(false); break;
-            }
-        }
-    }
-
+    
     public void callChangedEvent(CallEv[] events)
     {
         if (isLogLevelEnabled(LogLevel.DEBUG))
             debug("Received call events: "+eventsToString(events));
         for (CallEv event: events)
-        {
-            switch (event.getID())
-            {
+            switch (event.getID()) {
                 case CallCtlConnOfferedEv.ID: acceptIncomingCall((CallCtlConnOfferedEv)event); break;
                 case TermConnRingingEv.ID   : answerOnIncomingCall((TermConnRingingEv)event); break;
                 case CallCtlConnEstablishedEv.ID: startConversation((CallCtlConnEstablishedEv)event); break;
@@ -503,7 +479,20 @@ public class IvrMultichannelEndpointNode extends BaseNode
                     handleCallCtlTermConnDropped((CallCtlTermConnDroppedEv) event);
                     break;
             }
-        }
+    }
+
+    public void addressChangedEvent(AddrEv[] events) {
+        if (isLogLevelEnabled(LogLevel.DEBUG))
+            debug("Received address events: "+eventsToString(events));
+        for (AddrEv event: events)
+            switch (event.getID()) {
+                case CiscoAddrInServiceEv.ID:
+                    terminalAddressInService = true; checkStatus(); break;
+                case CiscoAddrOutOfServiceEv.ID:
+                    terminalAddressInService = false; checkStatus(); break;
+                case AddrObservationEndedEv.ID:
+                    observingTerminalAddress.set(false); break;
+            }
     }
 
     Map<Integer, IvrEndpointConversationImpl> getCalls()

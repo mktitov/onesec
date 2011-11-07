@@ -243,6 +243,8 @@ public class CommutationManagerCallImpl implements CommutationManagerCall, IvrCo
         }
     }
 
+    public void bridgeReactivated(IvrConversationsBridge bridge) { }
+
     public void bridgeActivated(IvrConversationsBridge bridge) {
         manager.getRequest().fireCommutatedEvent();
     }

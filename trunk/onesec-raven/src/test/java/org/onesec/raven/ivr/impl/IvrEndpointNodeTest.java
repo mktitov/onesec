@@ -40,6 +40,7 @@ import org.onesec.raven.ivr.IvrEndpointConversationListener;
 import org.onesec.raven.ivr.IvrEndpointConversationStoppedEvent;
 import org.onesec.raven.ivr.IvrEndpointConversationTransferedEvent;
 import org.onesec.raven.ivr.IvrEndpointState;
+import org.onesec.raven.ivr.IvrIncomingRtpStartedEvent;
 import org.onesec.raven.ivr.SendMessageDirection;
 import org.onesec.raven.ivr.actions.DtmfProcessPointActionNode;
 import org.onesec.raven.ivr.actions.PauseActionNode;
@@ -621,6 +622,9 @@ public class IvrEndpointNodeTest
         }
 
         public void listenerAdded(IvrEndpointConversationEvent event) {
+        }
+
+        public void incomingRtpStarted(IvrIncomingRtpStartedEvent event) {
         }
 
         public void conversationStarted(final IvrEndpointConversationEvent event) {

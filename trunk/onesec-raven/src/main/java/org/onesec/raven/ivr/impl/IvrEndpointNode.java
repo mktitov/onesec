@@ -79,6 +79,7 @@ import org.onesec.raven.ivr.IvrEndpointConversationStoppedEvent;
 import org.onesec.raven.ivr.IvrEndpointConversationTransferedEvent;
 import org.onesec.raven.ivr.IvrEndpointException;
 import org.onesec.raven.ivr.IvrEndpointState;
+import org.onesec.raven.ivr.IvrIncomingRtpStartedEvent;
 import org.onesec.raven.ivr.RtpAddress;
 import org.onesec.raven.ivr.TerminalStateMonitoringService;
 import org.raven.annotations.NodeClass;
@@ -936,11 +937,14 @@ public class IvrEndpointNode extends BaseNode
         }
     }
 
+    public void incomingRtpStarted(IvrIncomingRtpStartedEvent event) { }
+
     public void conversationStarted(IvrEndpointConversationEvent event) {
         listenersLock.readLock().lock();
         try {
             if (handlingOutgoingCall)
                 conversationResult.setConversationStartTime(System.currentTimeMillis());
+            endpointState.setState(IvrEndpointState.TALKING);
             for (IvrEndpointConversationListener listener: conversationListeners)
                 listener.conversationStarted(event);
         } finally {

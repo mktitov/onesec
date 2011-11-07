@@ -17,11 +17,9 @@
 
 package org.onesec.raven.ivr.impl;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.LinkedList;
 import javax.media.format.AudioFormat;
-import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.DataSource;
 import org.easymock.EasyMock;
 import org.easymock.IArgumentMatcher;
@@ -32,9 +30,11 @@ import org.onesec.raven.ivr.AudioStream;
 import org.onesec.raven.ivr.IncomingRtpStream;
 import org.onesec.raven.ivr.IncomingRtpStreamDataSourceListener;
 import org.onesec.raven.ivr.IvrConversationsBridge;
+import org.onesec.raven.ivr.IvrConversationsBridgeListener;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.IvrEndpointConversationListener;
 import org.onesec.raven.ivr.IvrEndpointConversationState;
+import org.onesec.raven.ivr.IvrIncomingRtpStartedEvent;
 import static org.easymock.EasyMock.*;
 import org.onesec.raven.ivr.RtpStreamException;
 import org.raven.log.LogLevel;
@@ -60,33 +60,55 @@ public class IvrConversationsBridgeImplTest extends OnesecRavenTestCase
     {
         DataSource dataSource = new TestDataSource();
         ConversationMocks conv1Mocks = new ConversationMocks();
-        trainConversation(conv1Mocks, "1");
+        trainConversation(conv1Mocks, "1", false);
         ConversationMocks conv2Mocks = new ConversationMocks();
-        trainConversation(conv2Mocks, "2");
-//        conv1Mocks.replay();
-//        conv2Mocks.replay();
+        trainConversation(conv2Mocks, "2", true);
 
         BaseNode node = new BaseNode("owner");
         tree.getRootNode().addAndSaveChildren(node);
         node.setLogLevel(LogLevel.TRACE);
         assertTrue(node.start());
-
         IvrConversationsBridge br = new IvrConversationsBridgeImpl(
                 conv1Mocks.conv, conv2Mocks.conv, node, null);
+
+        IvrConversationsBridgeListener listener = createMock(IvrConversationsBridgeListener.class);
+        IvrIncomingRtpStartedEvent rtpStartedEv = createStrictMock(IvrIncomingRtpStartedEvent.class);
+        IncomingRtpStream inRtp = createMock(IncomingRtpStream.class);
+        listener.bridgeActivated(br);
+        listener.bridgeReactivated(br);
+        listener.bridgeDeactivated(br);
+        expect(rtpStartedEv.getIncomingRtpStream()).andReturn(conv1Mocks.rtpStream);
+        expect(rtpStartedEv.getIncomingRtpStream()).andReturn(inRtp);
+        expect(inRtp.addDataSourceListener(checkDataSourceListener(), (AudioFormat)isNull())).andReturn(true);
+
+        replay(listener, rtpStartedEv, inRtp);
+
+        br.addBridgeListener(listener);
         br.activateBridge();
 
         assertEquals(2, conversationListeners.size());
         assertEquals(2, sourceListeners.size());
 
-        for (IncomingRtpStreamDataSourceListener listener: sourceListeners)
-            listener.dataSourceCreated(dataSource);
+        sourceListeners.get(0).dataSourceCreated(conv1Mocks.rtpStream, dataSource);
+        sourceListeners.get(1).dataSourceCreated(conv2Mocks.rtpStream, dataSource);
 
+        sourceListeners.clear();
+        conversationListeners.get(0).incomingRtpStarted(rtpStartedEv);
+        assertTrue(sourceListeners.isEmpty());
+        conversationListeners.get(0).incomingRtpStarted(rtpStartedEv);
+        assertEquals(1, sourceListeners.size());
+        sourceListeners.get(0).dataSourceCreated(inRtp, dataSource);
+
+        conversationListeners.get(0).conversationStopped(null);
+
+        verify(listener, rtpStartedEv, inRtp);
+        
         conv1Mocks.verify();
         conv2Mocks.verify();
 
     }
 
-    private void trainConversation(ConversationMocks mocks, String suffix) throws RtpStreamException
+    private void trainConversation(ConversationMocks mocks, String suffix, boolean addDsTwice) throws RtpStreamException
     {
         mocks.conv = createMock("conv"+suffix, IvrEndpointConversation.class);
         mocks.state = createMock("conv_state"+suffix, IvrEndpointConversationState.class);
@@ -94,14 +116,16 @@ public class IvrConversationsBridgeImplTest extends OnesecRavenTestCase
         mocks.audioStream = createMock("audio_stream"+suffix, AudioStream.class);
 
         expect(mocks.conv.getCallingNumber()).andReturn("num_"+suffix).anyTimes();
+        expect(mocks.conv.getCalledNumber()).andReturn("!num_"+suffix).anyTimes();
         mocks.conv.addConversationListener(checkConversationListener());
         expect(mocks.conv.getState()).andReturn(mocks.state);
         expect(mocks.state.getId()).andReturn(IvrEndpointConversationState.TALKING);
         expect(mocks.conv.getIncomingRtpStream()).andReturn(mocks.rtpStream);
         mocks.rtpStream.addDataSourceListener(checkDataSourceListener(), (AudioFormat) isNull());
         expectLastCall().andReturn(true);
-        expect(mocks.conv.getAudioStream()).andReturn(mocks.audioStream);
+        expect(mocks.conv.getAudioStream()).andReturn(mocks.audioStream).times(addDsTwice?2:1);
         mocks.audioStream.addSource(isA(DataSource.class));
+        expectLastCall().times(addDsTwice?2:1);
         replay(mocks.conv, mocks.state, mocks.rtpStream, mocks.audioStream);
 //        mocks.replay();
     }
