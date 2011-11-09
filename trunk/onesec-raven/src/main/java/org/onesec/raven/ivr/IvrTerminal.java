@@ -18,6 +18,7 @@
 package org.onesec.raven.ivr;
 
 import org.onesec.core.ObjectDescription;
+import org.raven.sched.ExecutorService;
 import org.raven.tree.Node;
 
 /**
@@ -30,4 +31,12 @@ public interface IvrTerminal extends Node, ObjectDescription
      * Returns the terminal address (number)
      */
     public String getAddress();
+    public RtpStreamManager getRtpStreamManager();
+    public ExecutorService getExecutor();
+    public IvrConversationScenario getConversationScenario();
+    public Codec getCodec();
+    public Integer getRtpPacketSize();
+    public Integer getRtpMaxSendAheadPacketsCount();
+    public Boolean getEnableIncomingRtp();
+    public Boolean getEnableIncomingCalls();
 }
