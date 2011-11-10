@@ -19,6 +19,7 @@ package org.onesec.raven.ivr.impl;
 
 import java.util.Map;
 import org.onesec.raven.ivr.AudioStream;
+import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.CompletionCode;
 import org.onesec.raven.ivr.ConversationCompletionCallback;
 import org.onesec.raven.ivr.IvrConversationScenario;
@@ -27,6 +28,7 @@ import org.onesec.raven.ivr.IvrEndpointConversationListener;
 import org.onesec.raven.ivr.IvrEndpointException;
 import org.onesec.raven.ivr.IvrEndpointState;
 import org.onesec.raven.ivr.RtpAddress;
+import org.onesec.raven.ivr.RtpStreamManager;
 import org.raven.conv.ConversationScenarioState;
 import org.raven.sched.ExecutorService;
 import org.raven.tree.Node;
@@ -109,4 +111,35 @@ public class TestIvrEndpoint extends BaseNode implements IvrEndpoint
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
+    public RtpStreamManager getRtpStreamManager() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public ExecutorService getExecutor() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public IvrConversationScenario getConversationScenario() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public Codec getCodec() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public Integer getRtpPacketSize() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public Integer getRtpMaxSendAheadPacketsCount() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public Boolean getEnableIncomingRtp() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public Boolean getEnableIncomingCalls() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
 }

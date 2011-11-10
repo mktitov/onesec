@@ -116,7 +116,7 @@ public class IvrMultichannelEndpointNode extends BaseNode
     private String address;
 
     @NotNull @Parameter(valueHandlerType=SystemSchedulerValueHandlerFactory.TYPE)
-    private ExecutorService executorService;
+    private ExecutorService executor;
 
     @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
     private IvrConversationScenarioNode conversationScenario;
@@ -375,12 +375,12 @@ public class IvrMultichannelEndpointNode extends BaseNode
         this.conversationScenario = conversationScenario;
     }
 
-    public ExecutorService getExecutorService() {
-        return executorService;
+    public ExecutorService getExecutor() {
+        return executor;
     }
 
-    public void setExecutorService(ExecutorService executorService) {
-        this.executorService = executorService;
+    public void setExecutor(ExecutorService executorService) {
+        this.executor = executorService;
     }
 
     public Integer getRtpInitialBuffer() {
@@ -397,6 +397,10 @@ public class IvrMultichannelEndpointNode extends BaseNode
 
     public void setRtpMaxSendAheadPacketsCount(Integer rtpMaxSendAheadPacketsCount) {
         this.rtpMaxSendAheadPacketsCount = rtpMaxSendAheadPacketsCount;
+    }
+
+    public Boolean getEnableIncomingCalls() {
+        return Boolean.TRUE;
     }
 
     public Boolean getEnableIncomingRtp() {
@@ -562,7 +566,7 @@ public class IvrMultichannelEndpointNode extends BaseNode
                 }
                 if (conversation!=null) {
                     final IvrEndpointConversationImpl _conversation = conversation;
-                    executorService.execute(new AbstractTask(this, "Starting conversation") {
+                    executor.execute(new AbstractTask(this, "Starting conversation") {
                         @Override
                         public void doRun() throws Exception {
 //                            _conversation.startConversation();
@@ -611,7 +615,7 @@ public class IvrMultichannelEndpointNode extends BaseNode
                 }
                 if (conversation!=null) {
                     final IvrEndpointConversation _conversation = conversation;
-                    executorService.execute(new AbstractTask(this, "continue conversation") {
+                    executor.execute(new AbstractTask(this, "continue conversation") {
                         @Override
                         public void doRun() throws Exception {
                             _conversation.continueConversation(event.getDtmfDigit());
@@ -731,7 +735,7 @@ public class IvrMultichannelEndpointNode extends BaseNode
                     final IvrEndpointConversationImpl _conversation = conversation;
                     final int _psize = psize;
                     final Codec _streamCodec = streamCodec;
-                    executorService.execute(new AbstractTask(this, "Initializing conversation") {
+                    executor.execute(new AbstractTask(this, "Initializing conversation") {
                         public void doRun() throws Exception {
 //                            _conversation.init(
 //                                    event.getCallID().getCall()
@@ -784,7 +788,7 @@ public class IvrMultichannelEndpointNode extends BaseNode
             if (callsLock.writeLock().tryLock(LOCK_WAIT_TIMEOUT, TimeUnit.MILLISECONDS)) {
                 try {
                     IvrEndpointConversationImpl conversation = new IvrEndpointConversationImpl(
-                                    this, executorService, conversationScenario, rtpStreamManager,
+                                    this, executor, conversationScenario, rtpStreamManager,
                                     enableIncomingRtp , null);
                     CiscoRTPParams params = new CiscoRTPParams(
                             conversation.getIncomingRtpStream().getAddress()

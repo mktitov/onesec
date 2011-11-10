@@ -100,7 +100,7 @@ public class IvrMultichannelEndpointNodeTest extends OnesecRavenTestCase
         endpoint.setLogLevel(LogLevel.TRACE);
         endpoint.setAddress("88049");
         endpoint.setConversationScenario(scenario);
-        endpoint.setExecutorService(executor);
+        endpoint.setExecutor(executor);
         endpoint.setRtpStreamManager(manager);
     }
 
