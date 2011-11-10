@@ -715,7 +715,7 @@ public class IvrEndpointNode extends BaseNode
                 conversation.stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
             }
         } finally {
-            
+            lock.unlock();
         }
     }
 
