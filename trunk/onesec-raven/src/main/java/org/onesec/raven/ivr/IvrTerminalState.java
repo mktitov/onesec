@@ -17,26 +17,13 @@
 
 package org.onesec.raven.ivr;
 
-import org.onesec.core.ObjectDescription;
-import org.raven.sched.ExecutorService;
-import org.raven.tree.Node;
+import org.onesec.core.State;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface IvrTerminal extends ObjectDescription
-{
-    /**
-     * Returns the terminal address (number)
-     */
-    public String getAddress();
-    public RtpStreamManager getRtpStreamManager();
-    public ExecutorService getExecutor();
-    public IvrConversationScenario getConversationScenario();
-    public Codec getCodec();
-    public Integer getRtpPacketSize();
-    public Integer getRtpMaxSendAheadPacketsCount();
-    public Boolean getEnableIncomingRtp();
-    public Boolean getEnableIncomingCalls();
+public interface IvrTerminalState  extends State<IvrTerminalState, IvrTerminal> {
+    public final static int OUT_OF_SERVICE = 1;
+    public final static int IN_SERVICE = 2;
 }

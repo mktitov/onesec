@@ -15,28 +15,23 @@
  *  under the License.
  */
 
-package org.onesec.raven.ivr;
+package org.onesec.raven.ivr.impl;
 
-import org.onesec.core.ObjectDescription;
-import org.raven.sched.ExecutorService;
-import org.raven.tree.Node;
+import org.onesec.core.impl.BaseState;
+import org.onesec.raven.ivr.IvrTerminal;
+import org.onesec.raven.ivr.IvrTerminalState;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface IvrTerminal extends ObjectDescription
+public class IvrTerminalStateImpl
+        extends BaseState<IvrTerminalState, IvrTerminal>
+        implements IvrTerminalState
 {
-    /**
-     * Returns the terminal address (number)
-     */
-    public String getAddress();
-    public RtpStreamManager getRtpStreamManager();
-    public ExecutorService getExecutor();
-    public IvrConversationScenario getConversationScenario();
-    public Codec getCodec();
-    public Integer getRtpPacketSize();
-    public Integer getRtpMaxSendAheadPacketsCount();
-    public Boolean getEnableIncomingRtp();
-    public Boolean getEnableIncomingCalls();
+    public IvrTerminalStateImpl(IvrTerminal observableObject) {
+        super(observableObject);
+        addIdName(OUT_OF_SERVICE, "OUT_OF_SERVICE");
+        addIdName(IN_SERVICE, "IN_SERVICE");
+    }
 }
