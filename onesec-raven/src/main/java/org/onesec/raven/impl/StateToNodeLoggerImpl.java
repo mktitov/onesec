@@ -46,8 +46,7 @@ public class StateToNodeLoggerImpl implements StateToNodeLogger
             logger = (Node) state.getObservableObject();
         else if (loggerNode!=null && Node.Status.STARTED.equals(loggerNode.getStatus()))
             logger = loggerNode;
-        if (logger!=null)
-        {
+        if (logger!=null) {
             String message = state.getObservableObject().getObjectDescription()
                         +" changed state to "+state.getIdName();
             if (state.hasError())

@@ -188,7 +188,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                     state.setState(TALKING);
                     fireEvent(true, null);
                     startConversation();
-                } else if (inRtpStatus == RtpStatus.WAITING_FOR_START && outRtpStatus.ordinal() >= RtpStatus.CREATED.ordinal())
+                } else if (inRtpStatus==RtpStatus.WAITING_FOR_START && outRtpStatus.ordinal()>=RtpStatus.CREATED.ordinal())
                     startIncomingRtp();
                 else if (inRtpStatus==RtpStatus.INVALID && outRtpStatus==RtpStatus.INVALID)
                     state.setState(READY);
@@ -734,11 +734,6 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         {
             lock.writeLock().unlock();
         }
-    }
-
-    private String getCallId()
-    {
-        return "[call id: "+call.getCallID().intValue()+", calling number: "+call.getCallingAddress().getName()+"]";
     }
 
     private String callLog(String mess, Object... args)

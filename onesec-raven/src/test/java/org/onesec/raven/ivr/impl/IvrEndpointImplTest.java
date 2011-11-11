@@ -17,18 +17,35 @@
 
 package org.onesec.raven.ivr.impl;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+import org.onesec.raven.ivr.IvrEndpointConversationStoppedEvent;
+import org.onesec.raven.ivr.actions.PlayAudioActionNode;
+import java.io.FileInputStream;
+import java.util.concurrent.TimeUnit;
+import org.easymock.IArgumentMatcher;
+import org.raven.tree.Node;
+import org.onesec.raven.ivr.IvrTerminalState;
+import org.onesec.core.StateWaitResult;
+import org.onesec.core.provider.ProviderController;
+import org.onesec.core.provider.ProviderControllerState;
 import org.junit.Before;
 import org.junit.Test;
 import org.onesec.core.services.ProviderRegistry;
 import org.onesec.core.services.StateListenersCoordinator;
 import org.onesec.raven.OnesecRavenTestCase;
+import org.onesec.raven.StateToNodeLogger;
 import org.onesec.raven.impl.CCMCallOperatorNode;
 import org.onesec.raven.impl.ProviderNode;
 import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.IvrConversationScenario;
+import org.onesec.raven.ivr.IvrEndpointConversationEvent;
+import org.onesec.raven.ivr.IvrEndpointConversationListener;
+import org.onesec.raven.ivr.IvrIncomingRtpStartedEvent;
 import org.onesec.raven.ivr.IvrTerminal;
+import org.onesec.raven.ivr.actions.StopConversationActionNode;
 import org.raven.log.LogLevel;
 import org.raven.sched.impl.ExecutorServiceNode;
+import org.raven.tree.impl.ContainerNode;
 import static org.easymock.EasyMock.*;
 
 /**
@@ -41,6 +58,8 @@ public class IvrEndpointImplTest extends OnesecRavenTestCase {
     private IvrConversationScenarioNode scenario;
     private RtpStreamManagerNode manager;
     private IvrEndpointImpl endpoint;
+    private ContainerNode termNode;
+    private static AtomicBoolean convStopped = new AtomicBoolean();
 
     @Before
     public void prepare() throws Exception {
@@ -64,7 +83,7 @@ public class IvrEndpointImplTest extends OnesecRavenTestCase {
         provider.setName("88013 provider");
         callOperator.getProvidersNode().addAndSaveChildren(provider);
         provider.setFromNumber(88013);
-        provider.setToNumber(88037);
+        provider.setToNumber(88049);
 //        provider.setFromNumber(68050);
 //        provider.setToNumber(68050);
         provider.setHost("10.16.15.1");
@@ -84,26 +103,83 @@ public class IvrEndpointImplTest extends OnesecRavenTestCase {
         tree.getRootNode().addAndSaveChildren(scenario);
         assertTrue(scenario.start());
 
+        termNode = new ContainerNode("term node");
+        tree.getRootNode().addAndSaveChildren(termNode);
+        termNode.setLogLevel(LogLevel.TRACE);
+        assertTrue(termNode.start());
+
         providerRegistry = registry.getService(ProviderRegistry.class);
         stateListenersCoordinator = registry.getService(StateListenersCoordinator.class);
+        StateToNodeLogger stateLogger = registry.getService(StateToNodeLogger.class);
+        stateLogger.setLoggerNode(termNode);
     }
 
-    @Test
-    public void test() throws Exception {
+//    @Test
+    public void startStopTest() throws Exception {
+        waitForProvider();
         IvrTerminal term = trainTerminal("88049", scenario, true, true);
         replay(term);
-        endpoint = new IvrEndpointImpl(providerRegistry, stateListenersCoordinator, term);
+        endpoint = new IvrEndpointImpl(providerRegistry, stateListenersCoordinator, term, termNode);
+        IvrTerminalState state = endpoint.getState();
+        assertEquals(IvrTerminalState.OUT_OF_SERVICE, state.getId());
         endpoint.start();
-        Thread.sleep(10000);
+        state.waitForState(new int[]{IvrTerminalState.IN_SERVICE}, 5000);
+        assertEquals(IvrTerminalState.IN_SERVICE, state.getId());
+        Thread.sleep(100);
+        endpoint.stop();
+        state.waitForState(new int[]{IvrTerminalState.OUT_OF_SERVICE}, 5000);
+        assertEquals(IvrTerminalState.OUT_OF_SERVICE, state.getId());
         verify(term);
     }
 
-    private IvrTerminal trainTerminal(String address, IvrConversationScenario scenario, boolean enableInCalls
+    @Test(timeout=20000)
+    public void incomingCallTest() throws Exception {
+        waitForProvider();
+        AudioFileNode audio = createAudioFileNode("audio", "src/test/wav/test.wav");
+        createPlayAudioActionNode("play audio", scenario, audio);
+        createStopConversationAction(scenario);
+
+        IvrTerminal term = trainTerminal("88013", scenario, true, true);
+        IvrEndpointConversationListener listener = trainListener();
+        replay(term, listener);
+
+        endpoint = new IvrEndpointImpl(providerRegistry, stateListenersCoordinator, term, termNode);
+//        endpoint.addConversationListener(listener);
+        IvrTerminalState state = endpoint.getState();
+        assertEquals(IvrTerminalState.OUT_OF_SERVICE, state.getId());
+        endpoint.start();
+        state.waitForState(new int[]{IvrTerminalState.IN_SERVICE}, 5000);
+        assertEquals(IvrTerminalState.IN_SERVICE, state.getId());
+        Thread.sleep(100);
+
+        while (!convStopped.get())
+            TimeUnit.MILLISECONDS.sleep(10);
+
+        endpoint.stop();
+        state.waitForState(new int[]{IvrTerminalState.OUT_OF_SERVICE}, 5000);
+        assertEquals(IvrTerminalState.OUT_OF_SERVICE, state.getId());
+        assertEquals(0, endpoint.getCallsCount());
+        assertEquals(0, endpoint.getConnectionsCount());
+        verify(term, listener);
+    }
+
+    private IvrEndpointConversationListener trainListener() {
+        IvrEndpointConversationListener listener = createMock(IvrEndpointConversationListener.class);
+        listener.conversationStarted(isA(IvrEndpointConversationEvent.class));
+        listener.conversationStopped(handleConversationStopped());
+        listener.listenerAdded(isA(IvrEndpointConversationEvent.class));
+        listener.incomingRtpStarted(isA(IvrIncomingRtpStartedEvent.class));
+        return listener;
+    }
+
+    private TestTerminal trainTerminal(String address, IvrConversationScenario scenario, boolean enableInCalls
             , boolean enableInRtp)
     {
-        IvrTerminal term = createMock((IvrTerminal.class));
-        expect(term.isLogLevelEnabled(isA(LogLevel.class))).andReturn(Boolean.TRUE).anyTimes();
-        expect(term.getLogger()).andReturn(scenario.getLogger());
+        TestTerminal term = createMock((TestTerminal.class));
+        expect(term.getLogger()).andReturn(termNode).anyTimes();
+        expect(term.isLogLevelEnabled(isA(LogLevel.class))).andReturn(true).anyTimes();
+        expect(term.getObjectName()).andReturn(termNode.getName()).anyTimes();
+        expect(term.getObjectDescription()).andReturn("Terminal").anyTimes();
         expect(term.getAddress()).andReturn(address);
         expect(term.getCodec()).andReturn(Codec.AUTO);
         expect(term.getConversationScenario()).andReturn(scenario);
@@ -115,5 +191,56 @@ public class IvrEndpointImplTest extends OnesecRavenTestCase {
         expect(term.getRtpStreamManager()).andReturn(manager);
 
         return term;
+    }
+
+    private void waitForProvider() throws Exception {
+        Thread.sleep(100);
+        ProviderController provider = providerRegistry.getProviderControllers().iterator().next();
+        assertNotNull(provider);
+        StateWaitResult res = provider.getState().waitForState(
+                new int[]{ProviderControllerState.IN_SERVICE}, 30000);
+        assertFalse(res.isWaitInterrupted());
+    }
+
+    private AudioFileNode createAudioFileNode(String nodeName, String filename) throws Exception {
+        AudioFileNode audioFileNode = new AudioFileNode();
+        audioFileNode.setName(nodeName);
+        tree.getRootNode().addAndSaveChildren(audioFileNode);
+        FileInputStream is = new FileInputStream(filename);
+        audioFileNode.getAudioFile().setDataStream(is);
+        assertTrue(audioFileNode.start());
+        return audioFileNode;
+    }
+
+    private PlayAudioActionNode createPlayAudioActionNode(String name, Node owner, AudioFileNode file) {
+        PlayAudioActionNode playAudioActionNode = new PlayAudioActionNode();
+        playAudioActionNode.setName(name);
+        owner.addAndSaveChildren(playAudioActionNode);
+        playAudioActionNode.setAudioFile(file);
+        assertTrue(playAudioActionNode.start());
+        return playAudioActionNode;
+    }
+
+    private StopConversationActionNode createStopConversationAction(Node owner) {
+        StopConversationActionNode stopAction = new StopConversationActionNode();
+        stopAction.setName("stop");
+        owner.addAndSaveChildren(stopAction);
+        assertTrue(stopAction.start());
+        return stopAction;
+    }
+
+    public static IvrEndpointConversationStoppedEvent handleConversationStopped() {
+        reportMatcher(new IArgumentMatcher() {
+            public boolean matches(Object arg) {
+                convStopped.set(true);
+                return true;
+            }
+            public void appendTo(StringBuffer buffer) {
+            }
+        });
+        return null;
+    }
+
+    private interface TestTerminal extends IvrTerminal, Node {
     }
 }
