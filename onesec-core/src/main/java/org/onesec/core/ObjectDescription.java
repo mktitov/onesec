@@ -23,13 +23,11 @@ package org.onesec.core;
  */
 public interface ObjectDescription {
     /**
-     * Возвращает имя объекта
-     * @return
+     * Returns the object name
      */
     public String getObjectName();
     /**
-     * Возвращает краткое описание объекта
-     * @return
+     * Returns the short description of the object
      */
     public String getObjectDescription();
 
