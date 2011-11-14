@@ -18,11 +18,12 @@
 package org.onesec.raven.ivr;
 
 import java.util.Map;
+import org.raven.tree.Node;
 
 /**
  * @author Mikhail Titov
  */
-public interface IvrEndpoint extends IvrTerminal
+public interface IvrEndpoint extends IvrTerminal, Node
 {
     public IvrEndpointState getEndpointState();
     /**

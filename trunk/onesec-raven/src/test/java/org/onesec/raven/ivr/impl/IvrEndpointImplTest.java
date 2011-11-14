@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.impl;
 
+import org.onesec.raven.ivr.actions.PauseActionNode;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.onesec.raven.ivr.IvrEndpointConversationStoppedEvent;
 import org.onesec.raven.ivr.actions.PlayAudioActionNode;
@@ -63,6 +64,8 @@ public class IvrEndpointImplTest extends OnesecRavenTestCase {
 
     @Before
     public void prepare() throws Exception {
+        convStopped.set(false);
+        
         manager = new RtpStreamManagerNode();
         manager.setName("rtpManager");
         tree.getRootNode().addAndSaveChildren(manager);
@@ -119,7 +122,7 @@ public class IvrEndpointImplTest extends OnesecRavenTestCase {
         waitForProvider();
         IvrTerminal term = trainTerminal("88049", scenario, true, true);
         replay(term);
-        endpoint = new IvrEndpointImpl(providerRegistry, stateListenersCoordinator, term, termNode);
+        endpoint = new IvrEndpointImpl(providerRegistry, stateListenersCoordinator, term);
         IvrTerminalState state = endpoint.getState();
         assertEquals(IvrTerminalState.OUT_OF_SERVICE, state.getId());
         endpoint.start();
@@ -132,35 +135,145 @@ public class IvrEndpointImplTest extends OnesecRavenTestCase {
         verify(term);
     }
 
-    @Test(timeout=20000)
+    //В данном тесте необходимо самому позвонить на номер, указанный в тесте. Должны услышать:
+    //  Пароли не совпадают
+//    @Test(timeout=20000)
     public void incomingCallTest() throws Exception {
         waitForProvider();
-        AudioFileNode audio = createAudioFileNode("audio", "src/test/wav/test.wav");
-        createPlayAudioActionNode("play audio", scenario, audio);
-        createStopConversationAction(scenario);
+        createSimpleScenario();
 
         IvrTerminal term = trainTerminal("88013", scenario, true, true);
         IvrEndpointConversationListener listener = trainListener();
         replay(term, listener);
 
-        endpoint = new IvrEndpointImpl(providerRegistry, stateListenersCoordinator, term, termNode);
-//        endpoint.addConversationListener(listener);
+        endpoint = new IvrEndpointImpl(providerRegistry, stateListenersCoordinator, term);
+        endpoint.addConversationListener(listener);
+        startEndpoint(endpoint);
+        waitForConversationStop();
+
+        stopEndpoint(endpoint);
+        verify(term, listener);
+    }
+
+    //В данном тесте система позвонит, на указанный адрес. Необходимо взять трубку. Должны услышать:
+    //  Пароли не совпадают
+//    @Test(timeout=20000)
+    public void inviteTest() throws Exception {
+        waitForProvider();
+        createSimpleScenario();
+
+        IvrTerminal term = trainTerminal("88013", scenario, true, true);
+        IvrEndpointConversationListener listener = trainListener();
+        replay(term, listener);
+
+        endpoint = new IvrEndpointImpl(providerRegistry, stateListenersCoordinator, term);
+        startEndpoint(endpoint);
+        endpoint.invite("88027", 0, listener, scenario, null);
+        waitForConversationStop();
+        stopEndpoint(endpoint);
+        
+        verify(term, listener);
+    }
+
+    //В данном тесте система позвонит на указанный адрес но трубку брать не надо
+//    @Test(timeout=20000)
+    public void inviteTimeoutTest() throws Exception {
+        waitForProvider();
+        createSimpleScenario();
+
+        IvrTerminal term = trainTerminal("88013", scenario, true, true);
+        IvrEndpointConversationListener listener = trainInviteTimeoutListener();
+        replay(term, listener);
+
+        endpoint = new IvrEndpointImpl(providerRegistry, stateListenersCoordinator, term);
+        startEndpoint(endpoint);
+        endpoint.invite("88027", 5, listener, scenario, null);
+        waitForConversationStop();
+        stopEndpoint(endpoint);
+
+        verify(term, listener);
+    }
+
+    //В данном тесте система позвонит на указанный адрес и нужно взять трубку. Должны услышать:
+    //  Пароли не совпадают -> Пауза 5 сек -> Пароли не совпадают
+//    @Test(timeout=30000)
+    public void inviteTimeoutTest2() throws Exception {
+        waitForProvider();
+        createSimpleScenario2();
+
+        IvrTerminal term = trainTerminal("88013", scenario, true, true);
+        IvrEndpointConversationListener listener = trainListener();
+        replay(term, listener);
+
+        endpoint = new IvrEndpointImpl(providerRegistry, stateListenersCoordinator, term);
+        startEndpoint(endpoint);
+        endpoint.invite("88027", 5, listener, scenario, null);
+        waitForConversationStop();
+        stopEndpoint(endpoint);
+
+        verify(term, listener);
+    }
+
+    //В данном тесте система позвонит на указанный адрес и нужно взять трубку в течении 5 сек!.
+    //Услышать ничего не должы, система сразу положит трубку
+    @Test(timeout=30000)
+    public void inviteTimeoutTest3() throws Exception {
+        waitForProvider();
+        createSimpleScenario3();
+
+        IvrTerminal term = trainTerminal("88013", scenario, true, true);
+        IvrEndpointConversationListener listener = trainListener();
+        replay(term, listener);
+
+        endpoint = new IvrEndpointImpl(providerRegistry, stateListenersCoordinator, term);
+        startEndpoint(endpoint);
+        endpoint.invite("88027", 8, listener, scenario, null);
+        waitForConversationStop();
+        Thread.sleep(9000);
+        stopEndpoint(endpoint);
+
+        verify(term, listener);
+    }
+
+    private void startEndpoint(IvrEndpointImpl endpoint) throws Exception {
         IvrTerminalState state = endpoint.getState();
         assertEquals(IvrTerminalState.OUT_OF_SERVICE, state.getId());
         endpoint.start();
         state.waitForState(new int[]{IvrTerminalState.IN_SERVICE}, 5000);
         assertEquals(IvrTerminalState.IN_SERVICE, state.getId());
         Thread.sleep(100);
+    }
 
-        while (!convStopped.get())
-            TimeUnit.MILLISECONDS.sleep(10);
-
+    private void stopEndpoint(IvrEndpointImpl endpoint) throws Exception {
         endpoint.stop();
+        IvrTerminalState state = endpoint.getState();
         state.waitForState(new int[]{IvrTerminalState.OUT_OF_SERVICE}, 5000);
         assertEquals(IvrTerminalState.OUT_OF_SERVICE, state.getId());
         assertEquals(0, endpoint.getCallsCount());
         assertEquals(0, endpoint.getConnectionsCount());
-        verify(term, listener);
+    }
+
+    private void waitForConversationStop() throws InterruptedException {
+        while (!convStopped.get()) 
+            TimeUnit.MILLISECONDS.sleep(10);
+    }
+
+    private void createSimpleScenario() throws Exception {
+        AudioFileNode audio = createAudioFileNode("audio", "src/test/wav/test.wav");
+        createPlayAudioActionNode("play audio", scenario, audio);
+        createStopConversationAction(scenario);
+    }
+
+    private void createSimpleScenario2() throws Exception {
+        AudioFileNode audio = createAudioFileNode("audio", "src/test/wav/test.wav");
+        createPlayAudioActionNode("play audio", scenario, audio);
+        createPauseActionNode(scenario, 5000l);
+        createPlayAudioActionNode("play audio 2", scenario, audio);
+        createStopConversationAction(scenario);
+    }
+
+    private void createSimpleScenario3() throws Exception {
+        createStopConversationAction(scenario);
     }
 
     private IvrEndpointConversationListener trainListener() {
@@ -169,6 +282,13 @@ public class IvrEndpointImplTest extends OnesecRavenTestCase {
         listener.conversationStopped(handleConversationStopped());
         listener.listenerAdded(isA(IvrEndpointConversationEvent.class));
         listener.incomingRtpStarted(isA(IvrIncomingRtpStartedEvent.class));
+        return listener;
+    }
+
+    private IvrEndpointConversationListener trainInviteTimeoutListener() {
+        IvrEndpointConversationListener listener = createMock(IvrEndpointConversationListener.class);
+        listener.conversationStopped(handleConversationStopped());
+        listener.listenerAdded(isA(IvrEndpointConversationEvent.class));
         return listener;
     }
 
@@ -200,6 +320,15 @@ public class IvrEndpointImplTest extends OnesecRavenTestCase {
         StateWaitResult res = provider.getState().waitForState(
                 new int[]{ProviderControllerState.IN_SERVICE}, 30000);
         assertFalse(res.isWaitInterrupted());
+    }
+
+    private PauseActionNode createPauseActionNode(Node owner, Long interval) {
+        PauseActionNode pauseAction = new PauseActionNode();
+        pauseAction.setName("pause");
+        owner.addAndSaveChildren(pauseAction);
+        pauseAction.setInterval(interval);
+        assertTrue(pauseAction.start());
+        return pauseAction;
     }
 
     private AudioFileNode createAudioFileNode(String nodeName, String filename) throws Exception {
