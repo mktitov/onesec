@@ -25,7 +25,7 @@ import org.raven.tree.Node;
  *
  * @author Mikhail Titov
  */
-public interface IvrTerminal extends ObjectDescription
+public interface IvrTerminal extends ObjectDescription, Node
 {
     /**
      * Returns the terminal address (number)
