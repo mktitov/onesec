@@ -34,10 +34,13 @@ import com.cisco.jtapi.extensions.CiscoTermInServiceEv;
 import com.cisco.jtapi.extensions.CiscoTermOutOfServiceEv;
 import com.cisco.jtapi.extensions.CiscoTerminal;
 import com.cisco.jtapi.extensions.CiscoTerminalObserver;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.telephony.Address;
@@ -80,14 +83,19 @@ import org.onesec.raven.ivr.RtpStreamManager;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.impl.AbstractTask;
+import org.raven.table.TableImpl;
+import org.raven.tree.Viewable;
+import org.raven.tree.ViewableObject;
+import org.raven.tree.impl.ViewableObjectImpl;
 import org.slf4j.Logger;
 import org.weda.beans.ObjectUtils;
+import org.weda.internal.annotations.Message;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class IvrEndpointImpl implements CiscoTerminalObserver, AddressObserver, CallControlCallObserver
+public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserver, CallControlCallObserver
         , MediaCallObserver, IvrEndpointConversationListener
 {
     private final ProviderRegistry providerRegistry;
@@ -119,7 +127,13 @@ public class IvrEndpointImpl implements CiscoTerminalObserver, AddressObserver, 
             new HashSet<IvrEndpointConversationListener>();
     private final ReadWriteLock listenersLock = new ReentrantReadWriteLock();
 
-    public IvrEndpointImpl(ProviderRegistry providerRegistry
+    @Message private static String callIdColumnMessage;
+    @Message private static String callInfoColumnMessage;
+    @Message private static String endpointBusyMessage;
+    @Message private static String callsCountMessage;
+
+
+    public CiscoJtapiTerminal(ProviderRegistry providerRegistry
             , StateListenersCoordinator stateListenersCoordinator
             , IvrTerminal term)
     {
@@ -164,8 +178,18 @@ public class IvrEndpointImpl implements CiscoTerminalObserver, AddressObserver, 
     }
 
     public void stop() {
+        resetListeners();
         unregisterTerminal();
         unregisterTerminalListeners();
+    }
+
+    private void resetListeners() {
+        listenersLock.writeLock().lock();
+        try {
+            conversationListeners.clear();
+        } finally {
+            listenersLock.writeLock().unlock();
+        }
     }
 
     public void invite(String opponentNum, int inviteTimeout, IvrEndpointConversationListener listener
@@ -197,6 +221,27 @@ public class IvrEndpointImpl implements CiscoTerminalObserver, AddressObserver, 
         } finally {
             lock.writeLock().unlock();
         }
+    }
+
+    public List<ViewableObject> getViewableObjects() throws Exception {
+        ViewableObject obj = null;
+        int callsCount = 0;
+        if (lock.readLock().tryLock(500, TimeUnit.MILLISECONDS)){
+            try{
+                callsCount = calls.size();
+                TableImpl table = new TableImpl(new String[]{callIdColumnMessage, callInfoColumnMessage});
+                for (Map.Entry entry: calls.entrySet())
+                    table.addRow(new Object[]{entry.getKey().toString(), entry.getValue().toString()});
+                obj = new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, table);
+            }finally{
+                lock.readLock().unlock();
+            }
+        } else {
+            obj = new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, endpointBusyMessage);
+        }
+        ViewableObject callsCountText = new ViewableObjectImpl(
+                Viewable.RAVEN_TEXT_MIMETYPE, String.format(callsCountMessage, callsCount));
+        return Arrays.asList(obj, callsCountText);
     }
 
     private CiscoTerminal registerTerminal(Address addr) throws Exception {

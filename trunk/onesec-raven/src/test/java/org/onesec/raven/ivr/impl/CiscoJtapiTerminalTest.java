@@ -52,13 +52,13 @@ import static org.easymock.EasyMock.*;
 /**
  * @author Mikhail Titov
  */
-public class IvrEndpointImplTest extends OnesecRavenTestCase {
+public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
     private ProviderRegistry providerRegistry;
     private StateListenersCoordinator stateListenersCoordinator;
     private ExecutorServiceNode executor;
     private IvrConversationScenarioNode scenario;
     private RtpStreamManagerNode manager;
-    private IvrEndpointImpl endpoint;
+    private CiscoJtapiTerminal endpoint;
     private ContainerNode termNode;
     private static AtomicBoolean convStopped = new AtomicBoolean();
 
@@ -122,7 +122,7 @@ public class IvrEndpointImplTest extends OnesecRavenTestCase {
         waitForProvider();
         IvrTerminal term = trainTerminal("88049", scenario, true, true);
         replay(term);
-        endpoint = new IvrEndpointImpl(providerRegistry, stateListenersCoordinator, term);
+        endpoint = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, term);
         IvrTerminalState state = endpoint.getState();
         assertEquals(IvrTerminalState.OUT_OF_SERVICE, state.getId());
         endpoint.start();
@@ -146,7 +146,7 @@ public class IvrEndpointImplTest extends OnesecRavenTestCase {
         IvrEndpointConversationListener listener = trainListener();
         replay(term, listener);
 
-        endpoint = new IvrEndpointImpl(providerRegistry, stateListenersCoordinator, term);
+        endpoint = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, term);
         endpoint.addConversationListener(listener);
         startEndpoint(endpoint);
         waitForConversationStop();
@@ -166,7 +166,7 @@ public class IvrEndpointImplTest extends OnesecRavenTestCase {
         IvrEndpointConversationListener listener = trainListener();
         replay(term, listener);
 
-        endpoint = new IvrEndpointImpl(providerRegistry, stateListenersCoordinator, term);
+        endpoint = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, term);
         startEndpoint(endpoint);
         endpoint.invite("88027", 0, listener, scenario, null);
         waitForConversationStop();
@@ -185,7 +185,7 @@ public class IvrEndpointImplTest extends OnesecRavenTestCase {
         IvrEndpointConversationListener listener = trainInviteTimeoutListener();
         replay(term, listener);
 
-        endpoint = new IvrEndpointImpl(providerRegistry, stateListenersCoordinator, term);
+        endpoint = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, term);
         startEndpoint(endpoint);
         endpoint.invite("88027", 5, listener, scenario, null);
         waitForConversationStop();
@@ -205,7 +205,7 @@ public class IvrEndpointImplTest extends OnesecRavenTestCase {
         IvrEndpointConversationListener listener = trainListener();
         replay(term, listener);
 
-        endpoint = new IvrEndpointImpl(providerRegistry, stateListenersCoordinator, term);
+        endpoint = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, term);
         startEndpoint(endpoint);
         endpoint.invite("88027", 5, listener, scenario, null);
         waitForConversationStop();
@@ -225,7 +225,7 @@ public class IvrEndpointImplTest extends OnesecRavenTestCase {
         IvrEndpointConversationListener listener = trainListener();
         replay(term, listener);
 
-        endpoint = new IvrEndpointImpl(providerRegistry, stateListenersCoordinator, term);
+        endpoint = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, term);
         startEndpoint(endpoint);
         endpoint.invite("88027", 8, listener, scenario, null);
         waitForConversationStop();
@@ -235,7 +235,7 @@ public class IvrEndpointImplTest extends OnesecRavenTestCase {
         verify(term, listener);
     }
 
-    private void startEndpoint(IvrEndpointImpl endpoint) throws Exception {
+    private void startEndpoint(CiscoJtapiTerminal endpoint) throws Exception {
         IvrTerminalState state = endpoint.getState();
         assertEquals(IvrTerminalState.OUT_OF_SERVICE, state.getId());
         endpoint.start();
@@ -244,7 +244,7 @@ public class IvrEndpointImplTest extends OnesecRavenTestCase {
         Thread.sleep(100);
     }
 
-    private void stopEndpoint(IvrEndpointImpl endpoint) throws Exception {
+    private void stopEndpoint(CiscoJtapiTerminal endpoint) throws Exception {
         endpoint.stop();
         IvrTerminalState state = endpoint.getState();
         state.waitForState(new int[]{IvrTerminalState.OUT_OF_SERVICE}, 5000);
