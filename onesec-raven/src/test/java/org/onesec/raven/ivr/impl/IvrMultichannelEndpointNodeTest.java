@@ -19,6 +19,8 @@ package org.onesec.raven.ivr.impl;
 
 import java.io.FileInputStream;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import org.easymock.IArgumentMatcher;
 import org.junit.Before;
 import org.junit.Test;
 import org.onesec.core.StateWaitResult;
@@ -28,6 +30,10 @@ import org.onesec.core.services.ProviderRegistry;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.impl.CCMCallOperatorNode;
 import org.onesec.raven.impl.ProviderNode;
+import org.onesec.raven.ivr.IvrEndpointConversationEvent;
+import org.onesec.raven.ivr.IvrEndpointConversationListener;
+import org.onesec.raven.ivr.IvrEndpointConversationStoppedEvent;
+import org.onesec.raven.ivr.IvrIncomingRtpStartedEvent;
 import org.onesec.raven.ivr.IvrMultichannelEndpointState;
 import org.onesec.raven.ivr.actions.PauseActionNode;
 import org.onesec.raven.ivr.actions.PlayAudioActionNode;
@@ -39,6 +45,7 @@ import org.raven.expr.impl.IfNode;
 import org.raven.log.LogLevel;
 import org.raven.sched.impl.ExecutorServiceNode;
 import org.raven.tree.Node;
+import static org.easymock.EasyMock.*;
 
 /**
  *
@@ -51,9 +58,11 @@ public class IvrMultichannelEndpointNodeTest extends OnesecRavenTestCase
     private IvrConversationScenarioNode scenario;
     private RtpStreamManagerNode manager;
 
+    private static AtomicBoolean convStopped = new AtomicBoolean();
+
     @Before
-    public void prepare() throws Exception
-    {
+    public void prepare() throws Exception {
+        convStopped.set(false);
         manager = new RtpStreamManagerNode();
         manager.setName("rtpManager");
         tree.getRootNode().addAndSaveChildren(manager);
@@ -102,70 +111,81 @@ public class IvrMultichannelEndpointNodeTest extends OnesecRavenTestCase
         endpoint.setConversationScenario(scenario);
         endpoint.setExecutor(executor);
         endpoint.setRtpStreamManager(manager);
+        
     }
 
-//    @Test
+    @Test
     public void startStopTest() throws Exception
     {
         waitForProvider();
 
         assertEquals(IvrMultichannelEndpointState.OUT_OF_SERVICE, endpoint.getEndpointState().getId());
         assertTrue(endpoint.start());
-        StateWaitResult res = endpoint.getEndpointState().waitForState(
-                new int[]{IvrMultichannelEndpointState.IN_SERVICE}, 2000);
-        assertFalse(res.isWaitInterrupted());
+        endpoint.getEndpointState().waitForState(new int[]{IvrMultichannelEndpointState.IN_SERVICE}, 2000);
+        assertEquals(IvrMultichannelEndpointState.IN_SERVICE, endpoint.getEndpointState().getId());
+
         endpoint.stop();
-        res = endpoint.getEndpointState().waitForState(
-                new int[]{IvrMultichannelEndpointState.OUT_OF_SERVICE}, 2000);
-        assertFalse(res.isWaitInterrupted());
+        endpoint.getEndpointState().waitForState(new int[]{IvrMultichannelEndpointState.OUT_OF_SERVICE}, 2000);
+
+        assertEquals(IvrMultichannelEndpointState.OUT_OF_SERVICE, endpoint.getEndpointState().getId());
     }
 
 //    @Test(timeout=30000)
     public void callTest() throws Exception
     {
+        IvrEndpointConversationListener listener = trainListener();
+        replay(listener);
         createSimpleConversation();
         waitForProvider();
         assertTrue(endpoint.start());
-        StateWaitResult res = endpoint.getEndpointState().waitForState(
-                new int[]{IvrMultichannelEndpointState.IN_SERVICE}, 2000);
-        assertTrue(endpoint.getCalls().isEmpty());
-        while (endpoint.getCalls().isEmpty())
-            TimeUnit.MILLISECONDS.sleep(500);
-        while (!endpoint.getCalls().isEmpty())
-            TimeUnit.MILLISECONDS.sleep(500);
-    }
-
-    @Test(timeout=60000)
-    public void callWithDtmfTest() throws Exception
-    {
-        createConversationWithDtmf();
-        waitForProvider();
-        assertTrue(endpoint.start());
-        StateWaitResult res = endpoint.getEndpointState().waitForState(
-                new int[]{IvrMultichannelEndpointState.IN_SERVICE}, 2000);
-        assertTrue(endpoint.getCalls().isEmpty());
-        while (endpoint.getCalls().isEmpty())
-            TimeUnit.MILLISECONDS.sleep(500);
-        while (!endpoint.getCalls().isEmpty())
-            TimeUnit.MILLISECONDS.sleep(500);
+        endpoint.getEndpointState().waitForState(new int[]{IvrMultichannelEndpointState.IN_SERVICE}, 2000);
+        assertEquals(IvrMultichannelEndpointState.IN_SERVICE, endpoint.getEndpointState().getId());
+        endpoint.addConversationListener(listener);
+        while (!convStopped.get())
+            TimeUnit.MILLISECONDS.sleep(10);
+        
+        endpoint.stop();
+        endpoint.getEndpointState().waitForState(new int[]{IvrMultichannelEndpointState.OUT_OF_SERVICE}, 2000);
+        assertEquals(IvrMultichannelEndpointState.OUT_OF_SERVICE, endpoint.getEndpointState().getId());
+        verify(listener);
+//        assertTrue(endpoint.getCalls().isEmpty());
+//        while (endpoint.getCalls().isEmpty())
+//            TimeUnit.MILLISECONDS.sleep(500);
+//        while (!endpoint.getCalls().isEmpty())
+//            TimeUnit.MILLISECONDS.sleep(500);
     }
 
 //    @Test(timeout=60000)
-    public void callWithTransferTest() throws Exception
-    {
-        createConversationWithTransfer();
-        waitForProvider();
-        assertTrue(endpoint.start());
-        StateWaitResult res = endpoint.getEndpointState().waitForState(
-                new int[]{IvrMultichannelEndpointState.IN_SERVICE}, 2000);
-        assertTrue(endpoint.getCalls().isEmpty());
-        while (endpoint.getCalls().isEmpty())
-            TimeUnit.MILLISECONDS.sleep(500);
-        while (!endpoint.getCalls().isEmpty())
-            TimeUnit.MILLISECONDS.sleep(500);
+//    public void callWithDtmfTest() throws Exception
+//    {
+//        createConversationWithDtmf();
+//        waitForProvider();
+//        assertTrue(endpoint.start());
+//        StateWaitResult res = endpoint.getEndpointState().waitForState(
+//                new int[]{IvrMultichannelEndpointState.IN_SERVICE}, 2000);
+//        assertTrue(endpoint.getCalls().isEmpty());
+//        while (endpoint.getCalls().isEmpty())
+//            TimeUnit.MILLISECONDS.sleep(500);
+//        while (!endpoint.getCalls().isEmpty())
+//            TimeUnit.MILLISECONDS.sleep(500);
+//    }
 
-        Thread.sleep(120000);
-    }
+//    @Test(timeout=60000)
+//    public void callWithTransferTest() throws Exception
+//    {
+//        createConversationWithTransfer();
+//        waitForProvider();
+//        assertTrue(endpoint.start());
+//        StateWaitResult res = endpoint.getEndpointState().waitForState(
+//                new int[]{IvrMultichannelEndpointState.IN_SERVICE}, 2000);
+//        assertTrue(endpoint.getCalls().isEmpty());
+//        while (endpoint.getCalls().isEmpty())
+//            TimeUnit.MILLISECONDS.sleep(500);
+//        while (!endpoint.getCalls().isEmpty())
+//            TimeUnit.MILLISECONDS.sleep(500);
+//
+//        Thread.sleep(120000);
+//    }
 
     private void createSimpleConversation() throws Exception
     {
@@ -294,5 +314,27 @@ public class IvrMultichannelEndpointNodeTest extends OnesecRavenTestCase
         StateWaitResult res = provider.getState().waitForState(
                 new int[]{ProviderControllerState.IN_SERVICE}, 20000);
         assertFalse(res.isWaitInterrupted());
+    }
+
+    private IvrEndpointConversationListener trainListener() {
+        IvrEndpointConversationListener listener = createMock(IvrEndpointConversationListener.class);
+        listener.listenerAdded(isA(IvrEndpointConversationEvent.class));
+        listener.incomingRtpStarted(isA(IvrIncomingRtpStartedEvent.class));
+        listener.conversationStarted((IvrEndpointConversationEvent) anyObject());
+        listener.conversationStopped(handleConversationStop());
+        return listener;
+    }
+
+    public static IvrEndpointConversationStoppedEvent handleConversationStop() {
+        reportMatcher(new IArgumentMatcher() {
+            public boolean matches(Object arg) {
+                convStopped.set(true);
+                return true;
+            }
+            public void appendTo(StringBuffer buffer) {
+                throw new UnsupportedOperationException("Not supported yet.");
+            }
+        });
+        return null;
     }
 }
