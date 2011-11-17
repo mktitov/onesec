@@ -45,6 +45,7 @@ import org.raven.expr.impl.IfNode;
 import org.raven.log.LogLevel;
 import org.raven.sched.impl.ExecutorServiceNode;
 import org.raven.tree.Node;
+import org.raven.tree.impl.NodeAttributeImpl;
 import static org.easymock.EasyMock.*;
 
 /**
@@ -111,15 +112,18 @@ public class IvrMultichannelEndpointNodeTest extends OnesecRavenTestCase
         endpoint.setConversationScenario(scenario);
         endpoint.setExecutor(executor);
         endpoint.setRtpStreamManager(manager);
-        
+        NodeAttributeImpl attr = new NodeAttributeImpl("autoStart", Boolean.TYPE, false, null);
+        attr.setOwner(manager);
+        attr.init();
+        endpoint.addNodeAttribute(attr);
     }
 
-    @Test
+//    @Test
     public void startStopTest() throws Exception
     {
         waitForProvider();
 
-        assertEquals(IvrMultichannelEndpointState.OUT_OF_SERVICE, endpoint.getEndpointState().getId());
+//        assertEquals(IvrMultichannelEndpointState.OUT_OF_SERVICE, endpoint.getEndpointState().getId());
         assertTrue(endpoint.start());
         endpoint.getEndpointState().waitForState(new int[]{IvrMultichannelEndpointState.IN_SERVICE}, 2000);
         assertEquals(IvrMultichannelEndpointState.IN_SERVICE, endpoint.getEndpointState().getId());
@@ -130,7 +134,8 @@ public class IvrMultichannelEndpointNodeTest extends OnesecRavenTestCase
         assertEquals(IvrMultichannelEndpointState.OUT_OF_SERVICE, endpoint.getEndpointState().getId());
     }
 
-//    @Test(timeout=30000)
+    //Необходимо позвонить на заданный номер. Должны услышать - "Пароли не совпадают"
+    @Test(timeout=30000)
     public void callTest() throws Exception
     {
         IvrEndpointConversationListener listener = trainListener();
