@@ -214,6 +214,24 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         }
     }
 
+    public void releaseEndpoint(IvrEndpoint endpoint) {
+        if (isLogLevelEnabled(LogLevel.DEBUG))
+            debug(String.format("Realesing endpoint (%s) to the pool", endpoint.getName()));
+        lock.writeLock().lock();
+        try {
+            RequestInfo req = busyEndpoints.remove(endpoint.getId());
+            if (req!=null){
+                loadAverage.addDuration(System.currentTimeMillis()-req.execStartTime);
+                endpointReleased.signal();
+                if (isLogLevelEnabled(LogLevel.DEBUG))
+                    debug(String.format("Endpoint (%s) successfully realesed to the pool"
+                            , endpoint.getName()));
+            }
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+    
     private void cleanupQueue()
     {
         statusMessage.set("Cleaning up queue from timeouted requests");
@@ -683,6 +701,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         private final EndpointRequest request;
         private final long startTime;
         private long terminalUsageTime;
+        private long execStartTime;
         private IvrEndpoint endpoint;
         private long id;
 
@@ -710,18 +729,20 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
 
         public void run()
         {
-            long durStartTime = System.currentTimeMillis();
-            try
-            {
+            execStartTime = System.currentTimeMillis();
+            try {
                 if (isLogLevelEnabled(LogLevel.DEBUG))
                     debug("Executing request from ("+getTaskNode().getPath()+")");
                 request.processRequest(endpoint);
                 if (isLogLevelEnabled(LogLevel.DEBUG))
                     debug("Request from ("+getTaskNode().getPath()+") was successfully executed");
-            }
-            finally
-            {
-                releaseEndpoint(endpoint, System.currentTimeMillis()-durStartTime);
+            } catch (Throwable e) {
+                if (isLogLevelEnabled(LogLevel.ERROR))
+                    getLogger().error(String.format(
+                            "Unexpected error on request processing by requester (%s)"
+                            , request.getOwner().getPath())
+                        , e);
+                releaseEndpoint(endpoint);
             }
         }
     }

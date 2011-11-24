@@ -192,7 +192,8 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
         }
     }
 
-    public void invite(String opponentNum, int inviteTimeout, IvrEndpointConversationListener listener
+    public void invite(String opponentNum, int inviteTimeout, int maxCallDur
+            , IvrEndpointConversationListener listener
             , IvrConversationScenario scenario, Map<String, Object> bindings)
     {
         lock.writeLock().lock();
@@ -211,7 +212,9 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                 calls.put(call, holder);
                 call.connect(ciscoTerm, termAddress, opponentNum);
                 if (inviteTimeout>0) 
-                    executor.execute(inviteTimeout*1000, new inviteTimeoutHandler(conv, call));
+                    executor.execute(inviteTimeout*1000, new InviteTimeoutHandler(conv, call, maxCallDur));
+                else if (maxCallDur>0)
+                    executor.execute(maxCallDur*1000, new MaxCallDurationHandler(conv, call));
             } catch (Throwable e) {
                 if (isLogLevelEnabled(LogLevel.WARN))
                     logger.warn(String.format("Problem with inviting abonent with number (%s)", opponentNum), e);
@@ -688,14 +691,16 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
         public abstract void callMethod(IvrEndpointConversationListener listener);
     }
 
-    private class inviteTimeoutHandler extends AbstractTask {
+    private class InviteTimeoutHandler extends AbstractTask {
         private final IvrEndpointConversationImpl conv;
         private final Call call;
+        private final long stopCallAt;
 
-        public inviteTimeoutHandler(IvrEndpointConversationImpl conv, Call call) {
+        public InviteTimeoutHandler(IvrEndpointConversationImpl conv, Call call, int maxCallDuration) {
             super(term, "Invite timeout handler for call");
             this.conv = conv;
             this.call = call;
+            this.stopCallAt = maxCallDuration>0? System.currentTimeMillis()+maxCallDuration*1000 : 0;
         }
 
         @Override
@@ -706,7 +711,30 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                 if (isLogLevelEnabled(LogLevel.DEBUG))
                     logger.debug(callLog(call, "Detected INVITE TIMEOUT. Canceling a call"));
                 conv.stopConversation(CompletionCode.OPPONENT_NOT_ANSWERED);
+            } else if (stopCallAt>0)
+                executor.executeQuietly(stopCallAt-System.currentTimeMillis()
+                        , new MaxCallDurationHandler(conv, call));
+        }
+    }
+    
+    private class MaxCallDurationHandler extends AbstractTask {
+        private final IvrEndpointConversationImpl conv;
+        private final Call call;
+
+        public MaxCallDurationHandler(IvrEndpointConversationImpl conv, Call call) {
+            super(term, "Invite timeout handler for call");
+            this.conv = conv;
+            this.call = call;
+        }   
+
+        @Override
+        public void doRun() throws Exception {
+            if (conv.getState().getId()!=IvrEndpointConversationState.INVALID) {
+                if (isLogLevelEnabled(LogLevel.DEBUG))
+                    logger.debug(callLog(call, "The call duration is TOO LONG. Canceling a call"));
+                conv.stopConversation(CompletionCode.CALL_DURATION_TOO_LONG);
             }
         }
     }
+    
 }

@@ -18,6 +18,7 @@
 package org.onesec.raven.ivr.queue.impl;
 
 import org.onesec.raven.ivr.EndpointRequest;
+import org.onesec.raven.ivr.IvrEndpoint;
 import org.onesec.raven.ivr.IvrEndpointPool;
 import org.raven.sched.ExecutorServiceException;
 import org.raven.tree.impl.BaseNode;
@@ -40,5 +41,9 @@ public class TestEndpointPool extends BaseNode implements IvrEndpointPool
 
     public void requestEndpoint(EndpointRequest request) throws ExecutorServiceException {
         endpointPool.requestEndpoint(request);
+    }
+
+    public void releaseEndpoint(IvrEndpoint endpoint) {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 }

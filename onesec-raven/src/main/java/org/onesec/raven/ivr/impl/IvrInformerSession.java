@@ -27,12 +27,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.onesec.core.StateWaitResult;
-import org.onesec.raven.ivr.ConversationCompletionCallback;
-import org.onesec.raven.ivr.ConversationCdr;
-import org.onesec.raven.ivr.EndpointRequest;
-import org.onesec.raven.ivr.IvrConversationScenario;
-import org.onesec.raven.ivr.IvrEndpoint;
-import org.onesec.raven.ivr.IvrEndpointState;
+import org.onesec.raven.ivr.*;
 import org.raven.ds.DataContext;
 import org.raven.ds.Record;
 import org.raven.ds.RecordException;
@@ -47,15 +42,17 @@ import static org.onesec.raven.ivr.impl.IvrInformerRecordSchemaNode.*;
  * Stores {@link IvrInformer ivr informer} session information
  * @author Mikhail Titov
  */
-public class IvrInformerSession implements EndpointRequest, ConversationCompletionCallback
+public class IvrInformerSession 
+        extends ConversationCdrRegistrator 
+        implements EndpointRequest, ConversationCompletionCallback
 {
     @Service
     private static TypeConverter converter;
 
     private final List<Record> records;
     private final AsyncIvrInformer informer;
-    private final Integer maxCallDuration;
-    private final Integer maxInviteDuration;
+    private final int maxCallDuration;
+    private final int inviteTimeout;
     private final IvrConversationScenario scenario;
 
     private final Condition abonentInformed;
@@ -69,17 +66,18 @@ public class IvrInformerSession implements EndpointRequest, ConversationCompleti
     private Record currentRecord;
     private IvrEndpoint endpoint;
     private String abonentNumber;
+    private int recPos = 0;
 
     public IvrInformerSession(
             List<Record> records, AsyncIvrInformer informer
-            , Integer maxInviteDuration, Integer maxCallDuration
+            , Integer inviteTimeout, Integer maxCallDuration
             , IvrConversationScenario scenario, long endpointWaitTimeout, DataContext dataContext
             , int requestPriority)
     {
         this.records = records;
         this.informer = informer;
-        this.maxInviteDuration = maxInviteDuration;
-        this.maxCallDuration = maxCallDuration;
+        this.inviteTimeout = inviteTimeout==null? 0 : inviteTimeout;
+        this.maxCallDuration = maxCallDuration==null? 0 : maxCallDuration;
         this.scenario = scenario;
         this.endpointWaitTimeout = endpointWaitTimeout;
         this.dataContext = dataContext;
@@ -136,27 +134,20 @@ public class IvrInformerSession implements EndpointRequest, ConversationCompleti
                 +(abonentNumber==null?"":", translated number - "+abonentNumber)+")";
     }
 
-    public void processRequest(IvrEndpoint endpoint)
-    {
-        try
-        {
+    public void processRequest(IvrEndpoint endpoint) {
+        try {
             statusMessage.set("Processing call request");
             this.endpoint = endpoint;
-            try
-            {
+            try {
                 if (endpoint==null)
                     skipInforming();
                 else
                     inform(endpoint);
-            }
-            catch(Exception e)
-            {
+            } catch(Throwable e) {
                 if (informer.isLogLevelEnabled(LogLevel.ERROR))
                     informer.getLogger().error("Error informing abonent.", e);
             }
-        }
-        finally
-        {
+        } finally {
             informer.incInformedAbonents();
             informer.removeSession(this);
         }
@@ -219,140 +210,202 @@ public class IvrInformerSession implements EndpointRequest, ConversationCompleti
                     "Error restarting endpoint (%s)", endpoint.getPath()));
     }
 
-    private void handleConversationResult(Record record) throws Exception
-    {
+//    private void handleConversationResult(Record rec) throws Exception {
+//        String status = null;
+//        if (conversationResult==null)
+//        {
+//            if (rec.getValue(COMPLETION_CODE_FIELD)==null)
+//                rec.setValue(COMPLETION_CODE_FIELD, AsyncIvrInformer.PROCESSING_ERROR_STATUS);
+//        }
+//        else
+//        {
+//            boolean sucProc = false;
+//            switch(conversationResult.getCompletionCode())
+//            {
+//                case COMPLETED_BY_ENDPOINT:
+//                    status = AsyncIvrInformer.COMPLETED_BY_INFORMER_STATUS; sucProc = true; break;
+//                case COMPLETED_BY_OPPONENT:
+//                    status = AsyncIvrInformer.COMPLETED_BY_ABONENT_STATUS; sucProc = true; break;
+//                case OPPONENT_BUSY: status = AsyncIvrInformer.NUMBER_BUSY_STATUS; break;
+//                case OPPONENT_NOT_ANSWERED: status = AsyncIvrInformer.NUMBER_NOT_ANSWERED_STATUS; break;
+//                case OPPONENT_UNKNOWN_ERROR: status = AsyncIvrInformer.PROCESSING_ERROR_STATUS; break;
+//            }
+//            if (sucProc)
+//                informer.incSuccessfullyInformedAbonents();
+//            rec.setValue(COMPLETION_CODE_FIELD, status);
+//            rec.setValue(
+//                    CALL_START_TIME_FIELD, conversationResult.getCallStartTime());
+//            rec.setValue(
+//                    CALL_END_TIME_FIELD, conversationResult.getCallEndTime());
+//            rec.setValue(
+//                    CALL_DURATION_FIELD, conversationResult.getCallDuration());
+//            rec.setValue(
+//                    CONVERSATION_START_TIME_FIELD
+//                    , conversationResult.getConversationStartTime());
+//            rec.setValue(
+//                    CONVERSATION_DURATION_FIELD
+//                    , conversationResult.getConversationDuration());
+//
+//            if (conversationResult.getTransferCompletionCode()!=null)
+//            {
+//                String transferStatus = null;
+//                switch(conversationResult.getTransferCompletionCode())
+//                {
+//                    case ERROR : transferStatus = AsyncIvrInformer.TRANSFER_ERROR_STATUS; break;
+//                    case NORMAL : transferStatus = AsyncIvrInformer.TRANSFER_SUCCESSFULL_STATUS; break;
+//                    case NO_ANSWER :
+//                        transferStatus = AsyncIvrInformer.TRANSFER_DESTINATION_NOT_ANSWER_STATUS;
+//                        break;
+//                }
+//                rec.setValue(TRANSFER_COMPLETION_CODE_FIELD, transferStatus);
+//                rec.setValue(
+//                        TRANSFER_ADDRESS_FIELD, conversationResult.getTransferAddress());
+//                rec.setValue(
+//                        TRANSFER_TIME_FIELD, conversationResult.getTransferTime());
+//                rec.setValue(TRANSFER_CONVERSATION_START_TIME_FIELD
+//                        , conversationResult.getTransferConversationStartTime());
+//                rec.setValue(TRANSFER_CONVERSATION_DURATION_FIELD
+//                        , conversationResult.getTransferConversationDuration());
+//            }
+//        }
+//    }
+    
+    private void inform(IvrEndpoint endpoint) throws Exception {
+        Record rec = getCurrentRec();
+        if (rec==null)
+            return;
+        abonentNumber = converter.convert(String.class, rec.getValue(ABONENT_NUMBER_FIELD), null);
+        statusMessage.set(String.format("Calling to the abonent number (%s)", abonentNumber));
+        abonentNumber = informer.translateNumber(abonentNumber, rec);
+        Map<String, Object> bindings = new HashMap<String, Object>();
+        bindings.put(AsyncIvrInformer.RECORD_BINDING, rec);
+        bindings.put(AsyncIvrInformer.INFORMER_BINDING, this);
+        rec.setValue(CALL_START_TIME_FIELD, new Timestamp(System.currentTimeMillis()));
+        endpoint.invite(abonentNumber, inviteTimeout, maxCallDuration, this, scenario, bindings);
+    }
+
+    @Override
+    public void conversationStopped(IvrEndpointConversationStoppedEvent event) {
+        super.conversationStopped(event);
+        
+    }
+    
+    private Record getCurrentRec() {
+        return records.get(recPos);
+    }
+    
+    private Record getNextRecord() {
+        return ++recPos>=records.size()? null : records.get(recPos);
+    }
+    private void handleConversationResult(Record rec, ConversationCdr cdr) throws Exception {
         String status = null;
-        if (conversationResult==null)
-        {
-            if (record.getValue(COMPLETION_CODE_FIELD)==null)
-                record.setValue(COMPLETION_CODE_FIELD, AsyncIvrInformer.PROCESSING_ERROR_STATUS);
+        boolean sucProc = false;
+        switch(cdr.getCompletionCode()) {
+            case COMPLETED_BY_ENDPOINT:
+                status = AsyncIvrInformer.COMPLETED_BY_INFORMER_STATUS; sucProc = true; break;
+            case COMPLETED_BY_OPPONENT:
+                status = AsyncIvrInformer.COMPLETED_BY_ABONENT_STATUS; sucProc = true; break;
+            case OPPONENT_BUSY: status = AsyncIvrInformer.NUMBER_BUSY_STATUS; break;
+            case OPPONENT_NOT_ANSWERED: status = AsyncIvrInformer.NUMBER_NOT_ANSWERED_STATUS; break;
+            case OPPONENT_UNKNOWN_ERROR: status = AsyncIvrInformer.PROCESSING_ERROR_STATUS; break;
         }
-        else
-        {
-            boolean sucProc = false;
-            switch(conversationResult.getCompletionCode())
-            {
-                case COMPLETED_BY_ENDPOINT:
-                    status = AsyncIvrInformer.COMPLETED_BY_INFORMER_STATUS; sucProc = true; break;
-                case COMPLETED_BY_OPPONENT:
-                    status = AsyncIvrInformer.COMPLETED_BY_ABONENT_STATUS; sucProc = true; break;
-                case OPPONENT_BUSY: status = AsyncIvrInformer.NUMBER_BUSY_STATUS; break;
-                case OPPONENT_NOT_ANSWERED: status = AsyncIvrInformer.NUMBER_NOT_ANSWERED_STATUS; break;
-                case OPPONENT_UNKNOWN_ERROR: status = AsyncIvrInformer.PROCESSING_ERROR_STATUS; break;
-            }
-            if (sucProc)
-                informer.incSuccessfullyInformedAbonents();
-            record.setValue(COMPLETION_CODE_FIELD, status);
-            record.setValue(
-                    CALL_START_TIME_FIELD, conversationResult.getCallStartTime());
-            record.setValue(
-                    CALL_END_TIME_FIELD, conversationResult.getCallEndTime());
-            record.setValue(
-                    CALL_DURATION_FIELD, conversationResult.getCallDuration());
-            record.setValue(
-                    CONVERSATION_START_TIME_FIELD
-                    , conversationResult.getConversationStartTime());
-            record.setValue(
-                    CONVERSATION_DURATION_FIELD
-                    , conversationResult.getConversationDuration());
+        if (sucProc)
+            informer.incSuccessfullyInformedAbonents();
+        rec.setValue(COMPLETION_CODE_FIELD, status);
+        rec.setValue(CALL_START_TIME_FIELD, cdr.getCallStartTime());
+        rec.setValue(CALL_END_TIME_FIELD, cdr.getCallEndTime());
+        rec.setValue(CALL_DURATION_FIELD, cdr.getCallDuration());
+        rec.setValue(CONVERSATION_START_TIME_FIELD, cdr.getConversationStartTime());
+        rec.setValue(CONVERSATION_DURATION_FIELD, cdr.getConversationDuration());
 
-            if (conversationResult.getTransferCompletionCode()!=null)
-            {
-                String transferStatus = null;
-                switch(conversationResult.getTransferCompletionCode())
-                {
-                    case ERROR : transferStatus = AsyncIvrInformer.TRANSFER_ERROR_STATUS; break;
-                    case NORMAL : transferStatus = AsyncIvrInformer.TRANSFER_SUCCESSFULL_STATUS; break;
-                    case NO_ANSWER :
-                        transferStatus = AsyncIvrInformer.TRANSFER_DESTINATION_NOT_ANSWER_STATUS;
-                        break;
-                }
-                record.setValue(TRANSFER_COMPLETION_CODE_FIELD, transferStatus);
-                record.setValue(
-                        TRANSFER_ADDRESS_FIELD, conversationResult.getTransferAddress());
-                record.setValue(
-                        TRANSFER_TIME_FIELD, conversationResult.getTransferTime());
-                record.setValue(TRANSFER_CONVERSATION_START_TIME_FIELD
-                        , conversationResult.getTransferConversationStartTime());
-                record.setValue(TRANSFER_CONVERSATION_DURATION_FIELD
-                        , conversationResult.getTransferConversationDuration());
+        if (cdr.getTransferCompletionCode()!=null) {
+            String transferStatus = null;
+            switch(conversationResult.getTransferCompletionCode()) {
+                case ERROR : transferStatus = AsyncIvrInformer.TRANSFER_ERROR_STATUS; break;
+                case NORMAL : transferStatus = AsyncIvrInformer.TRANSFER_SUCCESSFULL_STATUS; break;
+                case NO_ANSWER :
+                    transferStatus = AsyncIvrInformer.TRANSFER_DESTINATION_NOT_ANSWER_STATUS;
+                    break;
             }
+            rec.setValue(TRANSFER_COMPLETION_CODE_FIELD, transferStatus);
+            rec.setValue(TRANSFER_ADDRESS_FIELD, cdr.getTransferAddress());
+            rec.setValue(TRANSFER_TIME_FIELD, cdr.getTransferTime());
+            rec.setValue(TRANSFER_CONVERSATION_START_TIME_FIELD , cdr.getTransferConversationStartTime());
+            rec.setValue(TRANSFER_CONVERSATION_DURATION_FIELD, cdr.getTransferConversationDuration());
         }
     }
 
-    private void inform(IvrEndpoint endpoint) throws Exception
-    {
-        boolean groupInformed = false;
-        for (Record record: records)
-        {
-            if (!informer.getInformAllowed())
-                return;
-            statusMessage.set("Starting inform abonent");
-            record.setValue(CALL_START_TIME_FIELD, new Timestamp(System.currentTimeMillis()));
-            currentRecord = record;
-            Map<String, Object> bindings = new HashMap<String, Object>();
-            bindings.put(AsyncIvrInformer.RECORD_BINDING, record);
-            bindings.put(AsyncIvrInformer.INFORMER_BINDING, this);
-            statusMessage.set("Calling to the abonent");
-            abonentNumber = converter.convert(String.class, record.getValue(ABONENT_NUMBER_FIELD), null);
-            abonentNumber = informer.translateNumber(abonentNumber, record);
-            conversationResult = null;
-            if (groupInformed)
-                skipRecord(record);
-            else
-            {
-                //TODO:fix invite
-//                endpoint.invite(abonentNumber, scenario, this, bindings);
-                boolean restartEndpoint = false;
-                informLock.lock();
-                try
-                {
-                    //разговор может завершиться не начавшись
-                    if (conversationResult==null)
-                    {
-                        long callStartTime = System.currentTimeMillis();
-                        if (maxInviteDuration!=null && maxInviteDuration>0)
-                            if (   !abonentInformed.await(maxInviteDuration, TimeUnit.SECONDS)
-                                && endpoint.getEndpointState().getId()==IvrEndpointState.INVITING)
-                            {
-                                restartEndpoint = true;
-                                record.setValue(COMPLETION_CODE_FIELD
-                                        , AsyncIvrInformer.NUMBER_NOT_ANSWERED_STATUS);
-                            }
-
-                        if (!restartEndpoint && conversationResult==null)
-                        {
-                            if (maxCallDuration!=null)
-                            {
-                                long timeout = maxCallDuration - (System.currentTimeMillis()-callStartTime)/1000;
-                                if (timeout<=0 || !abonentInformed.await(timeout, TimeUnit.SECONDS))
-                                    restartEndpoint = true;
-                            }
-                            else
-                                abonentInformed.await();
-                        }
-                    }
-                    handleConversationResult(record);
-                    String completionCode = (String) record.getValue(COMPLETION_CODE_FIELD);
-                    Long duration = (Long) record.getValue(CONVERSATION_DURATION_FIELD);
-                    if (ObjectUtils.in(completionCode, AsyncIvrInformer.COMPLETED_BY_INFORMER_STATUS
-                            , AsyncIvrInformer.COMPLETED_BY_ABONENT_STATUS)
-                        && duration!=null && duration>0)
-                    {
-                        groupInformed = true;
-                    }
-                }
-                finally
-                {
-                    informLock.unlock();
-                }
-                if (restartEndpoint)
-                    restartEndpoint(endpoint, record);
-            }
-            abonentNumber = null;
-            informer.sendRecordToConsumers(record, dataContext);
-        }
-    }
+//    private void inform(IvrEndpoint endpoint) throws Exception {
+//        boolean groupInformed = false;
+//        for (Record record: records) {
+//            if (!informer.getInformAllowed())
+//                return;
+//            statusMessage.set("Starting inform abonent");
+//            record.setValue(CALL_START_TIME_FIELD, new Timestamp(System.currentTimeMillis()));
+//            currentRecord = record;
+//            Map<String, Object> bindings = new HashMap<String, Object>();
+//            bindings.put(AsyncIvrInformer.RECORD_BINDING, record);
+//            bindings.put(AsyncIvrInformer.INFORMER_BINDING, this);
+//            statusMessage.set("Calling to the abonent");
+//            abonentNumber = converter.convert(String.class, record.getValue(ABONENT_NUMBER_FIELD), null);
+//            abonentNumber = informer.translateNumber(abonentNumber, record);
+//            conversationResult = null;
+//            if (groupInformed)
+//                skipRecord(record);
+//            else
+//            {
+//                //TODO:fix invite
+////                endpoint.invite(abonentNumber, scenario, this, bindings);
+//                boolean restartEndpoint = false;
+//                informLock.lock();
+//                try
+//                {
+//                    //разговор может завершиться не начавшись
+//                    if (conversationResult==null)
+//                    {
+//                        long callStartTime = System.currentTimeMillis();
+//                        if (inviteTimeout!=null && inviteTimeout>0)
+//                            if (   !abonentInformed.await(inviteTimeout, TimeUnit.SECONDS)
+//                                && endpoint.getEndpointState().getId()==IvrEndpointState.INVITING)
+//                            {
+//                                restartEndpoint = true;
+//                                record.setValue(COMPLETION_CODE_FIELD
+//                                        , AsyncIvrInformer.NUMBER_NOT_ANSWERED_STATUS);
+//                            }
+//
+//                        if (!restartEndpoint && conversationResult==null)
+//                        {
+//                            if (maxCallDuration!=null)
+//                            {
+//                                long timeout = maxCallDuration - (System.currentTimeMillis()-callStartTime)/1000;
+//                                if (timeout<=0 || !abonentInformed.await(timeout, TimeUnit.SECONDS))
+//                                    restartEndpoint = true;
+//                            }
+//                            else
+//                                abonentInformed.await();
+//                        }
+//                    }
+//                    handleConversationResult(record);
+//                    String completionCode = (String) record.getValue(COMPLETION_CODE_FIELD);
+//                    Long duration = (Long) record.getValue(CONVERSATION_DURATION_FIELD);
+//                    if (ObjectUtils.in(completionCode, AsyncIvrInformer.COMPLETED_BY_INFORMER_STATUS
+//                            , AsyncIvrInformer.COMPLETED_BY_ABONENT_STATUS)
+//                        && duration!=null && duration>0)
+//                    {
+//                        groupInformed = true;
+//                    }
+//                }
+//                finally
+//                {
+//                    informLock.unlock();
+//                }
+//                if (restartEndpoint)
+//                    restartEndpoint(endpoint, record);
+//            }
+//            abonentNumber = null;
+//            informer.sendRecordToConsumers(record, dataContext);
+//        }
+//    }
 
     private void skipInforming() throws Exception
     {

@@ -27,10 +27,15 @@ import org.raven.tree.Node;
 public interface IvrEndpointPool extends Node
 {
     /**
-     * Send request for endpoint. When pool will found free endpoint or when
+     * Sends request for endpoint. When pool will found free endpoint or when
      * {@link EndpointRequest#getWaitTimeout() timeout} will reached pool executes
      * {@link EndpointRequest#processRequest(org.onesec.raven.ivr.IvrEndpointPool) callback method}
      * in the async manner (in the separate thread)
      */
     public void requestEndpoint(EndpointRequest request) throws ExecutorServiceException;
+    /**
+     * Releases endpoint requested in the {@link #requestEndpoint} method
+     * @param endpoint endpoint which must be released (returned to the pool)
+     */
+    public void releaseEndpoint(IvrEndpoint endpoint);
 }
