@@ -37,6 +37,8 @@ import org.raven.sched.impl.ExecutorServiceNode;
 import org.raven.tree.Node;
 import org.raven.tree.impl.ContainerNode;
 import static org.easymock.EasyMock.*;
+import org.junit.After;
+import org.onesec.raven.ivr.IvrEndpointPool;
 
 /**
  *
@@ -51,8 +53,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
     private Node requestOwner2;
 
     @Before
-    public void prepare() throws Exception
-    {
+    public void prepare() throws Exception {
         requestOwner = new ContainerNode("requestOwner");
         tree.getRootNode().addAndSaveChildren(requestOwner);
         assertTrue(requestOwner.start());
@@ -77,10 +78,15 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         
         assertTrue(pool.start());
     }
+    
+    @After
+    public void completeTest() {
+        pool.stop();
+        executor.stop();
+    }
 
 //    @Test
-    public void simpleTest() throws InterruptedException
-    {
+    public void simpleTest() throws InterruptedException {
         EndpointRequest req = createMock(EndpointRequest.class);
         expect(req.getOwner()).andReturn(requestOwner).anyTimes();
         req.processRequest(endpoint);
@@ -99,7 +105,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
     {
         EndpointRequest req = createMock(EndpointRequest.class);
         expect(req.getOwner()).andReturn(requestOwner).anyTimes();
-        req.processRequest(endpoint);
+        req.processRequest(processRequest(pool));
         expectLastCall().times(2);
         replay(req);
 
@@ -119,8 +125,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         expect(req.getOwner()).andReturn(requestOwner).anyTimes();
         expect(req2.getOwner()).andReturn(requestOwner2).anyTimes();
         req.processRequest(endpoint);
-        expectLastCall().andAnswer(new IAnswer<Object>()
-        {
+        expectLastCall().andAnswer(new IAnswer<Object>() {
             public Object answer() throws Throwable {
                 TimeUnit.SECONDS.sleep(2);
                 return null;
@@ -139,8 +144,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
     }
 
 //    @Test(timeout=25000)
-    public void asyncTest() throws Exception
-    {
+    public void asyncTest() throws Exception {
         createEndpoint("88014");
 
         EndpointRequest req = createMock(EndpointRequest.class);
@@ -148,8 +152,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         expect(req.getOwner()).andReturn(requestOwner).anyTimes();
         expect(req2.getOwner()).andReturn(requestOwner2).anyTimes();
         req.processRequest(isA(IvrEndpoint.class));
-        expectLastCall().andAnswer(new IAnswer<Object>()
-        {
+        expectLastCall().andAnswer(new IAnswer<Object>() {
             public Object answer() throws Throwable {
                 TimeUnit.SECONDS.sleep(2);
                 return null;
@@ -166,9 +169,8 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         verify(req, req2);
     }
 
-    @Test(timeout=20000)
-    public void watchdogTest() throws Exception
-    {
+//    @Test(timeout=20000)
+    public void watchdogTest() throws Exception {
         EndpointRequest req = createMock(EndpointRequest.class);
 
         expect(req.getOwner()).andReturn(requestOwner).anyTimes();
@@ -187,8 +189,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
     }
 
 //    @Test
-    public void priorityTest() throws InterruptedException
-    {
+    public void priorityTest() throws InterruptedException {
         pool.setLogLevel(LogLevel.DEBUG);
         endpoint.stop();
         IMocksControl control = createControl();
@@ -214,10 +215,10 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         List<String> order = new ArrayList<String>(4);
 //        req.processRequest(checkEndpoint(order, "req"));
         req.processRequest(null);
-        req2.processRequest(checkEndpoint(order, "req2"));
-        req1.processRequest(checkEndpoint(order, "req1"));
-        req3.processRequest(checkEndpoint(order, "req3"));
-        req4.processRequest(checkEndpoint(order, "req4"));
+        req2.processRequest(checkEndpoint(order, "req2", pool));
+        req1.processRequest(checkEndpoint(order, "req1", pool));
+        req3.processRequest(checkEndpoint(order, "req3", pool));
+        req4.processRequest(checkEndpoint(order, "req4", pool));
 
         control.replay();
 
@@ -273,9 +274,8 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         verify(req1, req2);
     }
 
-//    @Test
-    public void addressRangesTest() throws Exception
-    {
+    @Test
+    public void addressRangesTest() throws Exception {
         pool.stop();
         TimeUnit.SECONDS.sleep(2);
         assertEquals(Node.Status.INITIALIZED, pool.getStatus());
@@ -288,7 +288,8 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         assertNotNull(pool.getChildren("88016"));
     }
 
-    public static IvrEndpoint checkEndpoint(final List<String> order, final String req)
+    public static IvrEndpoint checkEndpoint(final List<String> order, final String req
+            , final IvrEndpointPool pool)
     {
         reportMatcher(new IArgumentMatcher() {
             public boolean matches(Object obj) {
@@ -297,8 +298,8 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
                     System.out.println("req: "+req+"; class: "+className);
                     order.add(req);
                     Thread.sleep(500);
-                } catch (InterruptedException ex) {
-                }
+                    pool.releaseEndpoint((IvrEndpoint)obj);
+                } catch (InterruptedException ex) { }
                 return true;
             }
             public void appendTo(StringBuffer buffer) {
@@ -334,5 +335,17 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
     private TestIvrEndpoint createEndpoint(String number)
     {
         return createEndpoint(pool, number);
+    }
+
+    public static IvrEndpoint processRequest(final IvrEndpointPool pool) {
+        reportMatcher(new IArgumentMatcher() {
+            public boolean matches(Object arg) {
+                pool.releaseEndpoint((IvrEndpoint)arg);
+                return true;
+            }
+            public void appendTo(StringBuffer buffer) {
+            }
+        });
+        return null;
     }
 }

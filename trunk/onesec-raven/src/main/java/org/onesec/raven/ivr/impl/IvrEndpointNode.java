@@ -221,12 +221,13 @@ public class IvrEndpointNode extends AbstractEndpointNode
 //        initializeEndpoint();
     }
 
-    public void invite(String opponentNum, int inviteTimeout, IvrEndpointConversationListener listener
+    public void invite(String opponentNum, int inviteTimeout, int maxCallDur
+            , IvrEndpointConversationListener listener
             , IvrConversationScenario scenario, Map<String, Object> bindings)
     {
         CiscoJtapiTerminal _term = term.get();
         if (_term!=null)
-            _term.invite(opponentNum, inviteTimeout, listener, scenario, bindings);
+            _term.invite(opponentNum, inviteTimeout, maxCallDur, listener, scenario, bindings);
         else
             listener.conversationStopped(new IvrEndpointConversationStoppedEventImpl(
                     null, CompletionCode.OPPONENT_UNKNOWN_ERROR));

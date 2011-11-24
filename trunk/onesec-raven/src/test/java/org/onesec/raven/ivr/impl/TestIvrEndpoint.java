@@ -142,4 +142,10 @@ public class TestIvrEndpoint extends BaseNode implements IvrEndpoint
     public Boolean getEnableIncomingCalls() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
+
+    public void invite(String opponentNum, int inviteTimeout, int maxCallDur
+            , IvrEndpointConversationListener listener, IvrConversationScenario scenario
+            , Map<String, Object> bindings) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
 }

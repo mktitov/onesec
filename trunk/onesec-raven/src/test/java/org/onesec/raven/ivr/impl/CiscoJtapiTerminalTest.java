@@ -52,6 +52,7 @@ import static org.easymock.EasyMock.*;
 /**
  * @author Mikhail Titov
  */
+//TODO: Add tests for maxCallDur parameter in invite method
 public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
     private ProviderRegistry providerRegistry;
     private StateListenersCoordinator stateListenersCoordinator;
@@ -168,7 +169,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
 
         endpoint = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, term);
         startEndpoint(endpoint);
-        endpoint.invite("88027", 0, listener, scenario, null);
+        endpoint.invite("88027", 0, 0, listener, scenario, null);
         waitForConversationStop();
         stopEndpoint(endpoint);
         
@@ -187,7 +188,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
 
         endpoint = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, term);
         startEndpoint(endpoint);
-        endpoint.invite("88027", 5, listener, scenario, null);
+        endpoint.invite("88027", 5, 0, listener, scenario, null);
         waitForConversationStop();
         stopEndpoint(endpoint);
 
@@ -207,7 +208,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
 
         endpoint = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, term);
         startEndpoint(endpoint);
-        endpoint.invite("88027", 5, listener, scenario, null);
+        endpoint.invite("88027", 5, 0, listener, scenario, null);
         waitForConversationStop();
         stopEndpoint(endpoint);
 
@@ -227,7 +228,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
 
         endpoint = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, term);
         startEndpoint(endpoint);
-        endpoint.invite("88027", 8, listener, scenario, null);
+        endpoint.invite("88027", 8, 0, listener, scenario, null);
         waitForConversationStop();
         Thread.sleep(9000);
         stopEndpoint(endpoint);

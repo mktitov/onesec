@@ -27,7 +27,8 @@ public interface IvrEndpoint extends IvrTerminal, Node
 {
     public IvrEndpointState getEndpointState();
 
-    public void invite(String opponentNum, int inviteTimeout, IvrEndpointConversationListener listener
+    public void invite(String opponentNum, int inviteTimeout, int maxCallDur
+            , IvrEndpointConversationListener listener
             , IvrConversationScenario scenario, Map<String, Object> bindings);
 //    public RtpAddress getRtpAddress();
     /**
