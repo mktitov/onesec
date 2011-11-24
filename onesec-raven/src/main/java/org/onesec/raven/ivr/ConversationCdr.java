@@ -23,7 +23,7 @@ import org.onesec.core.call.CallCompletionCode;
  * @see IvrEndpoint#invite
  * @author Mikhail Titov
  */
-public interface ConversationResult
+public interface ConversationCdr
 {
     /**
      * Returns the call start time

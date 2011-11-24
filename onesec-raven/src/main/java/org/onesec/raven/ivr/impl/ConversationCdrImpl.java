@@ -19,13 +19,13 @@ package org.onesec.raven.ivr.impl;
 
 import org.onesec.core.call.CallCompletionCode;
 import org.onesec.raven.ivr.CompletionCode;
-import org.onesec.raven.ivr.ConversationResult;
+import org.onesec.raven.ivr.ConversationCdr;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class ConversationResultImpl implements ConversationResult
+public class ConversationCdrImpl implements ConversationCdr
 {
     private long callStartTime;
     private long callEndTime;

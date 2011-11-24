@@ -28,7 +28,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import org.onesec.core.StateWaitResult;
 import org.onesec.raven.ivr.ConversationCompletionCallback;
-import org.onesec.raven.ivr.ConversationResult;
+import org.onesec.raven.ivr.ConversationCdr;
 import org.onesec.raven.ivr.EndpointRequest;
 import org.onesec.raven.ivr.IvrConversationBridgeExeption;
 import org.onesec.raven.ivr.IvrConversationsBridge;
@@ -160,7 +160,8 @@ public class CommutationManagerCallImpl implements CommutationManagerCall, IvrCo
         if (!checkState())
             return false;
         manager.getRequest().fireOperatorNumberQueueEvent(getNumber());
-        endpoint.invite(getNumber(), manager.getConversationScenario(), this, bindings);
+        //TODO: Fix invite
+//        endpoint.invite(getNumber(), manager.getConversationScenario(), this, bindings);
         lock.lock();
         try {
             long callStartTime = System.currentTimeMillis();
@@ -275,7 +276,7 @@ public class CommutationManagerCallImpl implements CommutationManagerCall, IvrCo
         return manager.getRequest().getPriority();
     }
 
-    public void conversationCompleted(ConversationResult res) {
+    public void conversationCompleted(ConversationCdr res) {
         if (manager.getOperator().isLogLevelEnabled(LogLevel.DEBUG))
             manager.getOperator().getLogger().debug(logMess("Operator's conversation completed"));
         lock.lock();

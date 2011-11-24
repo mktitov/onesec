@@ -443,6 +443,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         return null;
     }
 
+    //TODO: Remove RTP address from the table
     public List<ViewableObject> getViewableObjects(Map<String, NodeAttribute> refreshAttributes)
             throws Exception
     {
@@ -467,7 +468,8 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                         String name = endpoint.getName();
                         if (!Status.STARTED.equals(endpoint.getStatus()))
                             name = "<span style=\"color: yellow\">"+name+"</span>";
-                        RtpAddress rtpAddress = endpoint.getRtpAddress();
+//                        RtpAddress rtpAddress = endpoint.getRtpAddress();
+                        RtpAddress rtpAddress = null;
                         Object port = rtpAddress==null? "" : rtpAddress.getPort();
                         String status = endpoint.getEndpointState().getIdName();
                         status = String.format(
@@ -657,7 +659,6 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                     term.setEnableIncomingCalls(null);
                     term.setEnableIncomingRtp(null);
                     term.setCodec(null);
-                    term.setRtpInitialBuffer(null);
                     term.setRtpMaxSendAheadPacketsCount(null);
                     term.setRtpPacketSize(null);
                     term.setLogLevel(getLogLevel());

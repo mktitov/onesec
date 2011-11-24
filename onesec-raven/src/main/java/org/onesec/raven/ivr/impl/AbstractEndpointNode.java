@@ -109,8 +109,10 @@ public abstract class AbstractEndpointNode extends BaseNode
         }
     }
 
+    protected abstract void terminalCreated(CiscoJtapiTerminal terminal);
     protected abstract void terminalStopped(CiscoJtapiTerminal terminal);
     protected abstract void terminalStateChanged(IvrTerminalState state);
+    protected abstract String getEndpointStateAsString();
 
     public void addConversationListener(IvrEndpointConversationListener listener) {
         CiscoJtapiTerminal terminal = term.get();
