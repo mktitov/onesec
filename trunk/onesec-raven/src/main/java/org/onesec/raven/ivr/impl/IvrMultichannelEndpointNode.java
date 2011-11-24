@@ -20,6 +20,7 @@ package org.onesec.raven.ivr.impl;
 import java.util.List;
 import java.util.Map;
 import org.onesec.core.StateListener;
+import org.onesec.raven.ivr.IvrEndpointState;
 import org.onesec.raven.ivr.IvrMultichannelEndpoint;
 import org.onesec.raven.ivr.IvrMultichannelEndpointState;
 import org.onesec.raven.ivr.IvrTerminalState;
@@ -43,6 +44,7 @@ public class IvrMultichannelEndpointNode extends AbstractEndpointNode
     protected void initFields() {
         super.initFields();
         endpointState = new IvrMultichannelEndpointStateImpl(this);
+        stateListenersCoordinator.addListenersToState(endpointState, IvrEndpointState.class);
         endpointState.setState(IvrMultichannelEndpointState.OUT_OF_SERVICE);
     }
 
@@ -57,6 +59,14 @@ public class IvrMultichannelEndpointNode extends AbstractEndpointNode
         endpointState.setState(IvrMultichannelEndpointState.OUT_OF_SERVICE);
         super.doStart();
     }
+
+    @Override
+    protected String getEndpointStateAsString() {
+        return endpointState.getIdName();
+    }
+
+    @Override
+    protected void terminalCreated(CiscoJtapiTerminal terminal) { }
 
     @Override
     protected void terminalStopped(CiscoJtapiTerminal terminal) {

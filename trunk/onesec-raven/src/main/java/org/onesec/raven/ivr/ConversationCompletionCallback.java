@@ -23,5 +23,5 @@ package org.onesec.raven.ivr;
  */
 public interface ConversationCompletionCallback
 {
-    public void conversationCompleted(ConversationResult conversationResult);
+    public void conversationCompleted(ConversationCdr conversationResult);
 }

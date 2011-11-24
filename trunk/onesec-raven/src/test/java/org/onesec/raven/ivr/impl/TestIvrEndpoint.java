@@ -58,9 +58,9 @@ public class TestIvrEndpoint extends BaseNode implements IvrEndpoint
         return endpointState;
     }
 
-    public void invite(String opponentNumber, IvrConversationScenario conversationScenario, ConversationCompletionCallback callback, Map<String, Object> bindings) throws IvrEndpointException {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
+//    public void invite(String opponentNumber, IvrConversationScenario conversationScenario, ConversationCompletionCallback callback, Map<String, Object> bindings) throws IvrEndpointException {
+//        throw new UnsupportedOperationException("Not supported yet.");
+//    }
 
     public Node getOwner() {
         throw new UnsupportedOperationException("Not supported yet.");

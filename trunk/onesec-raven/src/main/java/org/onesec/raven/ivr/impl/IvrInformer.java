@@ -31,7 +31,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.onesec.raven.ivr.ConversationCompletionCallback;
-import org.onesec.raven.ivr.ConversationResult;
+import org.onesec.raven.ivr.ConversationCdr;
 import org.onesec.raven.ivr.IvrEndpoint;
 import org.onesec.raven.ivr.IvrEndpointException;
 import org.onesec.raven.ivr.IvrEndpointState;
@@ -107,7 +107,7 @@ public class IvrInformer
     private String lastAbonId;
     private Lock recordLock;
     private Condition recordProcessed;
-    private ConversationResult conversationResult;
+    private ConversationCdr conversationResult;
     private IvrInformerScheduler startScheduler;
     private IvrInformerScheduler stopScheduler;
 
@@ -303,7 +303,7 @@ public class IvrInformer
         return null;
     }
 
-    public void conversationCompleted(ConversationResult conversationResult)
+    public void conversationCompleted(ConversationCdr conversationResult)
     {
         this.conversationResult = conversationResult;
         recordLock.lock();
@@ -490,7 +490,8 @@ public class IvrInformer
                 Map<String, Object> bindings = new HashMap<String, Object>();
                 bindings.put(RECORD_BINDING, currentRecord);
                 bindings.put(INFORMER_BINDING, this);
-                endpoint.invite(abonNumber, conversationScenario, this, bindings);
+                //TODO: Fix invite
+//                endpoint.invite(abonNumber, conversationScenario, this, bindings);
                 if (conversationResult==null)
                 {
                     Integer _maxCallDuration = maxCallDuration;
@@ -566,7 +567,7 @@ public class IvrInformer
                     }
                 }
             }
-            catch(IvrEndpointException ex)
+            catch(Throwable ex)
             {
                 currentRecord.setValue(COMPLETION_CODE_FIELD, PROCESSING_ERROR_STATUS);
                 if (isLogLevelEnabled(LogLevel.ERROR))

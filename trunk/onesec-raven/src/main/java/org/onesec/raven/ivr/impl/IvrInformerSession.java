@@ -28,7 +28,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.onesec.core.StateWaitResult;
 import org.onesec.raven.ivr.ConversationCompletionCallback;
-import org.onesec.raven.ivr.ConversationResult;
+import org.onesec.raven.ivr.ConversationCdr;
 import org.onesec.raven.ivr.EndpointRequest;
 import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.IvrEndpoint;
@@ -65,7 +65,7 @@ public class IvrInformerSession implements EndpointRequest, ConversationCompleti
     private final int requestPriority;
 
     private AtomicReference<String> statusMessage;
-    private ConversationResult conversationResult;
+    private ConversationCdr conversationResult;
     private Record currentRecord;
     private IvrEndpoint endpoint;
     private String abonentNumber;
@@ -162,7 +162,7 @@ public class IvrInformerSession implements EndpointRequest, ConversationCompleti
         }
     }
 
-    public void conversationCompleted(ConversationResult conversationResult)
+    public void conversationCompleted(ConversationCdr conversationResult)
     {
         this.conversationResult = conversationResult;
         informLock.lock();
@@ -301,7 +301,8 @@ public class IvrInformerSession implements EndpointRequest, ConversationCompleti
                 skipRecord(record);
             else
             {
-                endpoint.invite(abonentNumber, scenario, this, bindings);
+                //TODO:fix invite
+//                endpoint.invite(abonentNumber, scenario, this, bindings);
                 boolean restartEndpoint = false;
                 informLock.lock();
                 try

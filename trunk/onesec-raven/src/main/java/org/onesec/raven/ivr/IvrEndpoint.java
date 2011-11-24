@@ -26,14 +26,10 @@ import org.raven.tree.Node;
 public interface IvrEndpoint extends IvrTerminal, Node
 {
     public IvrEndpointState getEndpointState();
-    /**
-     * Returns the executor service
-     */
-    public void invite(
-            String opponentNumber, IvrConversationScenario conversationScenario
-            , ConversationCompletionCallback callback
-            , Map<String, Object> bindings) throws IvrEndpointException;
-    public RtpAddress getRtpAddress();
+
+    public void invite(String opponentNum, int inviteTimeout, IvrEndpointConversationListener listener
+            , IvrConversationScenario scenario, Map<String, Object> bindings);
+//    public RtpAddress getRtpAddress();
     /**
      * Adds conversation listener
      */

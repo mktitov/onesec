@@ -27,7 +27,7 @@ import org.junit.Test;
 import org.onesec.core.StateWaitResult;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.ivr.CompletionCode;
-import org.onesec.raven.ivr.ConversationResult;
+import org.onesec.raven.ivr.ConversationCdr;
 import org.onesec.raven.ivr.IvrConversationsBridge;
 import org.onesec.raven.ivr.IvrConversationsBridgeListener;
 import org.onesec.raven.ivr.IvrConversationsBridgeManager;
@@ -208,7 +208,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
         IvrEndpointState endpointState = createMock(IvrEndpointState.class);
         IvrConversationsBridgeManager manager = createMock(IvrConversationsBridgeManager.class);
         IvrConversationsBridge bridge = createMock(IvrConversationsBridge.class);
-        ConversationResult conversationResult = createMock(ConversationResult.class);
+        ConversationCdr conversationResult = createMock(ConversationCdr.class);
 
         request.fireOperatorQueueEvent(operator.getName());
         request.fireOperatorGreetingQueueEvent(audioFile);
@@ -363,7 +363,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
     public static CommutationManagerCall processReadyToCommutate(
             final IvrEndpointConversation operatorConversation
             , final IvrEndpointConversation abonentConversation
-            , final ConversationResult conversationResult)
+            , final ConversationCdr conversationResult)
     {
         reportMatcher(new IArgumentMatcher() {
             public boolean matches(Object argument) {
