@@ -52,7 +52,6 @@ import org.onesec.core.provider.ProviderController;
 import org.onesec.core.provider.ProviderControllerState;
 import org.onesec.core.services.ProviderRegistry;
 import org.onesec.raven.OnesecRavenTestCase;
-import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.actions.PauseActionNode;
 import org.onesec.raven.ivr.actions.PlayAudioActionNode;
 import org.onesec.raven.ivr.actions.StopConversationActionNode;

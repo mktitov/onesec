@@ -776,7 +776,8 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
     {
         Record firstRecord = session.getRecords().get(0);
         try {
-            endpointPool.releaseEndpoint(session.getEndpoint());
+            if (session.getEndpoint()!=null)
+                endpointPool.releaseEndpoint(session.getEndpoint());
             Long id = converter.convert(Long.class, firstRecord.getValue(ID_FIELD), null);
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 debug("Removing session: "+id);

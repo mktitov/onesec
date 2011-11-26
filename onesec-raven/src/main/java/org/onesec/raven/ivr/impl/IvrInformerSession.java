@@ -139,8 +139,8 @@ public class IvrInformerSession extends ConversationCdrRegistrator implements En
     }
     
     private void inform(Record rec) throws Exception {
-        if (rec==null) {
-            closeSession(true);
+        if (rec==null || !informer.getInformAllowed()) {
+            closeSession(rec==null);
             return;
         }
         abonentNumber = converter.convert(String.class, rec.getValue(ABONENT_NUMBER_FIELD), null);
@@ -159,6 +159,7 @@ public class IvrInformerSession extends ConversationCdrRegistrator implements En
         try {
             Record rec = getCurrentRec();
             boolean groupInformed = handleConversationResult(rec, getCdr());
+            informer.sendRecordToConsumers(rec, dataContext);
             if (!groupInformed)
                 inform(getNextRec());
             else 
@@ -171,8 +172,8 @@ public class IvrInformerSession extends ConversationCdrRegistrator implements En
     }
     
     private void skipRestRec(Record rec) {
-        if (rec==null) {
-            closeSession(true);
+        if (rec==null || !informer.getInformAllowed()) {
+            closeSession(rec==null);
             return;
         }
         try {
@@ -181,6 +182,7 @@ public class IvrInformerSession extends ConversationCdrRegistrator implements En
             Timestamp curTs = new Timestamp(System.currentTimeMillis());
             rec.setValue(CALL_START_TIME_FIELD, curTs);
             rec.setValue(CALL_END_TIME_FIELD, curTs);
+            informer.sendRecordToConsumers(rec, dataContext);
             skipRestRec(getNextRec());
         } catch (Throwable e) {
             if (informer.isLogLevelEnabled(LogLevel.ERROR))
@@ -199,11 +201,11 @@ public class IvrInformerSession extends ConversationCdrRegistrator implements En
     
     private void skipInforming() throws Exception {
         statusMessage.set("Skiping infroming because of no free terminal in the pool");
-        for (Record record: records) {
-            record.setValue(COMPLETION_CODE_FIELD
-                    , AsyncIvrInformer.ERROR_NO_FREE_ENDPOINT_IN_THE_POOL);
-            informer.sendRecordToConsumers(record, dataContext);
+        for (Record rec: records) {
+            rec.setValue(COMPLETION_CODE_FIELD, AsyncIvrInformer.ERROR_NO_FREE_ENDPOINT_IN_THE_POOL);
+            informer.sendRecordToConsumers(rec, dataContext);
         }
+        closeSession(false);
     }
 
     private boolean handleConversationResult(Record rec, ConversationCdr cdr) throws Exception {
@@ -219,8 +221,7 @@ public class IvrInformerSession extends ConversationCdrRegistrator implements En
             case CALL_DURATION_TOO_LONG:    
             case OPPONENT_UNKNOWN_ERROR: status = AsyncIvrInformer.PROCESSING_ERROR_STATUS; break;
         }
-        Long dur = (Long) rec.getValue(CONVERSATION_DURATION_FIELD);
-        sucProc = dur!=null && dur>0 && sucProc;
+        sucProc = cdr.getConversationDuration()>0 && sucProc;
         if (sucProc)
             informer.incSuccessfullyInformedAbonents();
         rec.setValue(COMPLETION_CODE_FIELD, status);
@@ -249,6 +250,8 @@ public class IvrInformerSession extends ConversationCdrRegistrator implements En
     }
    
     private void closeSession(boolean success) {
+//        for (Record rec: records)
+//            informer.sendRecordToConsumers(rec, dataContext);
         if (success)
             informer.incSuccessfullyInformedAbonents();
         informer.removeSession(this);
