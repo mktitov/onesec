@@ -775,31 +775,25 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
     void removeSession(IvrInformerSession session)
     {
         Record firstRecord = session.getRecords().get(0);
-        try
-        {
+        try {
+            endpointPool.releaseEndpoint(session.getEndpoint());
             Long id = converter.convert(Long.class, firstRecord.getValue(ID_FIELD), null);
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 debug("Removing session: "+id);
             dataLock.writeLock().lock();
-            try
-            {
+            try {
                 session = sessions.remove(id);
-                if (session != null)
-                {
+                if (session != null) {
                     if (isLogLevelEnabled(LogLevel.DEBUG))
                         debug("Session successfully removed: "+id);
                     sessionRemoved.signal();
-                }
-                else
+                } else
                     if (isLogLevelEnabled(LogLevel.DEBUG))
                         debug("Session with id ("+id+") not found");
-            } finally
-            {
+            } finally {
                 dataLock.writeLock().unlock();
             }
-        }
-        catch (RecordException ex)
-        {
+        } catch (RecordException ex) {
             if (isLogLevelEnabled(LogLevel.ERROR))
                 error("Error removing session from the list: "+getRecordInfo(firstRecord), ex);
         }
