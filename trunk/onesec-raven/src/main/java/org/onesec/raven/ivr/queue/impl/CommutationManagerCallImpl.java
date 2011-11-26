@@ -17,10 +17,7 @@
 
 package org.onesec.raven.ivr.queue.impl;
 
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -43,6 +40,7 @@ import org.onesec.raven.ivr.queue.CallsCommutationManagerListener;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorServiceException;
 import org.raven.tree.Node;
+import org.slf4j.Logger;
 
 /**
  *
@@ -52,9 +50,13 @@ public class CommutationManagerCallImpl implements CommutationManagerCall, IvrCo
         , EndpointRequest, ConversationCompletionCallback
 {
     public final static String SEARCHING_FOR_ENDPOINT_MSG = "Looking up for free endpoint in the pool (%s)";
+    public enum State {INIT, NO_FREE_ENDPOINTS, INVITING, OPERATOR_READY, ABONENT_READY, COMMUTATED, HANDLED, INVALID}
+    public final static Map<State, EnumSet<State>> TRANSITIONS = 
+            new EnumMap<State, EnumSet<State>>(State.class);
 
     private final CallsCommutationManager manager;
     private final String number;
+    private final Logger logger;
     
     private final AtomicReference<String> statusMessage;
     private final List<CallsCommutationManagerListener> listeners =
@@ -68,12 +70,77 @@ public class CommutationManagerCallImpl implements CommutationManagerCall, IvrCo
     private IvrEndpointConversation operatorConversation = null;
     private ReentrantLock lock = new ReentrantLock();
     private Condition eventCondition = lock.newCondition();
+    private State state = State.INIT;
+    
+    static {
+        TRANSITIONS.put(State.INIT, EnumSet.of(State.INVITING, State.NO_FREE_ENDPOINTS, State.INVALID));
+        TRANSITIONS.put(State.NO_FREE_ENDPOINTS, EnumSet.of(State.INVALID));
+        TRANSITIONS.put(State.INVITING, EnumSet.of(State.OPERATOR_READY, State.INVALID));
+        TRANSITIONS.put(State.OPERATOR_READY, EnumSet.of(State.ABONENT_READY, State.INVALID));
+        TRANSITIONS.put(State.ABONENT_READY, EnumSet.of(State.COMMUTATED, State.INVALID));
+        TRANSITIONS.put(State.COMMUTATED, EnumSet.of(State.HANDLED, State.INVALID));
+        TRANSITIONS.put(State.HANDLED, EnumSet.of(State.INVALID));
+        TRANSITIONS.put(State.INVALID, null);
+    }
 
     public CommutationManagerCallImpl(CallsCommutationManager manager, String number) {
         this.manager = manager;
         this.number = number;
+        this.logger = manager.getOperator().getLogger();
         this.statusMessage = new AtomicReference<String>(
                 String.format(SEARCHING_FOR_ENDPOINT_MSG, manager.getRequest().toString()));
+    }
+    
+    private synchronized void moveToState(State newState, Throwable e) {
+        //if current state is invalid then do nothing
+        if (state==State.INVALID)
+            return;
+        //first, check is transition is possible
+        if (!TRANSITIONS.get(state).contains(newState)) {
+            if (isLogLevelEnabled(LogLevel.ERROR))
+                logger.error(logMess("Invalid transition. Can't move from state (%s) to state (%s)"
+                        , state.name(), newState.name()));
+            moveToState(State.INVALID, null);
+        }
+        State nextState = null;
+        switch (newState) {
+            case NO_FREE_ENDPOINTS: 
+                if (isLogLevelEnabled(LogLevel.ERROR))
+                    logger.error(logMess("Get endpoint from pool error"), e);
+                manager.getRequest().addToLog("get endpoint from pool error");
+                manager.incOnNoFreeEndpointsRequests();
+                nextState = State.INVALID;
+                break;
+            case INVITING: break;
+            case OPERATOR_READY: 
+                if (isLogLevelEnabled(LogLevel.DEBUG))
+                    logger.debug(logMess("Number (%s) ready to commutate", getNumber()));
+                manager.getRequest().addToLog(String.format(
+                        "op. number (%s) ready to commutate", getNumber()));
+                if (!manager.getRequest().fireReadyToCommutateQueueEvent(this)) 
+                    nextState = State.INVALID;
+
+            case ABONENT_READY:
+            case COMMUTATED:
+            case HANDLED:
+            case INVALID: 
+                boolean success = state==State.HANDLED;
+                if (!success) {
+                    if (isLogLevelEnabled(LogLevel.DEBUG))
+                        logger.debug(logMess("Call not handled"));
+                    manager.getRequest().addToLog(String.format(
+                            "operator (%s) didn't handle a call", manager.getOperator().getName()));
+                }
+                manager.callFinished(this, success);
+                break;
+        }
+        state = newState;
+        if (nextState!=null)
+            moveToState(nextState, null);
+    }
+    
+    private boolean isLogLevelEnabled(LogLevel logLevel) {
+        return manager.getOperator().isLogLevelEnabled(logLevel);
     }
 
     private boolean checkState() {

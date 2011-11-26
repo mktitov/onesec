@@ -64,6 +64,7 @@ import static org.onesec.raven.ivr.impl.IvrInformerRecordSchemaNode.*;
  *
  * @author Mikhail Titov
  */
+//TODO: remove this class
 @NodeClass
 public class IvrInformer 
         extends BaseNode 
