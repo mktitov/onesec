@@ -190,6 +190,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         startEndpoint(endpoint);
         endpoint.invite("88027", 5, 0, listener, scenario, null);
         waitForConversationStop();
+        assertEquals(0, endpoint.getCallsCount());
         stopEndpoint(endpoint);
 
         verify(term, listener);
@@ -200,7 +201,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
 //    @Test(timeout=30000)
     public void inviteTimeoutTest2() throws Exception {
         waitForProvider();
-        createSimpleScenario2();
+        createSimpleScenario2(5000);
 
         IvrTerminal term = trainTerminal("88013", scenario, true, true);
         IvrEndpointConversationListener listener = trainListener();
@@ -210,6 +211,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         startEndpoint(endpoint);
         endpoint.invite("88027", 5, 0, listener, scenario, null);
         waitForConversationStop();
+        assertEquals(0, endpoint.getCallsCount());
         stopEndpoint(endpoint);
 
         verify(term, listener);
@@ -217,7 +219,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
 
     //В данном тесте система позвонит на указанный адрес и нужно взять трубку в течении 5 сек!.
     //Услышать ничего не должы, система сразу положит трубку
-    @Test(timeout=30000)
+//    @Test(timeout=30000)
     public void inviteTimeoutTest3() throws Exception {
         waitForProvider();
         createSimpleScenario3();
@@ -230,7 +232,58 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         startEndpoint(endpoint);
         endpoint.invite("88027", 8, 0, listener, scenario, null);
         waitForConversationStop();
+        assertEquals(0, endpoint.getCallsCount());
         Thread.sleep(9000);
+        stopEndpoint(endpoint);
+
+        verify(term, listener);
+    }
+    
+    //В данном тесте система позвонит на указанный адрес и нужно взять трубку. 
+    //Сценарий информирования следующий:
+    //  Пароли не совпадают -> Пауза 5 сек  -> Пароли не совпадают
+    //А должны услышать:
+    //  Пароли не совпадают -> Пауза ~5 сек 
+//    @Test(timeout=30000)
+    public void maxCallDurationTest() throws Exception {
+        waitForProvider();
+        createSimpleScenario2(5000);
+
+        IvrTerminal term = trainTerminal("88013", scenario, true, true);
+        IvrEndpointConversationListener listener = trainListener();
+        replay(term, listener);
+
+        endpoint = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, term);
+        startEndpoint(endpoint);
+        endpoint.invite("88027", 0, 5, listener, scenario, null);
+        waitForConversationStop();
+        assertEquals(0, endpoint.getCallsCount());
+        stopEndpoint(endpoint);
+
+        verify(term, listener);
+    }
+
+    //В данном тесте система позвонит на указанный адрес и нужно взять трубку в течении 5 сек. 
+    //В тесте используется и INVITE_TIMEOUT и MAX_CONVERSATION_DUR, но вызовов должен "отвалиться"
+    //по MAX_CONVERSATION_DUR
+    //Сценарий информирования следующий:
+    //  Пароли не совпадают -> Пауза 10 сек  -> Пароли не совпадают
+    //А должны услышать:
+    //  Пароли не совпадают -> Пауза ~10 сек 
+    @Test(timeout=30000)
+    public void maxCallDurationTest2() throws Exception {
+        waitForProvider();
+        createSimpleScenario2(10000);
+
+        IvrTerminal term = trainTerminal("88013", scenario, true, true);
+        IvrEndpointConversationListener listener = trainListener();
+        replay(term, listener);
+
+        endpoint = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, term);
+        startEndpoint(endpoint);
+        endpoint.invite("88027", 5, 10, listener, scenario, null);
+        waitForConversationStop();
+        assertEquals(0, endpoint.getCallsCount());
         stopEndpoint(endpoint);
 
         verify(term, listener);
@@ -265,10 +318,10 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         createStopConversationAction(scenario);
     }
 
-    private void createSimpleScenario2() throws Exception {
+    private void createSimpleScenario2(long pause) throws Exception {
         AudioFileNode audio = createAudioFileNode("audio", "src/test/wav/test.wav");
         createPlayAudioActionNode("play audio", scenario, audio);
-        createPauseActionNode(scenario, 5000l);
+        createPauseActionNode(scenario, pause);
         createPlayAudioActionNode("play audio 2", scenario, audio);
         createStopConversationAction(scenario);
     }

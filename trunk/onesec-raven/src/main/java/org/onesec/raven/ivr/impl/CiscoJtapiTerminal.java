@@ -41,6 +41,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.telephony.Address;
@@ -126,6 +127,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
     private final Set<IvrEndpointConversationListener> conversationListeners =
             new HashSet<IvrEndpointConversationListener>();
     private final ReadWriteLock listenersLock = new ReentrantReadWriteLock();
+    private final AtomicBoolean stopping = new AtomicBoolean();
 
     @Message private static String callIdColumnMessage;
     @Message private static String callInfoColumnMessage;
@@ -178,9 +180,11 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
     }
 
     public void stop() {
-        resetListeners();
-        unregisterTerminal();
-        unregisterTerminalListeners();
+        if (stopping.compareAndSet(false, true)) {
+            resetListeners();
+            unregisterTerminal();
+            unregisterTerminalListeners();
+        }
     }
 
     private void resetListeners() {
@@ -582,7 +586,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
     }
 
     private synchronized void checkState() {
-        if (state.getId()==IvrTerminalState.OUT_OF_SERVICE) {
+        if (state.getId()==IvrTerminalState.OUT_OF_SERVICE && !stopping.get()) {
             if (termInService && termAddressInService)
                 state.setState(IvrTerminalState.IN_SERVICE);
         } else if (!termAddressInService || !termInService)

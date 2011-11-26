@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.onesec.core.StateWaitResult;
@@ -111,7 +112,7 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
         tree.getRootNode().addAndSaveChildren(pool);
         pool.setExecutor(executor);
         pool.setLogLevel(LogLevel.TRACE);
-        assertTrue(pool.start());
+//        assertTrue(pool.start());
 
         createEndpoint("88013", 1234);
 
@@ -151,15 +152,21 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
         tree.getRootNode().addAndSaveChildren(dataCollector);
         dataCollector.setDataSource(informer);
         assertTrue(dataCollector.start());
+    }
 
+    @After
+    public void afterTest() {
+        for (Node node: pool.getChildrens())
+            node.stop();
     }
 
 //    @Test(timeout=60000)
     public void tooManySessionsTest() throws Exception
     {
+        assertTrue(pool.start());
         createScenario();
         assertTrue(informer.start());
-        dataSource.pushData(createRecord(1, "abon1", "88024"));
+        dataSource.pushData(createRecord(1, "abon1", "88027"));
         dataSource.pushData(createRecord(2, "abon1", "089128672947"));
 
         while (informer.getSessionsCount()>0)
@@ -167,6 +174,7 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
 
         List dataList = dataCollector.getDataList();
         Map<Long, Record> recs = getRecords(dataList);
+        printRecordsInformation(dataList);
         assertEquals(4, dataList.size());
         assertEquals(2, recs.size());
         assertNotNull(recs.get(1l));
@@ -175,17 +183,17 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
         assertEquals(
                 AsyncIvrInformer.ERROR_TOO_MANY_SESSIONS
                 , recs.get(2l).getValue(COMPLETION_CODE_FIELD));
-        printRecordsInformation(dataList);
     }
 
 //    @Test(timeout=60000)
     public void tooManySessionsTest2() throws Exception
     {
+        assertTrue(pool.start());
         informer.setWaitForSession(Boolean.TRUE);
         createScenario();
         assertTrue(informer.start());
         dataSource.pushData(createRecord(1, "abon1", "88024"));
-        dataSource.pushData(createRecord(2, "abon1", "089128672947"));
+        dataSource.pushData(createRecord(2, "abon1", "88027"));
 
         while (informer.getSessionsCount()>0)
             TimeUnit.MILLISECONDS.sleep(500);
@@ -204,18 +212,20 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
 //    @Test(timeout=60000)
     public void noFreeTerminalTest() throws Exception
     {
+        assertTrue(pool.start());
         informer.setWaitForSession(Boolean.FALSE);
         informer.setMaxSessionsCount(2);
         createScenario();
         assertTrue(informer.start());
-        dataSource.pushData(createRecord(1, "abon1", "88024"));
-        dataSource.pushData(createRecord(2, "abon1", "089128672947"));
+        dataSource.pushData(createRecord(1, "abon1", "88027"));
+        dataSource.pushData(createRecord(2, "abon1", "88024"));
 
         while (informer.getSessionsCount()>0)
             TimeUnit.MILLISECONDS.sleep(500);
 
         List dataList = dataCollector.getDataList();
         Map<Long, Record> recs = getRecords(dataList);
+        printRecordsInformation(dataList);
         assertEquals(4, dataList.size());
         assertEquals(2, recs.size());
         assertNotNull(recs.get(1l));
@@ -224,16 +234,15 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
         assertEquals(
                 AsyncIvrInformer.ERROR_NO_FREE_ENDPOINT_IN_THE_POOL
                 , recs.get(2l).getValue(COMPLETION_CODE_FIELD));
-        printRecordsInformation(dataList);
     }
 
 //    @Test(timeout=60000)
-    public void alreadyInformingTest() throws Exception
-    {
+    public void alreadyInformingTest() throws Exception {
+        assertTrue(pool.start());
         createScenario();
         assertTrue(informer.start());
-        dataSource.pushData(createRecord(1, "abon1", "88024"));
-        dataSource.pushData(createRecord(2, "abon1", "88024"));
+        dataSource.pushData(createRecord(1, "abon1", "88027"));
+        dataSource.pushData(createRecord(2, "abon1", "88027"));
 
         while (informer.getSessionsCount()>0)
             TimeUnit.MILLISECONDS.sleep(500);
@@ -246,21 +255,19 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
         assertNotNull(recs.get(1l));
         assertTrue((Long)recs.get(1l).getValue(CONVERSATION_DURATION_FIELD)>0);
         assertNotNull(recs.get(2l));
-        assertEquals(
-                AsyncIvrInformer.ALREADY_INFORMING
-                , recs.get(2l).getValue(COMPLETION_CODE_FIELD));
+        assertEquals(AsyncIvrInformer.ALREADY_INFORMING, recs.get(2l).getValue(COMPLETION_CODE_FIELD));
     }
 
 //    @Test(timeout=60000)
-    public void asyncTest() throws Exception
-    {
+    public void asyncTest() throws Exception {
         informer.setWaitForSession(Boolean.FALSE);
         informer.setMaxSessionsCount(2);
         createEndpoint("88014", 1236);
+        assertTrue(pool.start());
         createScenario();
         assertTrue(informer.start());
         dataSource.pushData(createRecord(1, "abon1", "88024"));
-        dataSource.pushData(createRecord(2, "abon1", "089128672947"));
+        dataSource.pushData(createRecord(2, "abon1", "88027"));
 
         while (informer.getSessionsCount()>0)
             TimeUnit.MILLISECONDS.sleep(500);
@@ -276,18 +283,19 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
         assertTrue((Long)recs.get(2l).getValue(CONVERSATION_DURATION_FIELD)>0);
     }
 
+    //Необходимо ответить на первый вызов. Второго вызова быть не должно
 //    @Test(timeout=60000)
-    public void groupTest() throws Exception
-    {
+    public void groupTest() throws Exception {
         informer.setWaitForSession(Boolean.FALSE);
         informer.setMaxSessionsCount(2);
         informer.setGroupField(IvrInformerRecordSchemaNode.ABONENT_ID_FIELD);
         
         createEndpoint("88014", 1236);
+        assertTrue(pool.start());
         createScenario();
         assertTrue(informer.start());
         dataSource.pushData(createRecord(1, "abon1", "88024"));
-        dataSource.pushData(createRecord(2, "abon1", "089128672947"));
+        dataSource.pushData(createRecord(2, "abon1", "88027"));
         dataSource.pushData(null);
 
         while (informer.getSessionsCount()>0)
@@ -301,27 +309,27 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
         assertNotNull(recs.get(1l));
         assertTrue((Long)recs.get(1l).getValue(CONVERSATION_DURATION_FIELD)>0);
         assertNotNull(recs.get(2l));
-        assertEquals(AsyncIvrInformer.SKIPPED_STATUS, recs.get(2l).getValue(IvrInformerRecordSchemaNode.COMPLETION_CODE_FIELD));
+        assertEquals(AsyncIvrInformer.SKIPPED_STATUS
+                , recs.get(2l).getValue(IvrInformerRecordSchemaNode.COMPLETION_CODE_FIELD));
     }
 
 //    @Test(timeout=60000)
-    public void startProcessingTest() throws Exception
-    {
+    public void startProcessingTest() throws Exception {
         informer.setWaitForSession(Boolean.FALSE);
         informer.setMaxSessionsCount(2);
         informer.setDataSource(pullDataSource);
         informer.setGroupField(IvrInformerRecordSchemaNode.ABONENT_ID_FIELD);
 
         createEndpoint("88014", 1236);
+        assertTrue(pool.start());
         createScenario();
         assertTrue(informer.start());
         pullDataSource.addDataPortion(createRecord(1, "abon1", "88024"));
-        pullDataSource.addDataPortion(createRecord(2, "abon1", "089128672947"));
+        pullDataSource.addDataPortion(createRecord(2, "abon1", "88027"));
         pullDataSource.addDataPortion(null);
 
         new Thread(){
-            @Override
-            public void run() {
+            @Override public void run() {
                 informer.startProcessing();
             }
         }.start();
@@ -344,15 +352,15 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
     }
 
 //    @Test(timeout=60000)
-    public void startProcessingOnNotEmptySessionsTest() throws Exception
-    {
+    public void startProcessingOnNotEmptySessionsTest() throws Exception {
+        assertTrue(pool.start());
         informer.setWaitForSession(Boolean.FALSE);
         informer.setMaxSessionsCount(2);
         informer.setDataSource(pullDataSource);
 
         createScenario();
         assertTrue(informer.start());
-        pullDataSource.addDataPortion(createRecord(1, "abon1", "88024"));
+        pullDataSource.addDataPortion(createRecord(1, "abon1", "88027"));
         pullDataSource.addDataPortion(null);
 
         Thread startProcessing = new Thread(){
@@ -387,14 +395,15 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
         assertTrue((Long)recs.get(1l).getValue(CONVERSATION_DURATION_FIELD)>0);
     }
 
-    @Test(timeout=60000)
+//    @Test(timeout=60000)
     public void numberTranslatingTest() throws Exception
     {
+        assertTrue(pool.start());
         informer.setWaitForSession(Boolean.FALSE);
         informer.setMaxSessionsCount(2);
         informer.setDataSource(pullDataSource);
         informer.setUseNumberTranslation(Boolean.TRUE);
-        informer.setNumberTranslation("number.replace('x',record['ABONENT_ID']).replace('y','4')");
+        informer.setNumberTranslation("number.replace('x',record['ABONENT_ID']).replace('y','7')");
 
         createScenario();
         assertTrue(informer.start());
@@ -423,38 +432,32 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
     }
 
 //    @Test(timeout=60000)
-    public void stopProcessingTest() throws Exception
-    {
+    public void stopProcessingTest() throws Exception {
         informer.setWaitForSession(Boolean.FALSE);
         informer.setMaxSessionsCount(2);
         informer.setDataSource(pullDataSource);
         informer.setGroupField(IvrInformerRecordSchemaNode.ABONENT_ID_FIELD);
 
         createEndpoint("88014", 1236);
+        assertTrue(pool.start());
         createScenario();
         assertTrue(informer.start());
         pullDataSource.addDataPortion(createRecord(1, "abon1", "88024"));
-        pullDataSource.addDataPortion(createRecord(2, "abon1", "089128672947"));
+        pullDataSource.addDataPortion(createRecord(2, "abon1", "88027"));
         pullDataSource.addDataPortion(null);
 
         new Thread(){
-            @Override
-            public void run() {
+            @Override public void run() {
                 informer.startProcessing();
             }
         }.start();
-
         Thread.sleep(500);
         
         new Thread(){
-            @Override
-            public void run() {
+            @Override public void run() {
                 informer.stopProcessing();
             }
         }.start();
-
-
-//        assertEquals(IvrInformerStatus.PROCESSING, informer.getInformerStatus());
 
         while (informer.getSessionsCount()>0)
             TimeUnit.MILLISECONDS.sleep(500);
@@ -469,16 +472,16 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
     }
 
     //Не нужно брать трубку на первый вызов
-//    @Test
-    public void inviteTimeoutTest() throws Exception
-    {
+    @Test
+    public void inviteTimeoutTest() throws Exception {
+        assertTrue(pool.start());
         informer.setWaitForSession(Boolean.TRUE);
         informer.setMaxSessionsCount(1);
         informer.setMaxInviteDuration(20);
         createScenario();
         assertTrue(informer.start());
         dataSource.pushData(createRecord(1, "abon1", "88024"));
-        dataSource.pushData(createRecord(2, "abon1", "089128672947"));
+        dataSource.pushData(createRecord(2, "abon1", "88027"));
 
         while (informer.getSessionsCount()>0)
             TimeUnit.MILLISECONDS.sleep(500);
@@ -493,8 +496,7 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
         assertNotNull(recs.get(2l));
         assertTrue((Long)recs.get(2l).getValue(CONVERSATION_DURATION_FIELD)>0);
     }
-
-
+    
     private Map<Long, Record> getRecords(List list) throws RecordException
     {
         Map<Long, Record> recs = new HashMap<Long, Record>();

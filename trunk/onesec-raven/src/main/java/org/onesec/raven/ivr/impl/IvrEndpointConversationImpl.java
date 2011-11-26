@@ -37,6 +37,7 @@ import javax.telephony.callcontrol.CallControlCall;
 import javax.telephony.events.TermEv;
 import org.onesec.core.provider.ProviderController;
 import org.onesec.core.services.ProviderRegistry;
+import org.onesec.core.services.StateListenersCoordinator;
 import org.onesec.raven.ivr.AudioStream;
 import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.CompletionCode;
@@ -87,6 +88,9 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
 
     @Service
     private static BufferCache bufferCache;
+    
+    @Service
+    private static StateListenersCoordinator stateListenersCoordinator;
 
     private final Node owner;
     private final ExecutorService executor;
@@ -114,6 +118,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     private String callingNumber;
     private String calledNumber;
     private Collection<IvrEndpointConversationListener> listeners;
+    private boolean stopping = false;
 
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
@@ -133,6 +138,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
 
         state = new IvrEndpointConversationStateImpl(this);
         state.setState(INVALID);
+//        stateListenersCoordinator.addListenersToState(state, IvrEndpointConversationState.class);
     }
 
     public void addConversationListener(IvrEndpointConversationListener listener) {
@@ -579,9 +585,10 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     public void stopConversation(CompletionCode completionCode) {
         lock.writeLock().lock();
         try {
-            if (state.getId()==INVALID)
+            if (state.getId()==INVALID || stopping)
                 return;
-            if (state.getId()==TALKING) 
+            stopping = true;
+            if (state.getId()==TALKING || state.getId()==CONNECTING || state.getId()==READY) 
                 dropCallConnections();
             call = null;
             try {

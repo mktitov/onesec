@@ -215,6 +215,8 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     }
 
     public void releaseEndpoint(IvrEndpoint endpoint) {
+        if (endpoint==null)
+            throw new NullPointerException("Endpoint parameter can not be null");
         if (isLogLevelEnabled(LogLevel.DEBUG))
             debug(String.format("Realesing endpoint (%s) to the pool", endpoint.getName()));
         lock.writeLock().lock();
@@ -705,30 +707,25 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         private IvrEndpoint endpoint;
         private long id;
 
-        public RequestInfo(EndpointRequest request)
-        {
+        public RequestInfo(EndpointRequest request) {
             this.request = request;
             startTime = System.currentTimeMillis();
             id = requestSeq.incrementAndGet();
         }
 
-        public void setEndpoint(IvrEndpoint endpoint)
-        {
+        public void setEndpoint(IvrEndpoint endpoint) {
             this.endpoint = endpoint;
         }
 
-        public Node getTaskNode()
-        {
+        public Node getTaskNode() {
             return request.getOwner();
         }
 
-        public String getStatusMessage()
-        {
+        public String getStatusMessage() {
             return request.getStatusMessage();
         }
 
-        public void run()
-        {
+        public void run() {
             execStartTime = System.currentTimeMillis();
             try {
                 if (isLogLevelEnabled(LogLevel.DEBUG))
