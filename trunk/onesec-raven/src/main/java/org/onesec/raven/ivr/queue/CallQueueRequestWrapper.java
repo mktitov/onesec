@@ -149,4 +149,8 @@ public interface CallQueueRequestWrapper extends CallQueueRequest
      * Returns the number of operators who passed through the request in current queue
      */
     public int getOperatorHops();
+    /**
+     * Adds a request wrapper listener
+     */
+    public void addRequestWrapperListener(RequestWrapperListener listener);
 }

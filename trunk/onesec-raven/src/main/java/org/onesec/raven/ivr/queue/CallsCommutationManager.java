@@ -20,6 +20,7 @@ package org.onesec.raven.ivr.queue;
 import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.IvrConversationsBridgeManager;
 import org.onesec.raven.ivr.IvrEndpointPool;
+import org.raven.sched.ExecutorService;
 
 /**
  *
@@ -36,4 +37,5 @@ public interface CallsCommutationManager {
     public CallQueueRequestWrapper getRequest();
     public CallsQueue getQueue();
     public void incOnNoFreeEndpointsRequests();
+    public ExecutorService getExecutor();
 }
