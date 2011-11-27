@@ -165,4 +165,8 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager {
     public long getWaitTimeout() {
         return waitTimeout;
     }
+
+    public ExecutorService getExecutor() {
+        return executor;
+    }
 }

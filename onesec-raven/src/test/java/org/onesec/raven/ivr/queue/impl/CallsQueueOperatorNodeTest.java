@@ -90,7 +90,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
         operator.setExecutor(executor);
     }
 
-//    @Test
+    @Test
     public void requestOnStoppedNode()
     {
         CallQueueRequestWrapper request = createMock(CallQueueRequestWrapper.class);
@@ -143,7 +143,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
         verify(request, queue, pool, audioFile);
     }
 
-    @Test(timeout=10000)
+//    @Test(timeout=10000)
     public void inviteTimeoutTest() throws Exception
     {
         CallQueueRequestWrapper request = createMock(CallQueueRequestWrapper.class);
@@ -376,7 +376,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
                         try {
                             commutationManager.abonentReadyToCommutate(abonentConversation);
                             Thread.sleep(100);
-                            commutationManager.conversationCompleted(conversationResult);
+//                            commutationManager.conversationCompleted(conversationResult);
                             Thread.sleep(100);
                             flag.set(true);
                         } catch (InterruptedException e) {

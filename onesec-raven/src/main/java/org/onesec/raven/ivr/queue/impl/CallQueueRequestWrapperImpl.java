@@ -25,6 +25,8 @@ import org.onesec.raven.ivr.queue.CallsQueue;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.IvrEndpointConversationEvent;
@@ -37,6 +39,7 @@ import org.onesec.raven.ivr.queue.CallQueueRequest;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
 import org.onesec.raven.ivr.queue.CommutationManagerCall;
 import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviour;
+import org.onesec.raven.ivr.queue.RequestWrapperListener;
 import org.onesec.raven.ivr.queue.event.CallQueuedEvent;
 import org.onesec.raven.ivr.queue.event.CommutatedQueueEvent;
 import org.onesec.raven.ivr.queue.event.DisconnectedQueueEvent;
@@ -73,6 +76,7 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
     private final Listener listener;
     private final long requestId;
     private final AtomicBoolean cdrSent = new AtomicBoolean(false);
+    private final Set<RequestWrapperListener> listeners = new HashSet<RequestWrapperListener>();
 
     private int priority;
     private String queueId;
@@ -112,7 +116,12 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
         }
     }
 
-    public void addRequestListener(CallQueueRequestListener listener) {
+    public void addRequestListener(CallQueueRequestListener listener) { }
+
+    public void addRequestWrapperListener(RequestWrapperListener listener) {
+        synchronized (listeners) {
+            listeners.add(listener);
+        }
     }
 
     public boolean isValid() {
@@ -127,13 +136,13 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
         return request.isCanceled();
     }
     
-    private void invalidate()
-    {
+    private void invalidate() {
         if (valid.compareAndSet(true, false)){
             if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                 owner.getLogger().debug(logMess("Conversation stopped by abonent"));
             addToLog("conversation stopped by abonent");
             fireDisconnectedQueueEvent();
+            fireRequestInvalidated();
         }
     }
 
@@ -372,6 +381,14 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
         return request.getConversation().toString()
                 +" [reqId: "+requestId+(queue==null?"":"; queue: "+queue.getName())+"]. "
                 +String.format(message, args);
+    }
+
+    private void fireRequestInvalidated() {
+        synchronized(listeners) {
+            for (RequestWrapperListener listener: listeners) {
+                listener.requestInvalidated();
+            }
+        }
     }
     
     private class Listener implements IvrEndpointConversationListener, CallQueueRequestListener

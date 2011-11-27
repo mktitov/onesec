@@ -42,7 +42,7 @@ public interface CommutationManagerCall
     public void abonentReadyToCommutate(IvrEndpointConversation abonentConversation);
     /**
      * Returns <b>true</b> while the state of the communication between two calls is valid
-     */
+     */ 
     public boolean isCommutationValid();
     /**
      * Adds listener for commutation manager events
