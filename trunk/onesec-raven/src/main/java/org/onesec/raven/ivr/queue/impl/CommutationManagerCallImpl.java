@@ -97,10 +97,18 @@ public class  CommutationManagerCallImpl
         try {
             switch (newState) {
                 case NO_FREE_ENDPOINTS: 
-                    if (isLogLevelEnabled(LogLevel.ERROR))
-                        logger.error(logMess("Get endpoint from pool error"), e);
-                    addToLog("get endpoint from pool error");
-                    manager.incOnNoFreeEndpointsRequests();
+                    if (e!=null) {
+                        if (isLogLevelEnabled(LogLevel.ERROR))
+                            logger.error(logMess("Get endpoint from pool error"), e);
+                        addToLog("get endpoint from pool error");
+                    } else {
+                        if (isLogLevelEnabled(LogLevel.WARN))
+                            logger.warn(logMess("Can't process call queue request because of no "
+                                    + "free endpoints in the pool (%s)"
+                                    , manager.getEndpointPool().getName()));
+                        addToLog("no free endpoints in the pool");
+                        manager.incOnNoFreeEndpointsRequests();
+                    }
                     nextState = State.INVALID;
                     break;
                 case INVITING: break;
@@ -133,12 +141,11 @@ public class  CommutationManagerCallImpl
                         if (completionCode!=null) {
                             if (isLogLevelEnabled(LogLevel.DEBUG))
                                 logger.debug(logMess("Operator's number (%s) not answered", getNumber()));
-                            addToLog(String.format("number (%s) not answer", getNumber()));
+                            addToLog("number (%s) not answer", getNumber());
                         }
                         if (isLogLevelEnabled(LogLevel.DEBUG))
                             logger.debug(logMess("Call not handled"));
-                        manager.getRequest().addToLog(String.format(
-                                "operator (%s) didn't handle a call", manager.getOperator().getName()));
+                        addToLog("operator (%s) didn't handle a call", manager.getOperator().getName());
                     } 
                     manager.callFinished(this, success);
                     if (endpoint!=null)
