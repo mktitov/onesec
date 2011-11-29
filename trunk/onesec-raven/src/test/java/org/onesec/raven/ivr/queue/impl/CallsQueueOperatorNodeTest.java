@@ -20,6 +20,7 @@ package org.onesec.raven.ivr.queue.impl;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.onesec.raven.ivr.AudioFile;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import org.easymock.IArgumentMatcher;
 import org.junit.Before;
 import org.onesec.raven.ivr.EndpointRequest;
@@ -46,6 +47,7 @@ import org.onesec.raven.ivr.queue.RequestWrapperListener;
 import org.raven.sched.ExecutorServiceException;
 import org.raven.sched.impl.ExecutorServiceNode;
 import static org.easymock.EasyMock.*;
+import org.onesec.raven.ivr.queue.*;
 
 /**
  *
@@ -201,45 +203,72 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
         IvrEndpointPool pool = createMock(IvrEndpointPool.class);
         IvrEndpoint operatorEndpoint = createMock(IvrEndpoint.class);
         IvrEndpointState endpointState = createMock(IvrEndpointState.class);
-        IvrConversationsBridgeManager manager = createMock(IvrConversationsBridgeManager.class);
+        IvrConversationsBridgeManager bManager = createMock(IvrConversationsBridgeManager.class);
         IvrConversationsBridge bridge = createMock(IvrConversationsBridge.class);
+        CallsCommutationManagerListener commListener = createMock(CallsCommutationManagerListener.class);
+        AtomicReference<IvrEndpointConversationListener> convListener = 
+                new AtomicReference<IvrEndpointConversationListener>();
 //        ConversationCdr conversationResult = createMock(ConversationCdr.class);
 
+        //INIT STEP
         request.fireOperatorQueueEvent(operator.getName());
         request.fireOperatorGreetingQueueEvent(audioFile);
-        request.fireOperatorNumberQueueEvent("88024");
         request.addToLog("handling by operator (operator)");
-        expect(request.logMess(isA(String.class))).andReturn("prefix");
-        pool.requestEndpoint(sendEndpoint(operatorEndpoint));
-        //TODO: fix invite
-        operatorEndpoint.invite(eq("88024"), eq(4), eq(0), isA(IvrEndpointConversationListener.class)
-                , same(scenario), checkBindings(operator, request, operatorConversation));
         expect(request.isValid()).andReturn(Boolean.TRUE).anyTimes();
         expect(request.isHandlingByOperator()).andReturn(false).anyTimes();
         request.addRequestWrapperListener(isA(RequestWrapperListener.class));
-        expect(operatorEndpoint.getEndpointState()).andReturn(endpointState).anyTimes();
-//        expect(endpointState.getId()).andReturn(IvrEndpointState.TALKING).anyTimes();
+        pool.requestEndpoint(sendEndpoint(operatorEndpoint));
+        
+        //INVITING STEP
+        request.fireOperatorNumberQueueEvent("88024");
+        operatorEndpoint.invite(eq("88024"), eq(4), eq(0), handleConversationListener(convListener)
+                , same(scenario), checkBindings(operator, request, operatorConversation, commListener));
+        
+        //OPERATOR READY TO COMMUTATE
+        expect(request.logMess("Operator (operator). Number (88024) ready to commutate")).andReturn("prefix");
         request.addToLog("op. number (88024) ready to commutate");
         expect(request.fireReadyToCommutateQueueEvent(
                 processReadyToCommutate(operatorConversation, abonentConversation, conversationResult))
         ).andReturn(Boolean.TRUE);
+        
+        //ABONENT READY TO COMMUTATE
+        expect(request.logMess("Operator (operator). Abonent ready to commutate")).andReturn("prefix");
         request.addToLog("abonent ready to commutate");
-        expect(request.getConversation()).andReturn(abonentConversation);
-        expect(manager.createBridge(abonentConversation, operatorConversation, "prefix")).andReturn(bridge);
+        commListener.abonentReady();
+        
+        //COMMUTATED
+        expect(bManager.createBridge(abonentConversation, operatorConversation, "prefix")).andReturn(bridge);
         bridge.addBridgeListener(checkBridgeListener());
         bridge.activateBridge();
         request.fireCommutatedEvent();
-//        expect(conversationResult.getCompletionCode()).andReturn(CompletionCode.COMPLETED_BY_OPPONENT);
+        
+        //HANDLED
+        expect(request.logMess("Operator (operator). Operator's conversation completed")).andReturn("prefix");
         request.addToLog("conv. for op. number (88024) completed (COMPLETED_BY_OPPONENT)");
         request.fireDisconnectedQueueEvent();
+        
+        //INVALID
+        pool.releaseEndpoint(operatorEndpoint);
+        
+        
+        request.fireOperatorQueueEvent(operator.getName());
+        request.fireOperatorGreetingQueueEvent(audioFile);
+        request.fireOperatorNumberQueueEvent("88024");
+        request.addToLog("handling by operator (operator)");
+        expect(operatorEndpoint.getEndpointState()).andReturn(endpointState).anyTimes();
+//        expect(endpointState.getId()).andReturn(IvrEndpointState.TALKING).anyTimes();
+        request.addToLog("abonent ready to commutate");
+        expect(request.getConversation()).andReturn(abonentConversation);
+        request.fireCommutatedEvent();
+//        expect(conversationResult.getCompletionCode()).andReturn(CompletionCode.COMPLETED_BY_OPPONENT);
 
         replay(request, abonentConversation, operatorConversation, queue, pool, operatorEndpoint,
-            endpointState, manager, bridge, audioFile);
+            endpointState, bManager, bridge, audioFile);
 
         operator.setInviteTimeout(5);
         assertTrue(operator.start());
         endpointPool.setEndpointPool(pool);
-        bridgeManager.setManager(manager);
+        bManager.setManager(manager);
         operator.processRequest(queue, request, scenario, audioFile);
         Thread.sleep(1000);
         //check for busy
@@ -257,11 +286,10 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
 //        Thread.sleep(100);
 
         verify(request, abonentConversation, operatorConversation, queue, pool, operatorEndpoint,
-            endpointState, manager, bridge);
+            endpointState, bManager, bridge);
     }
 
-    public static IvrConversationsBridgeListener checkBridgeListener()
-    {
+    public static IvrConversationsBridgeListener checkBridgeListener() {
         reportMatcher(new IArgumentMatcher() {
             public boolean matches(Object arg) {
                 IvrConversationsBridgeListener listener = (IvrConversationsBridgeListener) arg;
@@ -276,7 +304,8 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
 
     public static Map<String, Object> checkBindings(
             final CallsQueueOperator operator, final CallQueueRequestWrapper request
-            , final IvrEndpointConversation operatorConversation)
+            , final IvrEndpointConversation operatorConversation
+            , final CallsCommutationManagerListener commListener)
     {
         reportMatcher(new IArgumentMatcher() {
             public boolean matches(Object argument) {
@@ -287,6 +316,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
                 final CommutationManagerCall call = (CommutationManagerCall)obj;
                 new Thread(){
                     @Override public void run() {
+                        call.addListener(commListener);
                         call.operatorReadyToCommutate(operatorConversation);
                     }
                 }.start();
@@ -331,8 +361,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
         return null;
     }
 
-    public static EndpointRequest sendEndpoint(final IvrEndpoint endpoint)
-    {
+    public static EndpointRequest sendEndpoint(final IvrEndpoint endpoint) {
         reportMatcher(new IArgumentMatcher() {
             public boolean matches(Object arg) {
                 EndpointRequest req = (EndpointRequest) arg;
@@ -366,8 +395,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
             public boolean matches(Object arg) {
                 final CommutationManagerCallImpl commutationManager = (CommutationManagerCallImpl) arg;
                 new Thread(){
-                    @Override
-                    public void run() {
+                    @Override public void run() {
                         try {
                             commutationManager.abonentReadyToCommutate(abonentConversation);
                             Thread.sleep(100);
@@ -400,6 +428,20 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
                 return true;
             }
             public void appendTo(StringBuffer buffer) { }
+        });
+        return null;
+    }
+
+    private IvrEndpointConversationListener handleConversationListener(
+            final AtomicReference<IvrEndpointConversationListener> convListener) 
+    {
+        reportMatcher(new IArgumentMatcher() {
+            public boolean matches(Object arg) {
+                convListener.set((IvrEndpointConversationListener)arg);
+                return true;
+            }
+            public void appendTo(StringBuffer buffer) {
+            }
         });
         return null;
     }
