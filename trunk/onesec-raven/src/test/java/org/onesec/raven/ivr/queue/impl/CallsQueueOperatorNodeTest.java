@@ -37,6 +37,7 @@ import org.onesec.raven.ivr.IvrEndpointConversationListener;
 import org.onesec.raven.ivr.IvrEndpointPool;
 import org.onesec.raven.ivr.IvrEndpointState;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
+import org.onesec.raven.ivr.impl.IvrEndpointConversationStoppedEventImpl;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
 import org.onesec.raven.ivr.queue.CommutationManagerCall;
 import org.onesec.raven.ivr.queue.CallsQueue;
@@ -146,7 +147,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
         verify(request, queue, pool, audioFile);
     }
 
-    @Test(timeout=10000)
+//    @Test(timeout=10000)
     public void inviteTimeoutTest() throws Exception {
         CallQueueRequestWrapper request = createMock(CallQueueRequestWrapper.class);
         AudioFile audioFile = createMock(AudioFile.class);
@@ -161,19 +162,13 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
         request.fireOperatorNumberQueueEvent("88024");
         request.addToLog("handling by operator (operator)");
         pool.requestEndpoint(sendEndpoint(endpoint));
-        //TODO: fix invite
-        endpoint.invite(eq("88024"), 0, 0, checkConvListener(), same(scenario), checkBindings(operator, request));
+        pool.releaseEndpoint(endpoint);
         request.addRequestWrapperListener(isA(RequestWrapperListener.class));
         expect(request.isValid()).andReturn(Boolean.TRUE).anyTimes();
         expect(request.isHandlingByOperator()).andReturn(false).anyTimes();
-        expect(endpoint.getEndpointState()).andReturn(endpointState).anyTimes();
-        expect(endpointState.getId()).andReturn(IvrEndpointState.INVITING).anyTimes();
+        endpoint.invite(eq("88024"), eq(4), eq(0), checkConvListener(), same(scenario)
+                , checkBindings(operator, request));
         request.addToLog("number (88024) not answer");
-        endpoint.stop();
-        expect(endpoint.start()).andReturn(Boolean.TRUE);
-        expect(endpointState.waitForState(aryEq(new int[]{IvrEndpointState.IN_SERVICE}), eq(10000l)))
-                .andReturn(stateWaitResult);
-        expect(stateWaitResult.isWaitInterrupted()).andReturn(Boolean.FALSE);
         request.addToLog("operator (operator) didn't handle a call");
         queue.queueCall(checkRequest(request));
 
@@ -189,16 +184,13 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
             Thread.sleep(100);
         long diff = System.currentTimeMillis() - startTime;
         System.out.println("diff:"+diff);
-        assertTrue(diff>5000);
-        assertTrue(diff<7000);
 
         verify(request, queue, pool, endpoint, endpointState, stateWaitResult, audioFile);
     }
 
-//    @Test(timeout=10000)
+    @Test(timeout=10000)
 //    @Test()
-    public void commutateTest() throws Exception
-    {
+    public void commutateTest() throws Exception {
         final CallQueueRequestWrapper request = createMock(CallQueueRequestWrapper.class);
         final AudioFile audioFile = createMock(AudioFile.class);
         IvrEndpointConversation abonentConversation = createMock(
@@ -211,7 +203,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
         IvrEndpointState endpointState = createMock(IvrEndpointState.class);
         IvrConversationsBridgeManager manager = createMock(IvrConversationsBridgeManager.class);
         IvrConversationsBridge bridge = createMock(IvrConversationsBridge.class);
-        ConversationCdr conversationResult = createMock(ConversationCdr.class);
+//        ConversationCdr conversationResult = createMock(ConversationCdr.class);
 
         request.fireOperatorQueueEvent(operator.getName());
         request.fireOperatorGreetingQueueEvent(audioFile);
@@ -220,12 +212,13 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
         expect(request.logMess(isA(String.class))).andReturn("prefix");
         pool.requestEndpoint(sendEndpoint(operatorEndpoint));
         //TODO: fix invite
-//        operatorEndpoint.invite(eq("88024"), same(scenario), isA(CommutationManagerCallImpl.class)
-//                , checkBindings(operator, request, operatorConversation));
+        operatorEndpoint.invite(eq("88024"), eq(4), eq(0), isA(IvrEndpointConversationListener.class)
+                , same(scenario), checkBindings(operator, request, operatorConversation));
         expect(request.isValid()).andReturn(Boolean.TRUE).anyTimes();
         expect(request.isHandlingByOperator()).andReturn(false).anyTimes();
+        request.addRequestWrapperListener(isA(RequestWrapperListener.class));
         expect(operatorEndpoint.getEndpointState()).andReturn(endpointState).anyTimes();
-        expect(endpointState.getId()).andReturn(IvrEndpointState.TALKING).anyTimes();
+//        expect(endpointState.getId()).andReturn(IvrEndpointState.TALKING).anyTimes();
         request.addToLog("op. number (88024) ready to commutate");
         expect(request.fireReadyToCommutateQueueEvent(
                 processReadyToCommutate(operatorConversation, abonentConversation, conversationResult))
@@ -236,12 +229,12 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
         bridge.addBridgeListener(checkBridgeListener());
         bridge.activateBridge();
         request.fireCommutatedEvent();
-        expect(conversationResult.getCompletionCode()).andReturn(CompletionCode.COMPLETED_BY_OPPONENT);
+//        expect(conversationResult.getCompletionCode()).andReturn(CompletionCode.COMPLETED_BY_OPPONENT);
         request.addToLog("conv. for op. number (88024) completed (COMPLETED_BY_OPPONENT)");
         request.fireDisconnectedQueueEvent();
 
         replay(request, abonentConversation, operatorConversation, queue, pool, operatorEndpoint,
-            endpointState, manager, bridge, conversationResult, audioFile);
+            endpointState, manager, bridge, audioFile);
 
         operator.setInviteTimeout(5);
         assertTrue(operator.start());
@@ -264,7 +257,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
 //        Thread.sleep(100);
 
         verify(request, abonentConversation, operatorConversation, queue, pool, operatorEndpoint,
-            endpointState, manager, bridge, conversationResult);
+            endpointState, manager, bridge);
     }
 
     public static IvrConversationsBridgeListener checkBridgeListener()
@@ -370,8 +363,8 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
             , final ConversationCdr conversationResult)
     {
         reportMatcher(new IArgumentMatcher() {
-            public boolean matches(Object argument) {
-                final CommutationManagerCallImpl commutationManager = (CommutationManagerCallImpl) argument;
+            public boolean matches(Object arg) {
+                final CommutationManagerCallImpl commutationManager = (CommutationManagerCallImpl) arg;
                 new Thread(){
                     @Override
                     public void run() {
@@ -386,7 +379,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
                         }
                     }
                 }.start();
-                return argument instanceof CommutationManagerCall;
+                return arg instanceof CommutationManagerCall;
             }
             public void appendTo(StringBuffer buffer) {
             }
@@ -396,17 +389,17 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
 
     public static IvrEndpointConversationListener checkConvListener() {
         reportMatcher(new IArgumentMatcher() {
-            public boolean matches(Object arg) {
+            public boolean matches(final Object arg) {
                 new Thread(new Runnable() {
                     public void run() {
-                        
+                        ((IvrEndpointConversationListener)arg).conversationStopped(
+                                new IvrEndpointConversationStoppedEventImpl(
+                                        null, CompletionCode.OPPONENT_NOT_ANSWERED));
                     }
                 }).start();
                 return true;
             }
-            public void appendTo(StringBuffer buffer) {
-                throw new UnsupportedOperationException("Not supported yet.");
-            }
+            public void appendTo(StringBuffer buffer) { }
         });
         return null;
     }
