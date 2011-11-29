@@ -33,7 +33,7 @@ import org.slf4j.Logger;
  *
  * @author Mikhail Titov
  */
-public class  CommutationManagerCallImpl 
+    public class  CommutationManagerCallImpl 
     implements CommutationManagerCall, IvrConversationsBridgeListener, EndpointRequest
             , RequestWrapperListener
 {
@@ -126,7 +126,7 @@ public class  CommutationManagerCallImpl
                     fireAbonentReadyEvent();
                     commutateCalls();
                     break;
-                case COMMUTATED: manager.getRequest().fireCommutatedEvent(); break;
+                case COMMUTATED: getRequest().fireCommutatedEvent(); break;
                 case HANDLED: 
                     if (isLogLevelEnabled(LogLevel.DEBUG))
                         logger.debug(logMess("Operator's conversation completed"));
