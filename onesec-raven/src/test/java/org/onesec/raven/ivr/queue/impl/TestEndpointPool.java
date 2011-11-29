@@ -44,6 +44,6 @@ public class TestEndpointPool extends BaseNode implements IvrEndpointPool
     }
 
     public void releaseEndpoint(IvrEndpoint endpoint) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        endpointPool.releaseEndpoint(endpoint);
     }
 }

@@ -111,7 +111,7 @@ public class  CommutationManagerCallImpl
                     }
                     nextState = State.INVALID;
                     break;
-                case INVITING: break;
+                case INVITING: getRequest().fireOperatorNumberQueueEvent(getNumber()); break;
                 case OPERATOR_READY: 
                     if (isLogLevelEnabled(LogLevel.DEBUG))
                         logger.debug(logMess("Number (%s) ready to commutate", getNumber()));
@@ -257,7 +257,8 @@ public class  CommutationManagerCallImpl
             Map<String, Object> bindings = new HashMap<String, Object>();
             bindings.put(CALLS_COMMUTATION_MANAGER_BINDING, this);
             bindings.put(CALL_QUEUE_REQUEST_BINDING, manager.getRequest());
-            endpoint.invite(getNumber(), (int)manager.getInviteTimeout(), 0
+            callMoveToState(State.INVITING, null, null);
+            endpoint.invite(getNumber(), (int)manager.getInviteTimeout()/1000, 0
                     , new OperatorConversationListener()
                     , manager.getConversationScenario(), bindings);
 //            
@@ -334,7 +335,7 @@ public class  CommutationManagerCallImpl
 
     public void commutateCalls() throws IvrConversationBridgeExeption {
         IvrConversationsBridge bridge = manager.getConversationsBridgeManager().createBridge(
-                manager.getRequest().getConversation(), operatorConversation, logMess(""));
+                getRequest().getConversation(), operatorConversation, logMess(""));
         bridge.addBridgeListener(this);
         bridge.activateBridge();
 //        commutated = true;
@@ -342,6 +343,7 @@ public class  CommutationManagerCallImpl
 
     public void operatorReadyToCommutate(IvrEndpointConversation operatorConversation)
     {
+        this.operatorConversation = operatorConversation;
         callMoveToState(State.OPERATOR_READY, null, null);
 //        lock.lock();
 //        try {
