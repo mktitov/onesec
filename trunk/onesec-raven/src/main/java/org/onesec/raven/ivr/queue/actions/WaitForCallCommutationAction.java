@@ -90,8 +90,7 @@ public class WaitForCallCommutationAction extends AsyncAction
         return false;
     }
 
-    public void abonentReady()
-    {
+    public void abonentReady() {
         lock.lock();
         try {
             abonentReadyCondition.signal();

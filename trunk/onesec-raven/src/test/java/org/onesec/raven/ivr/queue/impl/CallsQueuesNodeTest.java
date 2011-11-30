@@ -17,13 +17,16 @@
 
 package org.onesec.raven.ivr.queue.impl;
 
+import java.util.List;
 import java.io.FileInputStream;
+import java.util.ArrayList;
 import java.util.Map;
 import org.onesec.core.StateWaitResult;
 import org.onesec.core.provider.ProviderController;
 import org.onesec.core.provider.ProviderControllerState;
 import org.onesec.core.services.ProviderRegistry;
 import java.util.concurrent.TimeUnit;
+import org.junit.After;
 import org.raven.ds.DataContext;
 import org.raven.ds.RecordException;
 import org.raven.tree.Node;
@@ -32,6 +35,7 @@ import org.junit.Test;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.impl.CCMCallOperatorNode;
 import org.onesec.raven.impl.ProviderNode;
+import org.onesec.raven.ivr.IvrEndpoint;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.IvrEndpointConversationListener;
 import org.onesec.raven.ivr.actions.PauseActionNode;
@@ -70,12 +74,13 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
     private CallQueueCdrRecordSchemaNode schema;
     private PushDataSource ds;
     private DataCollector collector;
+    private List<Node> endpoints;
 
     private QueueCallActionNode queueCallAction;
 
     @Before
-    public void prepare()
-    {
+    public void prepare() {
+        endpoints = new ArrayList<Node>();
         ds = new PushDataSource();
         ds.setName("ds");
         tree.getRootNode().addAndSaveChildren(ds);
@@ -90,6 +95,12 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         schema.setName("queue cdr");
         tree.getRootNode().addAndSaveChildren(schema);
         assertTrue(schema.start());
+    }
+    
+    @After
+    public void clean() {
+        for (Node endpoint: endpoints)
+            endpoint.stop();
     }
 
 //    @Test
@@ -279,7 +290,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         RtpAddressNode address = new RtpAddressNode();
         address.setName(getInterfaceAddress().getHostAddress());
         manager.addAndSaveChildren(address);
-        address.setStartingPort(18384);
+        address.setStartingPort(16384);
         assertTrue(address.start());
 
         CCMCallOperatorNode callOperator = new CCMCallOperatorNode();
@@ -291,7 +302,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         provider.setName("88013 provider");
         callOperator.getProvidersNode().addAndSaveChildren(provider);
         provider.setFromNumber(88013);
-        provider.setToNumber(88037);
+        provider.setToNumber(88049);
         provider.setHost("10.16.15.1");
         provider.setPassword("cti_user1");
         provider.setUser("cti_user1");
@@ -321,7 +332,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         IvrConversationScenarioNode abonentScenario = createAbonentScenario();
 //        createEndpoint(tree.getRootNode(), executor, manager, abonentScenario, "88013");
         createMultichannelEndpoint(executor, manager, abonentScenario);
-        createEndpoint(pool, executor, manager, null, "88013");
+        createEndpoint(pool, executor, manager, abonentScenario/*в данном случае не важно что*/, "88013");
         
         assertTrue(pool.start());
         
@@ -370,6 +381,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         operator.setConversationsBridgeManager(bridge);
         operator.setLogLevel(LogLevel.TRACE);
         operator.setGreeting(greeting);
+        operator.setExecutor(executor);
         assertTrue(operator.start());
 
         CallsQueueNode queue = new CallsQueueNode();
@@ -402,12 +414,13 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         endpoint.setName("endpoint");
         tree.getRootNode().addAndSaveChildren(endpoint);
         endpoint.setLogLevel(LogLevel.TRACE);
-        endpoint.setAddress("88037");
+        endpoint.setAddress("88049");
         endpoint.setConversationScenario(scenario);
         endpoint.setExecutor(executor);
         endpoint.setRtpStreamManager(manager);
         endpoint.setEnableIncomingRtp(Boolean.TRUE);
         assertTrue(endpoint.start());
+        endpoints.add(endpoint);
     }
 
     private void createEndpoint(Node owner, ExecutorServiceNode executor, RtpStreamManagerNode manager
@@ -423,6 +436,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         endpoint.setLogLevel(LogLevel.TRACE);
         endpoint.setEnableIncomingRtp(Boolean.TRUE);
         assertTrue(endpoint.start());
+        endpoints.add(endpoint);
     }
 
     private IvrConversationScenarioNode createAbonentScenario()
