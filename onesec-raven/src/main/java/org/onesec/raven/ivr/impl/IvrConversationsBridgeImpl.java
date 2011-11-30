@@ -20,8 +20,6 @@ package org.onesec.raven.ivr.impl;
 import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.media.protocol.DataSource;
 import org.onesec.raven.ivr.IncomingRtpStream;
 import org.onesec.raven.ivr.IncomingRtpStreamDataSourceListener;
@@ -133,6 +131,8 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
         status.set(IvrConversationsBridgeStatus.ACTIVATING);
         conn1 = new BridgeConnection(conv1, conv2);
         conn2 = new BridgeConnection(conv2, conv1);
+        conn1.init();
+        conn2.init();
 //        listener1 = new Listener(conv1);
 //        listener2 = new Listener(conv2);
     }
@@ -215,6 +215,7 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
                 +conv1.getCallingNumber()+" >-< "+conv2.getCalledNumber()+" : "
                 +String.format(message, args);
     }
+    
     private class BridgeConnection
             implements IvrEndpointConversationListener, IncomingRtpStreamDataSourceListener
     {
@@ -226,6 +227,9 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
         public BridgeConnection(IvrEndpointConversation conv1, IvrEndpointConversation conv2) {
             this.conv1 = conv1;
             this.conv2 = conv2;
+        }
+        
+        public void init() {
             conv1.addConversationListener(this);
         }
 

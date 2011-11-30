@@ -116,7 +116,7 @@ import org.slf4j.Logger;
                     if (isLogLevelEnabled(LogLevel.DEBUG))
                         logger.debug(logMess("Number (%s) ready to commutate", getNumber()));
                     addToLog("op. number (%s) ready to commutate", getNumber());
-                    if (!manager.getRequest().fireReadyToCommutateQueueEvent(this)) 
+                    if (!getRequest().fireReadyToCommutateQueueEvent(this)) 
                         nextState = State.INVALID;
                     break;
                 case ABONENT_READY:
@@ -200,7 +200,7 @@ import org.slf4j.Logger;
 //    }
 //
     public boolean isCommutationValid() {
-        return getState()==State.COMMUTATED;
+        return getState()!=State.INVALID;
     }
 
     private String getNumber(){
@@ -358,7 +358,7 @@ import org.slf4j.Logger;
 //        }
     }
 
-    public void abonentReadyToCommutate(IvrEndpointConversation abonentConversation) {
+   public void abonentReadyToCommutate(IvrEndpointConversation abonentConversation) {
         callMoveToState(State.ABONENT_READY, null, null);
 //        lock.lock();
 //        try {
