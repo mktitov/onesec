@@ -19,6 +19,7 @@ package org.onesec.raven.ivr.queue.impl;
 
 import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.IvrIncomingRtpStartedEvent;
+import org.onesec.raven.ivr.IvrOutgoingRtpStartedEvent;
 import org.onesec.raven.ivr.queue.CallQueueRequestListener;
 import org.raven.ds.DataContext;
 import org.onesec.raven.ivr.queue.CallsQueue;
@@ -415,6 +416,8 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
         }
 
         public void incomingRtpStarted(IvrIncomingRtpStartedEvent event) { }
+
+        public void outgoingRtpStarted(IvrOutgoingRtpStartedEvent event) { }
         
         public void conversationStarted(IvrEndpointConversationEvent event) { }
 

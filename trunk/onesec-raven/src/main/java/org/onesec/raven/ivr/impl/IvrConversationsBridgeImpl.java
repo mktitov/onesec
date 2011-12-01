@@ -21,6 +21,7 @@ import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.media.protocol.DataSource;
+import org.onesec.raven.ivr.AudioStream;
 import org.onesec.raven.ivr.IncomingRtpStream;
 import org.onesec.raven.ivr.IncomingRtpStreamDataSourceListener;
 import org.onesec.raven.ivr.IvrConversationsBridge;
@@ -33,6 +34,7 @@ import org.onesec.raven.ivr.IvrEndpointConversationState;
 import org.onesec.raven.ivr.IvrEndpointConversationStoppedEvent;
 import org.onesec.raven.ivr.IvrEndpointConversationTransferedEvent;
 import org.onesec.raven.ivr.IvrIncomingRtpStartedEvent;
+import org.onesec.raven.ivr.IvrOutgoingRtpStartedEvent;
 import org.onesec.raven.ivr.RtpStreamException;
 import org.raven.log.LogLevel;
 import org.raven.tree.Node;
@@ -221,6 +223,7 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
     {
         private final IvrEndpointConversation conv1;
         private final IvrEndpointConversation conv2;
+        private final AtomicReference<AudioStream> audioStream = new AtomicReference<AudioStream>();
         private IncomingRtpStream inRtp;
         private ConnectionState state = ConnectionState.INITIALIZING;
 
@@ -230,10 +233,14 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
         }
         
         public void init() {
+            audioStream.set(conv1.getAudioStream());
             conv1.addConversationListener(this);
+            conv2.addConversationListener(this);
         }
 
         public void listenerAdded(IvrEndpointConversationEvent ev) {
+            if (ev.getConversation()!=conv1)
+                return;
             int convState = conv1.getState().getId();
             if (convState==IvrEndpointConversationState.INVALID) {
                 state = ConnectionState.INVALID;
@@ -246,7 +253,9 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
 
         public void conversationStarted(IvrEndpointConversationEvent event) { }
 
-        public void conversationStopped(IvrEndpointConversationStoppedEvent event) {
+        public void conversationStopped(IvrEndpointConversationStoppedEvent ev) {
+            if (ev.getConversation()!=conv1)
+                return;
             state = ConnectionState.INVALID;
             checkBridgeState();
         }
@@ -254,22 +263,33 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
         public void conversationTransfered(IvrEndpointConversationTransferedEvent event) {
         }
 
-        public void incomingRtpStarted(IvrIncomingRtpStartedEvent event) {
-            IncomingRtpStream rtp = event.getIncomingRtpStream();
+        public void incomingRtpStarted(IvrIncomingRtpStartedEvent ev) {
+            if (ev.getConversation()!=conv1)
+                return;
+            IncomingRtpStream rtp = ev.getIncomingRtpStream();
             if (rtp!=inRtp) {
                 inRtp = rtp;
                 addListenerToRtpStream();
             }
         }
 
+        public void outgoingRtpStarted(IvrOutgoingRtpStartedEvent ev) {
+            if (ev.getConversation()!=conv2)
+                return;
+            audioStream.set(ev.getAudioStream());
+        }
+
         public void dataSourceCreated(IncomingRtpStream stream, DataSource dataSource) {
             if (stream==inRtp && state!=ConnectionState.INVALID) {
-                conv2.getAudioStream().addSource(dataSource);
-                state = ConnectionState.ACTIVE;
-                if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                    owner.getLogger().debug(logMess(
-                            "Incoming RTP stream from %s routed to the outgoing RTP of the %s"
-                            , getNumber(conv1), getNumber(conv2)));
+                AudioStream audioStream = conv2.getAudioStream();
+                if (audioStream!=null) {
+                    conv2.getAudioStream().addSource(dataSource);
+                    state = ConnectionState.ACTIVE;
+                    if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                        owner.getLogger().debug(logMess(
+                                "Incoming RTP stream from %s routed to the outgoing RTP of the %s"
+                                , getNumber(conv1), getNumber(conv2)));
+                }
                 checkBridgeState();
             }
         }

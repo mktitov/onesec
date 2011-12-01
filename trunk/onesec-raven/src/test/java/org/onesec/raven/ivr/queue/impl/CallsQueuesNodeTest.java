@@ -263,7 +263,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
     {
         prepareRealTest();
 
-        TimeUnit.SECONDS.sleep(30);
+        TimeUnit.SECONDS.sleep(60);
 
         Logger log = LoggerFactory.getLogger(Node.class);
         log.debug("!! Finising test !!");

@@ -23,6 +23,7 @@ import org.onesec.raven.ivr.IvrEndpointConversationListener;
 import org.onesec.raven.ivr.IvrEndpointConversationStoppedEvent;
 import org.onesec.raven.ivr.IvrEndpointConversationTransferedEvent;
 import org.onesec.raven.ivr.IvrIncomingRtpStartedEvent;
+import org.onesec.raven.ivr.IvrOutgoingRtpStartedEvent;
 
 /**
  *
@@ -52,6 +53,7 @@ public class ConversationCdrRegistrator implements IvrEndpointConversationListen
         cdr.setTransferConversationStartTime(System.currentTimeMillis());
     }
 
-    public void incomingRtpStarted(IvrIncomingRtpStartedEvent event) {
-    }
+    public void incomingRtpStarted(IvrIncomingRtpStartedEvent event) { }
+
+    public void outgoingRtpStarted(IvrOutgoingRtpStartedEvent event) { }
 }

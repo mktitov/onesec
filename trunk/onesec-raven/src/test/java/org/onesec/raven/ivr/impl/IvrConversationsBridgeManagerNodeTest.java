@@ -50,6 +50,7 @@ import org.onesec.raven.ivr.IvrEndpointConversationStoppedEvent;
 import org.onesec.raven.ivr.IvrEndpointConversationTransferedEvent;
 import org.onesec.raven.ivr.IvrEndpointState;
 import org.onesec.raven.ivr.IvrIncomingRtpStartedEvent;
+import org.onesec.raven.ivr.IvrOutgoingRtpStartedEvent;
 import org.onesec.raven.ivr.RtpStreamException;
 import org.onesec.raven.ivr.actions.PauseActionNode;
 import org.raven.log.LogLevel;
@@ -267,6 +268,8 @@ public class IvrConversationsBridgeManagerNodeTest extends OnesecRavenTestCase
     }
 
     public void incomingRtpStarted(IvrIncomingRtpStartedEvent event) { }
+
+    public void outgoingRtpStarted(IvrOutgoingRtpStartedEvent event) { }
 
     public void listenerAdded(IvrEndpointConversationEvent event) {
     }

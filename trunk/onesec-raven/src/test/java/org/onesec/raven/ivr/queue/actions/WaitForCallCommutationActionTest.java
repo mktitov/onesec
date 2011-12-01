@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.queue.actions;
 
+import org.raven.tree.Node;
 import java.util.concurrent.TimeUnit;
 import javax.script.Bindings;
 import org.junit.Assert;
@@ -32,50 +33,60 @@ import static org.easymock.EasyMock.*;
  */
 public class WaitForCallCommutationActionTest extends Assert
 {
+    private static String executedKey = "executed_org.onesec.raven.ivr.queue.actions.WaitForCallCommutationAction_1";
+    
     @Test
     public void errorTest()
     {
         IvrEndpointConversation conv = createMock(IvrEndpointConversation.class);
         ConversationScenarioState state = createMock(ConversationScenarioState.class);
         Bindings bindings = createMock(Bindings.class);
-
+        Node owner = createMock(Node.class);
+        
+//        expect(owner.getId()).andReturn(1).anyTimes();
         expect(conv.getConversationScenarioState()).andReturn(state);
         expect(state.getBindings()).andReturn(bindings);
         expect(bindings.get(CommutationManagerCall.CALLS_COMMUTATION_MANAGER_BINDING)).andReturn(null);
+//        expect(bindings.containsKey(executedKey)).andReturn(false);
+//        expect(bindings.put(executedKey, Boolean.TRUE)).andReturn(null);
 
-        replay(conv, state, bindings);
+        replay(conv, state, bindings, owner);
 
-        WaitForCallCommutationAction action = new WaitForCallCommutationAction();
+        WaitForCallCommutationAction action = new WaitForCallCommutationAction(owner);
         try {
             action.doExecute(conv);
             fail();
         } catch (Exception ex) {
         }
 
-        verify(conv, state, bindings);
+        verify(conv, state, bindings, owner);
     }
 
     @Test
-    public void normalTest() throws Exception
-    {
+    public void normalTest() throws Exception {
         final IvrEndpointConversation conv = createMock(IvrEndpointConversation.class);
         ConversationScenarioState state = createMock(ConversationScenarioState.class);
         Bindings bindings = createMock(Bindings.class);
         CommutationManagerCall manager = createMock(CommutationManagerCall.class);
+        Node owner = createMock(Node.class);
+        final WaitForCallCommutationAction action = new WaitForCallCommutationAction(owner);
         
+        expect(owner.getId()).andReturn(1).anyTimes();
         expect(conv.getConversationScenarioState()).andReturn(state);
         expect(state.getBindings()).andReturn(bindings);
         expect(bindings.get(CommutationManagerCall.CALLS_COMMUTATION_MANAGER_BINDING)).andReturn(manager);
         manager.operatorReadyToCommutate(conv);
+        manager.addListener(action);
         expect(manager.isCommutationValid()).andReturn(Boolean.TRUE).anyTimes();
+        expect(bindings.size()).andReturn(1).anyTimes();
+        expect(bindings.containsKey(executedKey)).andReturn(false);
+        expect(bindings.put(executedKey, Boolean.TRUE)).andReturn(null);
         
-        replay(conv, state, bindings, manager);
+        replay(conv, state, bindings, manager, owner);
 
-        final WaitForCallCommutationAction action = new WaitForCallCommutationAction();
 
         Thread actionThread = new Thread(){
-            @Override
-            public void run() {
+            @Override public void run() {
                 try {
                     action.doExecute(conv);
                 } catch (Exception ex) {
@@ -86,31 +97,36 @@ public class WaitForCallCommutationActionTest extends Assert
 
         actionThread.start();
         TimeUnit.MILLISECONDS.sleep(500);
+//        TimeUnit.MILLISECONDS.sleep(150000);
         assertTrue(actionThread.isAlive());
         action.cancel();
         TimeUnit.MILLISECONDS.sleep(150);
         assertFalse(actionThread.isAlive());
 
-        verify(conv, state, bindings, manager);
+        verify(conv, state, bindings, manager, owner);
     }
 
     @Test
-    public void normalTest2() throws Exception
-    {
+    public void normalTest2() throws Exception {
         final IvrEndpointConversation conv = createMock(IvrEndpointConversation.class);
         ConversationScenarioState state = createMock(ConversationScenarioState.class);
         Bindings bindings = createMock(Bindings.class);
         CommutationManagerCall manager = createMock(CommutationManagerCall.class);
-
+        Node owner = createMock(Node.class);
+        final WaitForCallCommutationAction action = new WaitForCallCommutationAction(owner);
+        
+        expect(owner.getId()).andReturn(1).anyTimes();
         expect(conv.getConversationScenarioState()).andReturn(state);
         expect(state.getBindings()).andReturn(bindings);
         expect(bindings.get(CommutationManagerCall.CALLS_COMMUTATION_MANAGER_BINDING)).andReturn(manager);
+        manager.addListener(action);
         manager.operatorReadyToCommutate(conv);
         expect(manager.isCommutationValid()).andReturn(Boolean.TRUE).times(5).andReturn(Boolean.FALSE);
+        expect(bindings.containsKey(executedKey)).andReturn(false);
+        expect(bindings.put(executedKey, Boolean.TRUE)).andReturn(null);
 
-        replay(conv, state, bindings, manager);
+        replay(conv, state, bindings, manager, owner);
 
-        final WaitForCallCommutationAction action = new WaitForCallCommutationAction();
 
         Thread actionThread = new Thread(){
             @Override
@@ -129,6 +145,6 @@ public class WaitForCallCommutationActionTest extends Assert
         TimeUnit.MILLISECONDS.sleep(200);
         assertFalse(actionThread.isAlive());
 
-        verify(conv, state, bindings, manager);
+        verify(conv, state, bindings, manager, owner);
     }
 }

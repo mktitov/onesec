@@ -320,6 +320,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 outRtp.open(remoteAddress, remotePort, audioStream);
                 outRtp.start();
                 outRtpStatus = RtpStatus.CONNECTED;
+                fireOutgoingRtpStartedEvent();
                 checkState();
             } catch (Exception e) {
                 //TODO: stop conversation
@@ -777,8 +778,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         }
     }
 
-    private void fireTransferedEvent(String address)
-    {
+    private void fireTransferedEvent(String address) {
         if (listeners!=null && !listeners.isEmpty()) {
             IvrEndpointConversationTransferedEvent event =
                     new IvrEndpointConversationTransferedEventImpl(this, address);
@@ -787,12 +787,19 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         }
     }
 
-    private void fireIncomingRtpStartedEvent()
-    {
+    private void fireIncomingRtpStartedEvent() {
         if (listeners!=null && !listeners.isEmpty()) {
             IvrIncomingRtpStartedEventImpl ev = new IvrIncomingRtpStartedEventImpl(this);
             for (IvrEndpointConversationListener listener: listeners)
                 listener.incomingRtpStarted(ev);
+        }
+    }
+
+    private void fireOutgoingRtpStartedEvent() {
+        if (listeners!=null && !listeners.isEmpty()) {
+            IvrOutgoingRtpStartedEventImpl ev = new IvrOutgoingRtpStartedEventImpl(this);
+            for (IvrEndpointConversationListener listener: listeners)
+                listener.outgoingRtpStarted(ev);
         }
     }
 

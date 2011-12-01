@@ -14,23 +14,27 @@
  *  limitations under the License.
  *  under the License.
  */
+package org.onesec.raven.ivr.impl;
 
-package org.onesec.raven.ivr.queue.actions;
-
-import org.onesec.raven.ivr.IvrAction;
-import org.onesec.raven.ivr.IvrActionNode;
-import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
-import org.raven.annotations.NodeClass;
-import org.raven.tree.impl.BaseNode;
+import org.onesec.raven.ivr.AudioStream;
+import org.onesec.raven.ivr.IvrEndpointConversation;
+import org.onesec.raven.ivr.IvrOutgoingRtpStartedEvent;
 
 /**
  *
  * @author Mikhail Titov
  */
-@NodeClass(parentNode=IvrConversationScenarioNode.class)
-public class WaitForCallCommutationActionNode extends BaseNode implements IvrActionNode
+public class IvrOutgoingRtpStartedEventImpl extends IvrEndpointConversationEventImpl 
+        implements IvrOutgoingRtpStartedEvent
 {
-    public IvrAction createAction() {
-        return new WaitForCallCommutationAction(this);
+    private final AudioStream audioStream;
+
+    public IvrOutgoingRtpStartedEventImpl(IvrEndpointConversation conversation) {
+        super(conversation);
+        this.audioStream = conversation.getAudioStream();
+    }
+
+    public AudioStream getAudioStream() {
+        return audioStream;
     }
 }
