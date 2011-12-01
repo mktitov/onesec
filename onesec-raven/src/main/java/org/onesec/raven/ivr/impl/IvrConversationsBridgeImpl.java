@@ -276,6 +276,10 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
         public void outgoingRtpStarted(IvrOutgoingRtpStartedEvent ev) {
             if (ev.getConversation()!=conv2)
                 return;
+            if (audioStream.get()!=ev.getAudioStream()) {
+                audioStream.set(ev.getAudioStream());
+                addListenerToRtpStream();
+            }
             audioStream.set(ev.getAudioStream());
         }
 
