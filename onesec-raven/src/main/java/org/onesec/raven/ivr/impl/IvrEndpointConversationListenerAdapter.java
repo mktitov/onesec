@@ -30,4 +30,6 @@ public class IvrEndpointConversationListenerAdapter implements IvrEndpointConver
     public void conversationTransfered(IvrEndpointConversationTransferedEvent event) { }
 
     public void incomingRtpStarted(IvrIncomingRtpStartedEvent event) { }
+
+    public void outgoingRtpStarted(IvrOutgoingRtpStartedEvent event) { }
 }

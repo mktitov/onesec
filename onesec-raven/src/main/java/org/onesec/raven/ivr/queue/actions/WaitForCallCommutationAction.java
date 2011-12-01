@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import javax.script.Bindings;
 import org.onesec.raven.ivr.Cacheable;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.actions.AsyncAction;
@@ -28,6 +29,8 @@ import org.onesec.raven.ivr.impl.IvrUtils;
 import org.onesec.raven.ivr.impl.ResourceInputStreamSource;
 import org.onesec.raven.ivr.queue.CommutationManagerCall;
 import org.onesec.raven.ivr.queue.CallsCommutationManagerListener;
+import org.raven.RavenUtils;
+import org.raven.tree.Node;
 
 /**
  * Цель: проинформировать {@link CommutationManagerCall} о том, что оператор готов к коммутации и ждать
@@ -44,34 +47,42 @@ public class WaitForCallCommutationAction extends AsyncAction
     private final Lock lock = new ReentrantLock();
     private final Condition abonentReadyCondition = lock.newCondition();
     private final Condition preamblePlayedCondition = lock.newCondition();
+    private final Node owner;
 
-    public WaitForCallCommutationAction() {
+    public WaitForCallCommutationAction(Node owner) {
         super(NAME);
+        this.owner = owner;
     }
 
     @Override
-    protected void doExecute(IvrEndpointConversation conversation) throws Exception
+    protected void doExecute(IvrEndpointConversation conv) throws Exception
     {
-        CommutationManagerCall commutationManager = (CommutationManagerCall) conversation
-                .getConversationScenarioState()
-                .getBindings()
-                .get(CommutationManagerCall.CALLS_COMMUTATION_MANAGER_BINDING);
+        Bindings bindings = conv.getConversationScenarioState().getBindings();
+        CommutationManagerCall commutationManager = (CommutationManagerCall) 
+                bindings.get(CommutationManagerCall.CALLS_COMMUTATION_MANAGER_BINDING);
 
         if (commutationManager==null)
             throw new Exception("CallsCommutationManager not found in the conversation scenario state");
+        
+        String executedFlagKey = RavenUtils.generateKey("executed_"+this.getClass().getName(), owner);
 
-        commutationManager.addListener(this);
+        boolean executed = bindings.containsKey(executedFlagKey);
+        if (!executed)
+            commutationManager.addListener(this);
         try {
-            commutationManager.operatorReadyToCommutate(conversation);
+            if (!executed) {
+                commutationManager.operatorReadyToCommutate(conv);
+                bindings.put(executedFlagKey, true);
+            }
 
-            boolean preamblePlayed = false;
+            boolean preamblePlayed = executed;
             while (!hasCancelRequest() && commutationManager.isCommutationValid()){
                 if (!preamblePlayed) {
                     lock.lock();
                     try {
                         if (abonentReadyCondition.await(WAIT_TIMEOUT, TimeUnit.MILLISECONDS)) {
                             preamblePlayed = true;
-                            IvrUtils.playAudioInAction(this, conversation
+                            IvrUtils.playAudioInAction(this, conv
                                     , new ResourceInputStreamSource(BEEP_RESOURCE_NAME), this);
                             preamblePlayedCondition.signal();
                         }

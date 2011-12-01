@@ -78,6 +78,7 @@ import org.onesec.raven.ivr.IvrEndpointConversationStoppedEvent;
 import org.onesec.raven.ivr.IvrEndpointConversationTransferedEvent;
 import org.onesec.raven.ivr.IvrEndpointException;
 import org.onesec.raven.ivr.IvrIncomingRtpStartedEvent;
+import org.onesec.raven.ivr.IvrOutgoingRtpStartedEvent;
 import org.onesec.raven.ivr.IvrTerminal;
 import org.onesec.raven.ivr.IvrTerminalState;
 import org.onesec.raven.ivr.RtpStreamManager;
@@ -679,6 +680,15 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
             }
         });
     }
+
+    public void outgoingRtpStarted(final IvrOutgoingRtpStartedEvent event) {
+        fireConversationEvent(new MethodCaller() {
+            @Override public void callMethod(IvrEndpointConversationListener listener) {
+                listener.outgoingRtpStarted(event);
+            }
+        });
+    }
+    
     //--------------- End of the IvrEndpointConversationListener methods -----------------//
 
     private class ConvHolder {

@@ -80,6 +80,7 @@ import org.onesec.raven.ivr.IvrEndpointConversationTransferedEvent;
 import org.onesec.raven.ivr.IvrEndpointException;
 import org.onesec.raven.ivr.IvrEndpointState;
 import org.onesec.raven.ivr.IvrIncomingRtpStartedEvent;
+import org.onesec.raven.ivr.IvrOutgoingRtpStartedEvent;
 import org.onesec.raven.ivr.IvrTerminalState;
 import org.onesec.raven.ivr.RtpAddress;
 import org.onesec.raven.ivr.TerminalStateMonitoringService;
@@ -288,6 +289,8 @@ public class IvrEndpointNode extends AbstractEndpointNode
     public void conversationTransfered(IvrEndpointConversationTransferedEvent event) { }
 
     public void incomingRtpStarted(IvrIncomingRtpStartedEvent event) { }
+
+    public void outgoingRtpStarted(IvrOutgoingRtpStartedEvent event) { }
 
     public void listenerAdded(IvrEndpointConversationEvent event) { }
 
