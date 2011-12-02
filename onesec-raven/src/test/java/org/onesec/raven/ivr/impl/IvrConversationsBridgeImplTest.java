@@ -27,6 +27,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.ivr.AudioStream;
+import org.onesec.raven.ivr.CompletionCode;
 import org.onesec.raven.ivr.IncomingRtpStream;
 import org.onesec.raven.ivr.IncomingRtpStreamDataSourceListener;
 import org.onesec.raven.ivr.IvrConversationsBridge;
@@ -77,7 +78,9 @@ public class IvrConversationsBridgeImplTest extends OnesecRavenTestCase
         listener.bridgeActivated(br);
         listener.bridgeReactivated(br);
         listener.bridgeDeactivated(br);
+        expect(rtpStartedEv.getConversation()).andReturn(conv1Mocks.conv);
         expect(rtpStartedEv.getIncomingRtpStream()).andReturn(conv1Mocks.rtpStream);
+        expect(rtpStartedEv.getConversation()).andReturn(conv1Mocks.conv);
         expect(rtpStartedEv.getIncomingRtpStream()).andReturn(inRtp);
         expect(inRtp.addDataSourceListener(checkDataSourceListener(), (AudioFormat)isNull())).andReturn(true);
 
@@ -86,7 +89,7 @@ public class IvrConversationsBridgeImplTest extends OnesecRavenTestCase
         br.addBridgeListener(listener);
         br.activateBridge();
 
-        assertEquals(2, conversationListeners.size());
+        assertEquals(4, conversationListeners.size());
         assertEquals(2, sourceListeners.size());
 
         sourceListeners.get(0).dataSourceCreated(conv1Mocks.rtpStream, dataSource);
@@ -99,7 +102,8 @@ public class IvrConversationsBridgeImplTest extends OnesecRavenTestCase
         assertEquals(1, sourceListeners.size());
         sourceListeners.get(0).dataSourceCreated(inRtp, dataSource);
 
-        conversationListeners.get(0).conversationStopped(null);
+        conversationListeners.get(0).conversationStopped(new IvrEndpointConversationStoppedEventImpl(
+                conv1Mocks.conv, CompletionCode.COMPLETED_BY_ENDPOINT));
 
         verify(listener, rtpStartedEv, inRtp);
         
@@ -117,30 +121,31 @@ public class IvrConversationsBridgeImplTest extends OnesecRavenTestCase
 
         expect(mocks.conv.getCallingNumber()).andReturn("num_"+suffix).anyTimes();
         expect(mocks.conv.getCalledNumber()).andReturn("!num_"+suffix).anyTimes();
-        mocks.conv.addConversationListener(checkConversationListener());
+        mocks.conv.addConversationListener(checkConversationListener(mocks.conv));
+        expectLastCall().times(2);
         expect(mocks.conv.getState()).andReturn(mocks.state);
         expect(mocks.state.getId()).andReturn(IvrEndpointConversationState.TALKING);
         expect(mocks.conv.getIncomingRtpStream()).andReturn(mocks.rtpStream);
         mocks.rtpStream.addDataSourceListener(checkDataSourceListener(), (AudioFormat) isNull());
         expectLastCall().andReturn(true);
-        expect(mocks.conv.getAudioStream()).andReturn(mocks.audioStream).times(addDsTwice?2:1);
+        expect(mocks.conv.getAudioStream()).andReturn(mocks.audioStream).times(1);
         mocks.audioStream.addSource(isA(DataSource.class));
+//        expectLastCall().times(2);
         expectLastCall().times(addDsTwice?2:1);
         replay(mocks.conv, mocks.state, mocks.rtpStream, mocks.audioStream);
 //        mocks.replay();
     }
 
-    public static IvrEndpointConversationListener checkConversationListener()
+    public static IvrEndpointConversationListener checkConversationListener(final IvrEndpointConversation conv)
     {
         reportMatcher(new IArgumentMatcher() {
             public boolean matches(Object arg) {
                 IvrEndpointConversationListener listener = (IvrEndpointConversationListener) arg;
-                listener.listenerAdded(null);
+                listener.listenerAdded(new IvrEndpointConversationEventImpl(conv));
                 conversationListeners.add(listener);
                 return true;
             }
-            public void appendTo(StringBuffer buffer) {
-            }
+            public void appendTo(StringBuffer buffer) { }
         });
         return null;
     }
