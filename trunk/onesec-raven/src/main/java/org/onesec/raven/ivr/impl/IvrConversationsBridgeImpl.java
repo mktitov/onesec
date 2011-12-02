@@ -233,7 +233,7 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
         }
         
         public void init() {
-            audioStream.set(conv1.getAudioStream());
+            audioStream.set(conv2.getAudioStream());
             conv1.addConversationListener(this);
             conv2.addConversationListener(this);
         }
@@ -277,6 +277,10 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
             if (ev.getConversation()!=conv2)
                 return;
             if (audioStream.get()!=ev.getAudioStream()) {
+                if (owner.isLogLevelEnabled(LogLevel.DEBUG)) 
+                    owner.getLogger().debug(logMess(
+                            "The outgoing rtp where changed for (%s). Rerouting incoming rtp from (%s) to (%s)"
+                            , getNumber(conv2), getNumber(conv1), getNumber(conv2)));
                 audioStream.set(ev.getAudioStream());
                 addListenerToRtpStream();
             }
@@ -285,9 +289,9 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
 
         public void dataSourceCreated(IncomingRtpStream stream, DataSource dataSource) {
             if (stream==inRtp && state!=ConnectionState.INVALID) {
-                AudioStream audioStream = conv2.getAudioStream();
-                if (audioStream!=null) {
-                    conv2.getAudioStream().addSource(dataSource);
+                AudioStream audio = audioStream.get();
+                if (audio!=null) {
+                    audio.addSource(dataSource);
                     state = ConnectionState.ACTIVE;
                     if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                         owner.getLogger().debug(logMess(

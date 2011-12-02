@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.impl;
 
+import org.onesec.raven.ivr.IvrOutgoingRtpStartedEvent;
 import org.onesec.raven.ivr.actions.PauseActionNode;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.onesec.raven.ivr.IvrEndpointConversationStoppedEvent;
@@ -238,6 +239,30 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
 
         verify(term, listener);
     }
+    //Задача теста проверить, что не сработает INVITE TIMEOUT при постановке вызова на удержании
+    //В данном тесте система позвонит на указанный адрес и нужно взять трубку в течении 5 сек!.
+    //Далее необходимо поставить вызов на удержании. 
+    //Через 10 сек необходимо снять вызов с удержания
+    //Должны услышать: Пароли не совпадают
+    @Test(timeout=30000)
+    public void inviteTimeoutTest4() throws Exception {
+        waitForProvider();
+        createSimpleScenario4();
+
+        IvrTerminal term = trainTerminal("88013", scenario, true, true);
+        IvrEndpointConversationListener listener = trainListener2();
+        replay(term, listener);
+
+        endpoint = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, term);
+        startEndpoint(endpoint);
+        endpoint.invite("88027", 8, 0, listener, scenario, null);
+        waitForConversationStop();
+        assertEquals(0, endpoint.getCallsCount());
+//        Thread.sleep(9000);
+        stopEndpoint(endpoint);
+
+        verify(term, listener);
+    }
     
     //В данном тесте система позвонит на указанный адрес и нужно взять трубку. 
     //Сценарий информирования следующий:
@@ -270,7 +295,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
     //  Пароли не совпадают -> Пауза 10 сек  -> Пароли не совпадают
     //А должны услышать:
     //  Пароли не совпадают -> Пауза ~10 сек 
-    @Test(timeout=30000)
+//    @Test(timeout=30000)
     public void maxCallDurationTest2() throws Exception {
         waitForProvider();
         createSimpleScenario2(10000);
@@ -329,6 +354,14 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
     private void createSimpleScenario3() throws Exception {
         createStopConversationAction(scenario);
     }
+    
+    private void createSimpleScenario4() throws Exception {
+        AudioFileNode audio = createAudioFileNode("audio", "src/test/wav/test.wav");
+        createPlayAudioActionNode("play audio", scenario, audio);
+        createPauseActionNode(scenario, 5000l);
+        createStopConversationAction(scenario);
+    }
+
 
     private IvrEndpointConversationListener trainListener() {
         IvrEndpointConversationListener listener = createMock(IvrEndpointConversationListener.class);
@@ -336,6 +369,20 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         listener.conversationStopped(handleConversationStopped());
         listener.listenerAdded(isA(IvrEndpointConversationEvent.class));
         listener.incomingRtpStarted(isA(IvrIncomingRtpStartedEvent.class));
+        listener.outgoingRtpStarted(isA(IvrOutgoingRtpStartedEvent.class));
+        return listener;
+    }
+
+    private IvrEndpointConversationListener trainListener2() {
+        IvrEndpointConversationListener listener = createMock(IvrEndpointConversationListener.class);
+        listener.conversationStarted(isA(IvrEndpointConversationEvent.class));
+        expectLastCall().times(2);
+        listener.conversationStopped(handleConversationStopped());
+        listener.listenerAdded(isA(IvrEndpointConversationEvent.class));
+        listener.incomingRtpStarted(isA(IvrIncomingRtpStartedEvent.class));
+        expectLastCall().times(2);
+        listener.outgoingRtpStarted(isA(IvrOutgoingRtpStartedEvent.class));
+        expectLastCall().times(2);
         return listener;
     }
 

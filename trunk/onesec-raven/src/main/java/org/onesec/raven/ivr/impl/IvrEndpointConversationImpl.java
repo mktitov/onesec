@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.media.protocol.FileTypeDescriptor;
@@ -97,6 +98,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     private final ConversationScenario scenario;
     private final RtpStreamManager streamManager;
     private final boolean enableIncomingRtpStream;
+    private final AtomicBoolean audioStreamJustCreated = new AtomicBoolean();
     private Map<String, Object> additionalBindings;
     private Codec codec;
     private int packetSize;
@@ -317,6 +319,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                         FileTypeDescriptor.WAVE, executor, codec, packetSize, 0, maxSendAheadPacketsCount
                         , owner, bufferCache);
                 audioStream.setLogPrefix(callId+" : ");
+                audioStreamJustCreated.set(true);
                 outRtp.open(remoteAddress, remotePort, audioStream);
                 outRtp.start();
                 outRtpStatus = RtpStatus.CONNECTED;
@@ -552,7 +555,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                     owner.getLogger().debug(callLog(
                             "Continue conversation using dtmf ("+dtmfChar+")"));
                 
-                audioStream.reset();
+                if (!audioStreamJustCreated.compareAndSet(true, false))
+                    audioStream.reset();
                 conversationState.getBindings().put(DTMF_BINDING, ""+dtmfChar);
                 Collection<Node> actions = scenario.makeConversation(conversationState);
                 Collection<IvrAction> ivrActions = new ArrayList<IvrAction>(10);
@@ -686,18 +690,15 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         return conversationState;
     }
 
-    public Node getOwner()
-    {
+    public Node getOwner() {
         return owner;
     }
 
-    public ExecutorService getExecutorService()
-    {
+    public ExecutorService getExecutorService() {
         return executor;
     }
 
-    public AudioStream getAudioStream() 
-    {
+    public AudioStream getAudioStream()  {
         return audioStream;
     }
 

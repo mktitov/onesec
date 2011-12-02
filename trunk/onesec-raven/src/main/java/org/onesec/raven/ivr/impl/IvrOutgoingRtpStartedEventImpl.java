@@ -24,8 +24,7 @@ import org.onesec.raven.ivr.IvrOutgoingRtpStartedEvent;
  *
  * @author Mikhail Titov
  */
-public class IvrOutgoingRtpStartedEventImpl extends IvrEndpointConversationEventImpl 
-        implements IvrOutgoingRtpStartedEvent
+public class IvrOutgoingRtpStartedEventImpl extends IvrEndpointConversationEventImpl implements IvrOutgoingRtpStartedEvent
 {
     private final AudioStream audioStream;
 

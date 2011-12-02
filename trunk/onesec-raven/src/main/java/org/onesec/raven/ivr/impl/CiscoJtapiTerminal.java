@@ -705,30 +705,46 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
         public abstract void callMethod(IvrEndpointConversationListener listener);
     }
 
-    private class InviteTimeoutHandler extends AbstractTask {
+    private class InviteTimeoutHandler extends AbstractTask implements IvrEndpointConversationListener {
         private final IvrEndpointConversationImpl conv;
         private final Call call;
         private final long stopCallAt;
+        private final AtomicBoolean valid = new AtomicBoolean(true);
 
         public InviteTimeoutHandler(IvrEndpointConversationImpl conv, Call call, int maxCallDuration) {
             super(term, "Invite timeout handler for call");
             this.conv = conv;
             this.call = call;
             this.stopCallAt = maxCallDuration>0? System.currentTimeMillis()+maxCallDuration*1000 : 0;
+            conv.addConversationListener(this);
         }
 
         @Override
         public void doRun() throws Exception {
-            if (ObjectUtils.in(conv.getState().getId(), IvrEndpointConversationState.READY
+            if (valid.get() && ObjectUtils.in(conv.getState().getId(), IvrEndpointConversationState.READY
                     , IvrEndpointConversationState.CONNECTING))
             {
                 if (isLogLevelEnabled(LogLevel.DEBUG))
                     logger.debug(callLog(call, "Detected INVITE TIMEOUT. Canceling a call"));
                 conv.stopConversation(CompletionCode.OPPONENT_NOT_ANSWERED);
-            } else if (stopCallAt>0)
+            } else if (stopCallAt>0 && conv.getState().getId()!=IvrEndpointConversationState.INVALID)
                 executor.executeQuietly(stopCallAt-System.currentTimeMillis()
                         , new MaxCallDurationHandler(conv, call));
         }
+
+        public void listenerAdded(IvrEndpointConversationEvent event) { }
+
+        public void conversationStarted(IvrEndpointConversationEvent event) {
+            valid.compareAndSet(true, false);
+        }
+
+        public void conversationStopped(IvrEndpointConversationStoppedEvent event) { }
+
+        public void conversationTransfered(IvrEndpointConversationTransferedEvent event) { }
+
+        public void incomingRtpStarted(IvrIncomingRtpStartedEvent event) { }
+
+        public void outgoingRtpStarted(IvrOutgoingRtpStartedEvent event) { }
     }
     
     private class MaxCallDurationHandler extends AbstractTask {
