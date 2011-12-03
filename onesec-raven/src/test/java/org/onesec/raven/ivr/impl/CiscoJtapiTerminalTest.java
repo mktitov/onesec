@@ -170,6 +170,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
 
         endpoint = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, term);
         startEndpoint(endpoint);
+//        endpoint.invite("089128672947", 0, 0, listener, scenario, null);
         endpoint.invite("88027", 0, 0, listener, scenario, null);
         waitForConversationStop();
         stopEndpoint(endpoint);
@@ -244,7 +245,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
     //Далее необходимо поставить вызов на удержании. 
     //Через 10 сек необходимо снять вызов с удержания
     //Должны услышать: Пароли не совпадают
-    @Test(timeout=30000)
+//    @Test(timeout=30000)
     public void inviteTimeoutTest4() throws Exception {
         waitForProvider();
         createSimpleScenario4();

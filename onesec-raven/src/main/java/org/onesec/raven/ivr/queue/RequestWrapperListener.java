@@ -22,4 +22,8 @@ public interface RequestWrapperListener {
      * Inform listener that request was invalidated
      */
     public void requestInvalidated();
+    /**
+     * Informs listener that request is processing by operator
+     */
+    public void processingByOperator(CommutationManagerCall operatorCall);
 }
