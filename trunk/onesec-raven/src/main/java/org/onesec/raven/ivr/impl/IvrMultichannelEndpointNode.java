@@ -25,9 +25,12 @@ import org.onesec.raven.ivr.IvrMultichannelEndpoint;
 import org.onesec.raven.ivr.IvrMultichannelEndpointState;
 import org.onesec.raven.ivr.IvrTerminalState;
 import org.raven.annotations.NodeClass;
+import org.raven.annotations.Parameter;
 import org.raven.tree.NodeAttribute;
 import org.raven.tree.Viewable;
 import org.raven.tree.ViewableObject;
+import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
+import org.weda.annotations.constraints.NotNull;
 
 /**
  *
@@ -38,6 +41,9 @@ public class IvrMultichannelEndpointNode extends AbstractEndpointNode
         implements IvrMultichannelEndpoint, Viewable, StateListener<IvrTerminalState>
 {
 
+    @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
+    private IvrConversationScenarioNode conversationScenario;
+    
     private IvrMultichannelEndpointStateImpl endpointState;
 
     @Override
@@ -98,5 +104,13 @@ public class IvrMultichannelEndpointNode extends AbstractEndpointNode
 
     public Boolean getEnableIncomingCalls() {
         return Boolean.TRUE;
+    }
+
+    public IvrConversationScenarioNode getConversationScenario() {
+        return conversationScenario;
+    }
+
+    public void setConversationScenario(IvrConversationScenarioNode conversationScenario) {
+        this.conversationScenario = conversationScenario;
     }
 }

@@ -61,6 +61,7 @@ import org.slf4j.Logger;
 //    private Condition eventCondition = lock.newCondition();
     private State state = State.INIT;
     private IvrEndpoint endpoint = null;
+    private IvrEndpointConversation conversation = null;
     
     static {
         TRANSITIONS.put(State.INIT, EnumSet.of(State.INVITING, State.NO_FREE_ENDPOINTS, State.INVALID));
@@ -148,8 +149,11 @@ import org.slf4j.Logger;
                         addToLog("operator (%s) didn't handle a call", manager.getOperator().getName());
                     } 
                     manager.callFinished(this, success);
-                    if (endpoint!=null)
+                    if (endpoint!=null) {
+                        if (conversation!=null)
+                            conversation.stopConversation(CompletionCode.COMPLETED_BY_ENDPOINT);
                         manager.getEndpointPool().releaseEndpoint(endpoint);
+                    }
                     break;
             }
             state = newState;
@@ -165,6 +169,11 @@ import org.slf4j.Logger;
 
     public void requestInvalidated() {
         callMoveToState(getState()==State.COMMUTATED? State.HANDLED:State.INVALID, null, null);
+    }
+
+    public void processingByOperator(CommutationManagerCall operatorCall) {
+        if (operatorCall!=this)
+            callMoveToState(State.INVALID, null, null);
     }
     
     private void callMoveToState(final State newState, final Throwable ex, final CompletionCode completionCode) {
@@ -426,6 +435,11 @@ import org.slf4j.Logger;
     }
     
     private class OperatorConversationListener extends IvrEndpointConversationListenerAdapter {
+        @Override
+        public void listenerAdded(IvrEndpointConversationEvent event) {
+            conversation = event.getConversation();
+        }
+
         @Override
         public void conversationStopped(IvrEndpointConversationStoppedEvent event) {
             moveToState(getState()==State.COMMUTATED? State.HANDLED:State.INVALID, null, event.getCompletionCode());

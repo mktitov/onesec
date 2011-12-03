@@ -341,6 +341,7 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
     public boolean fireReadyToCommutateQueueEvent(CommutationManagerCall operator) {
         if (handlingByOperator.compareAndSet(false, true)) {
             callQueueChangeEvent(new ReadyToCommutateQueueEventImpl(queue, requestId, operator));
+            fireRequestProcessingByOperator(operator);
             return true;
         } 
         return false;
@@ -386,9 +387,15 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
 
     private void fireRequestInvalidated() {
         synchronized(listeners) {
-            for (RequestWrapperListener listener: listeners) {
+            for (RequestWrapperListener listener: listeners) 
                 listener.requestInvalidated();
-            }
+        }
+    }
+
+    private void fireRequestProcessingByOperator(CommutationManagerCall operator) {
+        synchronized(listeners) {
+            for (RequestWrapperListener listener: listeners) 
+                listener.processingByOperator(operator);
         }
     }
     

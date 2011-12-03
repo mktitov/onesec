@@ -44,6 +44,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.logging.Level;
 import javax.telephony.Address;
 import javax.telephony.AddressObserver;
 import javax.telephony.Call;
@@ -52,6 +53,7 @@ import javax.telephony.Terminal;
 import javax.telephony.callcontrol.CallControlCall;
 import javax.telephony.callcontrol.CallControlCallObserver;
 import javax.telephony.callcontrol.CallControlConnection;
+import javax.telephony.callcontrol.events.CallCtlConnEstablishedEv;
 import javax.telephony.callcontrol.events.CallCtlConnFailedEv;
 import javax.telephony.callcontrol.events.CallCtlConnOfferedEv;
 import javax.telephony.events.AddrEv;
@@ -72,6 +74,7 @@ import org.onesec.raven.ivr.CompletionCode;
 import org.onesec.raven.ivr.IncomingRtpStream;
 import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.IvrEndpointConversationEvent;
+import org.onesec.raven.ivr.IvrEndpointConversationException;
 import org.onesec.raven.ivr.IvrEndpointConversationListener;
 import org.onesec.raven.ivr.IvrEndpointConversationState;
 import org.onesec.raven.ivr.IvrEndpointConversationStoppedEvent;
@@ -335,6 +338,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                 case ConnConnectedEv.ID: bindConnIdToConv((ConnConnectedEv)ev); break;
                 case CallCtlConnOfferedEv.ID: acceptIncomingCall((CallCtlConnOfferedEv) ev); break;
                 case TermConnRingingEv.ID   : answerOnIncomingCall((TermConnRingingEv)ev); break;
+                case CallCtlConnEstablishedEv.ID: openLogicalChannel((CallCtlConnEstablishedEv)ev); break;
                 case MediaTermConnDtmfEv.ID: continueConv((MediaTermConnDtmfEv)ev); break;
                 case ConnDisconnectedEv.ID: unbindConnIdFromConv((ConnDisconnectedEv)ev); break;
                 case CallCtlConnFailedEv.ID: handleConnFailedEvent((CallCtlConnFailedEv)ev); break;
@@ -428,6 +432,23 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
             if (isLogLevelEnabled(LogLevel.ERROR))
                 logger.error(callLog(ev.getCall(), "Problem with answering on call"), e);
         }
+    }
+    
+    private void openLogicalChannel(CallCtlConnEstablishedEv ev) {
+        if (isLogLevelEnabled(LogLevel.DEBUG))
+            logger.debug(callLog(ev.getCall(), "Logical connection opened for address (%s)"
+                    , ev.getConnection().getAddress().getName()));
+        ConvHolder conv = getConvHolderByCall(ev.getCall());
+        if (conv!=null)
+            try {
+                conv.conv.logicalConnectionCreated();
+            } catch (IvrEndpointConversationException e) {
+                if (isLogLevelEnabled(LogLevel.ERROR))
+                    logger.error(callLog(ev.getCall(), 
+                            "Error open logical connection for address (%s)"
+                            , ev.getConnection().getAddress().getName()), e);
+                conv.conv.stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
+            }
     }
     
     private void initInRtp(CiscoMediaOpenLogicalChannelEv ev) {
@@ -688,7 +709,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
             }
         });
     }
-    
+
     //--------------- End of the IvrEndpointConversationListener methods -----------------//
 
     private class ConvHolder {

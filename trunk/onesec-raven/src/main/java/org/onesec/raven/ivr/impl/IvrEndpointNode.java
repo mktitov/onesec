@@ -147,6 +147,9 @@ public class IvrEndpointNode extends AbstractEndpointNode
 //    @NotNull @Parameter(defaultValue="0")
 //    private Integer rtpMaxSendAheadPacketsCount;
 
+    @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
+    private IvrConversationScenarioNode conversationScenario;
+    
     @NotNull @Parameter(defaultValue="false")
     private Boolean enableIncomingCalls;
 
@@ -453,6 +456,14 @@ public class IvrEndpointNode extends AbstractEndpointNode
 
     public IvrEndpointState getEndpointState() {
         return endpointState;
+    }
+
+    public IvrConversationScenarioNode getConversationScenario() {
+        return conversationScenario;
+    }
+
+    public void setConversationScenario(IvrConversationScenarioNode conversationScenario) {
+        this.conversationScenario = conversationScenario;
     }
 
 //    public RtpStreamManagerNode getRtpStreamManager() {

@@ -59,8 +59,8 @@ public abstract class AbstractEndpointNode extends BaseNode
     @NotNull @Parameter(valueHandlerType=SystemSchedulerValueHandlerFactory.TYPE)
     private ExecutorService executor;
 
-    @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
-    private IvrConversationScenarioNode conversationScenario;
+//    @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
+//    private IvrConversationScenarioNode conversationScenario;
 
     @NotNull @Parameter(defaultValue="AUTO")
     private Codec codec;
@@ -138,13 +138,13 @@ public abstract class AbstractEndpointNode extends BaseNode
         return getPath();
     }
 
-    public IvrConversationScenarioNode getConversationScenario() {
-        return conversationScenario;
-    }
-
-    public void setConversationScenario(IvrConversationScenarioNode conversationScenario) {
-        this.conversationScenario = conversationScenario;
-    }
+//    public IvrConversationScenarioNode getConversationScenario() {
+//        return conversationScenario;
+//    }
+//
+//    public void setConversationScenario(IvrConversationScenarioNode conversationScenario) {
+//        this.conversationScenario = conversationScenario;
+//    }
 
     public ExecutorService getExecutor() {
         return executor;

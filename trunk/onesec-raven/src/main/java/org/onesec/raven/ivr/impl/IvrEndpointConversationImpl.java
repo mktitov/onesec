@@ -35,6 +35,7 @@ import javax.telephony.Call;
 import javax.telephony.Connection;
 import javax.telephony.TerminalObserver;
 import javax.telephony.callcontrol.CallControlCall;
+import javax.telephony.callcontrol.CallControlConnection;
 import javax.telephony.events.TermEv;
 import org.onesec.core.provider.ProviderController;
 import org.onesec.core.services.ProviderRegistry;
@@ -193,9 +194,11 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                     stopOutgoingRtp();
                     state.setState(INVALID);
                 } else if (inRtpStatus == RtpStatus.CONNECTED && outRtpStatus == RtpStatus.CONNECTED) {
-                    state.setState(TALKING);
-                    fireEvent(true, null);
-                    startConversation();
+                    if (isAllLogicalConnectionEstablished()) {
+                        state.setState(TALKING);
+                        fireEvent(true, null);
+                        startConversation();
+                    }
                 } else if (inRtpStatus==RtpStatus.WAITING_FOR_START && outRtpStatus.ordinal()>=RtpStatus.CREATED.ordinal())
                     startIncomingRtp();
                 else if (inRtpStatus==RtpStatus.INVALID && outRtpStatus==RtpStatus.INVALID)
@@ -274,6 +277,27 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         } finally {
             lock.writeLock().unlock();
         }
+    }
+    
+    public void logicalConnectionCreated() throws IvrEndpointConversationException {
+        lock.writeLock().lock();
+        try {
+            if (state.getId()==CONNECTING)
+                checkState();
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+    
+    private boolean isAllLogicalConnectionEstablished() {
+        Connection[] cons = call.getConnections();
+        if (cons!=null) {
+            for (Connection con: cons)
+                if (((CallControlConnection)con).getCallControlState()!=CallControlConnection.ESTABLISHED)
+                    return false;
+            return true;
+        }
+        return false;
     }
 
     public void startIncomingRtp() throws IvrEndpointConversationException {
@@ -378,7 +402,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                     outRtpStatus = RtpStatus.INVALID;
                     audioStream.close();
                     audioStream = null;
-                    actionsExecutor.cancelActionsExecution();
+                    if (actionsExecutor!=null)
+                        actionsExecutor.cancelActionsExecution();
 //                    actionsExecutor = null;
                     checkState();
                 }
