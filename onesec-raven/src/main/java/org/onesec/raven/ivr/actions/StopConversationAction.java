@@ -39,8 +39,7 @@ public class StopConversationAction extends AsyncAction
     }
 
     @Override
-    protected void doExecute(IvrEndpointConversation conversation) throws Exception
-    {
+    protected void doExecute(IvrEndpointConversation conversation) throws Exception {
         setStatus(IvrActionStatus.EXECUTED);
         conversation.stopConversation(CompletionCode.COMPLETED_BY_ENDPOINT);
     }

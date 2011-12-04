@@ -94,6 +94,7 @@ public abstract class AbstractEndpointNode extends BaseNode
         CiscoJtapiTerminal terminal = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, this);
         terminal.getState().addStateListener(this);
         term.set(terminal);
+        terminalCreated(terminal);
         terminal.start();
     }
 

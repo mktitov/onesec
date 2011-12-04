@@ -66,13 +66,11 @@ public abstract class AsyncAction extends AbstractAction implements Task
         }
     }
 
-    public Node getTaskNode()
-    {
+    public Node getTaskNode() {
         return conversation.getOwner();
     }
 
-    public void run()
-    {
+    public void run() {
         try{
             try {
                 if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))

@@ -91,7 +91,7 @@ public class IvrInformerSession extends ConversationCdrRegistrator implements En
     }
 
     public Record getCurrentRecord() {
-        return currentRecord;
+        return getCurrentRec();
     }
 
     public List<Record> getRecords() {
@@ -218,6 +218,7 @@ public class IvrInformerSession extends ConversationCdrRegistrator implements En
                 status = AsyncIvrInformer.COMPLETED_BY_ABONENT_STATUS; sucProc = true; break;
             case OPPONENT_BUSY: status = AsyncIvrInformer.NUMBER_BUSY_STATUS; break;
             case OPPONENT_NOT_ANSWERED: status = AsyncIvrInformer.NUMBER_NOT_ANSWERED_STATUS; break;
+            case TERMINAL_NOT_READY:
             case CALL_DURATION_TOO_LONG:    
             case OPPONENT_UNKNOWN_ERROR: status = AsyncIvrInformer.PROCESSING_ERROR_STATUS; break;
         }

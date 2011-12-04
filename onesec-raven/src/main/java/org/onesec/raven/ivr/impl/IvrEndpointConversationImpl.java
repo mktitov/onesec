@@ -397,13 +397,13 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
 //                        "Can't stop outgoing RTP stream", "CREATED, CONNECTED", outRtpStatus.name());
             try {
                 if (outRtp!=null) {
+                    if (actionsExecutor!=null)
+                        actionsExecutor.cancelActionsExecution();
                     outRtp.release();
                     outRtp = null;
                     outRtpStatus = RtpStatus.INVALID;
                     audioStream.close();
                     audioStream = null;
-                    if (actionsExecutor!=null)
-                        actionsExecutor.cancelActionsExecution();
 //                    actionsExecutor = null;
                     checkState();
                 }
