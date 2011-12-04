@@ -115,24 +115,20 @@ public abstract class AbstractRtpStream implements RtpStream
         manager.incHandledBytes(this, bytes);
     }
 
-    public void release()
-    {
+    public void release() {
         if (!released.compareAndSet(false, true)) {
             if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                 owner.getLogger().debug(logMess("Can't release stream because of already released"));
             return;
         }
-        manager.releaseStream(this);
-        try
-        {
+        try {
             if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                 owner.getLogger().debug(logMess("Releasing stream..."));
             doRelease();
             if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                 owner.getLogger().debug(logMess("Stream realeased"));
-        }
-        catch(Exception e)
-        {
+            manager.releaseStream(this);
+        } catch(Exception e) {
             if (owner.isLogLevelEnabled(LogLevel.ERROR))
                 owner.getLogger().error("Error releasing RTP stream", e);
         }

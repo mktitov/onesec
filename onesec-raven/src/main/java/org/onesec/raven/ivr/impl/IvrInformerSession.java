@@ -253,8 +253,9 @@ public class IvrInformerSession extends ConversationCdrRegistrator implements En
     private void closeSession(boolean success) {
 //        for (Record rec: records)
 //            informer.sendRecordToConsumers(rec, dataContext);
-        if (success)
-            informer.incSuccessfullyInformedAbonents();
+        informer.incInformedAbonents();
+//        if (success)
+//            informer.incSuccessfullyInformedAbonents();
         informer.removeSession(this);
     }
 

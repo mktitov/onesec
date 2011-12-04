@@ -241,8 +241,7 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
             recievedPackets.addAndGet(packets);
     }
 
-    void releaseStream(RtpAddress stream)
-    {
+    void releaseStream(RtpAddress stream) {
         streamsLock.writeLock().lock();
         try{
             Map portStreams = streams.get(stream.getAddress());
