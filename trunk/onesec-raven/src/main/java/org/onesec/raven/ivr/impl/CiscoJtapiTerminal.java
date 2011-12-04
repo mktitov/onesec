@@ -138,7 +138,6 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
     @Message private static String endpointBusyMessage;
     @Message private static String callsCountMessage;
 
-
     public CiscoJtapiTerminal(ProviderRegistry providerRegistry
             , StateListenersCoordinator stateListenersCoordinator
             , IvrTerminal term)
@@ -216,6 +215,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                 IvrEndpointConversationImpl conv = new IvrEndpointConversationImpl(term, executor, scenario
                         , rtpStreamManager, enableIncomingRtp, bindings);
                 conv.addConversationListener(listener);
+                conv.addConversationListener(this);
                 ConvHolder holder = new ConvHolder(conv, false);
                 calls.put(call, holder);
                 call.connect(ciscoTerm, termAddress, opponentNum);
@@ -224,8 +224,11 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                 else if (maxCallDur>0)
                     executor.execute(maxCallDur*1000, new MaxCallDurationHandler(conv, call));
             } catch (Throwable e) {
-                if (isLogLevelEnabled(LogLevel.WARN))
+                if (isLogLevelEnabled(LogLevel.WARN)) {
                     logger.warn(String.format("Problem with inviting abonent with number (%s)", opponentNum), e);
+                    listener.conversationStopped(new IvrEndpointConversationStoppedEventImpl(
+                            null, CompletionCode.TERMINAL_NOT_READY));
+                }
                 if (call!=null)
                     stopConversation(call, CompletionCode.OPPONENT_UNKNOWN_ERROR);
             }
@@ -465,7 +468,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
             else if (ev.getTerminal() instanceof CiscoRouteTerminal)
                 ((CiscoRouteTerminal)ev.getTerminal()).setRTPParams(ev.getCiscoRTPHandle(), params);
         } catch (Throwable e) {
-            if (isLogLevelEnabled(LogLevel.ERROR))
+            if (conv.conv.getState().getId()!=IvrEndpointConversationState.INVALID && isLogLevelEnabled(LogLevel.ERROR))
                 logger.error("Error initializing incoming RTP stream", e);
             conv.conv.stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
         }
@@ -557,7 +560,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
     private void stopConversation(Call call, CompletionCode completionCode) {
         ConvHolder conv = getAndRemoveConvHolder(call);
         if (conv!=null)
-            conv.conv.stopConversation(CompletionCode.COMPLETED_BY_OPPONENT);
+            conv.conv.stopConversation(completionCode);
     }
 
     private static String callLog(Call call, String message, Object... args) {

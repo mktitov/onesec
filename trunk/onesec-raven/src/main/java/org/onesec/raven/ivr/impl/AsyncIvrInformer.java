@@ -607,10 +607,8 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         voList.add(new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, statTable));
 
         dataLock.readLock().lock();
-        try
-        {
-            if (!sessions.isEmpty())
-            {
+        try {
+            if (!sessions.isEmpty()) {
                 String fieldNames = displayFields;
                 String[] fields = fieldNames==null? null : fieldNames.split("\\s*,\\s*");
                 int addCols = 3;
@@ -619,8 +617,7 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
                 columnNames[0] = terminalMessage;
                 columnNames[1] = terminalStatusMessage;
                 columnNames[2] = callDurationMessage;
-                for (int i=0; i<fields.length; ++i)
-                {
+                for (int i=0; i<fields.length; ++i) {
                     RecordSchemaField recordField = recordFields.get(fields[i]);
                     if (recordField!=null)
                         columnNames[i+addCols]=recordField.getDisplayName();
@@ -630,12 +627,10 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
 
                 TableImpl table = new TableImpl(columnNames);
 
-                for (IvrInformerSession session: sessions.values())
-                {
+                for (IvrInformerSession session: sessions.values()) {
                     Object[] row = new Object[columnNames.length];
                     IvrEndpoint endpoint = session.getEndpoint();
-                    if (endpoint!=null)
-                    {
+                    if (endpoint!=null) {
                         row[0] = endpoint.getName();
                         row[1] = endpoint.getEndpointState().getIdName();
                     }
@@ -643,21 +638,17 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
                     if (rec!=null)
                         row[2] = new Long((System.currentTimeMillis()-((Timestamp)rec.getValue(CALL_START_TIME_FIELD)).getTime())/1000);
                     for (int i=0; i<fields.length; ++i)
-                        if (recordFields.containsKey(fields[i]))
-                        {
+                        if (recordFields.containsKey(fields[i])) {
                             Record record = session.getCurrentRecord();
                             if (record!=null)
                                 row[i+addCols] = session.getCurrentRecord().getValue(fields[i]);
                         }
                     table.addRow(row);
                 }
-
                 voList.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, "<b>"+sessionsMessage+"</b>:"));
                 voList.add(new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, table));
             }
-        }
-        finally
-        {
+        } finally {
             dataLock.readLock().unlock();
         }
 

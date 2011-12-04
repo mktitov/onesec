@@ -17,83 +17,23 @@
 
 package org.onesec.raven.ivr.impl;
 
-import com.cisco.jtapi.extensions.CiscoAddrInServiceEv;
-import com.cisco.jtapi.extensions.CiscoAddrOutOfServiceEv;
-import com.cisco.jtapi.extensions.CiscoMediaOpenLogicalChannelEv;
-import com.cisco.jtapi.extensions.CiscoMediaTerminal;
-import com.cisco.jtapi.extensions.CiscoRTPInputStartedEv;
-import com.cisco.jtapi.extensions.CiscoRTPInputStoppedEv;
-import com.cisco.jtapi.extensions.CiscoRTPOutputProperties;
-import com.cisco.jtapi.extensions.CiscoRTPOutputStartedEv;
-import com.cisco.jtapi.extensions.CiscoRTPOutputStoppedEv;
-import com.cisco.jtapi.extensions.CiscoRTPParams;
-import com.cisco.jtapi.extensions.CiscoTermInServiceEv;
-import com.cisco.jtapi.extensions.CiscoTermOutOfServiceEv;
-import com.cisco.jtapi.extensions.CiscoTerminalObserver;
-import com.cisco.jtapi.extensions.CiscoUnregistrationException;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import javax.telephony.Address;
-import javax.telephony.AddressObserver;
-import javax.telephony.Call;
-import javax.telephony.Provider;
-import javax.telephony.Terminal;
-import javax.telephony.callcontrol.CallControlCall;
-import javax.telephony.callcontrol.CallControlCallObserver;
-import javax.telephony.callcontrol.CallControlConnection;
-import javax.telephony.callcontrol.events.CallCtlConnFailedEv;
-import javax.telephony.callcontrol.events.CallCtlConnOfferedEv;
-import javax.telephony.callcontrol.events.CallCtlTermConnDroppedEv;
-import javax.telephony.events.AddrEv;
-import javax.telephony.events.AddrObservationEndedEv;
-import javax.telephony.events.CallActiveEv;
-import javax.telephony.events.CallEv;
-import javax.telephony.events.CallObservationEndedEv;
-import javax.telephony.events.TermConnDroppedEv;
-import javax.telephony.events.TermConnRingingEv;
-import javax.telephony.events.TermEv;
-import javax.telephony.events.TermObservationEndedEv;
-import javax.telephony.media.MediaCallObserver;
-import javax.telephony.media.events.MediaTermConnDtmfEv;
-import org.onesec.core.ObjectDescription;
-import org.onesec.core.provider.ProviderController;
-import org.onesec.core.services.Operator;
-import org.onesec.core.services.ProviderRegistry;
-import org.onesec.core.services.StateListenersCoordinator;
-import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.CompletionCode;
-import org.onesec.raven.ivr.ConversationCompletionCallback;
-import org.onesec.raven.ivr.ConversationCdr;
-import org.onesec.raven.ivr.IncomingRtpStream;
 import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.IvrEndpoint;
 import org.onesec.raven.ivr.IvrEndpointConversationEvent;
 import org.onesec.raven.ivr.IvrEndpointConversationListener;
 import org.onesec.raven.ivr.IvrEndpointConversationStoppedEvent;
 import org.onesec.raven.ivr.IvrEndpointConversationTransferedEvent;
-import org.onesec.raven.ivr.IvrEndpointException;
 import org.onesec.raven.ivr.IvrEndpointState;
 import org.onesec.raven.ivr.IvrIncomingRtpStartedEvent;
 import org.onesec.raven.ivr.IvrOutgoingRtpStartedEvent;
 import org.onesec.raven.ivr.IvrTerminalState;
-import org.onesec.raven.ivr.RtpAddress;
-import org.onesec.raven.ivr.TerminalStateMonitoringService;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.log.LogLevel;
-import org.raven.sched.ExecutorService;
-import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
-import org.raven.tree.Node;
-import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
 import org.weda.annotations.constraints.NotNull;
-import org.weda.internal.annotations.Service;
 
 /**
  *
@@ -230,11 +170,12 @@ public class IvrEndpointNode extends AbstractEndpointNode
             , IvrConversationScenario scenario, Map<String, Object> bindings)
     {
         CiscoJtapiTerminal _term = term.get();
-        if (_term!=null)
+        if (_term!=null) {
+            changeStateTo(IvrEndpointState.INVITING, "INVITING");
             _term.invite(opponentNum, inviteTimeout, maxCallDur, listener, scenario, bindings);
-        else
+        } else
             listener.conversationStopped(new IvrEndpointConversationStoppedEventImpl(
-                    null, CompletionCode.OPPONENT_UNKNOWN_ERROR));
+                    null, CompletionCode.TERMINAL_NOT_READY));
     }
     
     private synchronized void changeStateTo(int stateId, String stateName) {

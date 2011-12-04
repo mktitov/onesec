@@ -472,7 +472,7 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
     }
 
     //Не нужно брать трубку на первый вызов
-    @Test
+//    @Test
     public void inviteTimeoutTest() throws Exception {
         assertTrue(pool.start());
         informer.setWaitForSession(Boolean.TRUE);

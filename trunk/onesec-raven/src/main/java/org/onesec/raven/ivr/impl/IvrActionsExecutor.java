@@ -104,10 +104,8 @@ public class IvrActionsExecutor implements Task
 
     public void run()
     {
-        try
-        {
-            for (IvrAction action: actions)
-            {
+        try {
+            for (IvrAction action: actions) {
                 action.setLogPrefix(logPrefix);
                 boolean executeAction = true;
                 try {
