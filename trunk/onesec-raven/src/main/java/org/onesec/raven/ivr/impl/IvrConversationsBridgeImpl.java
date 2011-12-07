@@ -224,7 +224,7 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
         private final IvrEndpointConversation conv1;
         private final IvrEndpointConversation conv2;
         private final AtomicReference<AudioStream> audioStream = new AtomicReference<AudioStream>();
-        private IncomingRtpStream inRtp;
+        private AtomicReference<IncomingRtpStream> inRtp = new AtomicReference<IncomingRtpStream>();
         private ConnectionState state = ConnectionState.INITIALIZING;
 
         public BridgeConnection(IvrEndpointConversation conv1, IvrEndpointConversation conv2) {
@@ -246,7 +246,7 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
                 state = ConnectionState.INVALID;
                 checkBridgeState();
             } else {
-                inRtp = conv1.getIncomingRtpStream();
+                inRtp.set(conv1.getIncomingRtpStream());
                 addListenerToRtpStream();
             }
         }
@@ -267,8 +267,8 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
             if (ev.getConversation()!=conv1)
                 return;
             IncomingRtpStream rtp = ev.getIncomingRtpStream();
-            if (rtp!=inRtp) {
-                inRtp = rtp;
+            if (rtp!=inRtp.get()) {
+                inRtp.set(rtp);
                 addListenerToRtpStream();
             }
         }
@@ -288,7 +288,7 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
         }
 
         public void dataSourceCreated(IncomingRtpStream stream, DataSource dataSource) {
-            if (stream==inRtp && state!=ConnectionState.INVALID) {
+            if (stream==inRtp.get() && state!=ConnectionState.INVALID) {
                 AudioStream audio = audioStream.get();
                 if (audio!=null) {
                     audio.addSource(dataSource);
@@ -305,14 +305,16 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
         public void streamClosing(IncomingRtpStream stream) {
             if (state != ConnectionState.INVALID) {
                 state = ConnectionState.INITIALIZING;
-                inRtp = null;
+                inRtp.set(null);
                 checkBridgeState();
             }
         }
 
         private void addListenerToRtpStream() {
             try {
-                inRtp.addDataSourceListener(this, null);
+                IncomingRtpStream _rtp = inRtp.get();
+                if (_rtp!=null)
+                    _rtp.addDataSourceListener(this, null);
             } catch (RtpStreamException ex) {
                 if (owner.isLogLevelEnabled(LogLevel.ERROR))
                     owner.getLogger().error(logMess("Error adding rtp data source listener"), ex);

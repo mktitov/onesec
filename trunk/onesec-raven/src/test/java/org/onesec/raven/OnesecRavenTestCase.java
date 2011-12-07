@@ -17,6 +17,7 @@
 
 package org.onesec.raven;
 
+import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Enumeration;
@@ -46,9 +47,15 @@ public class OnesecRavenTestCase extends RavenCoreTestCase
             NetworkInterface nif = ifs.nextElement();
             if (nif.isUp() && !nif.isLoopback())
             {
-                InetAddress addr = nif.getInetAddresses().nextElement();
-                System.out.println("\n@@@ Interface address is: "+addr.getHostAddress()+"\n");
-                return nif.getInetAddresses().nextElement();
+                Enumeration<InetAddress> it = nif.getInetAddresses();
+                while (it.hasMoreElements()) {
+                    InetAddress addr = it.nextElement();
+                    if (addr instanceof Inet4Address) {
+                        System.out.println("\n@@@ Interface address is: "+addr.getHostAddress()+"\n");
+                        System.out.println("\n@@@ Interface hostname is: "+addr.getHostName()+"\n");
+                        return addr;
+                    }
+                } 
             }
         }
 

@@ -49,8 +49,7 @@ import org.onesec.raven.ivr.queue.*;
  *
  * @author Mikhail Titov
  */
-public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase
-{
+public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
     private CallsQueueOperatorNode operator;
     private TestConversationsBridgeManager bridgeManager;
     private TestEndpointPool endpointPool;
