@@ -654,7 +654,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             }
         } catch (Throwable e) {
             if (owner.isLogLevelEnabled(LogLevel.WARN))
-                owner.getLogger().warn(callLog("Can't drop call connections", e));
+                owner.getLogger().warn(callLog("Can't drop call connections"), e);
 
         }
     }
