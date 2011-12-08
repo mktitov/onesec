@@ -199,8 +199,14 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                         fireEvent(true, null);
                         startConversation();
                     }
-                } else if (inRtpStatus==RtpStatus.WAITING_FOR_START && outRtpStatus.ordinal()>=RtpStatus.CREATED.ordinal())
-                    startIncomingRtp();
+                } else if (inRtpStatus==RtpStatus.WAITING_FOR_START || outRtpStatus==RtpStatus.WAITING_FOR_START && isAllLogicalConnectionEstablished()) {
+                    if (inRtpStatus==RtpStatus.WAITING_FOR_START && outRtpStatus.ordinal()>RtpStatus.CREATED.ordinal())
+                        startIncomingRtp();
+                    if (outRtpStatus==RtpStatus.WAITING_FOR_START)
+                        startOutgoingRtp();
+                }
+//                else if (inRtpStatus==RtpStatus.WAITING_FOR_START && outRtpStatus.ordinal()>=RtpStatus.CREATED.ordinal())
+//                    startIncomingRtp();
                 else if (inRtpStatus==RtpStatus.INVALID && outRtpStatus==RtpStatus.INVALID)
                     state.setState(READY);
                 break;
@@ -310,7 +316,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 throw new IvrEndpointConversationRtpStateException(
                         "Can't start incoming RTP stream", "CREATED, WATING_FOR_START", inRtpStatus.name());
             try {
-                if (outRtpStatus.ordinal()>=RtpStatus.CREATED.ordinal()) {
+                if (outRtpStatus.ordinal()>=RtpStatus.CREATED.ordinal() && isAllLogicalConnectionEstablished()) {
                     if (enableIncomingRtpStream)
                         inRtp.open(remoteAddress);
                     fireIncomingRtpStartedEvent();
@@ -335,20 +341,23 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             if (state.getId()!=CONNECTING)
                 throw new IvrEndpointConversationStateException(
                         "Can't start incoming RTP", "CONNECTING", state.getIdName());
-            if (outRtpStatus!=RtpStatus.CREATED)
+            if (outRtpStatus!=RtpStatus.CREATED && outRtpStatus!=RtpStatus.WAITING_FOR_START)
                 throw new IvrEndpointConversationRtpStateException(
-                        "Can't start incoming RTP stream", "CREATED", outRtpStatus.name());
+                        "Can't start incoming RTP stream", "CREATED, WAITING_FOR_START", outRtpStatus.name());
             try {
-                audioStream = new ConcatDataSource(
-                        FileTypeDescriptor.WAVE, executor, codec, packetSize, 0, maxSendAheadPacketsCount
-                        , owner, bufferCache);
-                audioStream.setLogPrefix(callId+" : ");
-                audioStreamJustCreated.set(true);
-                outRtp.open(remoteAddress, remotePort, audioStream);
-                outRtp.start();
-                outRtpStatus = RtpStatus.CONNECTED;
-                fireOutgoingRtpStartedEvent();
-                checkState();
+                if (isAllLogicalConnectionEstablished()) {
+                    audioStream = new ConcatDataSource(
+                            FileTypeDescriptor.WAVE, executor, codec, packetSize, 0, maxSendAheadPacketsCount
+                            , owner, bufferCache);
+                    audioStream.setLogPrefix(callId+" : ");
+                    audioStreamJustCreated.set(true);
+                    outRtp.open(remoteAddress, remotePort, audioStream);
+                    outRtp.start();
+                    outRtpStatus = RtpStatus.CONNECTED;
+                    fireOutgoingRtpStartedEvent();
+                    checkState();
+                } else 
+                    outRtpStatus = RtpStatus.WAITING_FOR_START;
             } catch (Exception e) {
                 //TODO: stop conversation
                 if (owner.isLogLevelEnabled(LogLevel.ERROR))
