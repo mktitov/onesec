@@ -411,8 +411,10 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                     outRtp.release();
                     outRtp = null;
                     outRtpStatus = RtpStatus.INVALID;
-                    audioStream.close();
-                    audioStream = null;
+                    if (audioStream!=null) {
+                        audioStream.close();
+                        audioStream = null;
+                    }
 //                    actionsExecutor = null;
                     checkState();
                 }
