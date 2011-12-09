@@ -355,7 +355,8 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
     }
 
     private void createCallsQueues(ExecutorServiceNode executor, IvrConversationScenarioNode operatorScenario
-            , IvrEndpointPoolNode pool, IvrConversationsBridgeManagerNode bridge, RecordSchemaNode schema) throws Exception
+            , IvrEndpointPoolNode pool, IvrConversationsBridgeManagerNode bridge, RecordSchemaNode schema) 
+        throws Exception
     {
         CallsQueuesNode queues = new CallsQueuesNode();
         queues.setName("call queues");
@@ -377,8 +378,8 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         operator.setName("Titov MK");
         queues.getOperatorsNode().addAndSaveChildren(operator);
 //        operator.setPhoneNumbers("88027");
-//        operator.setPhoneNumbers("089128672947");
-        operator.setPhoneNumbers("88027,089128672947");
+        operator.setPhoneNumbers("089128672947");
+//        operator.setPhoneNumbers("88027,089128672947");
         operator.setParallelCallAfter(5);
         operator.setEndpointPool(pool);
         operator.setConversationsBridgeManager(bridge);
