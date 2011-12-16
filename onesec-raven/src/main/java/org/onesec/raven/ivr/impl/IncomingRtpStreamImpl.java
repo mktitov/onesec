@@ -295,26 +295,32 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
         private Processor processor;
         private DataSource inDataSource;
         private DataSource outDataSource;
+        private boolean closed = false;
 
         public Consumer(IncomingRtpStreamDataSourceListener listener, AudioFormat format) {
             this.listener = listener;
             this.format = format==null? FORMAT : format; 
         }
 
-        private void fireDataSourceCreatedEvent()
-        {
+        private void fireDataSourceCreatedEvent() {
             createEventFired = true;
-            try{
-                inDataSource = !firstConsumerAdded? source : ((SourceCloneable)source).createClone();
-                firstConsumerAdded = true;
+            try {
+                synchronized(this) {
+                    if (closed) {
+                        if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                            owner.getLogger().debug(logMess("Can't create data source for consumer because "
+                                    + "of consumer already closed"));
+                        return;
+                    }
+                    inDataSource = !firstConsumerAdded? source : ((SourceCloneable)source).createClone();
+                    firstConsumerAdded = true;
 
-                processor = ControllerStateWaiter.createRealizedProcessor(inDataSource, format, 4000);
-                outDataSource = processor.getDataOutput();
-                processor.start();
-
+                    processor = ControllerStateWaiter.createRealizedProcessor(inDataSource, format, 4000);
+                    outDataSource = processor.getDataOutput();
+                    processor.start();
+                }
                 listener.dataSourceCreated(IncomingRtpStreamImpl.this, outDataSource);
-
-            }catch(Exception e){
+            } catch(Exception e) {
                 if (owner.isLogLevelEnabled(LogLevel.ERROR))
                     owner.getLogger().error(logMess(
                             "Error creating data source for consumer"), e);
@@ -322,30 +328,38 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
             }
         }
 
-        private void fireStreamClosingEvent()
-        {
+        private void fireStreamClosingEvent() {
             try{
                 try{
-                    try{
-                        try{
-                            try{
-                                listener.streamClosing(IncomingRtpStreamImpl.this);
-                            }finally{
-                                inDataSource.stop();
-                            }
-                        }finally{
-                            processor.stop();
-                        }
-                    }finally{
-                        processor.close();
-                    }
+                    listener.streamClosing(IncomingRtpStreamImpl.this);
                 }finally{
-                    outDataSource.stop();
+                    closeResources();
                 }
             }catch(Exception e){
                 if (owner.isLogLevelEnabled(LogLevel.ERROR))
                     owner.getLogger().error(logMess(
                             "Error closing data source consumer resources"), e);
+            }
+        }
+        
+        private synchronized void closeResources() throws Exception {
+            closed = true;
+            try {
+                try {
+                    try {
+                        if (inDataSource!=null)
+                            inDataSource.stop();
+                    } finally {
+                        if (processor!=null)
+                            processor.stop();
+                    }
+                } finally {
+                    if (processor!=null)
+                        processor.close();
+                }
+            } finally {
+                if (outDataSource!=null)
+                    outDataSource.stop();
             }
         }
     }
