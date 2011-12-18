@@ -28,7 +28,17 @@ public interface CommutationManagerCall
     public final static String CALLS_COMMUTATION_MANAGER_BINDING = "queueCommutationManager";
     public final static String CALL_QUEUE_REQUEST_BINDING = "queueRequest";
 
-
+    /**
+     * Returns the operator number (the B number)
+     */
+    public String getOperatorNumber();
+    /**
+     * Returns the operator associated with a call
+     */
+    public CallsQueueOperator getOperator();
+    /**
+     * Commutates operator with abonent
+     */
     public void commutate();
     /**
      * Informs about that the operator's conversation is ready to commutation

@@ -112,11 +112,11 @@ import org.slf4j.Logger;
                     }
                     nextState = State.INVALID;
                     break;
-                case INVITING: getRequest().fireOperatorNumberQueueEvent(getNumber()); break;
+                case INVITING: getRequest().fireOperatorNumberQueueEvent(getOperatorNumber()); break;
                 case OPERATOR_READY: 
                     if (isLogLevelEnabled(LogLevel.DEBUG))
-                        logger.debug(logMess("Number (%s) ready to commutate", getNumber()));
-                    addToLog("op. number (%s) ready to commutate", getNumber());
+                        logger.debug(logMess("Number (%s) ready to commutate", getOperatorNumber()));
+                    addToLog("op. number (%s) ready to commutate", getOperatorNumber());
                     if (!getRequest().fireReadyToCommutateQueueEvent(this)) 
                         nextState = State.INVALID;
                     break;
@@ -131,7 +131,7 @@ import org.slf4j.Logger;
                 case HANDLED: 
                     if (isLogLevelEnabled(LogLevel.DEBUG))
                         logger.debug(logMess("Operator's conversation completed"));
-                    addToLog(String.format("conv. for op. number (%s) completed (%s)", getNumber()
+                    addToLog(String.format("conv. for op. number (%s) completed (%s)", getOperatorNumber()
                             , completionCode));
                     manager.getRequest().fireDisconnectedQueueEvent();
                     nextState = State.INVALID;
@@ -141,8 +141,8 @@ import org.slf4j.Logger;
                     if (!success) {
                         if (completionCode!=null) {
                             if (isLogLevelEnabled(LogLevel.DEBUG))
-                                logger.debug(logMess("Operator's number (%s) not answered", getNumber()));
-                            addToLog("number (%s) not answer", getNumber());
+                                logger.debug(logMess("Operator's number (%s) not answered", getOperatorNumber()));
+                            addToLog("number (%s) not answer", getOperatorNumber());
                         }
                         if (isLogLevelEnabled(LogLevel.DEBUG))
                             logger.debug(logMess("Call not handled"));
@@ -212,8 +212,12 @@ import org.slf4j.Logger;
         return getState()!=State.INVALID;
     }
 
-    private String getNumber(){
+    public String getOperatorNumber(){
         return number;
+    }
+
+    public CallsQueueOperator getOperator() {
+        return manager.getOperator();
     }
 
     public CallQueueRequestWrapper getRequest() {
@@ -267,7 +271,7 @@ import org.slf4j.Logger;
             bindings.put(CALLS_COMMUTATION_MANAGER_BINDING, this);
             bindings.put(CALL_QUEUE_REQUEST_BINDING, manager.getRequest());
             callMoveToState(State.INVITING, null, null);
-            endpoint.invite(getNumber(), (int)manager.getInviteTimeout()/1000, 0
+            endpoint.invite(getOperatorNumber(), (int)manager.getInviteTimeout()/1000, 0
                     , new OperatorConversationListener()
                     , manager.getConversationScenario(), bindings);
 //            
