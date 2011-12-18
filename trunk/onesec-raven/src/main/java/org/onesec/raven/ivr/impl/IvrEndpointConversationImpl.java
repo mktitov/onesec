@@ -316,7 +316,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 throw new IvrEndpointConversationRtpStateException(
                         "Can't start incoming RTP stream", "CREATED, WATING_FOR_START", inRtpStatus.name());
             try {
-                if (outRtpStatus.ordinal()>=RtpStatus.CREATED.ordinal() && isAllLogicalConnectionEstablished()) {
+//                if (outRtpStatus.ordinal()>=RtpStatus.CREATED.ordinal() && isAllLogicalConnectionEstablished()) {
+                if (outRtpStatus.ordinal()>=RtpStatus.CREATED.ordinal()) {
                     if (enableIncomingRtpStream)
                         inRtp.open(remoteAddress);
                     fireIncomingRtpStartedEvent();
