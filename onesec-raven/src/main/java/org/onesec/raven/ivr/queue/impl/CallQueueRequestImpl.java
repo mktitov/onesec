@@ -40,7 +40,6 @@ import org.raven.ds.DataContext;
  */
 public class CallQueueRequestImpl implements QueuedCallStatus
 {
-
     private final IvrEndpointConversation conversation;
     private final boolean continueConversationOnReadyToCommutate;
     private final boolean continueConversationOnReject;

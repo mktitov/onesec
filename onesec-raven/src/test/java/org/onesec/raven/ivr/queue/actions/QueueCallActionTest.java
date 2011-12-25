@@ -32,6 +32,7 @@ import org.raven.ds.DataContext;
 import org.raven.log.LogLevel;
 import org.raven.tree.Node;
 import static org.easymock.EasyMock.*;
+import org.raven.BindingNames;
 
 /**
  *
@@ -52,11 +53,41 @@ public class QueueCallActionTest extends Assert
         expect(conversation.getOwner()).andReturn(owner).anyTimes();
         expect(owner.isLogLevelEnabled((LogLevel)anyObject())).andReturn(false).anyTimes();
         expect(conversation.getConversationScenarioState()).andReturn(state);
-        expect(state.getBindings()).andReturn(bindings);
+        expect(state.getBindings()).andReturn(bindings).times(2);
         expect(bindings.get(QueueCallAction.QUEUED_CALL_STATUS_BINDING)).andReturn(null);
+        expect(bindings.get(BindingNames.DATA_CONTEXT_BINDING)).andReturn(null);
         state.setBinding(eq(QueueCallAction.QUEUED_CALL_STATUS_BINDING), checkCallQueueRequest()
                 , eq(BindingScope.POINT));
         expect(requestSender.createDataContext()).andReturn(context);
+        requestSender.sendCallQueueRequest(isA(CallQueueRequest.class), isA(DataContext.class));
+
+        replay(requestSender, conversation, state, owner, bindings, context);
+
+        QueueCallAction action = new QueueCallAction(requestSender, true, false, 10, "test queue", false, "1001");
+        action.doExecute(conversation);
+
+        verify(requestSender, conversation, state, owner, bindings, context);
+    }
+
+    @Test
+    public void createRequestWithExternalDataContextTest() throws Exception
+    {
+        CallQueueRequestSender requestSender = createMock(CallQueueRequestSender.class);
+        IvrEndpointConversation conversation = createMock(IvrEndpointConversation.class);
+        DataContext context = createMock(DataContext.class);
+        ConversationScenarioState state = createMock(ConversationScenarioState.class);
+        Node owner = createMock(Node.class);
+        Bindings bindings = createMock(Bindings.class);
+
+        expect(conversation.getOwner()).andReturn(owner).anyTimes();
+        expect(owner.isLogLevelEnabled((LogLevel)anyObject())).andReturn(false).anyTimes();
+        expect(conversation.getConversationScenarioState()).andReturn(state);
+        expect(state.getBindings()).andReturn(bindings).times(2);
+        expect(bindings.get(QueueCallAction.QUEUED_CALL_STATUS_BINDING)).andReturn(null);
+        expect(bindings.get(BindingNames.DATA_CONTEXT_BINDING)).andReturn(context);
+        state.setBinding(eq(QueueCallAction.QUEUED_CALL_STATUS_BINDING), checkCallQueueRequest()
+                , eq(BindingScope.POINT));
+//        expect(requestSender.createDataContext()).andReturn(context);
         requestSender.sendCallQueueRequest(isA(CallQueueRequest.class), isA(DataContext.class));
 
         replay(requestSender, conversation, state, owner, bindings, context);

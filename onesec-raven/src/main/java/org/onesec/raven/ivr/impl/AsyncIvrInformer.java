@@ -487,7 +487,13 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
 
     public boolean getDataImmediate(DataConsumer dataConsumer, DataContext context)
     {
-        return false;
+        if (Status.STARTED.equals(getStatus()))
+            return dataSource.getDataImmediate(this, context);
+        else {
+            if (isLogLevelEnabled(LogLevel.DEBUG))
+                getLogger().debug("Node not started! Can't initiate pull request (getDataImmediate)");
+            return false;
+        }
     }
 
     public Collection<NodeAttribute> generateAttributes()

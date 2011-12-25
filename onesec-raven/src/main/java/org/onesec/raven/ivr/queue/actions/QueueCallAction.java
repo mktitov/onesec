@@ -24,6 +24,7 @@ import org.onesec.raven.ivr.impl.IvrUtils;
 import org.onesec.raven.ivr.queue.CallQueueRequestSender;
 import org.onesec.raven.ivr.queue.QueuedCallStatus;
 import org.onesec.raven.ivr.queue.impl.CallQueueRequestImpl;
+import org.raven.BindingNames;
 import org.raven.conv.BindingScope;
 import org.raven.conv.ConversationScenarioState;
 import org.raven.ds.DataContext;
@@ -87,7 +88,9 @@ public class QueueCallAction extends AsyncAction
         QueuedCallStatus callStatus = (QueuedCallStatus) state.getBindings().get(
                 QUEUED_CALL_STATUS_BINDING);
         if (callStatus==null){
-            DataContext context = requestSender.createDataContext();
+            DataContext context = (DataContext) state.getBindings().get(BindingNames.DATA_CONTEXT_BINDING);
+            if (context==null)
+                context = requestSender.createDataContext();
             callStatus = new CallQueueRequestImpl(
                     conversation, priority, queueId, operatorPhoneNumbers
                     , continueConversationOnReadyToCommutate

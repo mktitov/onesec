@@ -32,6 +32,7 @@ import org.weda.beans.ObjectUtils;
 import org.weda.internal.annotations.Service;
 import org.weda.services.TypeConverter;
 import static org.onesec.raven.ivr.impl.IvrInformerRecordSchemaNode.*;
+import org.raven.BindingNames;
 
 /**
  * Stores {@link IvrInformer ivr informer} session information
@@ -149,6 +150,7 @@ public class IvrInformerSession extends ConversationCdrRegistrator implements En
         Map<String, Object> bindings = new HashMap<String, Object>();
         bindings.put(AsyncIvrInformer.RECORD_BINDING, rec);
         bindings.put(AsyncIvrInformer.INFORMER_BINDING, this);
+        bindings.put(BindingNames.DATA_CONTEXT_BINDING, dataContext);
         rec.setValue(CALL_START_TIME_FIELD, new Timestamp(System.currentTimeMillis()));
         endpoint.invite(abonentNumber, inviteTimeout, maxCallDuration, this, scenario, bindings);
     }
