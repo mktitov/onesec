@@ -326,7 +326,6 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 } else
                     inRtpStatus = RtpStatus.WAITING_FOR_START;
             } catch (RtpStreamException e){
-                //TODO: stop conversation
                 if (owner.isLogLevelEnabled(LogLevel.ERROR))
                     owner.getLogger().error(callLog("Error starting incoming RTP"), e);
                 stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
@@ -360,7 +359,6 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 } else 
                     outRtpStatus = RtpStatus.WAITING_FOR_START;
             } catch (Exception e) {
-                //TODO: stop conversation
                 if (owner.isLogLevelEnabled(LogLevel.ERROR))
                     owner.getLogger().error(callLog("Error starting outgoing RTP"), e);
                 stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
@@ -395,7 +393,6 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         }
     }
 
-    //TODO: Не пересоздавать actionExecutor, conversationState и bindings при
     public void stopOutgoingRtp() {
         lock.writeLock().lock();
         try {

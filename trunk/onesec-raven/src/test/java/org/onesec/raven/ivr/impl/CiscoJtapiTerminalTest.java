@@ -53,7 +53,6 @@ import static org.easymock.EasyMock.*;
 /**
  * @author Mikhail Titov
  */
-//TODO: Add tests for maxCallDur parameter in invite method
 public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
     private ProviderRegistry providerRegistry;
     private StateListenersCoordinator stateListenersCoordinator;
