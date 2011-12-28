@@ -668,7 +668,6 @@ public class IvrEndpointNode extends AbstractEndpointNode
 //        this.enableIncomingRtp = enableIncomingRtp;
 //    }
 
-    //TODO: use conversation event listener to change endpoint status to TALKING
 //    private void startConversation() {
 //        lock.lock();
 //        try {

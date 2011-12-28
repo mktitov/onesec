@@ -33,7 +33,7 @@ import org.slf4j.Logger;
  *
  * @author Mikhail Titov
  */
-    public class  CommutationManagerCallImpl 
+public class  CommutationManagerCallImpl 
     implements CommutationManagerCall, IvrConversationsBridgeListener, EndpointRequest
             , RequestWrapperListener
 {
@@ -50,16 +50,9 @@ import org.slf4j.Logger;
     private final AtomicReference<String> statusMessage;
     private final List<CallsCommutationManagerListener> listeners =
             new LinkedList<CallsCommutationManagerListener>();
-//    private AtomicBoolean operatorConversationFlag = new AtomicBoolean(false);
-//    private boolean operatorReadyToCommutate = false;
-//    private boolean readyToCommutateSended = false;
-//    private boolean abonentReadyToCommutate = false;
-//    private boolean commutated = false;
-//    private AtomicBoolean commutationValid = new AtomicBoolean(true);
     private IvrEndpointConversation operatorConversation = null;
     private ReentrantLock lock = new ReentrantLock();
-//    private Condition eventCondition = lock.newCondition();
-    private State state = State.INIT;
+    private AtomicReference<State> state = new AtomicReference<State>(State.INIT);
     private IvrEndpoint endpoint = null;
     private IvrEndpointConversation conversation = null;
     
@@ -84,13 +77,13 @@ import org.slf4j.Logger;
     
     private synchronized void moveToState(State newState, Throwable e, CompletionCode completionCode) {
         //if current state is invalid then do nothing
-        if (state==State.INVALID)
+        if (state.get()==State.INVALID)
             return;
-        //first, check is transition is possible
-        if (!TRANSITIONS.get(state).contains(newState)) {
+        //first, check is transition possible
+        if (!TRANSITIONS.get(state.get()).contains(newState)) {
             if (isLogLevelEnabled(LogLevel.ERROR))
                 logger.error(logMess("Invalid transition. Can't move from state (%s) to state (%s)"
-                        , state.name(), newState.name()));
+                        , state.get().name(), newState.name()));
             moveToState(State.INVALID, null, null);
         }
         State nextState = null;
@@ -137,7 +130,7 @@ import org.slf4j.Logger;
                     nextState = State.INVALID;
                     break;
                 case INVALID: 
-                    boolean success = state==State.HANDLED;
+                    boolean success = state.get()==State.HANDLED;
                     if (!success) {
                         if (completionCode!=null) {
                             if (isLogLevelEnabled(LogLevel.DEBUG))
@@ -156,12 +149,12 @@ import org.slf4j.Logger;
                     }
                     break;
             }
-            state = newState;
+            state.set(newState);
         } catch (Throwable ex) {
             nextState = State.INVALID;
             if (isLogLevelEnabled(LogLevel.ERROR))
                 logger.error(logMess("Error make a transition from state (%s) to state (%s)"
-                        , state, newState), ex);
+                        , state.get(), newState), ex);
         }
         if (nextState!=null)
             moveToState(nextState, nextException, completionCode);
@@ -189,8 +182,8 @@ import org.slf4j.Logger;
             moveToState(State.INVALID, null, null);
     }
     
-    private synchronized State getState() {
-        return state;
+    private State getState() {
+        return state.get();
     }
     
     private void addToLog(String mess, Object... args) {
@@ -201,13 +194,6 @@ import org.slf4j.Logger;
         return manager.getOperator().isLogLevelEnabled(logLevel);
     }
 
-//    private boolean checkState() {
-//        commutationValid.compareAndSet(true, manager.getRequest().isValid()
-//                && (!manager.getRequest().isHandlingByOperator() || readyToCommutateSended)
-//                && operatorConversationFlag.get());
-//        return commutationValid.get();
-//    }
-//
     public boolean isCommutationValid() {
         return getState()!=State.INVALID;
     }
@@ -238,159 +224,49 @@ import org.slf4j.Logger;
             if (manager.getRequest().isValid() && !manager.getRequest().isHandlingByOperator())
                 manager.getEndpointPool().requestEndpoint(this);
             else
-//                manager.callFinished(this, false);
                 moveToState(State.INVALID, null, null);
         } catch (ExecutorServiceException ex) {
             moveToState(State.NO_FREE_ENDPOINTS, ex, null);
-//            if (manager.getOperator().isLogLevelEnabled(LogLevel.ERROR))
-//                manager.getOperator().getLogger().error(logMess(
-//                        "Get endpoint from pool error"), ex);
-//            manager.getRequest().addToLog("get endpoint from pool error");
-//            manager.callFinished(this, false);
-//            manager.incOnNoFreeEndpointsRequests();
         }
     }
 
     public void processRequest(IvrEndpoint endpoint) {
-//        boolean callHandled = false;
-//        try{
-            if (endpoint==null) {
-                callMoveToState(State.NO_FREE_ENDPOINTS, null, null);
-//                if (manager.getOperator().isLogLevelEnabled(LogLevel.WARN))
-//                    manager.getOperator().getLogger().warn(logMess(
-//                            "Can't process call queue request because of no free endpoints in the pool (%s)"
-//                            , manager.getEndpointPool().getName()));
-//                manager.getRequest().addToLog("no free endpoints in the pool");
-//                manager.incOnNoFreeEndpointsRequests();;
-                return;
-            }
-            synchronized (this) {
-                this.endpoint = endpoint;
-            }
-            Map<String, Object> bindings = new HashMap<String, Object>();
-            bindings.put(CALLS_COMMUTATION_MANAGER_BINDING, this);
-            bindings.put(CALL_QUEUE_REQUEST_BINDING, manager.getRequest());
-            callMoveToState(State.INVITING, null, null);
-            endpoint.invite(getOperatorNumber(), (int)manager.getInviteTimeout()/1000, 0
-                    , new OperatorConversationListener()
-                    , manager.getConversationScenario(), bindings);
-//            
-//            try{
-//                if (callToOperator(endpoint, bindings))
-//                    callHandled = true;
-//                else {
-//                    if (manager.getOperator().isLogLevelEnabled(LogLevel.DEBUG))
-//                        manager.getOperator().getLogger().debug(logMess("Call not handled"));
-//                    manager.getRequest().addToLog(String.format(
-//                            "operator (%s) didn't handle a call", manager.getOperator().getName()));
-//                }
-//            } catch(Exception e){
-//                if (manager.getOperator().isLogLevelEnabled(LogLevel.ERROR))
-//                    manager.getOperator().getLogger().error(logMess("Error handling by operator"), e);
-//                manager.getRequest().addToLog("error handling by operator");
-//            }
-//        } finally {
-//            manager.callFinished(this, callHandled);
-//        }
+        if (endpoint==null) {
+            callMoveToState(State.NO_FREE_ENDPOINTS, null, null);
+            return;
+        }
+        synchronized (this) {
+            this.endpoint = endpoint;
+        }
+        Map<String, Object> bindings = new HashMap<String, Object>();
+        bindings.put(CALLS_COMMUTATION_MANAGER_BINDING, this);
+        bindings.put(CALL_QUEUE_REQUEST_BINDING, manager.getRequest());
+        callMoveToState(State.INVITING, null, null);
+        endpoint.invite(getOperatorNumber(), (int)manager.getInviteTimeout()/1000, 0
+                , new OperatorConversationListener()
+                , manager.getConversationScenario(), bindings);
     }
-
-//    public boolean callToOperator(IvrEndpoint endpoint, Map<String, Object> bindings) throws Exception
-//    {
-//        operatorConversationFlag.set(true);
-//        if (!checkState())
-//            return false;
-//        manager.getRequest().fireOperatorNumberQueueEvent(getNumber());
-//        //TODO: Fix invite
-////        endpoint.invite(getNumber(), manager.getConversationScenario(), this, bindings);
-//        lock.lock();
-//        try {
-//            long callStartTime = System.currentTimeMillis();
-//            while (checkState()){
-//                eventCondition.await(500, TimeUnit.MILLISECONDS);
-//                if (!checkState())
-//                    break;
-//                if (!checkInviteTimeout(callStartTime, endpoint))
-//                    return false;
-//                if (operatorReadyToCommutate && !readyToCommutateSended){
-//                    if (manager.getRequest().fireReadyToCommutateQueueEvent(this)) 
-//                        readyToCommutateSended=true;
-//                }
-//                if (abonentReadyToCommutate && !commutated)
-//                    commutateCalls();
-//            }
-//
-//            if (!checkState() && endpoint.getEndpointState().getId()==IvrEndpointState.INVITING)
-//                restartEndpoint(endpoint);
-//
-//            if (commutated) {
-//                manager.getRequest().fireDisconnectedQueueEvent();
-//                return true;
-//            } else
-//                return false;
-//        } finally {
-//            lock.unlock();
-//        }
-//        
-//    }
-//
-//    private boolean checkInviteTimeout(long callStartTime, IvrEndpoint endpoint) throws Exception
-//    {
-//        if (endpoint.getEndpointState().getId()==IvrEndpointState.INVITING && manager.getInviteTimeout()<=0) {
-//            if (manager.getOperator().isLogLevelEnabled(LogLevel.DEBUG))
-//                manager.getOperator().getLogger().debug(logMess("Operator's number (%s) not answered", getNumber()));
-//            manager.getRequest().addToLog(String.format("number (%s) not answer", getNumber()));
-//            //restarting endpoint
-//            restartEndpoint(endpoint);
-//            return false;
-//        }
-//        return true;
-//    }
 
     public void commutateCalls() throws IvrConversationBridgeExeption {
         IvrConversationsBridge bridge = manager.getConversationsBridgeManager().createBridge(
                 getRequest().getConversation(), operatorConversation, logMess(""));
         bridge.addBridgeListener(this);
         bridge.activateBridge();
-//        commutated = true;
     }
 
-    public void operatorReadyToCommutate(IvrEndpointConversation operatorConversation)
-    {
+    public void operatorReadyToCommutate(IvrEndpointConversation operatorConversation) {
         this.operatorConversation = operatorConversation;
         callMoveToState(State.OPERATOR_READY, null, null);
-//        lock.lock();
-//        try {
-//            if (manager.getOperator().isLogLevelEnabled(LogLevel.DEBUG))
-//                manager.getOperator().getLogger().debug(logMess("Number (%s) ready to commutate", getNumber()));
-//            operatorReadyToCommutate=true;
-//            manager.getRequest().addToLog(String.format("op. number (%s) ready to commutate", getNumber()));
-//            this.operatorConversation = operatorConversation;
-//            eventCondition.signal();
-//        } finally {
-//            lock.unlock();
-//        }
     }
 
    public void abonentReadyToCommutate(IvrEndpointConversation abonentConversation) {
         callMoveToState(State.ABONENT_READY, null, null);
-//        lock.lock();
-//        try {
-//            if (manager.getOperator().isLogLevelEnabled(LogLevel.DEBUG))
-//                manager.getOperator().getLogger().debug(logMess("Abonent ready to commutate"));
-//            manager.getRequest().addToLog("abonent ready to commutate");
-//            fireAbonentReadyEvent();
-//            abonentReadyToCommutate = true;
-//            eventCondition.signal();
-//        } finally {
-//            lock.unlock();
-//        }
     }
 
     public void bridgeReactivated(IvrConversationsBridge bridge) { }
 
     public void bridgeActivated(IvrConversationsBridge bridge) {
         callMoveToState(State.COMMUTATED, null, null);
-//        manager.getRequest().fireCommutatedEvent();
     }
 
     public void bridgeDeactivated(IvrConversationsBridge bridge) { }
@@ -399,9 +275,6 @@ import org.slf4j.Logger;
         return manager.getRequest().logMess("Operator ("+manager.getOperator().getName()+"). "+message, args);
     }
 
-//    private void freeResources(){        
-//    }
-//
     public long getWaitTimeout() {
         return manager.getWaitTimeout();
     }
@@ -417,21 +290,6 @@ import org.slf4j.Logger;
     public int getPriority() {
         return manager.getRequest().getPriority();
     }
-
-//    public void conversationCompleted(ConversationCdr res) {
-//        if (manager.getOperator().isLogLevelEnabled(LogLevel.DEBUG))
-//            manager.getOperator().getLogger().debug(logMess("Operator's conversation completed"));
-//        lock.lock();
-//        try {
-//            operatorConversationFlag.set(false);
-//            checkState();
-//            manager.getRequest().addToLog(String.format(
-//                    "conv. for op. number (%s) completed (%s)", getNumber(), res.getCompletionCode()));
-//            eventCondition.signal();
-//        } finally {
-//            lock.unlock();
-//        }
-//    }
 
     private void fireAbonentReadyEvent() {
         for (CallsCommutationManagerListener listener: listeners)
@@ -449,14 +307,4 @@ import org.slf4j.Logger;
             moveToState(getState()==State.COMMUTATED? State.HANDLED:State.INVALID, null, event.getCompletionCode());
         }
     }
-
-//    private void restartEndpoint(IvrEndpoint endpoint) throws Exception {
-//        endpoint.stop();
-//        TimeUnit.SECONDS.sleep(1);
-//        endpoint.start();
-//        StateWaitResult res = endpoint.getEndpointState().waitForState(
-//                new int[]{IvrEndpointState.IN_SERVICE}, 10000);
-//        if (res.isWaitInterrupted())
-//            throw new Exception("Wait for IN_SERVICE timeout");
-//    }
 }
