@@ -723,6 +723,11 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
             this.conv = conv;
             this.incoming = incoming;
         }
+
+        @Override
+        public String toString() {
+            return conv.toString();
+        }
     }
 
     private abstract class MethodCaller {
