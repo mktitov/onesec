@@ -17,6 +17,7 @@
 package org.onesec.raven.ivr.queue.impl;
 
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
 import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviour;
@@ -72,7 +73,8 @@ public class CallsQueuePrioritySelectorNode extends BaseNode implements CallsQue
     
     public List<CallsQueueOperatorRef> getOperatorsRefs() 
     {
-        List<CallsQueueOperatorRef> operators = NodeUtils.getChildsOfType(this, CallsQueueOperatorRef.class);
+        List<CallsQueueOperatorRef> operators = NodeUtils.getChildsOfType(
+                this, CallsQueueOperatorRef.class);            
         if (operatorsUsagePolicy==OperatorsUsagePolicy.UNIFORM_USAGE)
             Collections.sort(operators, new OperatorRefComparator());
         return operators;
