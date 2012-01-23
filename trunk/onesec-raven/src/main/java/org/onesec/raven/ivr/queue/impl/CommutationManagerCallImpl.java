@@ -139,6 +139,7 @@ public class  CommutationManagerCallImpl
                         }
                         if (isLogLevelEnabled(LogLevel.DEBUG))
                             logger.debug(logMess("Call not handled"));
+                        //TODO: Не совсем корректно в случае параллельного вызова
                         addToLog("operator (%s) didn't handle a call", manager.getOperator().getName());
                     } 
                     manager.callFinished(this, success);
