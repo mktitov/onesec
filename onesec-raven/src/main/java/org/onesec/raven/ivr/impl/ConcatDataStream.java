@@ -154,6 +154,8 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
                     }
                     transferData(null);
                     ++packetNumber;
+                    if (si!=null)
+                        ++si.expectedSourceBufferNumber;
                     action = "sleeping";
                     long timeDiff = System.currentTimeMillis()-startTime;
                     long expectedPacketNumber = timeDiff/packetLength;
