@@ -93,7 +93,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
         bufferCount = 0;
         Buffer silentBuffer = bufferCache.getSilentBuffer(codec, rtpPacketSize);
         streams = new ConcatDataStream[]{new ConcatDataStream(
-                buffers, this, owner, rtpPacketSize, rtpMaxSendAheadPacketsCount, silentBuffer)};
+                buffers, this, owner, rtpPacketSize, codec, rtpMaxSendAheadPacketsCount, silentBuffer)};
         streams[0].setLogPrefix(logPrefix);
     }
 
@@ -250,6 +250,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
         private PushBufferDataSource dataSource;
         private Processor processor;
         private long startTs;
+        private boolean firstBufferReceived = false;
 
         public SourceProcessor(DataSource source) {
             this.source = source;
@@ -356,7 +357,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
         }
 
         public void transferData(PushBufferStream stream) {
-            try{
+            try {
                 if (stopProcessing.get())
                     return;
                 Buffer buffer = new Buffer();
@@ -368,6 +369,10 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
                     buffer.setEOM(false);
                     close();
                     theEnd = true;
+                }
+                if (!firstBufferReceived) {
+                    streams[0].initNewSource();
+                    firstBufferReceived = true;
                 }
                 buffers.add(buffer);
                 if (sourceKey!=null){
@@ -386,7 +391,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
                 if (theEnd && owner.isLogLevelEnabled(LogLevel.DEBUG))
                     owner.getLogger().debug(String.format(
                             "Source processing time is %s ms", System.currentTimeMillis()-startTs));
-            }catch (Exception e){
+            } catch (Exception e) {
                 if (owner.isLogLevelEnabled(LogLevel.ERROR))
                     owner.getLogger().debug(logMess("Error reading buffer from source"), e);
                 close();

@@ -60,6 +60,20 @@ public enum Codec
                 break;
         }
     }
+    
+    public long getPacketSizeForMilliseconds(long ms) {
+        switch (payload) {
+//            case 11 : return ms;
+            default : return ms * 8;    
+        }
+    }
+    
+    public long getMillisecondsForPacketSize(long packetSizeInBytes) {
+        switch (payload) {
+//            case 11 : return (long)(.95*packetSizeInBytes/8);
+            default : return packetSizeInBytes / 8;    
+        }        
+    }
 
     public int getPayload() {
         return payload;

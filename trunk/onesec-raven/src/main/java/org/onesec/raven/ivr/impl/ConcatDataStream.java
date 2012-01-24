@@ -27,6 +27,7 @@ import javax.media.Format;
 import javax.media.protocol.BufferTransferHandler;
 import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.PushBufferStream;
+import org.onesec.raven.ivr.Codec;
 import org.raven.log.LogLevel;
 import org.raven.sched.Task;
 import org.raven.tree.Node;
@@ -46,6 +47,7 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
     private final Node owner;
     private final int packetLength; //ms?
     private final int maxSendAheadPacketsCount;
+    
     private BufferTransferHandler transferHandler;
     private Buffer bufferToSend;
     private String action;
@@ -57,13 +59,13 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
 
     public ConcatDataStream(
             Queue<Buffer> bufferQueue, ConcatDataSource dataSource, Node owner
-            , int packetSize, int maxSendAheadPacketsCount, Buffer silentBuffer)
+            , int packetSize, Codec codec, int maxSendAheadPacketsCount, Buffer silentBuffer)
     {
         this.bufferQueue = bufferQueue;
         this.dataSource = dataSource;
         this.contentDescriptor = new ContentDescriptor(dataSource.getContentType());
         this.owner = owner;
-        this.packetLength = packetSize/8;
+        this.packetLength = (int) codec.getMillisecondsForPacketSize(packetSize);
         this.maxSendAheadPacketsCount = maxSendAheadPacketsCount;
         this.silentBuffer = silentBuffer;
     }
@@ -142,6 +144,8 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
             long startTime = System.currentTimeMillis();
             packetNumber = 0;
             SourceInfo si = null;
+            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                owner.getLogger().debug(logMess("Concat stream started with time quant %s ms", packetLength));
             while ((!dataSource.isClosed() || !bufferQueue.isEmpty())
                     && silencePacketCount.get()<MAX_SILENCE_BUFFER_COUNT)
             {
@@ -150,7 +154,8 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
                     bufferToSend = bufferQueue.poll();
                     action = "sending transfer event";
                     if (bufferToSend!=null && (si=sourceInfo.get())!=null) {
-                        if ()
+                        if ( (si.sourceBufferNumber++)+2 < si.expectedSourceBufferNumber )
+                            continue;
                     }
                     transferData(null);
                     ++packetNumber;

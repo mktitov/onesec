@@ -481,21 +481,21 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
             CiscoRTPOutputProperties props = ev.getRTPOutputProperties();
             if (isLogLevelEnabled(LogLevel.DEBUG))
                     logger.debug(callLog(ev.getCallID().getCall(),
-                            "Proposed RTP params: remoteHost (%s), remotePort (%s), packetSize (%s), " +
+                            "Proposed RTP params: remoteHost (%s), remotePort (%s), packetSize (%s ms), " +
                             "payloadType (%s), bitrate (%s)"
                             , props.getRemoteAddress().toString(), props.getRemotePort()
-                            , props.getPacketSize()*8, props.getPayloadType(), props.getBitRate()));
+                            , props.getPacketSize(), props.getPayloadType(), props.getBitRate()));
             Integer psize = rtpPacketSize;
-            if (psize==null)
-                psize = props.getPacketSize()*8;
             Codec streamCodec = Codec.getCodecByCiscoPayload(props.getPayloadType());
             if (streamCodec==null)
                 throw new Exception(String.format(
                         "Not supported payload type (%s)", props.getPayloadType()));
+            if (psize==null)
+                psize = (int)streamCodec.getPacketSizeForMilliseconds(props.getPacketSize());
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 logger.debug(callLog(ev.getCallID().getCall()
-                    ,"Choosed RTP params: packetSize (%s), codec (%s), audioFormat (%s)"
-                    , psize, streamCodec, streamCodec.getAudioFormat()));
+                    ,"Choosed RTP params: packetSize (%s ms), codec (%s), audioFormat (%s)"
+                    , streamCodec.getMillisecondsForPacketSize(psize), streamCodec, streamCodec.getAudioFormat()));
             conv.conv.initOutgoingRtp(props.getRemoteAddress().getHostAddress(), props.getRemotePort()
                     , psize, rtpMaxSendAheadPacketsCount, streamCodec);
             conv.conv.startOutgoingRtp();
