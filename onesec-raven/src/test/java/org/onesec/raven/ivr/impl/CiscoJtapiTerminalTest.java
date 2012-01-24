@@ -163,7 +163,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         waitForProvider();
         createSimpleScenario();
 
-        IvrTerminal term = trainTerminal("88013", scenario, true, true);
+        IvrTerminal term = trainTerminal("88014", scenario, true, true);
         IvrEndpointConversationListener listener = trainListener();
         replay(term, listener);
 

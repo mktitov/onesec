@@ -308,6 +308,8 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
             PacketSizeControl packetSizeControl =
                     (PacketSizeControl) processor.getControl(PacketSizeControl.class.getName());
             if (packetSizeControl != null) {
+                if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                    owner.getLogger().debug("Found packet control so setting up packet size for encoder");
                 packetSizeControl.setPacketSize(rtpPacketSize);
             }
             dataSource = (PushBufferDataSource) processor.getDataOutput();

@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.Queue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.media.Buffer;
 import javax.media.Format;
 import javax.media.protocol.BufferTransferHandler;
@@ -43,7 +44,7 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
     private final ConcatDataSource dataSource;
     private final ContentDescriptor contentDescriptor;
     private final Node owner;
-    private final int packetLength;
+    private final int packetLength; //ms?
     private final int maxSendAheadPacketsCount;
     private BufferTransferHandler transferHandler;
     private Buffer bufferToSend;
@@ -52,6 +53,7 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
     private long sleepTime;
     private AtomicInteger silencePacketCount = new AtomicInteger(0);
     private String logPrefix;
+    private AtomicReference<SourceInfo> sourceInfo = new AtomicReference<SourceInfo>();
 
     public ConcatDataStream(
             Queue<Buffer> bufferQueue, ConcatDataSource dataSource, Node owner
@@ -64,6 +66,10 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
         this.packetLength = packetSize/8;
         this.maxSendAheadPacketsCount = maxSendAheadPacketsCount;
         this.silentBuffer = silentBuffer;
+    }
+    
+    public void initNewSource() {
+        sourceInfo.set(new SourceInfo());
     }
 
     public String getLogPrefix() {
@@ -135,6 +141,7 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
         {
             long startTime = System.currentTimeMillis();
             packetNumber = 0;
+            SourceInfo si = null;
             while ((!dataSource.isClosed() || !bufferQueue.isEmpty())
                     && silencePacketCount.get()<MAX_SILENCE_BUFFER_COUNT)
             {
@@ -142,12 +149,18 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
                     action = "getting new buffer from queue";
                     bufferToSend = bufferQueue.poll();
                     action = "sending transfer event";
+                    if (bufferToSend!=null && (si=sourceInfo.get())!=null) {
+                        if ()
+                    }
                     transferData(null);
                     ++packetNumber;
                     action = "sleeping";
-                    long expectedPacketNumber = (System.currentTimeMillis()-startTime)/packetLength;
-                    sleepTime = (packetNumber-expectedPacketNumber-
-                            (bufferToSend==null? 0 : maxSendAheadPacketsCount))*packetLength;
+                    long timeDiff = System.currentTimeMillis()-startTime;
+                    long expectedPacketNumber = timeDiff/packetLength;
+                    long correction = timeDiff % packetLength;
+//                    sleepTime = (packetNumber-expectedPacketNumber-
+//                            (bufferToSend==null? 0 : maxSendAheadPacketsCount))*packetLength;
+                    sleepTime = (packetNumber-expectedPacketNumber)*packetLength - correction;
                     if (sleepTime>0)
                         TimeUnit.MILLISECONDS.sleep(sleepTime);
                 } catch (InterruptedException ex) {
@@ -167,5 +180,10 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
 
     private String logMess(String mess, Object... args) {
         return dataSource.logMess(mess, args);
+    }
+    
+    private class SourceInfo {
+        private long expectedSourceBufferNumber = 0;
+        private long sourceBufferNumber = 0;
     }
 }
