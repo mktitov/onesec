@@ -34,12 +34,13 @@ public class CallsQueueVirtualOperatorNode extends AbstractOperatorNode {
 
     @Override
     protected boolean doProcessRequest(CallsQueue queue, CallQueueRequestWrapper request
-            , IvrConversationScenario conversationScenario, AudioFile greeting)
+            , IvrConversationScenario conversationScenario, AudioFile greeting
+            , String operatorPhoneNumbers)
     {
         if (request.getOperatorPhoneNumbers()==null) {
             if (isLogLevelEnabled(LogLevel.ERROR))
-                getLogger().error(request.logMess("Operator (%s), Can't process request because of it does "
-                        + "not contains operator phone numbers", getName()));
+                getLogger().error(request.logMess("Operator (%s), Can't process request because of "
+                        + "it does not contains operator phone numbers", getName()));
             return false;
         }
         commutate(queue, request, request.getOperatorPhoneNumbers(), conversationScenario, greeting);

@@ -313,6 +313,28 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
 
         verify(term, listener);
     }
+    
+    //Цель теста послушать качество 
+    //  Пароли не совпадают
+//    @Test
+    public void longCallTest() throws Exception {
+        waitForProvider();
+        createSimpleScenario();
+
+        IvrTerminal term = trainTerminal("88014", scenario, true, true);
+        IvrEndpointConversationListener listener = trainListener();
+        replay(term, listener);
+
+        endpoint = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, term);
+        startEndpoint(endpoint);
+        endpoint.invite("089128672947", 0, 0, listener, scenario, null);
+//        endpoint.invite("88027", 0, 0, listener, scenario, null);
+        waitForConversationStop();
+        stopEndpoint(endpoint);
+        
+        verify(term, listener);
+    }
+    
 
     private void startEndpoint(CiscoJtapiTerminal endpoint) throws Exception {
         IvrTerminalState state = endpoint.getState();

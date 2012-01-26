@@ -45,6 +45,9 @@ public class CallsQueueOperatorRefNode extends BaseNode implements CallsQueueOpe
     @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
     private AudioFileNode greeting;
 
+    @Parameter
+    private String phoneNumbers;
+    
     private int sortIndex;
 
     @Override
@@ -85,9 +88,18 @@ public class CallsQueueOperatorRefNode extends BaseNode implements CallsQueueOpe
         this.greeting = greeting;
     }
 
+    public String getPhoneNumbers() {
+        return phoneNumbers;
+    }
+
+    public void setPhoneNumbers(String phoneNumbers) {
+        this.phoneNumbers = phoneNumbers;
+    }
+
     public boolean processRequest(CallsQueue queue, CallQueueRequestWrapper request) {
         try {
-            return operator.processRequest(queue, request, conversationScenario, greeting);
+            return operator.processRequest(
+                    queue, request, conversationScenario, greeting, phoneNumbers);
         } catch (Throwable e) {
             if (isLogLevelEnabled(LogLevel.ERROR))
                 getLogger().error(

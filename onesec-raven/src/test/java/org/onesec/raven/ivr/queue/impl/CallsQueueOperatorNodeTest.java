@@ -98,7 +98,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
         CallsQueue queue = createMock(CallsQueue.class);
         replay(request, queue);
 
-        assertFalse(operator.processRequest(queue, request, scenario, null));
+        assertFalse(operator.processRequest(queue, request, scenario, null, null));
 
         verify(request, queue);
     }
@@ -112,7 +112,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
 
         operator.setActive(Boolean.FALSE);
         assertTrue(operator.start());
-        assertFalse(operator.processRequest(queue, request, scenario, null));
+        assertFalse(operator.processRequest(queue, request, scenario, null, null));
 
         verify(request, queue);
     }
@@ -140,7 +140,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
 
         assertTrue(operator.start());
         endpointPool.setEndpointPool(pool);
-        operator.processRequest(queue, request, scenario, audioFile);
+        operator.processRequest(queue, request, scenario, audioFile, null);
         Thread.sleep(200);
         verify(request, queue, pool, audioFile);
     }
@@ -177,7 +177,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
         endpointPool.setEndpointPool(pool);
         long startTime = System.currentTimeMillis();
         flag.set(false);
-        operator.processRequest(queue, request, scenario, audioFile);
+        operator.processRequest(queue, request, scenario, audioFile, null);
         while (!flag.get())
             Thread.sleep(100);
         long diff = System.currentTimeMillis() - startTime;
@@ -258,10 +258,10 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
         assertTrue(operator.start());
         endpointPool.setEndpointPool(pool);
         bridgeManager.setManager(bManager);
-        operator.processRequest(queue, request, scenario, audioFile);
+        operator.processRequest(queue, request, scenario, audioFile, null);
         Thread.sleep(10);
         //check for busy
-        assertFalse(operator.processRequest(queue, request, scenario, audioFile));
+        assertFalse(operator.processRequest(queue, request, scenario, audioFile, null));
         while(!stopFlag.get()) 
             TimeUnit.MILLISECONDS.sleep(100);
         TimeUnit.MILLISECONDS.sleep(1000);

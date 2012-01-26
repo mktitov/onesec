@@ -245,6 +245,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
         private final Lock lock = new ReentrantLock();
         private final String sourceKey;
         private final long sourceChecksum;
+        private final ConcatDataStream concatStream;
         private Collection<Buffer> cache;
 
         private PushBufferDataSource dataSource;
@@ -256,12 +257,14 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
             this.source = source;
             this.sourceChecksum = 0l;
             this.sourceKey = null;
+            this.concatStream = streams[0];
         }
 
         public SourceProcessor(DataSource source, String sourceKey, long sourceChecksum) {
             this.source = source;
             this.sourceKey = sourceKey;
             this.sourceChecksum = sourceChecksum;
+            this.concatStream = streams[0];
         }
 
         public boolean isProcessing(){
@@ -332,6 +335,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
 
         public void close(){
             stopProcessing.set(true);
+            concatStream.sourceClosed(source);
             try {
                 if (lock.tryLock(2000, TimeUnit.MILLISECONDS)) try {
                     try {
@@ -371,7 +375,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
                     theEnd = true;
                 }
                 if (!firstBufferReceived) {
-                    streams[0].initNewSource();
+                    concatStream.sourceInitialized(this);
                     firstBufferReceived = true;
                 }
                 buffers.add(buffer);

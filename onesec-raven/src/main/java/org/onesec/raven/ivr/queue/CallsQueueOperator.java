@@ -58,5 +58,6 @@ public interface CallsQueueOperator extends Node
      * then operator is busy for now
      */
     public boolean processRequest(CallsQueue queue, CallQueueRequestWrapper request
-            , IvrConversationScenario conversationScenario, AudioFile greeting);
+            , IvrConversationScenario conversationScenario, AudioFile greeting
+            , String operatorPhoneNumbers);
 }

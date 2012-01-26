@@ -95,14 +95,16 @@ public abstract class AbstractOperatorNode extends BaseNode implements CallsQueu
     
     //CallQueueOpertor's method
     public boolean processRequest(CallsQueue queue, CallQueueRequestWrapper request
-            , IvrConversationScenario conversationScenario, AudioFile greeting)
+            , IvrConversationScenario conversationScenario, AudioFile greeting
+            , String operatorPhoneNumbers)
     {
         totalRequests.incrementAndGet();
         if (!Status.STARTED.equals(getStatus()) || !active) {
             onNotStartedRequests.incrementAndGet();
             return false;
         }
-        boolean res =  doProcessRequest(queue, request, conversationScenario, greeting);
+        boolean res =  doProcessRequest(queue, request, conversationScenario, greeting
+                , operatorPhoneNumbers);
         if (res)
             processingRequestCount.incrementAndGet();
         return res;
@@ -113,7 +115,8 @@ public abstract class AbstractOperatorNode extends BaseNode implements CallsQueu
     }
 
     protected abstract boolean doProcessRequest(CallsQueue queue, CallQueueRequestWrapper request
-            , IvrConversationScenario conversationScenario, AudioFile greeting);
+            , IvrConversationScenario conversationScenario, AudioFile greeting
+            , String operatorPhoneNumbers);
 
     protected CallsCommutationManagerImpl commutate(CallsQueue queue, CallQueueRequestWrapper request
             , String phoneNumbers, IvrConversationScenario conversationScenario, AudioFile greeting)
