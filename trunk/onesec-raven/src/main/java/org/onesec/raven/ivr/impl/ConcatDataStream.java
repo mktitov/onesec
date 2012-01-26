@@ -55,7 +55,8 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
     private long sleepTime;
     private AtomicInteger silencePacketCount = new AtomicInteger(0);
     private String logPrefix;
-    private AtomicReference<SourceInfo> sourceInfo = new AtomicReference<SourceInfo>();
+    private AtomicReference sourceInfo = new AtomicReference();
+    private AtomicInteger emptyQueueEvents = new AtomicInteger(0);
 
     public ConcatDataStream(
             Queue<Buffer> bufferQueue, ConcatDataSource dataSource, Node owner
@@ -70,8 +71,13 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
         this.silentBuffer = silentBuffer;
     }
     
-    public void initNewSource() {
+    public void sourceInitialized(Object source) {
         sourceInfo.set(new SourceInfo());
+        emptyQueueEvents.set(0);
+    }
+    
+    public void sourceClosed(Object source) {
+        sourceInfo.compareAndSet(source, null);
     }
 
     public String getLogPrefix() {
@@ -137,15 +143,18 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
                 , action, packetNumber, sleepTime));
     }
 
+    //TODO: log bufferQueue.length() every 10 secs
     public void run() {
         dataSource.setStreamThreadRunning(true);
         try
         {
             long startTime = System.currentTimeMillis();
             packetNumber = 0;
-            SourceInfo si = null;
+            Object si = null;
             if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                 owner.getLogger().debug(logMess("Concat stream started with time quant %s ms", packetLength));
+            boolean debugEnabled = owner.isLogLevelEnabled(LogLevel.DEBUG);
+            long prevTime = System.currentTimeMillis();
             while ((!dataSource.isClosed() || !bufferQueue.isEmpty())
                     && silencePacketCount.get()<MAX_SILENCE_BUFFER_COUNT)
             {
@@ -153,15 +162,24 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
                     action = "getting new buffer from queue";
                     bufferToSend = bufferQueue.poll();
                     action = "sending transfer event";
-                    if (bufferToSend!=null && (si=sourceInfo.get())!=null) {
-                        if ( (si.sourceBufferNumber++)+2 < si.expectedSourceBufferNumber )
-                            continue;
+                    si = sourceInfo.get();
+                    if (bufferToSend!=null || si==null)
+                        transferData(null);
+                    if (bufferToSend==null && si!=null) {
+                        emptyQueueEvents.incrementAndGet();
+                        TimeUnit.MILLISECONDS.sleep(5);
+                        continue;
                     }
-                    transferData(null);
                     ++packetNumber;
-                    if (si!=null)
-                        ++si.expectedSourceBufferNumber;
+//                    if (si!=null)
+//                        ++si.expectedSourceBufferNumber;
                     action = "sleeping";
+                    long curTime = System.currentTimeMillis();
+                    if (si!=null && debugEnabled && curTime-prevTime>30000) {
+                        prevTime = curTime;
+                        owner.getLogger().debug(logMess(
+                                "Empty buffers events count: %s", emptyQueueEvents.get()));
+                    }
                     long timeDiff = System.currentTimeMillis()-startTime;
                     long expectedPacketNumber = timeDiff/packetLength;
                     long correction = timeDiff % packetLength;

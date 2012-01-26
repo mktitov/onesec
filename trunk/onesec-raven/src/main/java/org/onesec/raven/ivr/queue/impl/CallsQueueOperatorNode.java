@@ -56,13 +56,15 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
 
     @Override
     protected boolean doProcessRequest(CallsQueue queue, CallQueueRequestWrapper request
-            , IvrConversationScenario conversationScenario, AudioFile greeting)
+            , IvrConversationScenario conversationScenario, AudioFile greeting
+            , String operatorPhoneNumbers)
     {
         if (!busy.compareAndSet(false, true)) {
             onBusyRequests.incrementAndGet();
             return false;
         }
-        commutationManager.set(commutate(queue, request, phoneNumbers, conversationScenario, greeting));
+        String _nums = operatorPhoneNumbers==null? phoneNumbers : operatorPhoneNumbers;
+        commutationManager.set(commutate(queue, request, _nums, conversationScenario, greeting));
         return true;
     }
 
