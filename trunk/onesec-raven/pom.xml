@@ -22,18 +22,22 @@
       <url>http://tapestry.formos.com/maven-snapshot-repository/</url>
     </pluginRepository>
     -->
-    <!--
     <pluginRepository>
         <id>apache.snapshots</id>
         <url>http://people.apache.org/repo/m2-snapshot-repository/</url>
     </pluginRepository>
-    -->
+    
     </pluginRepositories>
     
     <dependencies>
         <dependency>
             <groupId>org.onesec</groupId>
             <artifactId>onesec-core</artifactId>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.apache.mina</groupId>
+            <artifactId>mina-core</artifactId>
         </dependency>
 
         <dependency>
