@@ -66,6 +66,7 @@ public class MoveToQueueOnBusyBehaviourStepNodeTest extends OnesecRavenTestCase 
         CallQueueRequestWrapper request = createMock(CallQueueRequestWrapper.class);
         expect(executor.executeQuietly(executeTask())).andReturn(true);
         expect(request.logMess("Moving to the queue (%s)", "move to queue")).andReturn("status");
+        request.setForceResetCallsQueueFlag();
         replay(executor, sourceQueue, request);
 
         executorService.setWrapper(executor);
@@ -84,6 +85,7 @@ public class MoveToQueueOnBusyBehaviourStepNodeTest extends OnesecRavenTestCase 
         expect(executor.executeQuietly(executeTask())).andReturn(true);
         request.setOnBusyBehaviour(null);
         expect(request.logMess("Moving to the queue (%s)", "move to queue")).andReturn("status");
+        request.setForceResetCallsQueueFlag();
         replay(executor, sourceQueue, request);
 
         moveOp.setResetOnBusyBehaviour(true);
