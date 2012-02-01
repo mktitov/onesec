@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.media.protocol.FileTypeDescriptor;
+import javax.telephony.Address;
 import javax.telephony.Call;
 import javax.telephony.Connection;
 import javax.telephony.TerminalObserver;
@@ -228,8 +229,12 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             this.call = (CiscoCall) call;
             callId = "[call id: " + this.call.getCallID().intValue()+", calling number: "
                     + call.getCallingAddress().getName() + "]";
-            this.callingNumber = call.getCallingAddress().getName();
-            this.calledNumber = call.getCalledAddress().getName();
+            Address addr = call.getCallingAddress();
+            if (addr!=null)
+                this.callingNumber = addr.getName();
+            addr = call.getCalledAddress();
+            if (addr!=null)
+                this.calledNumber = addr.getName();
             checkState();
         } finally {
             lock.writeLock().unlock();

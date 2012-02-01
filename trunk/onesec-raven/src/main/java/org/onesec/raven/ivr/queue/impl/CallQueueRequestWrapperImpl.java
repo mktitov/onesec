@@ -83,6 +83,7 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
     private String queueId;
     private Integer positionInQueue;
     private CallsQueue queue;
+    private CallsQueue targetQueue;
     private StringBuilder log;
     private Record cdr;
     private int onBusyBehaviourStep;
@@ -92,6 +93,7 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
     private int operatorIndex;
     private int operatorHops;
     private long lastQueuedTime;
+    private boolean forceResetCallsQueueFlag = false;
 
     public CallQueueRequestWrapperImpl(
             CallsQueuesNode owner, CallQueueRequest request, long requestId)
@@ -242,13 +244,24 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
         return lastQueuedTime;
     }
 
+    public void setForceResetCallsQueueFlag() {
+        forceResetCallsQueueFlag = true;
+    }
+
+    public CallsQueue getTargetQueue() {
+        return targetQueue;
+    }
+
     public void setCallsQueue(CallsQueue queue)
     {
-        if (queue!=this.queue){
+        if (queue!=this.queue || forceResetCallsQueueFlag){
 //            requestId=0;
             operatorIndex=-1;
             operatorHops = 0;
             lastQueuedTime = System.currentTimeMillis();
+            forceResetCallsQueueFlag = false;
+            if (targetQueue==null)
+                targetQueue = queue;
             addToLog(String.format("moved to queue (%s)", queue.getName()));
         }
         this.queue = queue;

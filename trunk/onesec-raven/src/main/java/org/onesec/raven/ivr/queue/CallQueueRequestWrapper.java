@@ -32,6 +32,10 @@ public interface CallQueueRequestWrapper extends CallQueueRequest
      */
     public long getRequestId();
     /**
+     * 
+     */
+    public void setForceResetCallsQueueFlag();
+    /**
      * Sets the call queue for request
      */
     public void setCallsQueue(CallsQueue queue);
@@ -39,6 +43,12 @@ public interface CallQueueRequestWrapper extends CallQueueRequest
      * Returns the calls queue for the request
      */
     public CallsQueue getCallsQueue();
+    /**
+     * Returns the target (first) queue for request. 
+     * The first call of {@link #setCallsQueue} specifies the
+     * return value for this method
+     */
+    public CallsQueue getTargetQueue();
     /**
      * Fires "rejected" event for the request
      */

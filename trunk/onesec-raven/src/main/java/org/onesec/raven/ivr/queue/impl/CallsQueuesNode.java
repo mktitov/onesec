@@ -110,9 +110,9 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
                 return;
             }
             Node queue = queuesNode.getChildren(request.getQueueId());
-            if (queue!=null && Status.STARTED.equals(queue.getStatus()))
+            if (queue!=null && Status.STARTED.equals(queue.getStatus())) {
                 ((CallsQueue)queue).queueCall(requestWrapper);
-            else {
+            } else {
                 if (isLogLevelEnabled(LogLevel.ERROR))
                     getLogger().error(logMess(
                             request, "Rejected because of queue (%s) not found or stopped"
