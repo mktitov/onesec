@@ -47,6 +47,8 @@ public abstract class AbstractOperatorNode extends BaseNode implements CallsQueu
     public final static String ON_NOT_STARTED_REQUESTS = "onNotStartedRequests";
     public final static String PROCESSING_REQUEST_COUNT = "processingRequestCount";
     public final static String ACTIVE_ATTR = "active";
+    public final static String BUSY_ATTR = "busy";
+    public final static String PROCESSING_REQUEST_ATTR = "processingRequest";
     
     @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
     private IvrEndpointPool endpointPool;
@@ -118,12 +120,25 @@ public abstract class AbstractOperatorNode extends BaseNode implements CallsQueu
             , IvrConversationScenario conversationScenario, AudioFile greeting
             , String operatorPhoneNumbers);
 
-    protected CallsCommutationManagerImpl commutate(CallsQueue queue, CallQueueRequestWrapper request
+    /**
+     * Create and returns the commutation manager.
+     * @param queue
+     * @param request
+     * @param phoneNumbers
+     * @param conversationScenario
+     * @param greeting
+     * @return 
+     */
+    protected CallsCommutationManagerImpl commutate(CallsQueue queue
+            , CallQueueRequestWrapper request
             , String phoneNumbers, IvrConversationScenario conversationScenario, AudioFile greeting)
+        throws Exception
     {
         request.fireOperatorQueueEvent(getName());
         request.fireOperatorGreetingQueueEvent(greeting!=null? greeting:this.greeting);
-        String[] numbers = RavenUtils.split(phoneNumbers, ",");
+        String[] numbers = RavenUtils.split(phoneNumbers, "\\s*,\\s*");
+        if (numbers==null || numbers.length==0) 
+            throw new Exception("Operator phone numbers not defined");
         CallsCommutationManagerImpl manager = new CallsCommutationManagerImpl(executor, request, inviteTimeout
                 , parallelCallAfter, queue, endpointWaitTimeout, numbers, conversationScenario
                 , conversationsBridgeManager, endpointPool, this);
