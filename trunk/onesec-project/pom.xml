@@ -37,10 +37,12 @@
     </modules>
     
     <repositories>
+        <!--
         <repository>
             <id>tapestry.formos</id>
             <url>http://tapestry.formos.com/maven-snapshot-repository/</url>
         </repository>
+        -->
         <repository>
             <id>java.net</id>
             <url>http://download.java.net/maven/2/</url>
@@ -190,12 +192,13 @@
                 <version>5.0.18</version>
                 <scope>compile</scope>
             </dependency>
-            
+            <!--
             <dependency>
                 <groupId>org.apache.mina</groupId>
                 <artifactId>mina-core</artifactId>
                 <version>2.0.4</version>
             </dependency>
+            -->
 
             <dependency>
                 <groupId>org.eclipse.jdt.core.compiler</groupId>
