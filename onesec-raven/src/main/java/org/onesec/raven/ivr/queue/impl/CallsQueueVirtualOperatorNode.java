@@ -17,6 +17,8 @@
 
 package org.onesec.raven.ivr.queue.impl;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
@@ -43,8 +45,14 @@ public class CallsQueueVirtualOperatorNode extends AbstractOperatorNode {
                         + "it does not contains operator phone numbers", getName()));
             return false;
         }
-        commutate(queue, request, request.getOperatorPhoneNumbers(), conversationScenario, greeting);
-        return true;
+        try {
+            commutate(queue, request, request.getOperatorPhoneNumbers(), conversationScenario, greeting);
+            return true;
+        } catch (Throwable e) {
+            if (isLogLevelEnabled(LogLevel.ERROR))
+                getLogger().error(request.logMess("Error handling request by operator"), e);
+            return false;
+        }
     }
 
     @Override

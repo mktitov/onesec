@@ -25,6 +25,7 @@ import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
+import org.raven.log.LogLevel;
 import org.weda.annotations.constraints.NotNull;
 
 /**
@@ -38,12 +39,30 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
 
     private AtomicBoolean busy;
     private AtomicReference<CallsCommutationManagerImpl> commutationManager;
+    private AtomicReference<String> request;
 
     @Override
     protected void initFields() {
         super.initFields();
         busy = new AtomicBoolean(false);
+        request = new AtomicReference<String>();
         commutationManager = new AtomicReference<CallsCommutationManagerImpl>();
+    }
+
+    @Override
+    protected void doStart() throws Exception {
+        busy.set(false);
+        super.doStart();
+    }
+    
+    @Parameter(readOnly=true)
+    public Boolean getBusy() {
+        return busy.get();
+    }
+    
+    @Parameter(readOnly=true)
+    public String getProcessingRequest(){
+        return request.get();
     }
 
     public String getPhoneNumbers() {
@@ -63,15 +82,26 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
             onBusyRequests.incrementAndGet();
             return false;
         }
-        String _nums = operatorPhoneNumbers==null? phoneNumbers : operatorPhoneNumbers;
-        commutationManager.set(commutate(queue, request, _nums, conversationScenario, greeting));
-        return true;
+        try {
+            this.request.set(request.toString());
+            String _nums = operatorPhoneNumbers==null? phoneNumbers : operatorPhoneNumbers;
+            commutationManager.set(commutate(queue, request, _nums, conversationScenario, greeting));
+            return true;
+        } catch (Throwable e) {
+            if (isLogLevelEnabled(LogLevel.ERROR))
+                getLogger().error(request.logMess("Error handling request by operator"), e);
+            busy.set(false);
+            this.request.set(null);
+            return false;
+        }
     }
 
     @Override
     protected void doRequestProcessed(CallsCommutationManagerImpl manager, boolean callHandled) {
-        if (commutationManager.compareAndSet(manager, null))
+        if (commutationManager.compareAndSet(manager, null)) {
             busy.set(false);
+            request.set(null);
+        }
     }
     
     /**
