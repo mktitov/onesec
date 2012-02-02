@@ -84,7 +84,8 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
         }
         try {
             this.request.set(request.toString());
-            String _nums = operatorPhoneNumbers==null? phoneNumbers : operatorPhoneNumbers;
+            String _nums = operatorPhoneNumbers==null||operatorPhoneNumbers.trim().length()==0?
+                    phoneNumbers : operatorPhoneNumbers;
             commutationManager.set(commutate(queue, request, _nums, conversationScenario, greeting));
             return true;
         } catch (Throwable e) {

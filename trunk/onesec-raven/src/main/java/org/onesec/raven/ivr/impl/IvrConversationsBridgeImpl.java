@@ -55,12 +55,9 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
     private AtomicLong activatingTimestamp;
     private AtomicLong activatedTimestamp;
     private LinkedList<IvrConversationsBridgeListener> listeners;
-//    private Listener listener1;
-//    private Listener listener2;
     private BridgeConnection conn1;
     private BridgeConnection conn2;
     private boolean activated = false;
-//    private int dataSourceCounter;
     private AtomicReference<IvrConversationsBridgeStatus> status;
 
     public IvrConversationsBridgeImpl(
@@ -74,7 +71,6 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
         activatingTimestamp = new AtomicLong();
         activatedTimestamp = new AtomicLong();
         listeners = new LinkedList<IvrConversationsBridgeListener>();
-//        dataSourceCounter = 0;
         status = new AtomicReference<IvrConversationsBridgeStatus>(IvrConversationsBridgeStatus.CREATED);
     }
 
@@ -135,8 +131,6 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
         conn2 = new BridgeConnection(conv2, conv1);
         conn1.init();
         conn2.init();
-//        listener1 = new Listener(conv1);
-//        listener2 = new Listener(conv2);
     }
 
     public void deactivateBridge() {
@@ -161,32 +155,6 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
             listener.bridgeDeactivated(this);
     }
     
-//    private synchronized void convStopped(IvrEndpointConversation conv)
-//    {
-//        status.set(IvrConversationsBridgeStatus.DEACTIVATED);
-//        if (owner.isLogLevelEnabled(LogLevel.INFO))
-//            owner.getLogger().info(logMess("Bridge successfully deactivated"));
-//        fireBridgeDeactivatedEvent();
-//    }
-
-//    private synchronized void dsCreated(IvrEndpointConversation conv, DataSource dataSource)
-//    {
-//        IvrEndpointConversation targetConv = conv==conv1? conv2 : conv1;
-//        targetConv.getAudioStream().addSource(dataSource);
-//        dataSourceCounter++;
-//        if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-//            owner.getLogger().debug(logMess(
-//                    "Incoming RTP stream from %s routed to the outgoing RTP of the %s"
-//                    , getNumber(conv), getNumber(targetConv)));
-//        if (dataSourceCounter==2){
-//            status.set(IvrConversationsBridgeStatus.ACTIVATED);
-//            activatedTimestamp.set(System.currentTimeMillis());
-//            fireBridgeActivatedEvent();
-//            if (owner.isLogLevelEnabled(LogLevel.INFO))
-//                owner.getLogger().info(logMess("Bridge successfully activated"));
-//        }
-//    }
-
     private String getNumber(IvrEndpointConversation conv) {
         return conv==conv1? conv.getCallingNumber() : conv.getCalledNumber();
     }
@@ -323,43 +291,4 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
             }
         }
     }
-    
-//    private class Listener implements IncomingRtpStreamDataSourceListener, IvrEndpointConversationListener
-//    {
-//        private final IvrEndpointConversation conv;
-//
-//        public Listener(IvrEndpointConversation conv)
-//        {
-//            this.conv = conv;
-//            conv.addConversationListener(this);
-//            try {
-//                conv.getIncomingRtpStream().addDataSourceListener(this, null);
-//            } catch (Throwable ex) {
-//                convStopped(conv);
-//            }
-//        }
-//
-//        public void dataSourceCreated(DataSource dataSource) {
-//            dsCreated(conv, dataSource);
-//        }
-//
-//        public void streamClosing() {
-//            convStopped(conv);
-//        }
-//
-//        public void listenerAdded(IvrEndpointConversationEvent event) {
-//            if (conv.getState().getId()!=IvrEndpointConversationState.TALKING)
-//                convStopped(conv);
-//        }
-//
-//        public void conversationStarted(IvrEndpointConversationEvent event) { }
-//
-//        public void conversationStopped(IvrEndpointConversationStoppedEvent event) {
-//            convStopped(conv);
-//        }
-//
-//        public void conversationTransfered(IvrEndpointConversationTransferedEvent event) { }
-//    }
-
-
 }
