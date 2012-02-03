@@ -155,6 +155,7 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
                 owner.getLogger().debug(logMess("Concat stream started with time quant %s ms", packetLength));
             boolean debugEnabled = owner.isLogLevelEnabled(LogLevel.DEBUG);
             long prevTime = System.currentTimeMillis();
+            long maxTransferTime = 0;
             while ((!dataSource.isClosed() || !bufferQueue.isEmpty())
                     && silencePacketCount.get()<MAX_SILENCE_BUFFER_COUNT)
             {
@@ -163,8 +164,13 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
                     bufferToSend = bufferQueue.poll();
                     action = "sending transfer event";
                     si = sourceInfo.get();
-                    if (bufferToSend!=null || si==null)
+                    if (bufferToSend!=null || si==null) {
+                        long ts = System.currentTimeMillis();
                         transferData(null);
+                        long tt = System.currentTimeMillis()-ts;
+                        if (tt>maxTransferTime)
+                            maxTransferTime=tt;
+                    }
                     if (bufferToSend==null && si!=null) {
                         emptyQueueEvents.incrementAndGet();
                         TimeUnit.MILLISECONDS.sleep(5);
@@ -175,14 +181,15 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
 //                        ++si.expectedSourceBufferNumber;
                     action = "sleeping";
                     long curTime = System.currentTimeMillis();
-                    if (si!=null && debugEnabled && curTime-prevTime>30000) {
-                        prevTime = curTime;
-                        owner.getLogger().debug(logMess(
-                                "Empty buffers events count: %s", emptyQueueEvents.get()));
-                    }
                     long timeDiff = System.currentTimeMillis()-startTime;
                     long expectedPacketNumber = timeDiff/packetLength;
                     long correction = timeDiff % packetLength;
+                    if (si!=null && debugEnabled && curTime-prevTime>30000) {
+                        prevTime = curTime;
+                        owner.getLogger().debug(logMess(
+                                "Empty buffers events count: %s; maxTransferTime: %s; buffers size: %s"
+                                , expectedPacketNumber-packetNumber, maxTransferTime, bufferQueue.size()));
+                    }
 //                    sleepTime = (packetNumber-expectedPacketNumber-
 //                            (bufferToSend==null? 0 : maxSendAheadPacketsCount))*packetLength;
                     sleepTime = (packetNumber-expectedPacketNumber)*packetLength - correction;

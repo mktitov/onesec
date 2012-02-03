@@ -78,7 +78,7 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         verify(listener);
     }
 
-    @Test
+//    @Test
     public void zenitTest() throws Exception
     {
         IncomingRtpStream irtp = manager.getIncomingRtpStream(manager);
@@ -131,7 +131,7 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         irtp.release();
     }
 
-//    @Test
+    @Test
     public void copyToConcatDataSource() throws Exception
     {
         IncomingRtpStream irtp = manager.getIncomingRtpStream(manager);
