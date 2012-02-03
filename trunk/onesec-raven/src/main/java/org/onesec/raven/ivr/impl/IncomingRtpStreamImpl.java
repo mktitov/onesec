@@ -31,6 +31,7 @@ import javax.media.Processor;
 import javax.media.format.AudioFormat;
 import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.DataSource;
+import javax.media.protocol.PushBufferDataSource;
 import javax.media.protocol.SourceCloneable;
 import javax.media.rtp.GlobalReceptionStats;
 import javax.media.rtp.RTPControl;
@@ -313,13 +314,15 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
                         return;
                     }
                     inDataSource = !firstConsumerAdded? source : ((SourceCloneable)source).createClone();
+                    inDataSource = new RealTimeDataSouce((PushBufferDataSource)inDataSource);
                     firstConsumerAdded = true;
 
-                    processor = ControllerStateWaiter.createRealizedProcessor(inDataSource, format, 4000);
-                    outDataSource = processor.getDataOutput();
-                    processor.start();
+//                    processor = ControllerStateWaiter.createRealizedProcessor(inDataSource, format, 4000);
+//                    outDataSource = processor.getDataOutput();
+//                    processor.start();
                 }
-                listener.dataSourceCreated(IncomingRtpStreamImpl.this, outDataSource);
+//                listener.dataSourceCreated(IncomingRtpStreamImpl.this, outDataSource);
+                listener.dataSourceCreated(IncomingRtpStreamImpl.this, inDataSource);
             } catch(Exception e) {
                 if (owner.isLogLevelEnabled(LogLevel.ERROR))
                     owner.getLogger().error(logMess(
