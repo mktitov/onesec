@@ -39,6 +39,7 @@ import org.raven.tree.Node;
 public class ConcatDataStream implements PushBufferStream, BufferTransferHandler, Task
 {
     public static int MAX_SILENCE_BUFFER_COUNT = 1500;
+    public static final int MAX_TIME_SKEW = 150;
 
     private final Buffer silentBuffer;
     private final Queue<Buffer> bufferQueue;
@@ -156,18 +157,26 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
             boolean debugEnabled = owner.isLogLevelEnabled(LogLevel.DEBUG);
             long prevTime = System.currentTimeMillis();
             long maxTransferTime = 0;
+            long droppedPacketCount = 0;
+            long transferTimeSum = 0;
+            long emptyBufferEventCount = 0;
             while ((!dataSource.isClosed() || !bufferQueue.isEmpty())
                     && silencePacketCount.get()<MAX_SILENCE_BUFFER_COUNT)
             {
                 try {
+                    long cycleStartTs = System.currentTimeMillis();
                     action = "getting new buffer from queue";
                     bufferToSend = bufferQueue.poll();
+//                    if (bufferToSend!=null && bufferToSend.getTimeStamp()+MAX_TIME_SKEW<cycleStartTs) {
+//                        droppedPacketCount++;
+//                        continue;
+//                    }
                     action = "sending transfer event";
                     si = sourceInfo.get();
                     if (bufferToSend!=null || si==null) {
-                        long ts = System.currentTimeMillis();
                         transferData(null);
-                        long tt = System.currentTimeMillis()-ts;
+                        long tt = System.currentTimeMillis()-cycleStartTs;
+                        transferTimeSum+=tt;
                         if (tt>maxTransferTime)
                             maxTransferTime=tt;
                     }
@@ -181,14 +190,20 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
 //                        ++si.expectedSourceBufferNumber;
                     action = "sleeping";
                     long curTime = System.currentTimeMillis();
-                    long timeDiff = System.currentTimeMillis()-startTime;
+                    long timeDiff = curTime - startTime;
                     long expectedPacketNumber = timeDiff/packetLength;
                     long correction = timeDiff % packetLength;
+                    emptyBufferEventCount = expectedPacketNumber - packetNumber;
                     if (si!=null && debugEnabled && curTime-prevTime>30000) {
                         prevTime = curTime;
                         owner.getLogger().debug(logMess(
-                                "Empty buffers events count: %s; maxTransferTime: %s; buffers size: %s"
-                                , expectedPacketNumber-packetNumber, maxTransferTime, bufferQueue.size()));
+                                "Empty buffers events count: %s; "
+                                + "avgTransferTime: %s; maxTransferTime: %s; buffers size: %s; "
+                                + " dropped packets count: %s"
+                                , emptyBufferEventCount, transferTimeSum/packetNumber
+                                , maxTransferTime
+                                , bufferQueue.size()
+                                , droppedPacketCount));
                     }
 //                    sleepTime = (packetNumber-expectedPacketNumber-
 //                            (bufferToSend==null? 0 : maxSendAheadPacketsCount))*packetLength;
@@ -203,8 +218,15 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
                     break;
                 }
             }
-            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+            if (owner.isLogLevelEnabled(LogLevel.DEBUG)) {
                 owner.getLogger().debug(logMess("Transfer buffers to rtp session task was finished"));
+                owner.getLogger().debug(logMess(
+                        "Empty buffers events count: %s; "
+                        + "avgTransferTime: %s; maxTransferTime: %s; buffers size: %s; "
+                        + " dropped packets count: %s"
+                        , emptyBufferEventCount, transferTimeSum/packetNumber, maxTransferTime
+                        , bufferQueue.size(), droppedPacketCount));
+            }
         } finally {
             dataSource.setStreamThreadRunning(false);
         }

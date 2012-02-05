@@ -97,7 +97,7 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
     public void oneListenerTest() throws Exception
     {
         IncomingRtpStream irtp = manager.getIncomingRtpStream(manager);
-        String address = getInterfaceAddress().getHostName();
+        String address = getInterfaceAddress().getHostAddress();
         irtp.open(address);
         DataSourceListener fileWriter = new DataSourceListener("target/recorded.wav");
         irtp.addDataSourceListener(fileWriter, null);
@@ -107,11 +107,11 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         irtp.release();
     }
 
-//    @Test
+    @Test
     public void tenListenerTest() throws Exception
     {
         IncomingRtpStream irtp = manager.getIncomingRtpStream(manager);
-        String address = getInterfaceAddress().getHostName();
+        String address = getInterfaceAddress().getHostAddress();
         irtp.open(address);
         //creating 5 listeners before rtp starts
         int i=0;
@@ -131,11 +131,11 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         irtp.release();
     }
 
-    @Test
+//    @Test
     public void copyToConcatDataSource() throws Exception
     {
         IncomingRtpStream irtp = manager.getIncomingRtpStream(manager);
-        String address = getInterfaceAddress().getHostName();
+        String address = getInterfaceAddress().getHostAddress();
         Codec codec = Codec.G711_MU_LAW;
         CopyDsConcatDataSource fileWriter = new CopyDsConcatDataSource(
                 "target/copy_to_concatDs.wav", codec);
