@@ -245,13 +245,14 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
         return packetSizeInMillis;
     }
 
-    private class SourceProcessor implements BufferTransferHandler {
+    class SourceProcessor implements BufferTransferHandler {
         private final DataSource source;
         private final AtomicBoolean stopProcessing = new AtomicBoolean(Boolean.FALSE);
         private final Lock lock = new ReentrantLock();
         private final String sourceKey;
         private final long sourceChecksum;
         private final ConcatDataStream concatStream;
+        private final boolean realTime;
         private Collection<Buffer> cache;
 
         private PushBufferDataSource dataSource;
@@ -264,6 +265,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
             this.sourceChecksum = 0l;
             this.sourceKey = null;
             this.concatStream = streams[0];
+            this.realTime = source instanceof RealTimeDataSource;
         }
 
         public SourceProcessor(DataSource source, String sourceKey, long sourceChecksum) {
@@ -271,10 +273,15 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
             this.sourceKey = sourceKey;
             this.sourceChecksum = sourceChecksum;
             this.concatStream = streams[0];
-            }
+            this.realTime = source instanceof RealTimeDataSource;
+        }
 
         public boolean isProcessing(){
             return !stopProcessing.get();
+        }
+
+        public boolean isRealTime() {
+            return realTime;
         }
 
         public void start(){
