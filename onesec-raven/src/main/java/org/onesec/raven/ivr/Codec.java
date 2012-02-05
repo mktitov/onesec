@@ -18,6 +18,7 @@
 package org.onesec.raven.ivr;
 
 import com.cisco.jtapi.extensions.CiscoMediaCapability;
+import javax.media.Format;
 import javax.media.format.AudioFormat;
 import org.onesec.raven.codec.AlawAudioFormat;
 
@@ -59,6 +60,15 @@ public enum Codec
                 audioFormat = new AudioFormat(AudioFormat.ULAW_RTP, 8000d, 8, 1);
                 break;
         }
+    }
+    
+    public static long getMillisecondsForFormat(Format format, int packetSizeInBytes) {
+        String enc = format.getEncoding();
+        if (AudioFormat.G729_RTP.equals(enc))
+            return packetSizeInBytes;
+        else if (AlawAudioFormat.ALAW_RTP.equals(enc) || AudioFormat.ULAW_RTP.equals(enc))
+            return packetSizeInBytes/8;
+        return 0;
     }
     
     public long getPacketSizeForMilliseconds(long ms) {

@@ -29,7 +29,6 @@ import javax.media.Manager;
 import javax.media.MediaLocator;
 import javax.media.Processor;
 import javax.media.format.AudioFormat;
-import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.DataSource;
 import javax.media.protocol.PushBufferDataSource;
 import javax.media.protocol.SourceCloneable;
@@ -314,7 +313,7 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
                         return;
                     }
                     inDataSource = !firstConsumerAdded? source : ((SourceCloneable)source).createClone();
-                    inDataSource = new RealTimeDataSouce((PushBufferDataSource)inDataSource);
+//                    inDataSource = new RealTimeDataSource((PushBufferDataSource)inDataSource, owner, logPrefix);
                     firstConsumerAdded = true;
 
 //                    processor = ControllerStateWaiter.createRealizedProcessor(inDataSource, format, 4000);

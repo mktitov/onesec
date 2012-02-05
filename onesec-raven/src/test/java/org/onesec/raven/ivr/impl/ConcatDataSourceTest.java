@@ -53,7 +53,7 @@ public class ConcatDataSourceTest extends EasyMock
         bufferCache = new BufferCacheImpl(rtpManagerService, log);
     }
 
-    @Test
+//    @Test
     public void addInputStreamSourceTest() throws Exception {
         Node owner = createMock("node", Node.class);
         ExecutorService executorService = createMock("executor", ExecutorService.class);
@@ -95,7 +95,7 @@ public class ConcatDataSourceTest extends EasyMock
         verify(owner, executorService, logger);
     }
 
-//    @Test
+    @Test
     public void addDataSourceTest() throws Exception
     {
         Node owner = createMock("node", Node.class);
@@ -103,7 +103,8 @@ public class ConcatDataSourceTest extends EasyMock
         Logger logger = createMock("logger", Logger.class);
 
         executorService.execute(executeTask());
-        expectLastCall().times(2);
+//        expectLastCall().times(2);
+        expect(executorService.executeQuietly(executeTask())).andReturn(Boolean.TRUE).times(2);
         expect(owner.isLogLevelEnabled(LogLevel.ERROR)).andReturn(Boolean.TRUE).anyTimes();
         expect(owner.isLogLevelEnabled(LogLevel.DEBUG)).andReturn(Boolean.TRUE).anyTimes();
         expect(owner.getLogger()).andReturn(logger).anyTimes();

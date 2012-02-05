@@ -19,21 +19,32 @@ import java.io.IOException;
 import javax.media.Time;
 import javax.media.protocol.PushBufferDataSource;
 import javax.media.protocol.PushBufferStream;
+import org.raven.log.LogLevel;
+import org.raven.tree.Node;
+import org.slf4j.Logger;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class RealTimeDataSouce extends PushBufferDataSource {
+public class RealTimeDataSource extends PushBufferDataSource {
 
     private final PushBufferDataSource source;
-    private final PushBufferStream[] streams;
+    private final RealTimeDataStream[] streams;
+    private final Node owner;
+    private final String logPrefix;
 
-    public RealTimeDataSouce(PushBufferDataSource source) {
+    public RealTimeDataSource(PushBufferDataSource source, Node owner, String logPrefix) {
         this.source = source;
-        streams = new PushBufferStream[]{new RealTimeDataStream(source.getStreams()[0])};
+        this.owner = owner;
+        this.logPrefix = logPrefix;
+        streams = new RealTimeDataStream[]{new RealTimeDataStream(this, source.getStreams()[0])};
     }
     
+    public long getDiscardedBuffersCount() {
+        return streams[0].getDiscardedBuffersCount();
+    }
+
     @Override
     public PushBufferStream[] getStreams() {
         return streams;
@@ -61,6 +72,8 @@ public class RealTimeDataSouce extends PushBufferDataSource {
 
     @Override
     public void stop() throws IOException {
+        if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+            owner.getLogger().debug(logMess("Discared buffers count: %s", getDiscardedBuffersCount()));
         source.stop();
     }
 
@@ -77,5 +90,13 @@ public class RealTimeDataSouce extends PushBufferDataSource {
     @Override
     public Time getDuration() {
         return source.getDuration();
+    }
+    
+    String logMess(String mess, Object... args) {
+        return (logPrefix==null? "" : logPrefix)+" RealTimeSource. "+String.format(mess, args);
+    }
+    
+    Logger getLogger() {
+        return owner.getLogger();
     }
 }

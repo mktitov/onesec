@@ -42,7 +42,7 @@ public abstract class AbstractRtpStream implements RtpStream
     private AtomicLong handledBytes;
     private RtpStreamManagerNode manager;
     protected Node owner;
-    private String logPrefix;
+    protected String logPrefix;
     private AtomicBoolean released;
 
     public AbstractRtpStream(InetAddress address, int port, String streamType)

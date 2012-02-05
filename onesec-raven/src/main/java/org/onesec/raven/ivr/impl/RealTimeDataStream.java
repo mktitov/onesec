@@ -21,6 +21,8 @@ import javax.media.Format;
 import javax.media.protocol.BufferTransferHandler;
 import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.PushBufferStream;
+import org.onesec.raven.ivr.Codec;
+import org.slf4j.Logger;
 
 /**
  *
@@ -28,12 +30,26 @@ import javax.media.protocol.PushBufferStream;
  */
 public class RealTimeDataStream implements PushBufferStream, BufferTransferHandler {
     
+    public static final int MAX_TIME_SKEW = 150;
+    
     private final PushBufferStream stream;
+    private long packetLengthInMillis=0;
+    private final Logger logger;
     private BufferTransferHandler transferHandler;
+    private RealTimeDataSource source;
+    private long counter = 0;
+    private long startTs = 0;
+    private volatile long discardedBuffersCount = 0;
 
-    public RealTimeDataStream(PushBufferStream stream) {
+    public RealTimeDataStream(RealTimeDataSource source, PushBufferStream stream) {
         this.stream = stream;
+        this.source = source;
+        this.logger = source.getLogger();
         this.stream.setTransferHandler(this);
+    }
+
+    public long getDiscardedBuffersCount() {
+        return discardedBuffersCount;
     }
 
     public Format getFormat() {
@@ -42,7 +58,31 @@ public class RealTimeDataStream implements PushBufferStream, BufferTransferHandl
 
     public void read(Buffer buffer) throws IOException {
         stream.read(buffer);
-        System.out.println("SEQ# "+buffer.getSequenceNumber());
+        if (packetLengthInMillis!=-1) {
+            if (packetLengthInMillis==0) {
+                packetLengthInMillis = Codec.getMillisecondsForFormat(stream.getFormat(), buffer.getLength());
+                if (packetLengthInMillis==0) {
+                    if (logger.isWarnEnabled()) 
+                        logger.warn(source.logMess(
+                                "Can't detect packet size in milliseconds for format (%s)"
+                                , buffer.getFormat()));
+                    packetLengthInMillis=-1;
+                } else if (logger.isDebugEnabled())
+                    logger.debug(source.logMess(
+                            "The incoming stream packet length in millisecods is (%s)", packetLengthInMillis));
+            }
+            if (packetLengthInMillis>0) {
+                if (counter==0) 
+                    buffer.setTimeStamp(startTs=System.currentTimeMillis());
+                else
+                    buffer.setTimeStamp(startTs+counter*packetLengthInMillis);
+                if (buffer.getTimeStamp()+MAX_TIME_SKEW < System.currentTimeMillis()) {
+                    buffer.setDiscard(true);
+                    ++discardedBuffersCount;
+                }
+                counter++;
+            }
+        }
     }
 
     public void setTransferHandler(BufferTransferHandler transferHandler) {
@@ -70,6 +110,7 @@ public class RealTimeDataStream implements PushBufferStream, BufferTransferHandl
     }
 
     public void transferData(PushBufferStream stream) {
-        transferHandler.transferData(this);
+        if (transferHandler!=null)
+            transferHandler.transferData(this);
     }
 }
