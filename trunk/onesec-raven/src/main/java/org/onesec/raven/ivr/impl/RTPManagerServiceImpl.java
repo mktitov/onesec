@@ -17,17 +17,9 @@
 
 package org.onesec.raven.ivr.impl;
 
-import com.sun.media.codec.audio.mp3.JavaDecoder;
-import com.sun.media.codec.audio.ulaw.Packetizer;
-import java.io.IOException;
 import javax.media.Format;
-import javax.media.PlugInManager;
 import javax.media.rtp.RTPManager;
-import org.onesec.raven.codec.AlawEncoder;
-import org.onesec.raven.codec.AlawPacketizer;
-import org.onesec.raven.codec.UlawPacketizer;
-import org.onesec.raven.codec.g729.G729Decoder;
-import org.onesec.raven.codec.g729.G729Encoder;
+import org.onesec.raven.ivr.CodecManager;
 import org.onesec.raven.ivr.RTPManagerService;
 import org.slf4j.Logger;
 
@@ -41,61 +33,10 @@ public class RTPManagerServiceImpl implements RTPManagerService
     private final Format alawRtpFormat;
     private final Format g729RtpFormat;
 
-    public RTPManagerServiceImpl(Logger logger) throws IOException
-    {
+    public RTPManagerServiceImpl(Logger logger, CodecManager codecManager) {
         this.logger = logger;
-
-        if (PlugInManager.removePlugIn(Packetizer.class.getName(), PlugInManager.CODEC))
-            logger.debug("ULAW packetizier codec (with getControls() bug) ({}) successfully removed", Packetizer.class.getName());
-        UlawPacketizer up = new UlawPacketizer();
-        PlugInManager.addPlugIn(UlawPacketizer.class.getName()
-                , up.getSupportedInputFormats(), up.getSupportedOutputFormats(null)
-                , PlugInManager.CODEC);
-        logger.debug("New ULAW packetizier codec ({}) successfully added", UlawPacketizer.class.getName());
-
-        AlawEncoder en = new AlawEncoder();
-        PlugInManager.addPlugIn(AlawEncoder.class.getName()
-                , en.getSupportedInputFormats()
-				, en.getSupportedOutputFormats(null)
-                , PlugInManager.CODEC);
-        logger.debug("ALAW codec ({}) successfully added", AlawEncoder.class.getName());
-
-        AlawPacketizer p = new AlawPacketizer();
-        PlugInManager.addPlugIn(AlawPacketizer.class.getName()
-                , p.getSupportedInputFormats()
-				, p.getSupportedOutputFormats(null)
-                , PlugInManager.CODEC);
-        logger.debug("ALAW packetizer codec ({}) successfully added", AlawPacketizer.class.getName());
-
-        G729Encoder g = new G729Encoder();
-        PlugInManager.addPlugIn(G729Encoder.class.getName()
-                , g.getSupportedInputFormats()
-                , g.getSupportedOutputFormats(null)
-                , PlugInManager.CODEC);
-        logger.debug("G729 encoder/packetizer ({}) successfully added", G729Encoder.class.getName());
-
-        G729Decoder d = new G729Decoder();
-        PlugInManager.addPlugIn(G729Decoder.class.getName()
-                , d.getSupportedInputFormats()
-                , d.getSupportedOutputFormats(null)
-                , PlugInManager.CODEC);
-        logger.debug("G729 decoder/depacketizer ({}) successfully added", G729Decoder.class.getName());
-
-//        JavaDecoder mp3d = new JavaDecoder();
-//        PlugInManager.addPlugIn(JavaDecoder.class.getName()
-//                , mp3d.getSupportedInputFormats()
-//                , mp3d.getSupportedOutputFormats(null)
-//                , PlugInManager.CODEC);
-//        logger.debug("MP3 decoder ({}) successfully added", JavaDecoder.class.getName());
-//
-//
-//        RTPManager tempManager = RTPManager.newInstance();
-        alawRtpFormat = p.getSupportedOutputFormats(null)[0];
-        g729RtpFormat = g.getSupportedOutputFormats(null)[0];
-//        tempManager.addFormat(alawRtpFormat, 8);
-//        tempManager.dispose();
-//
-        PlugInManager.commit();
+        this.alawRtpFormat = codecManager.getAlawRtpFormat();
+        this.g729RtpFormat = codecManager.getG729RtpFormat();
     }
 
     public RTPManager createRtpManager()

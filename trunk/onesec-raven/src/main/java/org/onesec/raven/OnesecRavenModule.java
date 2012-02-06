@@ -26,14 +26,8 @@ import org.onesec.core.provider.ProviderControllerState;
 import org.onesec.raven.impl.RavenProviderConfiguratorImpl;
 import org.onesec.core.services.ProviderConfiguratorListeners;
 import org.onesec.raven.impl.StateToNodeLoggerImpl;
-import org.onesec.raven.ivr.BufferCache;
-import org.onesec.raven.ivr.OnesecSystemNodesInitializer;
-import org.onesec.raven.ivr.TerminalStateMonitoringService;
-import org.onesec.raven.ivr.RTPManagerService;
-import org.onesec.raven.ivr.impl.BufferCacheImpl;
-import org.onesec.raven.ivr.impl.OnesecSystemNodesInitializerImpl;
-import org.onesec.raven.ivr.impl.TerminalStateMonitoringServiceImpl;
-import org.onesec.raven.ivr.impl.RTPManagerServiceImpl;
+import org.onesec.raven.ivr.*;
+import org.onesec.raven.ivr.impl.*;
 import org.raven.tree.TreeListener;
 import org.slf4j.Logger;
 
@@ -55,10 +49,17 @@ public class OnesecRavenModule
     {
         return new RavenProviderConfiguratorImpl(listeners);
     }
+    
+    @EagerLoad
+    public CodecManager buildCodecManager(Logger logger) throws Exception {
+        return new CodecManagerImpl(logger);
+    }
 
     @EagerLoad
-    public RTPManagerService buildRTPManagerService(Logger logger) throws Exception {
-        return new RTPManagerServiceImpl(logger);
+    public RTPManagerService buildRTPManagerService(Logger logger, CodecManager codecManager) 
+            throws Exception
+    {
+        return new RTPManagerServiceImpl(logger, codecManager);
     }
 
     public BufferCache buildBufferCache(RTPManagerService rtpManagerService, Logger logger) {

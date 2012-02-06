@@ -66,7 +66,7 @@ public class RTPSessionTest extends EasyMock implements ReceiveStreamListener, S
 
     @Before
     public void prepare() throws IOException {
-        RTPManagerServiceImpl rtpManagerService = new RTPManagerServiceImpl(logger);
+        RTPManagerServiceImpl rtpManagerService = new RTPManagerServiceImpl(logger, new CodecManagerImpl(logger));
         bufferCache = new BufferCacheImpl(rtpManagerService, logger);
     }
 

@@ -49,7 +49,7 @@ public class ConcatDataSourceTest extends EasyMock
     @Before
     public void prepare() throws IOException{
         Logger log = LoggerFactory.getLogger(ConcatDataSourceTest.class);
-        RTPManagerServiceImpl rtpManagerService = new RTPManagerServiceImpl(log);
+        RTPManagerServiceImpl rtpManagerService = new RTPManagerServiceImpl(log, new CodecManagerImpl(log));
         bufferCache = new BufferCacheImpl(rtpManagerService, log);
     }
 
