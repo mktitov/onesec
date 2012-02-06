@@ -56,7 +56,8 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
     private long sleepTime;
     private AtomicInteger silencePacketCount = new AtomicInteger(0);
     private String logPrefix;
-    private AtomicReference sourceInfo = new AtomicReference();
+    private AtomicReference<ConcatDataSource.SourceProcessor> sourceInfo = 
+            new AtomicReference<ConcatDataSource.SourceProcessor>();
     private AtomicInteger emptyQueueEvents = new AtomicInteger(0);
 
     public ConcatDataStream(
@@ -72,12 +73,12 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
         this.silentBuffer = silentBuffer;
     }
     
-    public void sourceInitialized(Object source) {
-        sourceInfo.set(new SourceInfo());
+    public void sourceInitialized(ConcatDataSource.SourceProcessor source) {
+        sourceInfo.set(source);
         emptyQueueEvents.set(0);
     }
     
-    public void sourceClosed(Object source) {
+    public void sourceClosed(ConcatDataSource.SourceProcessor source) {
         sourceInfo.compareAndSet(source, null);
     }
 
@@ -151,7 +152,7 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
         {
             long startTime = System.currentTimeMillis();
             packetNumber = 0;
-            Object si = null;
+            ConcatDataSource.SourceProcessor si = null;
             if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                 owner.getLogger().debug(logMess("Concat stream started with time quant %s ms", packetLength));
             boolean debugEnabled = owner.isLogLevelEnabled(LogLevel.DEBUG);
@@ -166,13 +167,22 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
                 try {
                     long cycleStartTs = System.currentTimeMillis();
                     action = "getting new buffer from queue";
-                    bufferToSend = bufferQueue.poll();
+                    si = sourceInfo.get();
+                    if (si!=null && si.isRealTime()) {
+                        bufferToSend = null;
+                        Buffer buf;
+                        while ( (buf=bufferQueue.poll())!=null ) {
+                            bufferToSend = buf;
+                            droppedPacketCount++;
+                        }
+                        if (buf!=null) droppedPacketCount--;
+                    } else
+                        bufferToSend = bufferQueue.poll();
 //                    if (bufferToSend!=null && bufferToSend.getTimeStamp()+MAX_TIME_SKEW<cycleStartTs) {
 //                        droppedPacketCount++;
 //                        continue;
 //                    }
                     action = "sending transfer event";
-                    si = sourceInfo.get();
                     if (bufferToSend!=null || si==null) {
                         transferData(null);
                         long tt = System.currentTimeMillis()-cycleStartTs;

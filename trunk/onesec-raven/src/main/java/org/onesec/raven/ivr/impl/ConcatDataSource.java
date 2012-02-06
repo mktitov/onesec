@@ -357,7 +357,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
 
         public void close(){
             stopProcessing.set(true);
-            concatStream.sourceClosed(source);
+            concatStream.sourceClosed(this);
             try {
                 if (lock.tryLock(2000, TimeUnit.MILLISECONDS)) try {
                     try {
@@ -400,8 +400,9 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
                     firstBufferTs = System.currentTimeMillis();
                     buffer.setTimeStamp(firstBufferTs);
                     concatStream.sourceInitialized(this);
-                } else
-                    buffer.setTimeStamp(firstBufferTs+bufferCount*getPacketSizeInMillis());
+                } //else
+//                    buffer.setTimeStamp(firstBufferTs+bufferCount*getPacketSizeInMillis());
+                buffer.setSequenceNumber(bufferCount);
                 buffers.add(buffer);
                 if (sourceKey!=null){
                     if (cache==null)
