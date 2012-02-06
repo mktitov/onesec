@@ -71,7 +71,7 @@ public class RTPManagerServiceImplTest extends OnesecRavenTestCase
             logger.info("M3 Decoder. Supported format: "+format.toString());
     }
 
-//    @Test
+    @Test
     public void codecsTest()
     {
         checkCodec(AudioFormat.ULAW, AudioFormat.ULAW_RTP, UlawPacketizer.class);
@@ -81,7 +81,7 @@ public class RTPManagerServiceImplTest extends OnesecRavenTestCase
         checkCodec(AudioFormat.G729_RTP, AudioFormat.LINEAR, G729Decoder.class);
     }
 
-//    @Test
+    @Test
     public void serviceTest()
     {
         RTPManagerService service = registry.getService(RTPManagerService.class);

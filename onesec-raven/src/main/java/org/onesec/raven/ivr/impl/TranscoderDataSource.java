@@ -17,7 +17,6 @@ package org.onesec.raven.ivr.impl;
 
 import java.io.IOException;
 import javax.media.Buffer;
-import javax.media.Codec;
 import javax.media.Format;
 import javax.media.Time;
 import javax.media.protocol.ContentDescriptor;
@@ -30,18 +29,12 @@ import javax.media.protocol.PushBufferStream;
  */
 public class TranscoderDataSource extends PushBufferDataSource {
     
-    private final CodecState[] codecs;
     private final PushBufferDataSource source;
     private final Format outputFormat;
 
     public TranscoderDataSource(PushBufferDataSource source, Format outputFormat) {
         this.source = source;
         this.outputFormat = outputFormat;
-        this.codecs = buildCodecChain();
-    }
-    
-    private CodecState[] buildCodecChain() {
-        return null;
     }
     
     private void processBuffer(Buffer src) {

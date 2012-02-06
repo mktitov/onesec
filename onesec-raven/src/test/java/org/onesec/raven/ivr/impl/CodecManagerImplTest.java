@@ -13,16 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.onesec.raven.ivr;
+package org.onesec.raven.ivr.impl;
 
-import javax.media.Format;
+import java.io.IOException;
+import org.junit.*;
+import org.onesec.raven.ivr.CodecManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface CodecManager {
-    public javax.media.Codec[] buildCodecChain(Format inFormat, Format outFormat);
-    public Format getAlawRtpFormat();
-    public Format getG729RtpFormat();
+public class CodecManagerImplTest {
+
+    @Test
+    public void test() throws IOException {
+        Logger logger = LoggerFactory.getLogger(CodecManager.class);
+        CodecManager manager = new CodecManagerImpl(logger);
+    }
 }

@@ -39,7 +39,8 @@ public class BufferCacheImplTest extends Assert
     @Test
     public void silentBufferTest() throws IOException
     {
-        RTPManagerServiceImpl manager = new RTPManagerServiceImpl(LoggerFactory.getLogger("Rtp Manager"));
+        Logger log = LoggerFactory.getLogger("Rtp Manager");
+        RTPManagerServiceImpl manager = new RTPManagerServiceImpl(log, new CodecManagerImpl(log));
         BufferCacheImpl cache = new BufferCacheImpl(manager, logger);
         Buffer silentBuffer = cache.getSilentBuffer(Codec.G711_A_LAW, 160);
         assertNotNull(silentBuffer);
