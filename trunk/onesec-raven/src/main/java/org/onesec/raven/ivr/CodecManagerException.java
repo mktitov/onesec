@@ -15,14 +15,18 @@
  */
 package org.onesec.raven.ivr;
 
-import javax.media.Format;
-
 /**
  *
  * @author Mikhail Titov
  */
-public interface CodecManager {
-    public CodecConfig[] buildCodecChain(Format inFormat, Format outFormat) throws CodecManagerException;
-    public Format getAlawRtpFormat();
-    public Format getG729RtpFormat();
+public class CodecManagerException extends Exception {
+
+    public CodecManagerException(String message, Throwable cause) {
+        super(message, cause);
+    }
+
+    public CodecManagerException(String message) {
+        super(message);
+    }
+
 }

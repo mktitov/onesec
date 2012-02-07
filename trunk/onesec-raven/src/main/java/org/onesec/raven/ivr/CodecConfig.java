@@ -19,10 +19,10 @@ import javax.media.Format;
 
 /**
  *
- * @author Mikhail Titov
+ * @author Mikhail Config
  */
-public interface CodecManager {
-    public CodecConfig[] buildCodecChain(Format inFormat, Format outFormat) throws CodecManagerException;
-    public Format getAlawRtpFormat();
-    public Format getG729RtpFormat();
+public interface CodecConfig {
+    public javax.media.Codec getCodec();
+    public Format getOutputFormat();
+    public Format getInputFormat();
 }
