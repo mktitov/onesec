@@ -22,6 +22,7 @@ import javax.media.Format;
 import javax.media.protocol.BufferTransferHandler;
 import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.PushBufferStream;
+import org.onesec.raven.ivr.CodecConfig;
 
 /**
  *
@@ -39,13 +40,13 @@ public class TranscoderDataStream implements PushBufferStream, BufferTransferHan
     private volatile Buffer bufferToSend;
     private volatile boolean endOfStream = false;
 
-    public TranscoderDataStream(Codec[] codecChain, Format outFormat, PushBufferStream sourceStream)
+    public TranscoderDataStream(CodecConfig[] codecChain, Format outFormat, PushBufferStream sourceStream)
     {
         this.outFormat = outFormat;
         this.codecs = new CodecState[codecChain.length];
         sourceStream.setTransferHandler(this);
         for (int i=0; i<codecChain.length; ++i)
-            codecs[i] = new CodecState(codecChain[i]);
+            codecs[i] = new CodecState(codecChain[i].getCodec());
     }
 
     public Format getFormat() {

@@ -16,12 +16,14 @@
 package org.onesec.raven.ivr.impl;
 
 import java.io.IOException;
-import javax.media.Buffer;
 import javax.media.Format;
 import javax.media.Time;
 import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.PushBufferDataSource;
 import javax.media.protocol.PushBufferStream;
+import org.onesec.raven.ivr.CodecConfig;
+import org.onesec.raven.ivr.CodecManager;
+import org.onesec.raven.ivr.CodecManagerException;
 
 /**
  *
@@ -31,19 +33,21 @@ public class TranscoderDataSource extends PushBufferDataSource {
     
     private final PushBufferDataSource source;
     private final Format outputFormat;
+    private final TranscoderDataStream[] streams;
 
-    public TranscoderDataSource(PushBufferDataSource source, Format outputFormat) {
+    public TranscoderDataSource(CodecManager codecManager, PushBufferDataSource source, Format outputFormat) 
+            throws CodecManagerException 
+    {
         this.source = source;
         this.outputFormat = outputFormat;
+        PushBufferStream sourceStream = source.getStreams()[0];
+        CodecConfig[] codecChain = codecManager.buildCodecChain(sourceStream.getFormat(), outputFormat);
+        streams = new TranscoderDataStream[]{new TranscoderDataStream(codecChain, outputFormat, sourceStream)};
     }
     
-    private void processBuffer(Buffer src) {
-        
-    }
-
     @Override
     public PushBufferStream[] getStreams() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return streams;
     }
 
     @Override
@@ -53,23 +57,27 @@ public class TranscoderDataSource extends PushBufferDataSource {
 
     @Override
     public void connect() throws IOException {
+        source.connect();
     }
 
     @Override
     public void disconnect() {
+        source.disconnect();
     }
 
     @Override
     public void start() throws IOException {
+        source.start();
     }
 
     @Override
     public void stop() throws IOException {
+        source.stop();
     }
 
     @Override
     public Object getControl(String arg0) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return null;
     }
 
     @Override
