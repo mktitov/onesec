@@ -15,7 +15,10 @@
  */
 package org.onesec.raven.ivr.impl;
 
-import javax.media.Codec;
+import com.sun.media.parser.audio.WavParser;
+import javax.media.Demultiplexer;
+import javax.media.protocol.ContentDescriptor;
+import javax.media.protocol.FileTypeDescriptor;
 import org.onesec.raven.ivr.CodecConfig;
 import org.junit.*;
 import org.onesec.raven.ivr.CodecManager;
@@ -51,5 +54,12 @@ public class CodecManagerImplTest extends Assert {
             logger.debug("   OUTPUT FORMAT: {}", codec.getOutputFormat());
         }
 //        assertEquals(2, codecs.length);
+    }
+    
+    @Test
+    public void buildDemultiplexerTest() {
+        Demultiplexer parser = manager.buildDemultiplexer(FileTypeDescriptor.WAVE);
+        assertNotNull(parser);
+        assertTrue(parser instanceof WavParser);
     }
 }

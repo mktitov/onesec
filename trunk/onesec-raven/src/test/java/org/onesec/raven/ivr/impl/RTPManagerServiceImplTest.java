@@ -21,9 +21,11 @@ import com.sun.media.codec.audio.mp3.JavaDecoder;
 import java.util.Collection;
 import java.util.Vector;
 import javax.media.Codec;
+import javax.media.Demultiplexer;
 import javax.media.Format;
 import javax.media.PlugInManager;
 import javax.media.format.AudioFormat;
+import javax.media.protocol.ContentDescriptor;
 import javax.media.rtp.RTPManager;
 import org.junit.Test;
 import org.onesec.raven.OnesecRavenTestCase;
@@ -50,14 +52,18 @@ public class RTPManagerServiceImplTest extends OnesecRavenTestCase
     {
 //        AudioFormat inFormat = new AudioFormat(
 //                AudioFormat.LINEAR, 8000, 16, 1, AudioFormat.LITTLE_ENDIAN, AudioFormat.SIGNED);
-        Collection plugins = PlugInManager.getPlugInList(null, null, PlugInManager.CODEC);
+        Collection plugins = PlugInManager.getPlugInList(null, null, PlugInManager.DEMULTIPLEXER);
         assertNotNull(plugins);
         for (Object plugin: plugins) {
             logger.info("PLUGIN: {}", plugin.toString());
-            Codec codec = (Codec) Class.forName(plugin.toString()).newInstance();
-            Format[] formats = codec.getSupportedInputFormats();
-            for (Format format: formats)
-                logger.info("  Decoder. Supported format: "+format.toString());
+            Demultiplexer demux = (Demultiplexer) Class.forName(plugin.toString()).newInstance();
+            ContentDescriptor[] descriptors = demux.getSupportedInputContentDescriptors();
+            for (ContentDescriptor desc: descriptors)
+                logger.info("    SUPPORTED CONTENT DESCRIPTOR: "+desc.toString());
+//            Codec codec = (Codec) Class.forName(plugin.toString()).newInstance();
+//            Format[] formats = codec.getSupportedInputFormats();
+//            for (Format format: formats)
+//                logger.info("  Decoder. Supported format: "+format.toString());
         }
 
     }
@@ -71,7 +77,7 @@ public class RTPManagerServiceImplTest extends OnesecRavenTestCase
             logger.info("M3 Decoder. Supported format: "+format.toString());
     }
 
-    @Test
+//    @Test
     public void codecsTest()
     {
         checkCodec(AudioFormat.ULAW, AudioFormat.ULAW_RTP, UlawPacketizer.class);

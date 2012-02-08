@@ -22,11 +22,9 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import javax.media.Controller;
 import javax.media.DataSink;
-import javax.media.Format;
 import javax.media.Manager;
 import javax.media.MediaLocator;
 import javax.media.Processor;
-import javax.media.ProcessorModel;
 import javax.media.format.AudioFormat;
 import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.DataSource;
@@ -62,11 +60,6 @@ public class JMFHelper
                     , AudioFormat.SIGNED);
             p = ControllerStateWaiter.createRealizedProcessor(dataSource, format, 4000
                     , new ContentDescriptor(FileTypeDescriptor.WAVE));
-//            p = Manager.createRealizedProcessor(new ProcessorModel(
-//                    dataSource
-//                    , new Format[]{new AudioFormat(
-//                        AudioFormat.LINEAR, 8000, 16, 1, AudioFormat.LITTLE_ENDIAN, AudioFormat.SIGNED)}
-//                    , new ContentDescriptor(FileTypeDescriptor.WAVE)));
             _writer = Manager.createDataSink(p.getDataOutput(), dest);
             p.start();
         }

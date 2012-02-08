@@ -136,7 +136,7 @@ public abstract class AbstractOperatorNode extends BaseNode implements CallsQueu
     {
         request.fireOperatorQueueEvent(getName());
         request.fireOperatorGreetingQueueEvent(greeting!=null? greeting:this.greeting);
-        String[] numbers = RavenUtils.split(phoneNumbers, "\\s*,\\s*");
+        String[] numbers = RavenUtils.split(phoneNumbers, ",");
         if (numbers==null || numbers.length==0) 
             throw new Exception("Operator phone numbers not defined");
         CallsCommutationManagerImpl manager = new CallsCommutationManagerImpl(executor, request, inviteTimeout

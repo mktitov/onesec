@@ -32,19 +32,29 @@ import org.apache.commons.io.IOUtils;
 public class IssDataSource extends PullDataSource
 {
 
-    private final InputStreamSource source;
+//    private final InputStreamSource source;
     private final String contentType;
     private IssStream[] sources;
     private boolean connected;
     private boolean started;
 
-    public IssDataSource(InputStreamSource source, String contentType)
+    public IssDataSource(InputStreamSource source, String contentType) throws IOException
     {
-        this.source = source;
+//        this.source = source;
         this.contentType = contentType;
         connected = true;
-        sources = new IssStream[1];
-        sources[0] = new IssStream();
+        sources = new IssStream[]{new IssStream()};
+//        sources[0] = new IssStream();
+        InputStream is = source.getInputStream();
+        byte[] bytes = null;
+        try {
+            bytes = IOUtils.toByteArray(is);
+        } finally {
+            IOUtils.closeQuietly(is);
+        }
+        ByteBuffer inputBuffer = ByteBuffer.wrap(bytes);
+        inputBuffer.position(0);
+        sources[0].setInputBuffer(inputBuffer);
     }
 
     @Override
@@ -97,19 +107,16 @@ public class IssDataSource extends PullDataSource
         if (started)
             return;
         started = true;
-        InputStream is = source.getInputStream();
-        byte[] bytes = null;
-        try
-        {
-            bytes = IOUtils.toByteArray(is);
-        }
-        finally
-        {
-            IOUtils.closeQuietly(is);
-        }
-        ByteBuffer inputBuffer = ByteBuffer.wrap(bytes);
-        inputBuffer.position(0);
-        sources[0].setInputBuffer(inputBuffer);
+//        InputStream is = source.getInputStream();
+//        byte[] bytes = null;
+//        try {
+//            bytes = IOUtils.toByteArray(is);
+//        } finally {
+//            IOUtils.closeQuietly(is);
+//        }
+//        ByteBuffer inputBuffer = ByteBuffer.wrap(bytes);
+//        inputBuffer.position(0);
+//        sources[0].setInputBuffer(inputBuffer);
     }
 
     public void stop() throws IOException
