@@ -41,6 +41,8 @@ import org.slf4j.LoggerFactory;
 public class JMFHelper
 {
     private final static Logger logger = LoggerFactory.getLogger(JMFHelper.class);
+    public static AudioFormat DEFAULT_FORMAT = new AudioFormat(AudioFormat.LINEAR, 8000, 16, 1
+                    , AudioFormat.LITTLE_ENDIAN, AudioFormat.SIGNED);
 
     public static OperationController writeToFile(DataSource dataSource, final String filename)
             throws Exception
@@ -56,8 +58,7 @@ public class JMFHelper
             _writer = Manager.createDataSink(dataSource, dest);
         }catch(Exception e){
             logger.warn("Error creating data sink directly from the data source, so creating a processor");
-            AudioFormat format = new AudioFormat(AudioFormat.LINEAR, 8000, 16, 1, AudioFormat.LITTLE_ENDIAN
-                    , AudioFormat.SIGNED);
+            AudioFormat format = DEFAULT_FORMAT;
             p = ControllerStateWaiter.createRealizedProcessor(dataSource, format, 4000
                     , new ContentDescriptor(FileTypeDescriptor.WAVE));
             _writer = Manager.createDataSink(p.getDataOutput(), dest);
