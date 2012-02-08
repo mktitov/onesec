@@ -102,12 +102,12 @@ public class TranscoderDataStream implements PushBufferStream, BufferTransferHan
                 handler.transferData(this);
         } else {
             CodecState state = codecs[codecInd];
-            int res = 0;
+            int res;
             do {
                 res = state.codec.process(buf, state.getOrCreateOutBuffer());
                 if ( (res & Codec.OUTPUT_BUFFER_NOT_FILLED)==0 )
                     processBufferByCodec(state.getAndResetOutBuffer(), codecInd+1);
-            } while ( (res&CONT_STATE) == CONT_STATE);
+            } while ( (res & CONT_STATE) == CONT_STATE);
         }
     }
     
