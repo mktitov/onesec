@@ -23,10 +23,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.logging.Level;
 import javax.media.Codec;
+import javax.media.Demultiplexer;
 import javax.media.Format;
 import javax.media.PlugInManager;
 import javax.media.format.AudioFormat;
+import javax.media.protocol.ContentDescriptor;
 import org.onesec.raven.codec.AlawEncoder;
 import org.onesec.raven.codec.AlawPacketizer;
 import org.onesec.raven.codec.UlawPacketizer;
@@ -48,6 +51,7 @@ public class CodecManagerImpl implements CodecManager {
     private final Format g729RtpFormat;
     private final Map<Format/*inFormat*/, Map<Format/*outFormat*/, CodecConfigMeta[]>> cache =
             new HashMap<Format, Map<Format, CodecConfigMeta[]>>();
+    private final Map<String, Class> parsers = new HashMap<String, Class>();
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
     private FormatInfo[] formats;
 
@@ -96,6 +100,7 @@ public class CodecManagerImpl implements CodecManager {
         PlugInManager.commit();
         
         getFormatInfo();
+        getDemultiplexorsInfo();
     }
     
     private void getFormatInfo() {
@@ -123,12 +128,39 @@ public class CodecManagerImpl implements CodecManager {
         _formats.toArray(formats);
     }
     
+    private void getDemultiplexorsInfo() {
+        Collection<String> demuxs = PlugInManager.getPlugInList(null, null, PlugInManager.DEMULTIPLEXER);
+        for (String className: demuxs) {
+            try {
+                Demultiplexer demux = (Demultiplexer) Class.forName(className).newInstance();
+                ContentDescriptor[] descs = demux.getSupportedInputContentDescriptors();
+                if (descs!=null)
+                    for (ContentDescriptor desc: descs)
+                        parsers.put(desc.getContentType(), demux.getClass());
+            } catch (Exception ex) {
+                if (logger.isErrorEnabled())
+                    logger.error("Error creating instance of codec ({})", className);
+            }
+        }
+    }
+    
     public Format getAlawRtpFormat() {
         return alawRtpFormat;
     }
 
     public Format getG729RtpFormat() {
         return g729RtpFormat;
+    }
+
+    public Demultiplexer buildDemultiplexer(String contentType) {
+        Class parserClass = parsers.get(contentType);
+        try {
+            return parserClass==null? null : (Demultiplexer)parserClass.newInstance();
+        } catch (Exception ex) {
+            if (logger.isErrorEnabled())
+                logger.error("Error creating instance of demultiplexor class", ex);
+            return null;
+        }
     }
     
     public CodecConfig[] buildCodecChain(Format inFormat, Format outFormat) throws CodecManagerException {
