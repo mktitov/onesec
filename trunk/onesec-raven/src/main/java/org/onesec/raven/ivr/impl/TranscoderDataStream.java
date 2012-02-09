@@ -60,8 +60,8 @@ public class TranscoderDataStream implements PushBufferStream, BufferTransferHan
 
     public void read(Buffer buffer) throws IOException {
         Buffer _buf = bufferToSend;
+        System.out.println(" <<<<< BUF OUT >>>>>>");
         if (_buf!=null) {
-            System.out.println(" <<<<< BUF OUT >>>>>>");
             buffer.copy(_buf);
             if (_buf.isEOM())
                 endOfStream = true;
@@ -118,21 +118,21 @@ public class TranscoderDataStream implements PushBufferStream, BufferTransferHan
             CodecState state = codecs[codecInd];
             int res=0;
             do {
-                Buffer buf2 = new Buffer();
-                buf2.copy(buf);
+//                Buffer buf2 = new Buffer();
+//                buf2.copy(buf);
                 long startTs = System.currentTimeMillis();
-                try {
-                    //                res = state.codec.process(buf2, state.getOrCreateOutBuffer());
-                                    Thread.sleep(5);
-                } catch (InterruptedException ex) {
-                    Logger.getLogger(TranscoderDataStream.class.getName()).log(Level.SEVERE, null, ex);
-                }
+//                try {
+                    res = state.codec.process(buf, state.getOrCreateOutBuffer());
+//                                    Thread.sleep(0, 500);
+//                } catch (InterruptedException ex) {
+//                    Logger.getLogger(TranscoderDataStream.class.getName()).log(Level.SEVERE, null, ex);
+//                }
                 System.out.println("Processing time is: "+(System.currentTimeMillis()-startTs));
 //                state.outBuffer.setFormat(buf.getFormat());
 //                state.outBuffer.setSequenceNumber(buf.getSequenceNumber());
 //                state.outBuffer.setData(buf.getData());
 //                state.outBuffer.setTimeStamp(buf.getTimeStamp());
-                state.outBuffer = buf;
+//                state.outBuffer = buf;
                 if (buf.isEOM())
                     state.outBuffer.setEOM(true);
                 if ( (res & Codec.OUTPUT_BUFFER_NOT_FILLED)==0 || (buf.isEOM() && (res & CONT_STATE)==0) ) 
