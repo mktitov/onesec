@@ -17,7 +17,6 @@ package org.onesec.raven.ivr.impl;
 
 import com.sun.media.parser.audio.WavParser;
 import javax.media.Demultiplexer;
-import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.FileTypeDescriptor;
 import org.onesec.raven.ivr.CodecConfig;
 import org.junit.*;

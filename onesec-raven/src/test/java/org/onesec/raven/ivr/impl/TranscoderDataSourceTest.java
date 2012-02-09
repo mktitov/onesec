@@ -17,6 +17,8 @@ package org.onesec.raven.ivr.impl;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
+import javax.media.Format;
+import javax.media.format.AudioFormat;
 import javax.media.protocol.FileTypeDescriptor;
 import org.junit.*;
 import org.onesec.raven.ivr.CodecManager;
@@ -59,9 +61,13 @@ public class TranscoderDataSourceTest extends Assert {
         IssDataSource dataSource = new IssDataSource(source, FileTypeDescriptor.WAVE);
         ContainerParserDataSource parser = new ContainerParserDataSource(codecManager, dataSource);
         PullToPushConverterDataSource conv = new PullToPushConverterDataSource(parser, executor, owner);
-        TranscoderDataSource t1 = new TranscoderDataSource(codecManager, conv, Codec.G711_A_LAW.getAudioFormat());
+        AudioFormat audioFormat = new AudioFormat(AudioFormat.ULAW, 8000, 8, 1, Format.NOT_SPECIFIED
+                , Format.NOT_SPECIFIED);
+        TranscoderDataSource t1 = new TranscoderDataSource(codecManager, conv, Codec.G729.getAudioFormat());
+//        TranscoderDataSource t1 = new TranscoderDataSource(codecManager, conv, audioFormat);
+        TranscoderDataSource t2 = new TranscoderDataSource(codecManager, t1, JMFHelper.DEFAULT_FORMAT);
         JMFHelper.OperationController controller = JMFHelper.writeToFile(t1, "target/transcode_test.wav");
-        TimeUnit.SECONDS.sleep(3);
+        TimeUnit.SECONDS.sleep(40);
         controller.stop();
         
         verify(executor, owner);

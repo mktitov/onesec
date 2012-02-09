@@ -91,6 +91,8 @@ public class PullToPushConverterDataStream implements PushBufferStream, Task {
             while (!stop && !sourceStream.endOfStream()) {
                 bufferToSend = new Buffer();
                 sourceStream.read(bufferToSend);
+                if (bufferToSend.isEOM()) 
+                    System.out.println("OEM!!!");
                 if (!bufferToSend.isDiscard()) {
                     BufferTransferHandler _handler = transferHandler;
                     if (_handler!=null)
