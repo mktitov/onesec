@@ -16,6 +16,8 @@
 package org.onesec.raven.ivr.impl;
 
 import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.media.Buffer;
 import javax.media.Codec;
 import javax.media.Format;
@@ -59,6 +61,7 @@ public class TranscoderDataStream implements PushBufferStream, BufferTransferHan
     public void read(Buffer buffer) throws IOException {
         Buffer _buf = bufferToSend;
         if (_buf!=null) {
+            System.out.println(" <<<<< BUF OUT >>>>>>");
             buffer.copy(_buf);
             if (_buf.isEOM())
                 endOfStream = true;
@@ -94,12 +97,15 @@ public class TranscoderDataStream implements PushBufferStream, BufferTransferHan
         Buffer buf = new Buffer();
         try {
             stream.read(buf);
+            System.out.println(" >>>> BUF IN <<<<<");
             processBufferByCodec(buf, 0);
         } catch (IOException ex) {
         }
     }
     
     private void processBufferByCodec(Buffer buf, int codecInd) {
+        if (buf.isEOM())
+            System.out.println("  !!!  EOM   !!!");
         if (codecInd>=codecs.length) {
             bufferToSend = buf;
             BufferTransferHandler handler = transferHandler;
@@ -110,9 +116,23 @@ public class TranscoderDataStream implements PushBufferStream, BufferTransferHan
 //            if (buf.getData()==null)
 //                buf.setData(EMPTY_BUFFER);
             CodecState state = codecs[codecInd];
-            int res;
+            int res=0;
             do {
-                res = state.codec.process(buf, state.getOrCreateOutBuffer());
+                Buffer buf2 = new Buffer();
+                buf2.copy(buf);
+                long startTs = System.currentTimeMillis();
+                try {
+                    //                res = state.codec.process(buf2, state.getOrCreateOutBuffer());
+                                    Thread.sleep(5);
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(TranscoderDataStream.class.getName()).log(Level.SEVERE, null, ex);
+                }
+                System.out.println("Processing time is: "+(System.currentTimeMillis()-startTs));
+//                state.outBuffer.setFormat(buf.getFormat());
+//                state.outBuffer.setSequenceNumber(buf.getSequenceNumber());
+//                state.outBuffer.setData(buf.getData());
+//                state.outBuffer.setTimeStamp(buf.getTimeStamp());
+                state.outBuffer = buf;
                 if (buf.isEOM())
                     state.outBuffer.setEOM(true);
                 if ( (res & Codec.OUTPUT_BUFFER_NOT_FILLED)==0 || (buf.isEOM() && (res & CONT_STATE)==0) ) 

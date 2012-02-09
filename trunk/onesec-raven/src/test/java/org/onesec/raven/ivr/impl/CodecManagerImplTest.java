@@ -15,8 +15,10 @@
  */
 package org.onesec.raven.ivr.impl;
 
+import com.ibm.media.codec.audio.PCMToPCM;
 import com.sun.media.parser.audio.WavParser;
 import javax.media.Demultiplexer;
+import javax.media.Format;
 import javax.media.protocol.FileTypeDescriptor;
 import org.onesec.raven.ivr.CodecConfig;
 import org.junit.*;
@@ -38,6 +40,16 @@ public class CodecManagerImplTest extends Assert {
     public void prepare() throws Exception {
         manager = new CodecManagerImpl(logger);
     }
+    
+//    @Test
+    public void formatsTest() throws Exception {
+        PCMToPCM codec = new PCMToPCM();
+        for (Format format: codec.getSupportedInputFormats()) {
+            logger.debug("  >> SUPPORTED FORMAT: "+format);
+            for (Format oFormat: codec.getSupportedOutputFormats(format))
+                logger.debug("     OUTPUT FORMAT: "+oFormat);
+        }
+    }
 
     @Test
     public void buildCodecChainTest() throws Exception {
@@ -55,7 +67,24 @@ public class CodecManagerImplTest extends Assert {
 //        assertEquals(2, codecs.length);
     }
     
-    @Test
+//    @Test
+//    public void buildCodecChainTest2() throws Exception {
+//        long startTs = System.currentTimeMillis();
+//        CodecConfig[] codecs = manager.buildCodecChain(G711_MU_LAW.getAudioFormat(), G729.getAudioFormat());
+//        for (int i=1; i<10000; ++i)
+//            codecs = manager.buildCodecChain(G711_MU_LAW.getAudioFormat(), G729.getAudioFormat());
+//        logger.debug("Processing time: {}", System.currentTimeMillis()-startTs);
+//        assertNotNull(codecs);
+//        for (CodecConfig codec: codecs) {
+//            logger.debug("CODEC: {}", codec.getCodec());
+//            logger.debug("   INPUT  FORMAT: {}", codec.getInputFormat());
+//            logger.debug("   OUTPUT FORMAT: {}", codec.getOutputFormat());
+//        }
+////        assertEquals(2, codecs.length);
+//    }
+    
+    
+//    @Test
     public void buildDemultiplexerTest() {
         Demultiplexer parser = manager.buildDemultiplexer(FileTypeDescriptor.WAVE);
         assertNotNull(parser);

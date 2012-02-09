@@ -63,11 +63,12 @@ public class TranscoderDataSourceTest extends Assert {
         PullToPushConverterDataSource conv = new PullToPushConverterDataSource(parser, executor, owner);
         AudioFormat audioFormat = new AudioFormat(AudioFormat.ULAW, 8000, 8, 1, Format.NOT_SPECIFIED
                 , Format.NOT_SPECIFIED);
-        TranscoderDataSource t1 = new TranscoderDataSource(codecManager, conv, Codec.G729.getAudioFormat());
+//        TranscoderDataSource t1 = new TranscoderDataSource(codecManager, conv, Codec.G729.getAudioFormat());
+        TranscoderDataSource t1 = new TranscoderDataSource(codecManager, conv, JMFHelper.DEFAULT_FORMAT);
 //        TranscoderDataSource t1 = new TranscoderDataSource(codecManager, conv, audioFormat);
-        TranscoderDataSource t2 = new TranscoderDataSource(codecManager, t1, JMFHelper.DEFAULT_FORMAT);
+//        TranscoderDataSource t2 = new TranscoderDataSource(codecManager, t1, JMFHelper.DEFAULT_FORMAT);
         JMFHelper.OperationController controller = JMFHelper.writeToFile(t1, "target/transcode_test.wav");
-        TimeUnit.SECONDS.sleep(40);
+        TimeUnit.SECONDS.sleep(10);
         controller.stop();
         
         verify(executor, owner);
