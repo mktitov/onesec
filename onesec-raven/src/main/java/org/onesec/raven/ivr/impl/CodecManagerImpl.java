@@ -236,7 +236,7 @@ public class CodecManagerImpl implements CodecManager {
                         tailHolder.setTail(node);
                         break;
                     } else 
-                        getChainTail(node, inFormat, format.inFormat, tailHolder);
+                        getChainTail(node, inFormat, node.inFormat, tailHolder);
                 }        
     }
     
@@ -252,15 +252,22 @@ public class CodecManagerImpl implements CodecManager {
     private final class CodecNode {
         private final CodecNode parent;
         private final Class codec;
-        private final Format inFormat;
-        private final Format outFormat;
+        private final AudioFormat inFormat;
+        private final AudioFormat outFormat;
         private int level = 1;
 
         public CodecNode(CodecNode parent, Class codec, Format inFormat, Format outFormat) {
             this.parent = parent;
             this.codec = codec;
-            this.inFormat = inFormat;
-            this.outFormat = outFormat;
+            this.outFormat = (AudioFormat) outFormat;
+            AudioFormat in = (AudioFormat) inFormat, out = this.outFormat;
+            this.inFormat = new AudioFormat(
+                    in.getEncoding(),
+                    in.getSampleRate()==-1? out.getSampleRate() : in.getSampleRate(),
+                    in.getSampleSizeInBits()==-1? out.getSampleSizeInBits() : in.getSampleSizeInBits(),
+                    in.getChannels()==-1? out.getChannels() : in.getChannels(),
+                    in.getEndian()==-1? out.getEndian() : in.getEndian(),
+                    in.getSigned()==-1? out.getSigned() : in.getSigned());
             if (parent!=null)
                 level = parent.level+1;
         }
