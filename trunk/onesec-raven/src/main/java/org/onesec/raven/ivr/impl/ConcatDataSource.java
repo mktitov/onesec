@@ -108,13 +108,13 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
     }
 
     public void addSource(InputStreamSource source) {
-        if (source!=null)
-            addSource(new IssDataSource(source, contentType));
+//        if (source!=null)
+//            addSource(new IssDataSource(source, contentType));
     }
 
     public void addSource(String key, long checksum, InputStreamSource source) {
-        if (source!=null)
-            addSource(key, checksum, new IssDataSource(source, contentType));
+//        if (source!=null)
+//            addSource(key, checksum, new IssDataSource(source, contentType));
     }
 
     private SourceProcessor replaceSourceProcessor(final SourceProcessor newSourceProcessor)
