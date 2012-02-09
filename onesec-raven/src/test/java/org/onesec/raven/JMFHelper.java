@@ -54,16 +54,16 @@ public class JMFHelper
         DataSink _writer = null;
         MediaLocator dest = new MediaLocator(file.toURI().toURL());
         Processor p = null;
-        try{
-            _writer = Manager.createDataSink(dataSource, dest);
-        }catch(Exception e){
-            logger.warn("Error creating data sink directly from the data source, so creating a processor");
+//        try{
+//            _writer = Manager.createDataSink(dataSource, dest);
+//        }catch(Exception e){
+//            logger.warn("Error creating data sink directly from the data source, so creating a processor");
             AudioFormat format = DEFAULT_FORMAT;
             p = ControllerStateWaiter.createRealizedProcessor(dataSource, format, 4000
                     , new ContentDescriptor(FileTypeDescriptor.WAVE));
             _writer = Manager.createDataSink(p.getDataOutput(), dest);
             p.start();
-        }
+//        }
         final DataSink writer = _writer;
         final Processor processor = p;
         writer.open();
