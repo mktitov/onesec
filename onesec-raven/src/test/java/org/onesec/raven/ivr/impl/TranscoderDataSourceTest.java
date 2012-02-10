@@ -68,7 +68,7 @@ public class TranscoderDataSourceTest extends Assert {
 //        TranscoderDataSource t1 = new TranscoderDataSource(codecManager, conv, audioFormat);
         TranscoderDataSource t2 = new TranscoderDataSource(codecManager, t1, JMFHelper.DEFAULT_FORMAT);
         JMFHelper.OperationController controller = JMFHelper.writeToFile(t2, "target/transcode_test.wav");
-        TimeUnit.SECONDS.sleep(10);
+        TimeUnit.SECONDS.sleep(100);
         controller.stop();
         
         verify(executor, owner);

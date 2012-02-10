@@ -53,6 +53,11 @@ public class TranscoderDataStream implements PushBufferStream, BufferTransferHan
         for (int i=0; i<codecChain.length; ++i)
             codecs[i] = new CodecState(codecChain[i].getCodec());
     }
+    
+    void resetCodecStates() {
+        for (CodecState state: codecs)
+            state.reset();
+    }
 
     public Format getFormat() {
         return outFormat;
@@ -60,7 +65,6 @@ public class TranscoderDataStream implements PushBufferStream, BufferTransferHan
 
     public void read(Buffer buffer) throws IOException {
         Buffer _buf = bufferToSend;
-        System.out.println(" <<<<< BUF OUT >>>>>>");
         if (_buf!=null) {
             buffer.copy(_buf);
             if (_buf.isEOM())
@@ -104,35 +108,17 @@ public class TranscoderDataStream implements PushBufferStream, BufferTransferHan
     }
     
     private void processBufferByCodec(Buffer buf, int codecInd) {
-        if (buf.isEOM())
-            System.out.println("  !!!  EOM   !!!");
         if (codecInd>=codecs.length) {
             bufferToSend = buf;
             BufferTransferHandler handler = transferHandler;
             if (handler!=null)
-//            if (handler!=null && !buf.isDiscard() || buf.getData()!=null)
                 handler.transferData(this);
         } else {
-//            if (buf.getData()==null)
-//                buf.setData(EMPTY_BUFFER);
             CodecState state = codecs[codecInd];
             int res=0;
             do {
-//                Buffer buf2 = new Buffer();
-//                buf2.copy(buf);
                 long startTs = System.currentTimeMillis();
-//                try {
-                    res = state.codec.process(buf, state.getOrCreateOutBuffer());
-//                                    Thread.sleep(0, 500);
-//                } catch (InterruptedException ex) {
-//                    Logger.getLogger(TranscoderDataStream.class.getName()).log(Level.SEVERE, null, ex);
-//                }
-                System.out.println("Processing time is: "+(System.currentTimeMillis()-startTs));
-//                state.outBuffer.setFormat(buf.getFormat());
-//                state.outBuffer.setSequenceNumber(buf.getSequenceNumber());
-//                state.outBuffer.setData(buf.getData());
-//                state.outBuffer.setTimeStamp(buf.getTimeStamp());
-//                state.outBuffer = buf;
+                res = state.codec.process(buf, state.getOrCreateOutBuffer());
                 if (buf.isEOM())
                     state.outBuffer.setEOM(true);
                 if ( (res & Codec.OUTPUT_BUFFER_NOT_FILLED)==0 || (buf.isEOM() && (res & CONT_STATE)==0) ) 
@@ -142,7 +128,7 @@ public class TranscoderDataStream implements PushBufferStream, BufferTransferHan
     }
     
     private class CodecState {
-        final Codec codec;
+        Codec codec;
         Buffer inBuffer;
         Buffer outBuffer;
 
@@ -160,6 +146,16 @@ public class TranscoderDataStream implements PushBufferStream, BufferTransferHan
             Buffer res = outBuffer;
             outBuffer = null;
             return res;
+        }
+
+        private void reset() {
+            inBuffer = null;
+            outBuffer = null;
+            try {
+                codec = codec.getClass().newInstance();
+            } catch (Exception e) {
+                owner.
+            } 
         }
     }
 }

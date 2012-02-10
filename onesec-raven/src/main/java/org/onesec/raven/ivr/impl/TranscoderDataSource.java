@@ -16,6 +16,7 @@
 package org.onesec.raven.ivr.impl;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.media.Format;
 import javax.media.Time;
 import javax.media.protocol.ContentDescriptor;
@@ -34,6 +35,7 @@ public class TranscoderDataSource extends PushBufferDataSource {
     private final PushBufferDataSource source;
     private final Format outputFormat;
     private final TranscoderDataStream[] streams;
+    private final AtomicBoolean started = new AtomicBoolean();
 
     public TranscoderDataSource(CodecManager codecManager, PushBufferDataSource source, Format outputFormat) 
             throws CodecManagerException 
@@ -67,12 +69,14 @@ public class TranscoderDataSource extends PushBufferDataSource {
 
     @Override
     public void start() throws IOException {
-        source.start();
+        if (started.compareAndSet(false, true))
+            source.start();
     }
 
     @Override
     public void stop() throws IOException {
-        source.stop();
+        if (started.compareAndSet(true, false))
+            source.stop();
     }
 
     @Override

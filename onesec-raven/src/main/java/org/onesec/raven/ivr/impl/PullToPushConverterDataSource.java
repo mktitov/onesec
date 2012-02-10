@@ -77,11 +77,12 @@ public class PullToPushConverterDataSource extends PushBufferDataSource {
 
     @Override
     public void stop() throws IOException {
-        try {
-            source.stop();
-        } finally {
-            streams[0].stop();
-        }
+        if (started.compareAndSet(true, false))
+            try {
+                source.stop();
+            } finally {
+                streams[0].stop();
+            }
     }
 
     @Override
