@@ -29,6 +29,7 @@ import static org.easymock.EasyMock.*;
 import org.easymock.IArgumentMatcher;
 import org.onesec.raven.JMFHelper;
 import org.onesec.raven.ivr.Codec;
+import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.Task;
 import org.raven.tree.Node;
@@ -50,12 +51,18 @@ public class TranscoderDataSourceTest extends Assert {
     
     @Test
     public void test() throws Exception {
+        doTest();
+        doTest();
+    }
+    
+    private void doTest() throws Exception {
         ExecutorService executor = createMock("executor", ExecutorService.class);
         Node owner =  createMock("owner", Node.class);
         
         executor.execute(executeTask(owner));
         expectLastCall().atLeastOnce();
         expect(owner.getLogger()).andReturn(logger).anyTimes();
+        expect(owner.isLogLevelEnabled(anyObject(LogLevel.class))).andReturn(Boolean.TRUE).anyTimes();
         replay(executor, owner);
         
         InputStreamSource source = new TestInputStreamSource("src/test/wav/test.wav");
@@ -64,18 +71,23 @@ public class TranscoderDataSourceTest extends Assert {
         PullToPushConverterDataSource conv = new PullToPushConverterDataSource(parser, executor, owner);
         AudioFormat audioFormat = new AudioFormat(AudioFormat.ULAW, 8000, 8, 1, Format.NOT_SPECIFIED
                 , Format.NOT_SPECIFIED);
-        TranscoderDataSource t1 = new TranscoderDataSource(codecManager, conv, Codec.G729.getAudioFormat());
+        TranscoderDataSource t1 = new TranscoderDataSource(
+                codecManager, conv, Codec.G729.getAudioFormat(), owner, "T1. ");
 //        TranscoderDataSource t1 = new TranscoderDataSource(codecManager, conv, JMFHelper.DEFAULT_FORMAT);
 //        TranscoderDataSource t1 = new TranscoderDataSource(codecManager, conv, audioFormat);
-        TranscoderDataSource t2 = new TranscoderDataSource(codecManager, conv, Codec.G711_MU_LAW.getAudioFormat());
-        TranscoderDataSource t3 = new TranscoderDataSource(codecManager, t2, JMFHelper.DEFAULT_FORMAT);
+        TranscoderDataSource t2 = new TranscoderDataSource(
+                codecManager, conv, Codec.G711_MU_LAW.getAudioFormat(), owner, "T2. ");
+        TranscoderDataSource t3 = new TranscoderDataSource(
+                codecManager, t2, JMFHelper.DEFAULT_FORMAT, owner, "T3. ");
+        long ts = System.currentTimeMillis();
         t3.connect();
-//        JMFHelper.OperationController controller = JMFHelper.writeToFile(t2, "target/transcode_test.wav");
+        System.out.println(" !! Connect time: "+(System.currentTimeMillis()-ts));
+        JMFHelper.OperationController controller = JMFHelper.writeToFile(t3, "target/transcode_test.wav");
         TimeUnit.SECONDS.sleep(4);
-//        controller.stop();
+        controller.stop();
         
         verify(executor, owner);
-//        assertEquals(2, tasksFinished);
+        
     }
     
     public static Task executeTask(final Node owner) {

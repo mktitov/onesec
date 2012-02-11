@@ -62,8 +62,11 @@ public class OnesecRavenModule
         return new RTPManagerServiceImpl(logger, codecManager);
     }
 
-    public BufferCache buildBufferCache(RTPManagerService rtpManagerService, Logger logger) {
-        return new BufferCacheImpl(rtpManagerService, logger);
+    @EagerLoad
+    public BufferCache buildBufferCache(RTPManagerService rtpManagerService, Logger logger
+            , CodecManager codecManager) 
+    {
+        return new BufferCacheImpl(rtpManagerService, logger, codecManager);
     }
 
     public static void contributeStateListenersCoordinator(

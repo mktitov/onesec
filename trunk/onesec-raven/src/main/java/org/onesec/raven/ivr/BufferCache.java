@@ -21,6 +21,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import javax.media.Buffer;
+import org.raven.sched.ExecutorService;
+import org.raven.tree.Node;
 
 /**
  *
@@ -33,7 +35,7 @@ public interface BufferCache
      * @param codec codec
      * @param packetSize of silent buffer
      */
-    public Buffer getSilentBuffer(Codec codec, int packetSize);
+    public Buffer getSilentBuffer(ExecutorService executor, Node requester, Codec codec, int packetSize);
     /**
      * Returns cached buffers or null if cache does not contains buffers for specified parameters
      * @param key the key of the cache

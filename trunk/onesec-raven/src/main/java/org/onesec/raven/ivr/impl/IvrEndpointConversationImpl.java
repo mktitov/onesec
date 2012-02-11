@@ -41,30 +41,11 @@ import javax.telephony.events.TermEv;
 import org.onesec.core.provider.ProviderController;
 import org.onesec.core.services.ProviderRegistry;
 import org.onesec.core.services.StateListenersCoordinator;
-import org.onesec.raven.ivr.AudioStream;
-import org.onesec.raven.ivr.Codec;
-import org.onesec.raven.ivr.CompletionCode;
-import org.onesec.raven.ivr.IncomingRtpStream;
-import org.onesec.raven.ivr.IvrAction;
-import org.onesec.raven.ivr.IvrActionNode;
-import org.onesec.raven.ivr.IvrConversationScenarioPoint;
-import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.onesec.raven.ivr.IvrEndpointConversationEvent;
-import org.onesec.raven.ivr.IvrEndpointConversationException;
-import org.onesec.raven.ivr.IvrEndpointConversationListener;
-import org.onesec.raven.ivr.IvrEndpointConversationRtpStateException;
-import org.onesec.raven.ivr.OutgoingRtpStream;
-import org.onesec.raven.ivr.RtpStreamException;
-import org.onesec.raven.ivr.SendMessageDirection;
+import org.onesec.raven.ivr.*;
 import org.raven.conv.ConversationScenario;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.tree.Node;
-import org.onesec.raven.ivr.IvrEndpointConversationState;
-import org.onesec.raven.ivr.IvrEndpointConversationStateException;
-import org.onesec.raven.ivr.IvrEndpointConversationStoppedEvent;
-import org.onesec.raven.ivr.IvrEndpointConversationTransferedEvent;
-import org.onesec.raven.ivr.RtpStreamManager;
 import org.onesec.raven.ivr.actions.ContinueConversationAction;
 import org.raven.conv.BindingScope;
 import org.raven.conv.ConversationScenarioPoint;
@@ -94,6 +75,9 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     
     @Service
     private static StateListenersCoordinator stateListenersCoordinator;
+    
+    @Service
+    private static CodecManager codecManager;
 
     private final Node owner;
     private final ExecutorService executor;
@@ -352,8 +336,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             try {
                 if (isAllLogicalConnectionEstablished()) {
                     audioStream = new ConcatDataSource(
-                            FileTypeDescriptor.WAVE, executor, codec, packetSize, 0, maxSendAheadPacketsCount
-                            , owner, bufferCache);
+                            FileTypeDescriptor.WAVE, executor, codecManager, codec, packetSize, 0
+                            , maxSendAheadPacketsCount, owner, bufferCache);
                     audioStream.setLogPrefix(callId+" : ");
                     audioStreamJustCreated.set(true);
                     outRtp.open(remoteAddress, remotePort, audioStream);

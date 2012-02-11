@@ -23,7 +23,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.logging.Level;
 import javax.media.Codec;
 import javax.media.Demultiplexer;
 import javax.media.Format;
@@ -261,13 +260,14 @@ public class CodecManagerImpl implements CodecManager {
             this.codec = codec;
             this.outFormat = (AudioFormat) outFormat;
             AudioFormat in = (AudioFormat) inFormat, out = this.outFormat;
-            this.inFormat = new AudioFormat(
-                    in.getEncoding(),
-                    in.getSampleRate()==-1? out.getSampleRate() : in.getSampleRate(),
-                    in.getSampleSizeInBits()==-1? out.getSampleSizeInBits() : in.getSampleSizeInBits(),
-                    in.getChannels()==-1? out.getChannels() : in.getChannels(),
-                    in.getEndian()==-1? out.getEndian() : in.getEndian(),
-                    in.getSigned()==-1? out.getSigned() : in.getSigned());
+            this.inFormat = (AudioFormat) inFormat;
+//            this.inFormat = new AudioFormat(
+//                    in.getEncoding(),
+//                    in.getSampleRate()==-1? out.getSampleRate() : in.getSampleRate(),
+//                    in.getSampleSizeInBits()==-1? out.getSampleSizeInBits() : in.getSampleSizeInBits(),
+//                    in.getChannels()==-1? out.getChannels() : in.getChannels(),
+//                    in.getEndian()==-1? out.getEndian() : in.getEndian(),
+//                    in.getSigned()==-1? out.getSigned() : in.getSigned());
             if (parent!=null)
                 level = parent.level+1;
         }

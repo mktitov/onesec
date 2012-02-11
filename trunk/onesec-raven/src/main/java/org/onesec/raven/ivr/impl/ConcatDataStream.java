@@ -168,15 +168,15 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
                     long cycleStartTs = System.currentTimeMillis();
                     action = "getting new buffer from queue";
                     si = sourceInfo.get();
-                    if (si!=null && si.isRealTime()) {
-                        bufferToSend = null;
-                        Buffer buf;
-                        while ( (buf=bufferQueue.poll())!=null ) {
-                            bufferToSend = buf;
-                            droppedPacketCount++;
-                        }
-                        if (buf!=null) droppedPacketCount--;
-                    } else
+//                    if (si!=null && si.isRealTime()) {
+//                        bufferToSend = null;
+//                        Buffer buf;
+//                        while ( (buf=bufferQueue.poll())!=null ) {
+//                            bufferToSend = buf;
+//                            droppedPacketCount++;
+//                        }
+//                        if (buf!=null) droppedPacketCount--;
+//                    } else
                         bufferToSend = bufferQueue.poll();
 //                    if (bufferToSend!=null && bufferToSend.getTimeStamp()+MAX_TIME_SKEW<cycleStartTs) {
 //                        droppedPacketCount++;
