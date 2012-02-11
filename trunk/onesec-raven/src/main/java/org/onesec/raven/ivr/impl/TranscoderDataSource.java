@@ -17,6 +17,8 @@ package org.onesec.raven.ivr.impl;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.media.Format;
 import javax.media.Time;
 import javax.media.protocol.ContentDescriptor;
@@ -35,16 +37,18 @@ public class TranscoderDataSource extends PushBufferDataSource {
     private final PushBufferDataSource source;
     private final Format outputFormat;
     private final TranscoderDataStream[] streams;
-    private final AtomicBoolean started = new AtomicBoolean();
+    private final AtomicBoolean connected = new AtomicBoolean();
+    private final CodecManager codecManager;
+    private final PushBufferStream sourceStream;
 
     public TranscoderDataSource(CodecManager codecManager, PushBufferDataSource source, Format outputFormat) 
             throws CodecManagerException 
     {
         this.source = source;
         this.outputFormat = outputFormat;
-        PushBufferStream sourceStream = source.getStreams()[0];
-        CodecConfig[] codecChain = codecManager.buildCodecChain(sourceStream.getFormat(), outputFormat);
-        streams = new TranscoderDataStream[]{new TranscoderDataStream(codecChain, outputFormat, sourceStream)};
+        this.codecManager = codecManager;
+        this.sourceStream = source.getStreams()[0];
+        this.streams = new TranscoderDataStream[]{new TranscoderDataStream(sourceStream)};
     }
     
     @Override
@@ -59,7 +63,21 @@ public class TranscoderDataSource extends PushBufferDataSource {
 
     @Override
     public void connect() throws IOException {
-        source.connect();
+        if (connected.compareAndSet(false, true)) {
+            source.connect();
+            try {
+                System.out.println(" !! Input format: "+sourceStream.getFormat());
+                CodecConfig[] codecChain = codecManager.buildCodecChain(sourceStream.getFormat(), outputFormat);
+                for (CodecConfig codec: codecChain) {
+                    System.out.println(" !! Codec: "+codec.getCodec());
+                    System.out.println("       IN: "+codec.getInputFormat());
+                    System.out.println(" !!   OUT: "+codec.getOutputFormat());
+                }
+                streams[0].init(codecChain, outputFormat);
+            } catch (CodecManagerException ex) {
+                throw new IOException(ex);
+            }
+        }
     }
 
     @Override
@@ -69,14 +87,12 @@ public class TranscoderDataSource extends PushBufferDataSource {
 
     @Override
     public void start() throws IOException {
-        if (started.compareAndSet(false, true))
-            source.start();
+        source.start();
     }
 
     @Override
     public void stop() throws IOException {
-        if (started.compareAndSet(true, false))
-            source.stop();
+        source.stop();
     }
 
     @Override
@@ -93,5 +109,4 @@ public class TranscoderDataSource extends PushBufferDataSource {
     public Time getDuration() {
         return DURATION_UNKNOWN;
     }
-    
 }

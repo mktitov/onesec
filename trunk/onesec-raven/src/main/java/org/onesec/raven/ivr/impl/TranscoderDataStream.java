@@ -16,8 +16,6 @@
 package org.onesec.raven.ivr.impl;
 
 import java.io.IOException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.media.Buffer;
 import javax.media.Codec;
 import javax.media.Format;
@@ -37,40 +35,27 @@ public class TranscoderDataStream implements PushBufferStream, BufferTransferHan
     private final static ContentDescriptor CONTENT_DESCRIPTOR = 
             new ContentDescriptor(ContentDescriptor.RAW);
     
-    private final CodecState[] codecs;
     private final PushBufferStream sourceStream;
-    private final Format outFormat;
+    private CodecState[] codecs;
+    private Format outFormat;
     private BufferTransferHandler transferHandler;
     private volatile Buffer bufferToSend;
     private volatile boolean endOfStream = false;
 
-    public TranscoderDataStream(CodecConfig[] codecChain, Format outFormat, PushBufferStream sourceStream)
-    {
-        this.outFormat = outFormat;
-        this.codecs = new CodecState[codecChain.length];
-        sourceStream.setTransferHandler(this);
+    public TranscoderDataStream(PushBufferStream sourceStream) {
         this.sourceStream = sourceStream;
-        for (int i=0; i<codecChain.length; ++i)
-            codecs[i] = new CodecState(codecChain[i].getCodec());
     }
     
-    void resetCodecStates() {
-        for (CodecState state: codecs)
-            state.reset();
+    void init(CodecConfig[] codecChain, Format outputFormat) {
+        this.outFormat = outputFormat;
+        this.codecs = new CodecState[codecChain.length];
+        sourceStream.setTransferHandler(this);
+        for (int i=0; i<codecChain.length; ++i)
+            codecs[i] = new CodecState(codecChain[i]);
     }
-
+    
     public Format getFormat() {
         return outFormat;
-    }
-
-    public void read(Buffer buffer) throws IOException {
-        Buffer _buf = bufferToSend;
-        if (_buf!=null) {
-            buffer.copy(_buf);
-            if (_buf.isEOM())
-                endOfStream = true;
-        } else
-            buffer.setDiscard(true);
     }
 
     public void setTransferHandler(BufferTransferHandler transferHandler) {
@@ -97,11 +82,20 @@ public class TranscoderDataStream implements PushBufferStream, BufferTransferHan
         return null;
     }
 
+    public void read(Buffer buffer) throws IOException {
+        Buffer _buf = bufferToSend;
+        if (_buf!=null) {
+            buffer.copy(_buf);
+            if (_buf.isEOM())
+                endOfStream = true;
+        } else
+            buffer.setDiscard(true);
+    }
+
     public void transferData(PushBufferStream stream) {
         Buffer buf = new Buffer();
         try {
             stream.read(buf);
-            System.out.println(" >>>> BUF IN <<<<<");
             processBufferByCodec(buf, 0);
         } catch (IOException ex) {
         }
@@ -115,25 +109,33 @@ public class TranscoderDataStream implements PushBufferStream, BufferTransferHan
                 handler.transferData(this);
         } else {
             CodecState state = codecs[codecInd];
+//          if (buf.getFormat()==null)
+            buf.setFormat(state.inputFormat);
             int res=0;
             do {
-                long startTs = System.currentTimeMillis();
                 res = state.codec.process(buf, state.getOrCreateOutBuffer());
-                if (buf.isEOM())
-                    state.outBuffer.setEOM(true);
-                if ( (res & Codec.OUTPUT_BUFFER_NOT_FILLED)==0 || (buf.isEOM() && (res & CONT_STATE)==0) ) 
+                if ( (res & Codec.BUFFER_PROCESSED_FAILED)>0) 
+                    break;
+//                if (buf.isEOM()) 
+//                    state.outBuffer.setEOM(true);
+                if ( (res & Codec.OUTPUT_BUFFER_NOT_FILLED)==0 || (buf.isEOM() && (res & CONT_STATE)==0) ) {
+                    if (state.outBuffer.isEOM() && state.outBuffer.getData()==null)
+                        state.outBuffer.setData(EMPTY_BUFFER);
                     processBufferByCodec(state.getAndResetOutBuffer(), codecInd+1);
+                }
             } while ( (res & CONT_STATE) == CONT_STATE);
         }
     }
     
     private class CodecState {
-        Codec codec;
+        final Codec codec;
+        final Format inputFormat;
         Buffer inBuffer;
         Buffer outBuffer;
 
-        public CodecState(Codec codec) {
-            this.codec = codec;
+        public CodecState(CodecConfig codecConfig) {
+            this.codec = codecConfig.getCodec();
+            this.inputFormat = codecConfig.getInputFormat();
         }
 
         private Buffer getOrCreateOutBuffer() {
@@ -146,16 +148,6 @@ public class TranscoderDataStream implements PushBufferStream, BufferTransferHan
             Buffer res = outBuffer;
             outBuffer = null;
             return res;
-        }
-
-        private void reset() {
-            inBuffer = null;
-            outBuffer = null;
-            try {
-                codec = codec.getClass().newInstance();
-            } catch (Exception e) {
-                owner.
-            } 
         }
     }
 }

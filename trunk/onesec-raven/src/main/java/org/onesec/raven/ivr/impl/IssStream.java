@@ -40,6 +40,10 @@ public class IssStream implements PullSourceStream, Seekable
     {
         return !inputBuffer.hasRemaining();
     }
+    
+    public void reset() {
+        inputBuffer.position(0);
+    }
 
     public ContentDescriptor getContentDescriptor()
     {
@@ -56,56 +60,43 @@ public class IssStream implements PullSourceStream, Seekable
         return null;
     }
 
-    public Object[] getControls()
-    {
+    public Object[] getControls() {
         return new Object[0];
     }
 
-    public boolean isRandomAccess()
-    {
+    public boolean isRandomAccess() {
         return true;
     }
 
-    public int read(byte[] buffer, int offset, int length) throws IOException
-    {
+    public int read(byte[] buffer, int offset, int length) throws IOException {
         if (length == 0)
-        {
             return 0;
-        }
-        try
-        {
+        try {
             inputBuffer.get(buffer, offset, length);
             return length;
-        } catch (BufferUnderflowException E)
-        {
+        } catch (BufferUnderflowException E) {
             return -1;
         }
     }
 
-    public void close()
-    {
+    public void close() {
 //        inputBuffer = null;
     }
 
-    public long seek(long where)
-    {
-        try
-        {
+    public long seek(long where) {
+        try {
             inputBuffer.position((int) (where));
             return where;
-        } catch (IllegalArgumentException E)
-        {
+        } catch (IllegalArgumentException E) {
             return tell();
         }
     }
 
-    public long tell()
-    {
+    public long tell() {
         return inputBuffer.position();
     }
 
-    public boolean willReadBlock()
-    {
+    public boolean willReadBlock() {
         return (inputBuffer.remaining() == 0);
     }
 }

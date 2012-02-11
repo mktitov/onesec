@@ -38,11 +38,13 @@ public class PullToPushConverterDataSourceTest extends Assert {
     
     private CodecManager codecManager;
     private static Logger logger = LoggerFactory.getLogger(ContainerParserDataSource.class);
-    private static volatile boolean taskFinished;
+    private static volatile int taskFinished;
+    private static volatile int taskExecuted;
     
     @Before
     public void prepare() throws IOException {
-        taskFinished = false;
+        taskFinished = 0;
+        taskExecuted = 0;
         codecManager = new CodecManagerImpl(logger);
     }
     
@@ -52,30 +54,34 @@ public class PullToPushConverterDataSourceTest extends Assert {
         Node owner =  createMock("owner", Node.class);
         
         executor.execute(executeTask(owner));
+        expectLastCall().atLeastOnce();
         replay(executor, owner);
-        
         
         InputStreamSource source = new TestInputStreamSource("src/test/wav/test.wav");
         IssDataSource dataSource = new IssDataSource(source, FileTypeDescriptor.WAVE);
         ContainerParserDataSource parser = new ContainerParserDataSource(codecManager, dataSource);
         PullToPushConverterDataSource conv = new PullToPushConverterDataSource(parser, executor, owner);
+        conv.connect();
         JMFHelper.OperationController controller = JMFHelper.writeToFile(conv, "target/pull2push_file.wav");
-        TimeUnit.SECONDS.sleep(3);
+        TimeUnit.SECONDS.sleep(5);
         controller.stop();
         
         verify(executor, owner);
-        assertTrue(taskFinished);
+        assertEquals(taskFinished, taskExecuted);
     }
 
     public static Task executeTask(final Node owner) {
+        taskExecuted++;
         reportMatcher(new IArgumentMatcher() {
             public boolean matches(Object argument) {
                 final Task task = (Task) argument;
                 assertSame(owner, task.getTaskNode());
                 new Thread(new Runnable() {
                     public void run() {
+                        System.out.println("!! Executing a task !!");
                         task.run();
-                        taskFinished = true;
+                        taskFinished++;
+                        System.out.println("!! Task executed !!");
                     }
                 }).start();
                 return true;

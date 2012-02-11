@@ -28,20 +28,19 @@ import javax.media.protocol.PullBufferStream;
  */
 public class ContainerParserDataStream implements PullBufferStream {
     
-    private final Track track;
+    private Track track;
     private final ContentDescriptor contentDescriptor;
 //    private final ContainerParserDataSource dataSource;
     private boolean endOfStream = false;
 
-    public ContainerParserDataStream(Track track, ContainerParserDataSource dataSource) {
+    public ContainerParserDataStream(ContainerParserDataSource dataSource) {
         this.contentDescriptor = new ContentDescriptor(dataSource.getContentType());
-        this.track = track;
     }
     
-//    void setTrack(Track track) {
-//        this.track = track;
-//    }
-//
+    void setTrack(Track track) {
+        this.track = track;
+    }
+
     public boolean willReadBlock() {
         return track!=null && track.isEnabled() && !endOfStream;
     }

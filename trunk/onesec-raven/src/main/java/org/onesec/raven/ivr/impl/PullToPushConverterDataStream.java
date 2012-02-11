@@ -16,6 +16,7 @@
 package org.onesec.raven.ivr.impl;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 import javax.media.Buffer;
 import javax.media.Format;
 import javax.media.protocol.BufferTransferHandler;
@@ -36,6 +37,8 @@ public class PullToPushConverterDataStream implements PushBufferStream, Task {
     private volatile BufferTransferHandler transferHandler;
     private volatile Buffer bufferToSend;
     private volatile boolean stop = false;
+    private volatile boolean endOfStream = false;
+    private volatile boolean pause = true;
 
     public PullToPushConverterDataStream(Node owner, PullBufferStream sourceStream) {
         this.owner = owner;
@@ -44,10 +47,6 @@ public class PullToPushConverterDataStream implements PushBufferStream, Task {
 
     public Format getFormat() {
         return sourceStream.getFormat();
-    }
-
-    public void read(Buffer buffer) throws IOException {
-        buffer.copy(bufferToSend);
     }
 
     public void setTransferHandler(BufferTransferHandler transferHandler) {
@@ -82,21 +81,41 @@ public class PullToPushConverterDataStream implements PushBufferStream, Task {
         return "Converting PullDataSource to PushDataSource";
     }
     
-    public void stop() {
+    void stop() {
         stop = true;
+    }
+    
+    void reset() {
+        stop = false;
+    }
+    
+    void pause() {
+        pause = true;
+    }
+    
+    void cont() {
+        pause = false;
+    }
+
+    public void read(Buffer buffer) throws IOException {
+        buffer.copy(bufferToSend);
     }
 
     public void run() {
         try {
-            while (!stop && !sourceStream.endOfStream()) {
-                bufferToSend = new Buffer();
-                sourceStream.read(bufferToSend);
-                if (bufferToSend.isEOM()) 
-                    System.out.println("OEM!!!");
-                if (!bufferToSend.isDiscard()) {
-                    BufferTransferHandler _handler = transferHandler;
-                    if (_handler!=null)
-                        _handler.transferData(this);
+            while (!stop && !sourceStream.endOfStream() && !endOfStream) {
+                if (pause) 
+                    TimeUnit.MILLISECONDS.sleep(1);
+                else {
+                    bufferToSend = new Buffer();
+                    sourceStream.read(bufferToSend);
+                    if (bufferToSend.isEOM())
+                        endOfStream = true;
+                    if (!bufferToSend.isDiscard()) {
+                        BufferTransferHandler _handler = transferHandler;
+                        if (_handler!=null)
+                            _handler.transferData(this);
+                    }
                 }
             }
         } catch (Throwable e) {
