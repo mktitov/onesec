@@ -17,23 +17,30 @@
 
 package org.onesec.raven.ivr.impl;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.logging.Level;
 import javax.media.Buffer;
 import javax.media.Processor;
 import javax.media.control.PacketSizeControl;
+import javax.media.protocol.BufferTransferHandler;
 import javax.media.protocol.FileTypeDescriptor;
 import javax.media.protocol.PushBufferDataSource;
 import javax.media.protocol.PushBufferStream;
-import org.onesec.raven.ivr.BufferCache;
-import org.onesec.raven.ivr.BuffersCacheEntity;
-import org.onesec.raven.ivr.Codec;
-import org.onesec.raven.ivr.RTPManagerService;
+import org.onesec.raven.ivr.*;
+import org.raven.log.LogLevel;
+import org.raven.sched.ExecutorService;
+import org.raven.sched.ExecutorService;
+import org.raven.tree.Node;
 import org.slf4j.Logger;
 
 /**
@@ -49,22 +56,24 @@ public class BufferCacheImpl implements BufferCache
     private final Map<String, Buffer> silentBuffers = new ConcurrentHashMap<String, Buffer>();
     private final Map<String, BuffersCacheEntity>  buffersCache = new ConcurrentHashMap<String, BuffersCacheEntity>();
     private final RTPManagerService rtpManagerService;
+    private final CodecManager codecManager;
     private final Logger logger;
 
     private AtomicLong maxCacheIdleTime = new AtomicLong(DEFAULT_MAX_CACHE_IDLE_TIME);
 
-    public BufferCacheImpl(RTPManagerService rtpManagerService, Logger logger) {
+    public BufferCacheImpl(RTPManagerService rtpManagerService, Logger logger, CodecManager codecManager) {
         this.rtpManagerService = rtpManagerService;
         this.logger = logger;
+        this.codecManager = codecManager;
     }
 
-    public Buffer getSilentBuffer(Codec codec, int packetSize) {
+    public Buffer getSilentBuffer(ExecutorService executor, Node requester, Codec codec, int packetSize) {
         String key = codec.toString()+"_"+packetSize;
         Buffer res = silentBuffers.get(key);
         if (res==null) synchronized (silentBuffers) {
             res = silentBuffers.get(key);
             if (res==null)
-                res = createSilentBuffer(codec, packetSize, key);
+                res = createSilentBuffer(executor, requester, codec, packetSize, key);
         }
         return res;
     }
@@ -107,36 +116,77 @@ public class BufferCacheImpl implements BufferCache
         return key+"_"+codec+"_"+packetSize;
     }
 
-    private Buffer createSilentBuffer(Codec codec, int packetSize, String key) {
+    private Buffer createSilentBuffer(ExecutorService executor, final Node requester, Codec codec
+            , int packetSize, String key) 
+    {
         try {
-            Processor processor = null;
-            PushBufferDataSource dataSource = null;
-            IssDataSource source = null;
+//            Processor processor = null;
+//            PushBufferDataSource dataSource = null;
+//            IssDataSource source = null;
+            TranscoderDataSource transcoder = null;
             try {
                 ResourceInputStreamSource silenceSource=new ResourceInputStreamSource(SILENCE_RESOURCE_NAME);
-                source = new IssDataSource(silenceSource, FileTypeDescriptor.WAVE);
-
-                processor = ControllerStateWaiter.createRealizedProcessor(
-                        source, codec.getAudioFormat(), WAIT_STATE_TIMEOUT);
-
-                PacketSizeControl packetSizeControl =
-                        (PacketSizeControl) processor.getControl(PacketSizeControl.class.getName());
-                if (packetSizeControl!=null)
-                    packetSizeControl.setPacketSize(packetSize);
-
-                dataSource = (PushBufferDataSource)processor.getDataOutput();
-                PushBufferStream stream = dataSource.getStreams()[0];
-                dataSource.start();
-                processor.start();
-                Buffer silentBuffer = new Buffer();
-                stream.read(silentBuffer);
-                silentBuffers.put(key, silentBuffer);
-                return silentBuffer;
+                ContainerParserDataSource parser = new ContainerParserDataSource(
+                        codecManager, silenceSource, FileTypeDescriptor.WAVE);
+                PullToPushConverterDataSource converter = new PullToPushConverterDataSource(
+                        parser, executor, requester);
+                transcoder = new TranscoderDataSource(
+                        codecManager, converter, codec.getAudioFormat(), requester, null);
+                transcoder.connect();
+                final AtomicReference<Buffer> buf = new AtomicReference<Buffer>();
+                final AtomicReference<Exception> error = new AtomicReference();
+                transcoder.getStreams()[0].setTransferHandler(new BufferTransferHandler() {
+                    public void transferData(PushBufferStream stream) {
+                        if (buf.get()!=null)
+                            return;
+                        Buffer buffer = new Buffer();
+                        try {
+                            stream.read(buffer);
+                            if (buffer.getData()!=null && !buffer.isDiscard())
+                                buf.compareAndSet(null, buffer);
+                        } catch (IOException ex) {
+                            error.set(ex);
+                            if (requester.isLogLevelEnabled(LogLevel.ERROR))
+                                requester.getLogger().error("Error getting silent buffer", ex);
+                        }
+                    }
+                });
+                transcoder.start();
+                while (buf.get()==null && error.get()==null)
+                    TimeUnit.MILLISECONDS.sleep(1);
+                if (error.get()!=null)
+                    throw error.get();
+                silentBuffers.put(key, buf.get());
+                return buf.get();
+//                        
+//                source = new IssDataSource(silenceSource, FileTypeDescriptor.WAVE);
+//                source.connect();
+//
+//                processor = ControllerStateWaiter.createRealizedProcessor(
+//                        source, codec.getAudioFormat(), WAIT_STATE_TIMEOUT);
+//
+//                PacketSizeControl packetSizeControl =
+//                        (PacketSizeControl) processor.getControl(PacketSizeControl.class.getName());
+//                if (packetSizeControl!=null)
+//                    packetSizeControl.setPacketSize(packetSize);
+//
+//                dataSource = (PushBufferDataSource)processor.getDataOutput();
+//                PushBufferStream stream = dataSource.getStreams()[0];
+//                dataSource.start();
+//                processor.start();
+//                Buffer silentBuffer = new Buffer();
+//                stream.read(silentBuffer);
+//                silentBuffers.put(key, silentBuffer);
+//                return silentBuffer;
             } finally {
-                source.stop();
-                if (processor!=null) processor.stop();
-                if (dataSource!=null) dataSource.stop();
-                if (processor!=null) processor.close();
+                if (transcoder!=null) {
+                    transcoder.stop();
+                    transcoder.disconnect();
+                }
+//                source.stop();
+//                if (processor!=null) processor.stop();
+//                if (dataSource!=null) dataSource.stop();
+//                if (processor!=null) processor.close();
             }
         } catch (Exception ex) {
             if (logger.isErrorEnabled())

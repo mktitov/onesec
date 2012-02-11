@@ -20,19 +20,54 @@ package org.onesec.raven.ivr;
 import javax.media.Buffer;
 import org.junit.Test;
 import org.onesec.raven.OnesecRavenTestCase;
-
+import static org.easymock.EasyMock.*;
+import org.easymock.IArgumentMatcher;
+import org.raven.log.LogLevel;
+import org.raven.sched.ExecutorService;
+import org.raven.sched.Task;
+import org.raven.tree.Node;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 /**
  *
  * @author Mikhail Titov
  */
 public class BufferCacheTest extends OnesecRavenTestCase
 {
+    private Logger logger = LoggerFactory.getLogger(BufferCacheTest.class);
+    
     @Test
-    public void serviceTest()
+    public void serviceTest() throws Exception
     {
+        ExecutorService executor = createMock(ExecutorService.class);
+        Node node = createMock(Node.class);
+        expect(node.isLogLevelEnabled(anyObject(LogLevel.class))).andReturn(Boolean.TRUE).anyTimes();
+        expect(node.getLogger()).andReturn(logger).anyTimes();
+        executor.execute(executeTask());
+        expectLastCall().anyTimes();
+        replay(executor, node);
+        
         BufferCache cache = registry.getService(BufferCache.class);
         assertNotNull(cache);
-        Buffer silentBuffer = cache.getSilentBuffer(Codec.G711_A_LAW, 160);
+        Buffer silentBuffer = cache.getSilentBuffer(executor, node, Codec.G711_A_LAW, 160);
         assertNotNull(silentBuffer);
+        
+        verify(executor, node);
+    }
+    
+    public static Task executeTask() {
+        reportMatcher(new IArgumentMatcher() {
+            public boolean matches(Object argument) {
+                final Task task = (Task) argument;
+                new Thread(new Runnable() {
+                    public void run() {
+                        task.run();
+                    }
+                }).start();
+                return true;
+            }
+            public void appendTo(StringBuffer buffer) { }
+        });
+        return null;
     }
 }

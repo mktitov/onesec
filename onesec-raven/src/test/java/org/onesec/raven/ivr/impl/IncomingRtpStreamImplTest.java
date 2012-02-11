@@ -93,7 +93,7 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         irtp.release();
     }
 
-//    @Test
+    @Test
     public void oneListenerTest() throws Exception
     {
         IncomingRtpStream irtp = manager.getIncomingRtpStream(manager);
@@ -107,7 +107,7 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         irtp.release();
     }
 
-    @Test
+//    @Test
     public void tenListenerTest() throws Exception
     {
         IncomingRtpStream irtp = manager.getIncomingRtpStream(manager);
@@ -193,8 +193,8 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         {
             this.filename = filename;
             this.codec = codec;
-            ds = new ConcatDataSource(FileTypeDescriptor.WAVE, executor, codec, 240, 0, 0, manager,
-                    registry.getService(BufferCache.class));
+            ds = new ConcatDataSource(FileTypeDescriptor.WAVE, executor, codecManager, codec, 240
+                    , 0, 0, manager, registry.getService(BufferCache.class));
             ds.start();
             writeControl = JMFHelper.writeToFile(ds, filename);
         }

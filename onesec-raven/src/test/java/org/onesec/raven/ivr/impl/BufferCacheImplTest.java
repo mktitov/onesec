@@ -27,7 +27,14 @@ import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.RTPManagerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.easymock.IArgumentMatcher;
+import org.junit.Before;
+import org.onesec.raven.ivr.CodecManager;
+import org.raven.sched.ExecutorService;
+import org.raven.sched.Task;
+import org.raven.tree.Node;
 import static org.easymock.EasyMock.*;
+import org.raven.log.LogLevel;
 /**
  *
  * @author Mikhail Titov
@@ -35,23 +42,39 @@ import static org.easymock.EasyMock.*;
 public class BufferCacheImplTest extends Assert
 {
     private Logger logger = LoggerFactory.getLogger(this.getClass());
+    private CodecManager codecManager;
+    
+    @Before
+    public void prepare() throws Exception {
+        codecManager = new CodecManagerImpl(logger);
+    }
 
     @Test
-    public void silentBufferTest() throws IOException
+    public void silentBufferTest() throws Exception
     {
+        ExecutorService executor = createMock(ExecutorService.class);
+        Node node = createMock(Node.class);
+        expect(node.isLogLevelEnabled(anyObject(LogLevel.class))).andReturn(Boolean.TRUE).anyTimes();
+        expect(node.getLogger()).andReturn(logger).anyTimes();
+        executor.execute(executeTask());
+        expectLastCall().anyTimes();
+        replay(executor, node);
+        
         Logger log = LoggerFactory.getLogger("Rtp Manager");
         RTPManagerServiceImpl manager = new RTPManagerServiceImpl(log, new CodecManagerImpl(log));
-        BufferCacheImpl cache = new BufferCacheImpl(manager, logger);
-        Buffer silentBuffer = cache.getSilentBuffer(Codec.G711_A_LAW, 160);
+        BufferCacheImpl cache = new BufferCacheImpl(manager, logger, codecManager);
+        Buffer silentBuffer = cache.getSilentBuffer(executor, node, Codec.G711_A_LAW, 160);
         assertNotNull(silentBuffer);
-        Buffer silentBuffer2 = cache.getSilentBuffer(Codec.G711_A_LAW, 160);
+        Buffer silentBuffer2 = cache.getSilentBuffer(executor, node, Codec.G711_A_LAW, 160);
         assertSame(silentBuffer2, silentBuffer);
+        
+        verify(executor, node);
     }
 
     @Test
     public void cacheBuffersTest() throws Exception {
         RTPManagerService rtpManager = createMock(RTPManagerService.class);
-        BufferCacheImpl cache = new BufferCacheImpl(rtpManager, logger);
+        BufferCacheImpl cache = new BufferCacheImpl(rtpManager, logger, codecManager);
         Buffer[] buffers = new Buffer[]{null, null};
         Buffer[] res;
         res = cache.getCachedBuffers("key", 1, Codec.G711_A_LAW, 1);
@@ -67,7 +90,7 @@ public class BufferCacheImplTest extends Assert
     @Test
     public void removeOldCachesTest() throws Exception {
         RTPManagerService rtpManager = createMock(RTPManagerService.class);
-        BufferCacheImpl cache = new BufferCacheImpl(rtpManager, logger);
+        BufferCacheImpl cache = new BufferCacheImpl(rtpManager, logger, codecManager);
         Buffer[] buffers = new Buffer[]{null, null};
         Buffer[] res;
         cache.cacheBuffers("key", 1, Codec.G711_A_LAW, 1, Arrays.asList(buffers));
@@ -79,5 +102,21 @@ public class BufferCacheImplTest extends Assert
         TimeUnit.MILLISECONDS.sleep(2100);
         cache.removeOldCaches();
         assertNull(cache.getCachedBuffers("key", 1, Codec.G711_A_LAW, 1));
+    }
+    
+    public static Task executeTask() {
+        reportMatcher(new IArgumentMatcher() {
+            public boolean matches(Object argument) {
+                final Task task = (Task) argument;
+                new Thread(new Runnable() {
+                    public void run() {
+                        task.run();
+                    }
+                }).start();
+                return true;
+            }
+            public void appendTo(StringBuffer buffer) { }
+        });
+        return null;
     }
 }

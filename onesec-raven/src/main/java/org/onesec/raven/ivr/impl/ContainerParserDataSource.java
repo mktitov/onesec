@@ -24,6 +24,7 @@ import javax.media.protocol.DataSource;
 import javax.media.protocol.PullBufferDataSource;
 import javax.media.protocol.PullBufferStream;
 import org.onesec.raven.ivr.CodecManager;
+import org.onesec.raven.ivr.InputStreamSource;
 
 /**
  *
@@ -31,19 +32,21 @@ import org.onesec.raven.ivr.CodecManager;
  */
 public class ContainerParserDataSource extends PullBufferDataSource {
     private final DataSource source;
-    private final Demultiplexer parser;
     private final ContainerParserDataStream[] streams;
     private final AtomicBoolean connected = new AtomicBoolean();
+    private final CodecManager codecManager;
+    private Demultiplexer parser;
 
-    public ContainerParserDataSource(CodecManager codecManager, DataSource source) 
-            throws ContainerParserDataSourceException, IOException 
-    {
+    public ContainerParserDataSource(CodecManager codecManager, DataSource source) {
         this.source = source;
-        this.parser = codecManager.buildDemultiplexer(source.getContentType());
-        if (parser==null)
-            throw new ContainerParserDataSourceException(String.format(
-                    "Can't find parser for content type (%s)", source.getContentType()));
         this.streams = new ContainerParserDataStream[]{new ContainerParserDataStream(this)};
+        this.codecManager = codecManager;
+    }
+    
+    public ContainerParserDataSource(CodecManager codecManager, InputStreamSource inputStreamSource
+            , String contentType)
+    {
+        this(codecManager, new IssDataSource(inputStreamSource, contentType));
     }
 
     @Override
@@ -62,6 +65,10 @@ public class ContainerParserDataSource extends PullBufferDataSource {
             return;
         source.connect();
         try {
+            this.parser = codecManager.buildDemultiplexer(source.getContentType());
+            if (parser==null)
+                throw new ContainerParserDataSourceException(String.format(
+                        "Can't find parser for content type (%s)", source.getContentType()));
             parser.setSource(source);
             streams[0].setTrack(parser.getTracks()[0]);
         } catch (Exception e) {

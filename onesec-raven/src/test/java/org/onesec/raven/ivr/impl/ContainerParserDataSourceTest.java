@@ -49,6 +49,5 @@ public class ContainerParserDataSourceTest {
         JMFHelper.OperationController controller = JMFHelper.writeToFile(parser, "target/parsed_file.wav");
         TimeUnit.SECONDS.sleep(3);
         controller.stop();
-        TimeUnit.SECONDS.sleep(3);
     }
 }

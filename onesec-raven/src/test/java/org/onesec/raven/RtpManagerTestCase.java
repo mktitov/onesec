@@ -20,10 +20,7 @@ package org.onesec.raven;
 import java.net.InetAddress;
 import javax.media.protocol.FileTypeDescriptor;
 import org.junit.Before;
-import org.onesec.raven.ivr.BufferCache;
-import org.onesec.raven.ivr.Codec;
-import org.onesec.raven.ivr.InputStreamSource;
-import org.onesec.raven.ivr.OutgoingRtpStream;
+import org.onesec.raven.ivr.*;
 import org.onesec.raven.ivr.impl.ConcatDataSource;
 import org.onesec.raven.ivr.impl.RtpAddressNode;
 import org.onesec.raven.ivr.impl.RtpStreamManagerNode;
@@ -32,7 +29,6 @@ import org.raven.log.LogLevel;
 import org.raven.sched.impl.ExecutorServiceNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import static org.onesec.raven.JMFHelper.*;
 
 
 /**
@@ -46,6 +42,7 @@ public class RtpManagerTestCase extends OnesecRavenTestCase
     protected RtpStreamManagerNode manager;
     protected ExecutorServiceNode executor;
     protected InetAddress localAddress;
+    protected CodecManager codecManager;
 
     /**
      * Here you cat init you nodes. This method executes after rtp manager node and executor nodes.
@@ -57,6 +54,7 @@ public class RtpManagerTestCase extends OnesecRavenTestCase
     @Before
     public void createRtpManager() throws Exception
     {
+        codecManager = registry.getService(CodecManager.class);
         manager = new RtpStreamManagerNode();
         manager.setName("rtp manager");
         tree.getRootNode().addAndSaveChildren(manager);
@@ -83,8 +81,8 @@ public class RtpManagerTestCase extends OnesecRavenTestCase
         logger.debug("Sending RTP stream to the ({}:{}) ", host, port);
 
         final ConcatDataSource audioSource =
-                new ConcatDataSource(FileTypeDescriptor.WAVE, executor, codec, 240, 5, 5, manager
-                , registry.getService(BufferCache.class));
+                new ConcatDataSource(FileTypeDescriptor.WAVE, executor, codecManager, codec, 160, 5
+                , 5, manager, registry.getService(BufferCache.class));
         final OutgoingRtpStream sendStream = manager.getOutgoingRtpStream(manager);
         sendStream.open(host, port, audioSource);
         Thread runner = new Thread(){
@@ -92,8 +90,8 @@ public class RtpManagerTestCase extends OnesecRavenTestCase
             public void run() {
                 try {
                     InputStreamSource source1 = new TestInputStreamSource("src/test/wav/test.wav");
-                    Thread.sleep(100);
                     sendStream.start();
+                    Thread.sleep(5000);
                     audioSource.addSource(source1);
                     Thread.sleep(100);
                     while (audioSource.isPlaying()) 

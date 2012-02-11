@@ -21,19 +21,7 @@ import java.util.Map;
 import javax.media.Player;
 import javax.media.protocol.FileTypeDescriptor;
 import org.onesec.raven.JMFHelper;
-import org.onesec.raven.ivr.AudioStream;
-import org.onesec.raven.ivr.BufferCache;
-import org.onesec.raven.ivr.Codec;
-import org.onesec.raven.ivr.CompletionCode;
-import org.onesec.raven.ivr.ConversationCompletionCallback;
-import org.onesec.raven.ivr.IncomingRtpStream;
-import org.onesec.raven.ivr.IvrConversationScenario;
-import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.onesec.raven.ivr.IvrEndpointConversationListener;
-import org.onesec.raven.ivr.IvrEndpointConversationState;
-import org.onesec.raven.ivr.IvrEndpointException;
-import org.onesec.raven.ivr.IvrEndpointState;
-import org.onesec.raven.ivr.SendMessageDirection;
+import org.onesec.raven.ivr.*;
 import org.onesec.raven.ivr.impl.ConcatDataSource;
 import org.raven.annotations.Parameter;
 import org.raven.conv.ConversationScenarioState;
@@ -54,6 +42,10 @@ public class TestEndpointConversationNode extends BaseNode implements IvrEndpoin
 
     @Service
     private static BufferCache bufferCache;
+    
+    @Service
+    private static CodecManager codecManager;
+    
 
     private ConcatDataSource audioStream;
     private Player player;
@@ -66,7 +58,8 @@ public class TestEndpointConversationNode extends BaseNode implements IvrEndpoin
     {
         super.doStart();
         audioStream = new ConcatDataSource(
-                FileTypeDescriptor.WAVE, executorService, Codec.LINEAR, 240, 5, 5, this, bufferCache);
+                FileTypeDescriptor.WAVE, executorService, codecManager, Codec.LINEAR, 240, 5, 5
+                , this, bufferCache);
         audioStream.start();
 //        player = Manager.createPlayer(audioStream);
         operationController = JMFHelper.writeToFile(audioStream, fileName);

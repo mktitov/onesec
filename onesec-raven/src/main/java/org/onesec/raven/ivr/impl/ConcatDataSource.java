@@ -32,15 +32,8 @@ import javax.media.Format;
 import javax.media.Processor;
 import javax.media.Time;
 import javax.media.control.PacketSizeControl;
-import javax.media.protocol.BufferTransferHandler;
-import javax.media.protocol.ContentDescriptor;
-import javax.media.protocol.DataSource;
-import javax.media.protocol.PushBufferDataSource;
-import javax.media.protocol.PushBufferStream;
-import org.onesec.raven.ivr.AudioStream;
-import org.onesec.raven.ivr.BufferCache;
-import org.onesec.raven.ivr.Codec;
-import org.onesec.raven.ivr.InputStreamSource;
+import javax.media.protocol.*;
+import org.onesec.raven.ivr.*;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.ExecutorServiceException;
@@ -58,6 +51,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
 
     private final String contentType;
     private final ExecutorService executorService;
+    private final CodecManager codecManager;
     private final ConcatDataStream[] streams;
     private final Queue<Buffer> buffers = new ConcurrentLinkedQueue<Buffer>();
     private final AtomicReference<SourceProcessor> sourceProcessorRef = 
@@ -76,6 +70,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
 
     public ConcatDataSource(String contentType
             , ExecutorService executorService
+            , CodecManager codecManager
             , Codec codec
             , int rtpPacketSize
             , int rtpInitialBufferSize
@@ -85,6 +80,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
     {
         this.contentType = contentType;
         this.executorService = executorService;
+        this.codecManager = codecManager;
         this.owner = owner;
         this.rtpPacketSize = rtpPacketSize;
         this.packetSizeInMillis = rtpPacketSize / 8;
@@ -93,7 +89,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
         this.codec = codec;
         
         bufferCount = 0;
-        Buffer silentBuffer = bufferCache.getSilentBuffer(codec, rtpPacketSize);
+        Buffer silentBuffer = bufferCache.getSilentBuffer(executorService, owner, codec, rtpPacketSize);
         streams = new ConcatDataStream[]{new ConcatDataStream(
                 buffers, this, owner, rtpPacketSize, codec, rtpMaxSendAheadPacketsCount, silentBuffer)};
         streams[0].setLogPrefix(logPrefix);
@@ -108,13 +104,13 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
     }
 
     public void addSource(InputStreamSource source) {
-//        if (source!=null)
-//            addSource(new IssDataSource(source, contentType));
+        if (source!=null)
+            addSource(new ContainerParserDataSource(codecManager, source, contentType));
     }
 
     public void addSource(String key, long checksum, InputStreamSource source) {
-//        if (source!=null)
-//            addSource(key, checksum, new IssDataSource(source, contentType));
+        if (source!=null)
+            addSource(key, checksum, new ContainerParserDataSource(codecManager, source, contentType));
     }
 
     private SourceProcessor replaceSourceProcessor(final SourceProcessor newSourceProcessor)
@@ -255,8 +251,9 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
         private final boolean realTime;
         private Collection<Buffer> cache;
 
-        private PushBufferDataSource dataSource;
-        private Processor processor;
+//        private PushBufferDataSource dataSource;
+//        private Processor processor;
+        private TranscoderDataSource transcoder;
         private long startTs;
         private long firstBufferTs;
 
@@ -330,25 +327,29 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
         private void readBuffersFromSource() throws Exception {
             if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                 owner.getLogger().debug(logMess("Reading buffers from source"));
-            processor = ControllerStateWaiter.createRealizedProcessor(source, format, WAIT_STATE_TIMEOUT);
+            transcoder = new TranscoderDataSource(
+                    codecManager, prepareSource(source), format, owner, logMess(""));
+            transcoder.connect();
             PacketSizeControl packetSizeControl =
-                    (PacketSizeControl) processor.getControl(PacketSizeControl.class.getName());
+                    (PacketSizeControl) transcoder.getControl(PacketSizeControl.class.getName());
             if (packetSizeControl != null) {
                 if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                     owner.getLogger().debug(logMess("Found packet control so setting up packet size for encoder"));
                 packetSizeControl.setPacketSize(rtpPacketSize);
             }
-            dataSource = (PushBufferDataSource) processor.getDataOutput();
-            PushBufferStream s = dataSource.getStreams()[0];
-            s.setTransferHandler(this);
-            dataSource.start();
-            long ts2 = System.currentTimeMillis();
-            processor.prefetch();
-            ControllerStateWaiter.waitForState(processor, Processor.Prefetched, WAIT_STATE_TIMEOUT);
-            if (owner.isLogLevelEnabled(LogLevel.DEBUG)) {
-                owner.getLogger().debug(logMess("Prefetching time is %s ms", System.currentTimeMillis() - ts2));
-            }
-            processor.start();
+            transcoder.getStreams()[0].setTransferHandler(this);
+            transcoder.start();
+        }
+        
+        private PushBufferDataSource prepareSource(DataSource source) {
+            PushBufferDataSource res;
+            if (source instanceof PullDataSource)
+                source = new ContainerParserDataSource(codecManager, source);
+            if (source instanceof PullBufferDataSource)
+                res = new PullToPushConverterDataSource((PullBufferDataSource)source, executorService, owner);
+            else 
+                res = (PushBufferDataSource) source;
+            return res;
         }
 
         public void stop() {
@@ -361,17 +362,18 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
             try {
                 if (lock.tryLock(2000, TimeUnit.MILLISECONDS)) try {
                     try {
-                        source.stop();
+                        if (transcoder!=null)
+                            transcoder.stop();
                     } finally {
-                        try {
-                            if (processor != null) processor.stop();
-                        } finally {
-                            try {
-                                if (dataSource != null) dataSource.stop();
-                            } finally {
-                                if (processor != null) processor.close();
-                            }
-                        }
+//                        try {
+//                            if (processor != null) processor.stop();
+//                        } finally {
+//                            try {
+//                                if (dataSource != null) dataSource.stop();
+//                            } finally {
+//                                if (processor != null) processor.close();
+//                            }
+//                        }
                     }
                 } finally {
                     lock.unlock();
@@ -418,7 +420,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
                 }
                 ++bufferCount;
                 if (theEnd && owner.isLogLevelEnabled(LogLevel.DEBUG)) {
-                    owner.getLogger().debug(String.format(
+                    owner.getLogger().debug(logMess(
                             "Source processing time: %s ms", System.currentTimeMillis()-startTs));
 //                    if (source instanceof RealTimeDataSource)
 //                        owner.getLogger().debug(logMess("Buffers discarded by realtime source", streams));
