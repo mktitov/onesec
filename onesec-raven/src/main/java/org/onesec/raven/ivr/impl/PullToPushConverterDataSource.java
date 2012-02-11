@@ -34,6 +34,7 @@ public class PullToPushConverterDataSource extends PushBufferDataSource {
     private final PullBufferDataSource source;
     private final ExecutorService executor;
     private final PullToPushConverterDataStream[] streams;
+    private AtomicBoolean connected = new AtomicBoolean();
     private AtomicBoolean started = new AtomicBoolean();
 
     public PullToPushConverterDataSource(PullBufferDataSource source, ExecutorService executor, Node owner) {
@@ -55,23 +56,33 @@ public class PullToPushConverterDataSource extends PushBufferDataSource {
 
     @Override
     public void connect() throws IOException {
-        source.connect();
-    }
-
-    @Override
-    public void disconnect() {
-        source.disconnect();
-    }
-
-    @Override
-    public void start() throws IOException {
-        if (!started.compareAndSet(false, true))
+        if (!connected.compareAndSet(false, true))
             return;
-        source.start();
+        source.connect();
+        streams[0].reset();
         try {
             executor.execute(streams[0]);
         } catch (ExecutorServiceException ex) {
             throw new IOException("Error starting Pull to Push BufferDataSource converter", ex);
+        }
+    }
+
+    @Override
+    public void disconnect() {
+        if (connected.compareAndSet(true, false)) {
+            try {
+                source.disconnect();
+            } finally {
+                streams[0].stop();
+            }
+        }
+    }
+
+    @Override
+    public void start() throws IOException {
+        if (connected.get() && started.compareAndSet(false, true)) {
+            streams[0].cont();
+            source.start();
         }
     }
 
@@ -81,7 +92,7 @@ public class PullToPushConverterDataSource extends PushBufferDataSource {
             try {
                 source.stop();
             } finally {
-                streams[0].stop();
+                streams[0].pause();
             }
     }
 

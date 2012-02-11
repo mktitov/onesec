@@ -16,9 +16,7 @@
 package org.onesec.raven.ivr.impl;
 
 import java.io.IOException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import javax.media.BadHeaderException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.media.Demultiplexer;
 import javax.media.Time;
 import javax.media.protocol.ContentDescriptor;
@@ -35,6 +33,7 @@ public class ContainerParserDataSource extends PullBufferDataSource {
     private final DataSource source;
     private final Demultiplexer parser;
     private final ContainerParserDataStream[] streams;
+    private final AtomicBoolean connected = new AtomicBoolean();
 
     public ContainerParserDataSource(CodecManager codecManager, DataSource source) 
             throws ContainerParserDataSourceException, IOException 
@@ -44,14 +43,7 @@ public class ContainerParserDataSource extends PullBufferDataSource {
         if (parser==null)
             throw new ContainerParserDataSourceException(String.format(
                     "Can't find parser for content type (%s)", source.getContentType()));
-        try {
-            parser.setSource(source);
-            streams = new ContainerParserDataStream[]{new ContainerParserDataStream(parser.getTracks()[0], this)};
-        } catch (Exception e) {
-            throw new ContainerParserDataSourceException(
-                    String.format("Error configuring parser (%s)", parser.getClass().getName())
-                    , e);
-        }
+        this.streams = new ContainerParserDataStream[]{new ContainerParserDataStream(this)};
     }
 
     @Override
@@ -66,25 +58,37 @@ public class ContainerParserDataSource extends PullBufferDataSource {
 
     @Override
     public void connect() throws IOException {
+        if (!connected.compareAndSet(false, true))
+            return;
+        source.connect();
+        try {
+            parser.setSource(source);
+            streams[0].setTrack(parser.getTracks()[0]);
+        } catch (Exception e) {
+            throw new IOException(
+                    String.format("Error configuring parser (%s)", parser.getClass().getName())
+                    , e);
+        }
     }
 
     @Override
     public void disconnect() {
+        if (connected.compareAndSet(true, false)) {
+            source.disconnect();
+            parser.reset();
+        }
     }
 
     @Override
     public void start() throws IOException {
+        source.start();
         parser.start();
-//        try {
-//            streams[0].setTrack(parser.getTracks()[0]);
-//        } catch (BadHeaderException ex) {
-//            throw new IOException(ex);
-//        }
     }
 
     @Override
     public void stop() throws IOException {
         parser.stop();
+        source.stop();
     }
 
     @Override

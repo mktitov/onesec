@@ -45,8 +45,10 @@ public class ContainerParserDataSourceTest {
         InputStreamSource source = new TestInputStreamSource("src/test/wav/test.wav");
         IssDataSource dataSource = new IssDataSource(source, FileTypeDescriptor.WAVE);
         ContainerParserDataSource parser = new ContainerParserDataSource(codecManager, dataSource);
+        parser.connect();
         JMFHelper.OperationController controller = JMFHelper.writeToFile(parser, "target/parsed_file.wav");
-        TimeUnit.SECONDS.sleep(30);
+        TimeUnit.SECONDS.sleep(3);
         controller.stop();
+        TimeUnit.SECONDS.sleep(3);
     }
 }

@@ -40,11 +40,11 @@ public class TranscoderDataSourceTest extends Assert {
     
     private CodecManager codecManager;
     private static Logger logger = LoggerFactory.getLogger(ContainerParserDataSource.class);
-    private static volatile boolean taskFinished;
+    private static volatile int tasksFinished;
     
     @Before
     public void prepare() throws IOException {
-        taskFinished = false;
+        tasksFinished = 0;
         codecManager = new CodecManagerImpl(logger);
     }
     
@@ -54,6 +54,7 @@ public class TranscoderDataSourceTest extends Assert {
         Node owner =  createMock("owner", Node.class);
         
         executor.execute(executeTask(owner));
+        expectLastCall().atLeastOnce();
         expect(owner.getLogger()).andReturn(logger).anyTimes();
         replay(executor, owner);
         
@@ -66,13 +67,15 @@ public class TranscoderDataSourceTest extends Assert {
         TranscoderDataSource t1 = new TranscoderDataSource(codecManager, conv, Codec.G729.getAudioFormat());
 //        TranscoderDataSource t1 = new TranscoderDataSource(codecManager, conv, JMFHelper.DEFAULT_FORMAT);
 //        TranscoderDataSource t1 = new TranscoderDataSource(codecManager, conv, audioFormat);
-        TranscoderDataSource t2 = new TranscoderDataSource(codecManager, t1, JMFHelper.DEFAULT_FORMAT);
-        JMFHelper.OperationController controller = JMFHelper.writeToFile(t2, "target/transcode_test.wav");
-        TimeUnit.SECONDS.sleep(100);
-        controller.stop();
+        TranscoderDataSource t2 = new TranscoderDataSource(codecManager, conv, Codec.G711_MU_LAW.getAudioFormat());
+        TranscoderDataSource t3 = new TranscoderDataSource(codecManager, t2, JMFHelper.DEFAULT_FORMAT);
+        t3.connect();
+//        JMFHelper.OperationController controller = JMFHelper.writeToFile(t2, "target/transcode_test.wav");
+        TimeUnit.SECONDS.sleep(4);
+//        controller.stop();
         
         verify(executor, owner);
-        assertTrue(taskFinished);
+//        assertEquals(2, tasksFinished);
     }
     
     public static Task executeTask(final Node owner) {
@@ -83,7 +86,7 @@ public class TranscoderDataSourceTest extends Assert {
                 new Thread(new Runnable() {
                     public void run() {
                         task.run();
-                        taskFinished = true;
+                        ++tasksFinished;
                     }
                 }).start();
                 return true;
