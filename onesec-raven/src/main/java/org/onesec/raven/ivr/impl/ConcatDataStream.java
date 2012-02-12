@@ -36,8 +36,9 @@ import org.raven.tree.Node;
  *
  * @author Mikhail Titov
  */
-public class ConcatDataStream implements PushBufferStream, BufferTransferHandler, Task
+public class ConcatDataStream implements PushBufferStream, Task
 {
+    public static final int MAX_QUEUE_SIZE = 3;
     public static int MAX_SILENCE_BUFFER_COUNT = 1500;
     public static final int MAX_TIME_SKEW = 150;
 
@@ -130,7 +131,7 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
         return null;
     }
 
-    public void transferData(PushBufferStream stream) {
+    private void sendBuffer() {
         if (transferHandler!=null)
             transferHandler.transferData(this);
     }
@@ -168,36 +169,29 @@ public class ConcatDataStream implements PushBufferStream, BufferTransferHandler
                     long cycleStartTs = System.currentTimeMillis();
                     action = "getting new buffer from queue";
                     si = sourceInfo.get();
-//                    if (si!=null && si.isRealTime()) {
-//                        bufferToSend = null;
-//                        Buffer buf;
-//                        while ( (buf=bufferQueue.poll())!=null ) {
-//                            bufferToSend = buf;
-//                            droppedPacketCount++;
-//                        }
-//                        if (buf!=null) droppedPacketCount--;
-//                    } else
-                        bufferToSend = bufferQueue.poll();
-//                    if (bufferToSend!=null && bufferToSend.getTimeStamp()+MAX_TIME_SKEW<cycleStartTs) {
-//                        droppedPacketCount++;
-//                        continue;
-//                    }
+                    bufferToSend = bufferQueue.poll();
+                    if (bufferToSend!=null && si!=null && si.isRealTime()) {
+                        if (   bufferToSend.getTimeStamp()+MAX_TIME_SKEW<cycleStartTs
+                            || bufferQueue.size()>MAX_QUEUE_SIZE) 
+                        {
+                            droppedPacketCount++;
+                            continue;
+                        }
+                    }
                     action = "sending transfer event";
                     if (bufferToSend!=null || si==null) {
-                        transferData(null);
+                        sendBuffer();
                         long tt = System.currentTimeMillis()-cycleStartTs;
                         transferTimeSum+=tt;
                         if (tt>maxTransferTime)
                             maxTransferTime=tt;
                     }
-                    if (bufferToSend==null && si!=null) {
-                        emptyQueueEvents.incrementAndGet();
-                        TimeUnit.MILLISECONDS.sleep(5);
-                        continue;
-                    }
+//                    if (bufferToSend==null && si!=null) {
+//                        emptyQueueEvents.incrementAndGet();
+//                        TimeUnit.MILLISECONDS.sleep(5);
+//                        continue;
+//                    }
                     ++packetNumber;
-//                    if (si!=null)
-//                        ++si.expectedSourceBufferNumber;
                     action = "sleeping";
                     long curTime = System.currentTimeMillis();
                     long timeDiff = curTime - startTime;

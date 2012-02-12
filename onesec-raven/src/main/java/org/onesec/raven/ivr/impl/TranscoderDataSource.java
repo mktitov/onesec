@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.media.Format;
 import javax.media.Time;
+import javax.media.format.AudioFormat;
 import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.PushBufferDataSource;
 import javax.media.protocol.PushBufferStream;
@@ -27,7 +28,6 @@ import org.onesec.raven.ivr.CodecManager;
 import org.onesec.raven.ivr.CodecManagerException;
 import org.raven.log.LogLevel;
 import org.raven.tree.Node;
-import org.slf4j.Logger;
 
 /**
  *
@@ -36,7 +36,7 @@ import org.slf4j.Logger;
 public class TranscoderDataSource extends PushBufferDataSource {
     
     private final PushBufferDataSource source;
-    private final Format outputFormat;
+    private final AudioFormat outputFormat;
     private final TranscoderDataStream[] streams;
     private final AtomicBoolean connected = new AtomicBoolean();
     private final CodecManager codecManager;
@@ -45,7 +45,7 @@ public class TranscoderDataSource extends PushBufferDataSource {
     private final String logPrefix;
 
     public TranscoderDataSource(CodecManager codecManager, PushBufferDataSource source
-            , Format outputFormat, Node owner, String logPrefix) 
+            , AudioFormat outputFormat, Node owner, String logPrefix) 
             throws CodecManagerException 
     {
         this.owner = owner;
@@ -78,7 +78,8 @@ public class TranscoderDataSource extends PushBufferDataSource {
                     owner.getLogger().debug(logMess("  Output format: "+outputFormat));
                     owner.getLogger().debug(logMess("Building codec chain"));
                 }
-                CodecConfig[] codecChain = codecManager.buildCodecChain(sourceStream.getFormat(), outputFormat);
+                CodecConfig[] codecChain = codecManager.buildCodecChain(
+                        (AudioFormat)sourceStream.getFormat(), outputFormat);
                 if (owner.isLogLevelEnabled(LogLevel.DEBUG)) {
                     for (CodecConfig codec: codecChain) {
                         owner.getLogger().debug(logMess("  Codec: "+codec.getCodec()));

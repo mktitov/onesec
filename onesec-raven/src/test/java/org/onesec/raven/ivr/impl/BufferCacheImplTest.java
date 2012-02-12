@@ -18,7 +18,6 @@
 package org.onesec.raven.ivr.impl;
 
 import java.util.Arrays;
-import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import javax.media.Buffer;
 import org.junit.Assert;
@@ -63,9 +62,9 @@ public class BufferCacheImplTest extends Assert
         Logger log = LoggerFactory.getLogger("Rtp Manager");
         RTPManagerServiceImpl manager = new RTPManagerServiceImpl(log, new CodecManagerImpl(log));
         BufferCacheImpl cache = new BufferCacheImpl(manager, logger, codecManager);
-        Buffer silentBuffer = cache.getSilentBuffer(executor, node, Codec.G711_A_LAW, 160);
+        Buffer silentBuffer = cache.getSilentBuffer(executor, node, Codec.G711_MU_LAW, 160);
         assertNotNull(silentBuffer);
-        Buffer silentBuffer2 = cache.getSilentBuffer(executor, node, Codec.G711_A_LAW, 160);
+        Buffer silentBuffer2 = cache.getSilentBuffer(executor, node, Codec.G711_MU_LAW, 160);
         assertSame(silentBuffer2, silentBuffer);
         
         verify(executor, node);

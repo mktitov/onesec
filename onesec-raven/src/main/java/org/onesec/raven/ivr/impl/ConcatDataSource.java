@@ -18,6 +18,7 @@
 package org.onesec.raven.ivr.impl;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -29,9 +30,9 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import javax.media.Buffer;
 import javax.media.Format;
-import javax.media.Processor;
 import javax.media.Time;
 import javax.media.control.PacketSizeControl;
+import javax.media.format.AudioFormat;
 import javax.media.protocol.*;
 import org.onesec.raven.ivr.*;
 import org.raven.log.LogLevel;
@@ -60,7 +61,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
     private final AtomicBoolean started = new AtomicBoolean(false);
     private final Node owner;
     private final AtomicBoolean streamThreadRunning = new AtomicBoolean(false);
-    private final Format format;
+    private final AudioFormat format;
     private final int rtpPacketSize;
     private final long packetSizeInMillis;
     private final BufferCache bufferCache;
@@ -284,8 +285,11 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
         public void start(){
             if (lock.tryLock()) try {
                 if (!stopProcessing.get()) try {
-                    if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                    if (owner.isLogLevelEnabled(LogLevel.DEBUG)) {
                         owner.getLogger().debug(logMess("Processing new source..."));
+                        if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                            owner.getLogger().debug(logMess("Detected real time source"));
+                    }
                     startTs = System.currentTimeMillis();
                     if (!applyBuffersFromCache())
                         readBuffersFromSource();
@@ -308,15 +312,15 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
             if (cachedBuffers==null)
                 return false;
             long currentTs = System.currentTimeMillis();
-            for (int i=0; i<cachedBuffers.length; ++i) {
-                Buffer clone = (Buffer)cachedBuffers[i].clone();
-                if (i==0)
-                    clone.setTimeStamp(currentTs);
-                else
-                    clone.setTimeStamp(currentTs+i*getPacketSizeInMillis());
-                buffers.add(clone);
-            }
-//            buffers.addAll(Arrays.asList(cachedBuffers));
+//            for (int i=0; i<cachedBuffers.length; ++i) {
+//                Buffer clone = (Buffer)cachedBuffers[i].clone();
+//                if (i==0)
+//                    clone.setTimeStamp(currentTs);
+//                else
+//                    clone.setTimeStamp(currentTs+i*getPacketSizeInMillis());
+//                buffers.add(clone);
+//            }
+            buffers.addAll(Arrays.asList(cachedBuffers));
             stopProcessing.set(true);
             if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                 owner.getLogger().debug(logMess(
@@ -398,13 +402,10 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
                     close();
                     theEnd = true;
                 }
-                if (firstBufferTs==0) {
-                    firstBufferTs = System.currentTimeMillis();
-                    buffer.setTimeStamp(firstBufferTs);
+                if (firstBufferTs==0) 
                     concatStream.sourceInitialized(this);
-                } //else
-//                    buffer.setTimeStamp(firstBufferTs+bufferCount*getPacketSizeInMillis());
-                buffer.setSequenceNumber(bufferCount);
+                if (isRealTime())
+                    buffer.setTimeStamp(System.currentTimeMillis());
                 buffers.add(buffer);
                 if (sourceKey!=null){
                     if (cache==null)
@@ -431,6 +432,5 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
                 close();
             }
         }
-
     }
 }

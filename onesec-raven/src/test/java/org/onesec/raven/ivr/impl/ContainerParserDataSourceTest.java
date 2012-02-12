@@ -42,7 +42,7 @@ public class ContainerParserDataSourceTest {
     
     @Test
     public void test() throws Exception {
-        InputStreamSource source = new TestInputStreamSource("src/test/wav/test.wav");
+        InputStreamSource source = new TestInputStreamSource("src/test/wav/test11.wav");
         IssDataSource dataSource = new IssDataSource(source, FileTypeDescriptor.WAVE);
         ContainerParserDataSource parser = new ContainerParserDataSource(codecManager, dataSource);
         parser.connect();

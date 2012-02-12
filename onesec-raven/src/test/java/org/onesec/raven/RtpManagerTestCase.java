@@ -91,7 +91,7 @@ public class RtpManagerTestCase extends OnesecRavenTestCase
                 try {
                     InputStreamSource source1 = new TestInputStreamSource("src/test/wav/test.wav");
                     sendStream.start();
-                    Thread.sleep(5000);
+                    Thread.sleep(500);
                     audioSource.addSource(source1);
                     Thread.sleep(100);
                     while (audioSource.isPlaying()) 
