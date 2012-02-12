@@ -17,14 +17,14 @@ package org.onesec.raven.ivr;
 
 import javax.media.Demultiplexer;
 import javax.media.Format;
-import javax.media.protocol.ContentDescriptor;
+import javax.media.format.AudioFormat;
 
 /**
  *
  * @author Mikhail Titov
  */
 public interface CodecManager {
-    public CodecConfig[] buildCodecChain(Format inFormat, Format outFormat) throws CodecManagerException;
+    public CodecConfig[] buildCodecChain(AudioFormat inFormat, AudioFormat outFormat) throws CodecManagerException;
     public Demultiplexer buildDemultiplexer(String contentType);
     public Format getAlawRtpFormat();
     public Format getG729RtpFormat();

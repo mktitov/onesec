@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.impl;
 
+import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import org.junit.Before;
@@ -129,6 +130,21 @@ public class RtpStreamManagerNodeTest extends OnesecRavenTestCase
 //        assertEquals(new Integer(2), manager.getStreamsCount());
 //
 //        manager.releaseStream(addr2);
+    }
+    
+    @Test()
+    public void busyPortTest() throws Exception
+    {
+        assertTrue(manager.start());
+        InetAddress addr = InetAddress.getByName("localhost");
+        DatagramSocket socket = new DatagramSocket(3000, addr);
+        RtpStream stream1 = createStream(addr, 3002);
+        DatagramSocket socket2 = new DatagramSocket(3005, addr);
+        RtpStream stream2 = createStream(addr, 3006);
+        stream1.release();
+        stream2.release();
+        socket.close();
+        socket2.close();
     }
 
     private RtpStream createStream(InetAddress address, Integer port)

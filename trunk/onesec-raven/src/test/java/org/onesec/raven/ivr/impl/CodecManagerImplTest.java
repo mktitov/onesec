@@ -16,9 +16,11 @@
 package org.onesec.raven.ivr.impl;
 
 import com.ibm.media.codec.audio.PCMToPCM;
+import com.ibm.media.codec.audio.rc.RCModule;
 import com.sun.media.parser.audio.WavParser;
 import javax.media.Demultiplexer;
 import javax.media.Format;
+import javax.media.format.AudioFormat;
 import javax.media.protocol.FileTypeDescriptor;
 import org.onesec.raven.ivr.CodecConfig;
 import org.junit.*;
@@ -44,19 +46,19 @@ public class CodecManagerImplTest extends Assert {
 //    @Test
     public void formatsTest() throws Exception {
         PCMToPCM codec = new PCMToPCM();
-        for (Format format: codec.getSupportedInputFormats()) {
-            logger.debug("  >> SUPPORTED FORMAT: "+format);
-            for (Format oFormat: codec.getSupportedOutputFormats(format))
+//        for (Format format: codec.getSupportedInputFormats()) {
+//            logger.debug("  >> SUPPORTED FORMAT: "+format);
+            for (Format oFormat: codec.getSupportedOutputFormats(LINEAR.getAudioFormat()))
                 logger.debug("     OUTPUT FORMAT: "+oFormat);
-        }
+//        }
     }
-
+    
     @Test
     public void buildCodecChainTest() throws Exception {
         long startTs = System.currentTimeMillis();
         CodecConfig[] codecs = manager.buildCodecChain(G711_MU_LAW.getAudioFormat(), G729.getAudioFormat());
-        for (int i=1; i<10000; ++i)
-            codecs = manager.buildCodecChain(G711_MU_LAW.getAudioFormat(), G729.getAudioFormat());
+//        for (int i=1; i<10000; ++i)
+//            codecs = manager.buildCodecChain(G711_MU_LAW.getAudioFormat(), G729.getAudioFormat());
         logger.debug("Processing time: {}", System.currentTimeMillis()-startTs);
         assertNotNull(codecs);
         for (CodecConfig codec: codecs) {
@@ -67,6 +69,25 @@ public class CodecManagerImplTest extends Assert {
 //        assertEquals(2, codecs.length);
     }
     
+//    @Test
+    public void buildCodecChainTest2() throws Exception {
+        AudioFormat f1 = new AudioFormat(
+                AudioFormat.LINEAR, 16000, 16, 1, AudioFormat.LITTLE_ENDIAN, AudioFormat.SIGNED);
+        AudioFormat f2 = new AudioFormat(
+                AudioFormat.LINEAR, 8000, 16, 1, AudioFormat.LITTLE_ENDIAN, AudioFormat.SIGNED);
+        CodecConfig[] codecs = manager.buildCodecChain(f1, f2);
+        assertNotNull(codecs);
+        assertEquals(1, codecs.length);
+        assertEquals(RCModule.class, codecs[0].getCodec().getClass());
+        assertEquals(f1, codecs[0].getInputFormat());
+        assertEquals(f2, codecs[0].getOutputFormat());
+        for (CodecConfig codec: codecs) {
+            logger.debug("CODEC: {}", codec.getCodec());
+            logger.debug("   INPUT  FORMAT: {}", codec.getInputFormat());
+            logger.debug("   OUTPUT FORMAT: {}", codec.getOutputFormat());
+        }
+//        assertEquals(2, codecs.length);
+    }
 //    @Test
 //    public void buildCodecChainTest2() throws Exception {
 //        long startTs = System.currentTimeMillis();

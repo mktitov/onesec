@@ -111,13 +111,8 @@ public class CodecManagerImpl implements CodecManager {
                 Format[] inFormats = codec.getSupportedInputFormats();
                 if (inFormats==null || inFormats.length==0 || !(inFormats[0] instanceof AudioFormat))
                     continue;
-                for (Format inFormat: inFormats) {
-                    Format[] outFormats = codec.getSupportedOutputFormats(inFormat);
-                    if (outFormats!=null && outFormats.length>0)
-                        for (Format outFormat: outFormats)
-                            _formats.add(new FormatInfo(outFormat, inFormat, codec.getClass()));
-                }
-                    
+                for (Format inFormat: inFormats)
+                    _formats.add(new FormatInfo((AudioFormat)inFormat, codec));
             } catch (Exception e) {
                 if (logger.isErrorEnabled())
                     logger.error("Error creating instance of codec ({})", className);
@@ -162,13 +157,14 @@ public class CodecManagerImpl implements CodecManager {
         }
     }
     
-    public CodecConfig[] buildCodecChain(Format inFormat, Format outFormat) throws CodecManagerException {
+    public CodecConfig[] buildCodecChain(AudioFormat inFormat, AudioFormat outFormat) throws CodecManagerException {
         try {
             CodecConfig[] codecs = getChainFromCache(inFormat, outFormat);
             if (codecs!=null)
                 return codecs;
             TailHolder tailHolder = new TailHolder();
-            getChainTail(null, inFormat, outFormat, tailHolder);
+                getChainTail(null, inFormat, outFormat, tailHolder);
+            checkTail(tailHolder.tail, inFormat, outFormat);
             if (tailHolder.tail==null)
                 throw new CodecManagerException(String.format(
                         "Can't find codec chain to convert data from (%s) to (%s)"
@@ -177,18 +173,25 @@ public class CodecManagerImpl implements CodecManager {
             CodecNode tail = tailHolder.tail;
             CodecConfigMeta[] meta = new CodecConfigMeta[tail.level];
             codecs = new CodecConfig[meta.length];
-            int i=0;
+            int i=meta.length-1;
             while (tail!=null) {
                 meta[i] = new CodecConfigMeta(tail.codec, tail.inFormat, tail.outFormat);
                 codecs[i] = meta[i].createCodecConfig();
                 tail = tail.parent;
-                i++;
+                i--;
             }
             cacheChain(inFormat, outFormat, meta);
             return codecs;
         } catch (Exception ex) {
             throw new CodecManagerException("Error creating codec chain", ex);
         }
+    }
+    
+    private void checkTail(CodecNode tail, AudioFormat f1, AudioFormat f2) throws CodecManagerException {
+        if (tail==null)
+            throw new CodecManagerException(String.format(
+                    "Can't find codec chain to convert data from (%s) to (%s)"
+                    , f1, f2));
     }
     
     private CodecConfig[] getChainFromCache(Format inFormat, Format outFormat) throws Exception {
@@ -226,22 +229,33 @@ public class CodecManagerImpl implements CodecManager {
             
     }
     
-    private void getChainTail(CodecNode parent, Format inFormat, Format outFormat, TailHolder tailHolder) {
+    private void getChainTail(CodecNode parent, AudioFormat inFormat, AudioFormat outFormat, TailHolder tailHolder) {
         if (tailHolder.continueSearch(parent))
-            for (FormatInfo format: formats)
-                if (format.outFormat.matches(outFormat) && !isChainContainsCodec(parent, format)) {
-                    CodecNode node = new CodecNode(parent, format.codec, format.inFormat, outFormat);
-                    if (format.inFormat.matches(inFormat)) {
-                        tailHolder.setTail(node);
-                        break;
-                    } else 
-                        getChainTail(node, inFormat, node.inFormat, tailHolder);
-                }        
+            for (FormatInfo format: formats) 
+                if (format.inFormat.matches(inFormat) && !isChainContainsCodec(parent, format)) {
+                    Format[] outFormats = format.codec.getSupportedOutputFormats(inFormat);
+                    if (outFormats!=null && outFormats.length>0)
+                        for (Format outf: outFormats) {
+                            CodecNode node = new CodecNode(parent, format.codec.getClass(), inFormat, outf);
+                            if (outf.matches(outFormat)) {
+                                tailHolder.setTail(node);
+                                return;
+                            } else
+                                getChainTail(node, (AudioFormat)outf, outFormat, tailHolder);
+                        }
+                }
+    }
+    
+    private boolean isFormatEquals(AudioFormat f1, AudioFormat f2) {
+        return f1.getEncoding().equals(f2.getEncoding()) && f1.getSampleRate()==f2.getSampleRate() 
+                && f1.getChannels()==f2.getChannels() 
+                && f1.getEndian()==f2.getEndian() && f1.getSampleSizeInBits()==f2.getSampleSizeInBits()
+                && f1.getSigned()==f2.getSigned();
     }
     
     private boolean isChainContainsCodec(CodecNode tail, FormatInfo fmt) {
         while (tail!=null) 
-            if (tail.codec.equals(fmt.codec) || tail.inFormat.matches(fmt.inFormat) || tail.outFormat.matches(fmt.outFormat))
+            if (tail.codec.equals(fmt.codec.getClass()) || tail.inFormat.matches(fmt.inFormat))
                 return true;
             else
                 tail = tail.parent;
@@ -249,9 +263,9 @@ public class CodecManagerImpl implements CodecManager {
     }
     
     private final class CodecNode {
-        private final CodecNode parent;
+        private CodecNode parent;
         private final Class codec;
-        private final AudioFormat inFormat;
+        private AudioFormat inFormat;
         private final AudioFormat outFormat;
         private int level = 1;
 
@@ -261,15 +275,12 @@ public class CodecManagerImpl implements CodecManager {
             this.outFormat = (AudioFormat) outFormat;
             AudioFormat in = (AudioFormat) inFormat, out = this.outFormat;
             this.inFormat = (AudioFormat) inFormat;
-//            this.inFormat = new AudioFormat(
-//                    in.getEncoding(),
-//                    in.getSampleRate()==-1? out.getSampleRate() : in.getSampleRate(),
-//                    in.getSampleSizeInBits()==-1? out.getSampleSizeInBits() : in.getSampleSizeInBits(),
-//                    in.getChannels()==-1? out.getChannels() : in.getChannels(),
-//                    in.getEndian()==-1? out.getEndian() : in.getEndian(),
-//                    in.getSigned()==-1? out.getSigned() : in.getSigned());
             if (parent!=null)
                 level = parent.level+1;
+        }
+        
+        public CodecNode getRoot() {
+            return parent==null? this : parent.getRoot();
         }
     }
     
@@ -290,12 +301,10 @@ public class CodecManagerImpl implements CodecManager {
     }
     
     private final class FormatInfo {
-        private final Format outFormat;
-        private final Format inFormat;
-        private final Class codec;
+        private final AudioFormat inFormat;
+        private final Codec codec;
 
-        public FormatInfo(Format outFormat, Format inFormat, Class codec) {
-            this.outFormat = outFormat;
+        public FormatInfo(AudioFormat inFormat, Codec codec) {
             this.inFormat = inFormat;
             this.codec = codec;
         }

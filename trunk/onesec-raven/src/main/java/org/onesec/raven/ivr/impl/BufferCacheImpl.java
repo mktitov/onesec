@@ -25,20 +25,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.logging.Level;
 import javax.media.Buffer;
-import javax.media.Processor;
 import javax.media.control.PacketSizeControl;
 import javax.media.protocol.BufferTransferHandler;
 import javax.media.protocol.FileTypeDescriptor;
-import javax.media.protocol.PushBufferDataSource;
 import javax.media.protocol.PushBufferStream;
 import org.onesec.raven.ivr.*;
 import org.raven.log.LogLevel;
-import org.raven.sched.ExecutorService;
 import org.raven.sched.ExecutorService;
 import org.raven.tree.Node;
 import org.slf4j.Logger;
@@ -120,9 +115,6 @@ public class BufferCacheImpl implements BufferCache
             , int packetSize, String key) 
     {
         try {
-//            Processor processor = null;
-//            PushBufferDataSource dataSource = null;
-//            IssDataSource source = null;
             TranscoderDataSource transcoder = null;
             try {
                 ResourceInputStreamSource silenceSource=new ResourceInputStreamSource(SILENCE_RESOURCE_NAME);
@@ -133,6 +125,10 @@ public class BufferCacheImpl implements BufferCache
                 transcoder = new TranscoderDataSource(
                         codecManager, converter, codec.getAudioFormat(), requester, null);
                 transcoder.connect();
+                PacketSizeControl packetSizeControl =
+                        (PacketSizeControl) transcoder.getControl(PacketSizeControl.class.getName());
+                if (packetSizeControl!=null)
+                    packetSizeControl.setPacketSize(packetSize);
                 final AtomicReference<Buffer> buf = new AtomicReference<Buffer>();
                 final AtomicReference<Exception> error = new AtomicReference();
                 transcoder.getStreams()[0].setTransferHandler(new BufferTransferHandler() {
@@ -158,35 +154,11 @@ public class BufferCacheImpl implements BufferCache
                     throw error.get();
                 silentBuffers.put(key, buf.get());
                 return buf.get();
-//                        
-//                source = new IssDataSource(silenceSource, FileTypeDescriptor.WAVE);
-//                source.connect();
-//
-//                processor = ControllerStateWaiter.createRealizedProcessor(
-//                        source, codec.getAudioFormat(), WAIT_STATE_TIMEOUT);
-//
-//                PacketSizeControl packetSizeControl =
-//                        (PacketSizeControl) processor.getControl(PacketSizeControl.class.getName());
-//                if (packetSizeControl!=null)
-//                    packetSizeControl.setPacketSize(packetSize);
-//
-//                dataSource = (PushBufferDataSource)processor.getDataOutput();
-//                PushBufferStream stream = dataSource.getStreams()[0];
-//                dataSource.start();
-//                processor.start();
-//                Buffer silentBuffer = new Buffer();
-//                stream.read(silentBuffer);
-//                silentBuffers.put(key, silentBuffer);
-//                return silentBuffer;
             } finally {
                 if (transcoder!=null) {
                     transcoder.stop();
                     transcoder.disconnect();
                 }
-//                source.stop();
-//                if (processor!=null) processor.stop();
-//                if (dataSource!=null) dataSource.stop();
-//                if (processor!=null) processor.close();
             }
         } catch (Exception ex) {
             if (logger.isErrorEnabled())

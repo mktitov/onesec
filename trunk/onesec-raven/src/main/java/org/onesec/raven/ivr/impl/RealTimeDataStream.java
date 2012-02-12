@@ -21,7 +21,6 @@ import javax.media.Format;
 import javax.media.protocol.BufferTransferHandler;
 import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.PushBufferStream;
-import org.onesec.raven.ivr.Codec;
 import org.slf4j.Logger;
 
 /**

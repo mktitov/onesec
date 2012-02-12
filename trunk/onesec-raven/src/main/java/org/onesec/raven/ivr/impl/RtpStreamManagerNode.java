@@ -17,18 +17,13 @@
 
 package org.onesec.raven.ivr.impl;
 
+import java.io.IOException;
+import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.TreeMap;
+import java.util.*;
+import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -62,6 +57,7 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
 
     private Map<InetAddress, NavigableMap<Integer, RtpStream>> streams;
     private Map<Node, RtpAddress> reservedAddresses;
+    private Map<InetAddress, Set<Integer>> busyPorts;
     private ReentrantReadWriteLock streamsLock;
 
     private AtomicLong sendedBytes;
@@ -71,6 +67,7 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
     private AtomicLong rejectedStreamCreations;
     private AtomicLong streamCreations;
 
+    @Message private static String busyPortsMessage;
     @Message private static String statMessage;
     @Message private static String sendedBytesMessage;
     @Message private static String sendedPacketsMessage;
@@ -93,6 +90,7 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
     {
         super.initFields();
         streams = new HashMap<InetAddress, NavigableMap<Integer, RtpStream>>();
+        busyPorts =  new HashMap<InetAddress, Set<Integer>>();
         reservedAddresses = new HashMap<Node, RtpAddress>();
         streamsLock = new ReentrantReadWriteLock();
         sendedBytes = new AtomicLong();
@@ -120,6 +118,7 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
     {
         super.doStop();
         releaseStreams(streams);
+        busyPorts.clear();
     }
 
     public Boolean getAutoRefresh() {
@@ -144,6 +143,11 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
                     recievedBytesMessage, recievedPacketsMessage});
                 statTable.addRow(new Object[]{streamCreations, rejectedStreamCreations,
                     sendedBytes, sendedPackets, recievedBytes, recievedPackets});
+                
+                TableImpl busyPortsTable = new TableImpl(new String[]{localAddressMessage, localPortMessage});
+                for (Entry<InetAddress, Set<Integer>> addr: busyPorts.entrySet())
+                    for (Integer port: addr.getValue())
+                        busyPortsTable.addRow(new Object[]{addr.getKey().getHostAddress(), port});
 
                 String[] colnames = {
                     localAddressMessage, localPortMessage, remoteAddressMessage, remotePortMessage,
@@ -163,6 +167,8 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
                 vos = new ArrayList<ViewableObject>();
                 vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, statMessage));
                 vos.add(new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, statTable));
+                vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, busyPortsMessage));
+                vos.add(new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, busyPortsTable));
                 vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, outgoingStreamMessage));
                 vos.add(new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, outStreams));
                 vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, incomingStreamMessage));
@@ -307,9 +313,10 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
                 {
                     if (!streams.containsKey(addr.getKey()))
                     {
-                        portNumber = addr.getValue().getStartingPort();
-                        portStreams = new TreeMap<Integer, RtpStream>();
                         address = addr.getKey();
+                        portStreams = new TreeMap<Integer, RtpStream>();
+//                        portNumber = addr.getValue().getStartingPort();
+                        portNumber = getPortNumber(address, addr.getValue().getStartingPort(), portStreams);
                         streams.put(addr.getKey(), portStreams);
                         break;
                     }
@@ -322,12 +329,13 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
                             portStreams = streamEntry.getValue();
                             address = streamEntry.getKey();
                             int startingPort = avalAddresses.get(streamEntry.getKey()).getStartingPort();
-                            if (portStreams.size()==0)
-                                portNumber = startingPort;
-                            else if (portStreams.firstKey()>startingPort)
-                                portNumber = portStreams.firstKey()-2;
-                            else
-                                portNumber = portStreams.lastKey()+2;
+                            portNumber = getPortNumber(address, startingPort, portStreams);
+//                            if (portStreams.size()==0)
+//                                portNumber = startingPort;
+//                            else if (portStreams.firstKey()>startingPort)
+//                                portNumber = portStreams.firstKey()-2;
+//                            else
+//                                portNumber = portStreams.lastKey()+2;
                         }
 
                 if (!reserve) {
@@ -367,6 +375,43 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
                     , e);
             return null;
         }
+    }
+    
+    private int getPortNumber(InetAddress addr, int startingPort, NavigableMap<Integer, RtpStream> portStreams) {
+        int port = portStreams.isEmpty()? startingPort : portStreams.firstKey()-2;
+        while (startingPort<=port)
+            if (checkPort(addr, port)) 
+                return port;
+            else
+                port-=2;
+        port = portStreams.isEmpty()? startingPort+2 : portStreams.lastKey()+2;
+        while (!checkPort(addr, port))
+            port+=2;
+        return port;
+    }
+    
+    private boolean checkPort(InetAddress addr, int port) {
+        Set<Integer> ports = busyPorts.get(addr);
+        if (ports!=null && (ports.contains(port) || ports.contains(port+1)))
+                return false;
+        for (int p=port; p<=port+1; ++p) {
+            DatagramSocket socket = null;
+            try {
+                socket = new DatagramSocket(p);
+                socket.setReuseAddress(true);
+            } catch (IOException e) {
+                if (ports==null) {
+                    ports = new HashSet<Integer>();
+                    busyPorts.put(addr, ports);
+                }
+                ports.add(p);
+                return false;
+            } finally { 
+                if (socket != null) 
+                    socket.close(); 
+            }            
+        }
+        return true;
     }
 
     @Parameter(readOnly=true)

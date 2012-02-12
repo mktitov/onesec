@@ -313,7 +313,7 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
                         return;
                     }
                     inDataSource = !firstConsumerAdded? source : ((SourceCloneable)source).createClone();
-//                    inDataSource = new RealTimeDataSource((PushBufferDataSource)inDataSource, owner, logPrefix);
+                    inDataSource = new RealTimeDataSource((PushBufferDataSource)inDataSource, owner, logPrefix);
                     firstConsumerAdded = true;
 
 //                    processor = ControllerStateWaiter.createRealizedProcessor(inDataSource, format, 4000);
