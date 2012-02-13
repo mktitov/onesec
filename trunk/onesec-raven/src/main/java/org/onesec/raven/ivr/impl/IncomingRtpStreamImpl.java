@@ -25,15 +25,12 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import javax.media.Controller;
 import javax.media.DataSink;
-import javax.media.Manager;
 import javax.media.MediaLocator;
 import javax.media.Processor;
 import javax.media.format.AudioFormat;
 import javax.media.protocol.DataSource;
 import javax.media.protocol.PushBufferDataSource;
-import javax.media.protocol.SourceCloneable;
 import javax.media.rtp.GlobalReceptionStats;
-import javax.media.rtp.RTPControl;
 import javax.media.rtp.RTPManager;
 import javax.media.rtp.ReceiveStream;
 import javax.media.rtp.ReceiveStreamListener;
@@ -66,7 +63,8 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
     private RTPManager rtpManager;
     private SessionAddress destAddress;
     private ReceiveStream stream;
-    private DataSource source; //SourceClonable
+//    private DataSource source; //SourceClonable
+    private DataSourceCloneBuilder sourceCloneBuilder; //SourceClonable
     private boolean firstConsumerAdded;
     private List<Consumer> consumers;
     private Lock lock;
@@ -97,9 +95,14 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
     {
         try{
             try{
-                if (!consumers.isEmpty())
-                    for (Consumer consumer: consumers)
-                        consumer.fireStreamClosingEvent();
+                try {
+                    if (sourceCloneBuilder!=null)
+                        sourceCloneBuilder.close();
+                } finally {
+                    if (!consumers.isEmpty())
+                        for (Consumer consumer: consumers)
+                            consumer.fireStreamClosingEvent();
+                }
             }finally{
                 if (rtpManager!=null) {
                     GlobalReceptionStats stats = rtpManager.getGlobalReceptionStats();
@@ -172,44 +175,54 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
 
     public void update(final ReceiveStreamEvent event)
     {
-        if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-            owner.getLogger().debug(logMess("Received stream event (%s)", event.getClass().getName()));
-
-        if (event instanceof NewReceiveStreamEvent)
-        {
-            stream = event.getReceiveStream();
+        try {
             if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                owner.getLogger().debug(logMess("Received new stream"));
+                owner.getLogger().debug(logMess("Received stream event (%s)", event.getClass().getName()));
 
-            source = Manager.createCloneableDataSource(stream.getDataSource());
-
-            RTPControl ctl = (RTPControl)source.getControl("javax.media.rtp.RTPControl");
-            if (ctl!=null)
+            if (event instanceof NewReceiveStreamEvent)
+            {
+                stream = event.getReceiveStream();
                 if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                    owner.getLogger().debug(logMess("The format of the stream: %s", ctl.getFormat()));
+                    owner.getLogger().debug(logMess("Received new stream"));
 
-            lock.lock();
-            try{
-                owner.getLogger().debug(logMess("Sending dataSourceCreatedEvent to consumers"));
-                status = Status.OPENED;
-                if (!consumers.isEmpty())
-                    for (Consumer consumer: consumers)
-                        consumer.fireDataSourceCreatedEvent();
+                sourceCloneBuilder = new DataSourceCloneBuilder(
+                        (PushBufferDataSource)stream.getDataSource(), owner, logMess(""));
+                sourceCloneBuilder.open();
 
-            }finally{
-                lock.unlock();
+    //            source = Manager.createCloneableDataSource(stream.getDataSource());
+
+    //            RTPControl ctl = (RTPControl)source.getControl("javax.media.rtp.RTPControl");
+    //            if (ctl!=null)
+    //                if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+    //                    owner.getLogger().debug(logMess("The format of the stream: %s", ctl.getFormat()));
+
+                lock.lock();
+                try{
+                    owner.getLogger().debug(logMess("Sending dataSourceCreatedEvent to consumers"));
+                    status = Status.OPENED;
+                    if (!consumers.isEmpty())
+                        for (Consumer consumer: consumers)
+                            consumer.fireDataSourceCreatedEvent();
+
+                }finally{
+                    lock.unlock();
+                }
             }
-        }
-        else if (event instanceof ByeEvent)
-        {
-            lock.lock();
-            try {
-                status = Status.CLOSED;
-            } finally {
-                lock.unlock();
+            else if (event instanceof ByeEvent)
+            {
+                lock.lock();
+                try {
+                    status = Status.CLOSED;
+                } finally {
+                    lock.unlock();
+                }
+    //            Thread.sleep(500);
+    //            release();
             }
-//            Thread.sleep(500);
-//            release();
+        } catch (Exception e) {
+            if (owner.isLogLevelEnabled(LogLevel.ERROR))
+                owner.getLogger().error(logMess("Error initializing rtp data source"), e);
+            status = Status.CLOSED;
         }
     }
 
@@ -312,9 +325,12 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
                                     + "of consumer already closed"));
                         return;
                     }
-                    inDataSource = !firstConsumerAdded? source : ((SourceCloneable)source).createClone();
+//                    inDataSource = !firstConsumerAdded? source : ((SourceCloneable)source).createClone();
+                    inDataSource = sourceCloneBuilder.createClone();
                     inDataSource = new RealTimeDataSource((PushBufferDataSource)inDataSource, owner, logPrefix);
-                    firstConsumerAdded = true;
+                    
+//                    inDataSource = ((SourceCloneable)source).createClone();
+//                    firstConsumerAdded = true;
 
 //                    processor = ControllerStateWaiter.createRealizedProcessor(inDataSource, format, 4000);
 //                    outDataSource = processor.getDataOutput();
@@ -350,7 +366,7 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
                 try {
                     try {
                         if (inDataSource!=null)
-                            inDataSource.stop();
+                            inDataSource.disconnect();
                     } finally {
                         if (processor!=null)
                             processor.stop();

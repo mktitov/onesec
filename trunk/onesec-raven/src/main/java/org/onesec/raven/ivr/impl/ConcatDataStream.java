@@ -38,9 +38,9 @@ import org.raven.tree.Node;
  */
 public class ConcatDataStream implements PushBufferStream, Task
 {
-    public static final int MAX_QUEUE_SIZE = 3;
+    public static final int MAX_QUEUE_SIZE = 10;
     public static int MAX_SILENCE_BUFFER_COUNT = 1500;
-    public static final int MAX_TIME_SKEW = 150;
+    public static final int MAX_TIME_SKEW = 300;
 
     private final Buffer silentBuffer;
     private final Queue<Buffer> bufferQueue;

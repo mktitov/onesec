@@ -39,6 +39,7 @@ public class RealTimeDataStream implements PushBufferStream, BufferTransferHandl
     private long counter = 0;
     private long startTs = 0;
     private volatile long discardedBuffersCount = 0;
+//    private volatile boolean disconnected = false;
 
     public RealTimeDataStream(RealTimeDataSource source, PushBufferStream stream) {
         this.stream = stream;
@@ -53,6 +54,11 @@ public class RealTimeDataStream implements PushBufferStream, BufferTransferHandl
 
     public Format getFormat() {
         return stream.getFormat();
+    }
+    
+    public void disconnect() {
+        System.out.println("!! disconnecting !!");
+        transferHandler = null;
     }
 
     public void read(Buffer buffer) throws IOException {
