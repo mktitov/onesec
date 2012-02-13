@@ -366,8 +366,10 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
             try {
                 if (lock.tryLock(2000, TimeUnit.MILLISECONDS)) try {
                     try {
-                        if (transcoder!=null)
+                        if (transcoder!=null) {
                             transcoder.stop();
+                            transcoder.disconnect();
+                        }
                     } finally {
 //                        try {
 //                            if (processor != null) processor.stop();

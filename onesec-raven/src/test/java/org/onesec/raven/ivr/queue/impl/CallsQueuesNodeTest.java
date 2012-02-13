@@ -332,8 +332,8 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         IvrConversationScenarioNode abonentScenario = createAbonentScenario();
 //        createEndpoint(tree.getRootNode(), executor, manager, abonentScenario, "88013");
         createMultichannelEndpoint(executor, manager, abonentScenario);
-//        createEndpoint(pool, executor, manager, null, "88013");
-        createEndpoint(pool, executor, manager, null, "88014");
+        createEndpoint(pool, executor, manager, null, "88013");
+//        createEndpoint(pool, executor, manager, null, "88014");
         
         assertTrue(pool.start());
         
@@ -378,8 +378,8 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         operator.setName("Titov MK");
         queues.getOperatorsNode().addAndSaveChildren(operator);
 //        operator.setPhoneNumbers("88027");
-        operator.setPhoneNumbers("089128672947");
-//        operator.setPhoneNumbers("88027,089128672947");
+//        operator.setPhoneNumbers("089128672947");
+        operator.setPhoneNumbers("88027,089128672947");
         operator.setParallelCallAfter(5);
         operator.setEndpointPool(pool);
         operator.setConversationsBridgeManager(bridge);

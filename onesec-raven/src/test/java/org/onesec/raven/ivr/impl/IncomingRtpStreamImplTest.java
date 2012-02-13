@@ -55,7 +55,7 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         state.join();
     }
 
-//    @Test
+    @Test
     public void dataSourceListenerEventsTest() throws Exception
     {
         IncomingRtpStream irtp = manager.getIncomingRtpStream(manager);

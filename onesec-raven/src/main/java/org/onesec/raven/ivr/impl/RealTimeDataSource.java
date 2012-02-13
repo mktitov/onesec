@@ -16,6 +16,7 @@
 package org.onesec.raven.ivr.impl;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.media.Time;
 import javax.media.protocol.PushBufferDataSource;
 import javax.media.protocol.PushBufferStream;
@@ -72,8 +73,6 @@ public class RealTimeDataSource extends PushBufferDataSource {
 
     @Override
     public void stop() throws IOException {
-        if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-            owner.getLogger().debug(logMess("Discared buffers count: %s", getDiscardedBuffersCount()));
         source.stop();
     }
 
