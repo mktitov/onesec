@@ -80,7 +80,7 @@ public enum Codec
     
     public long getMillisecondsForPacketSize(long packetSizeInBytes) {
         switch (payload) {
-//            case 11 : return (long)(.95*packetSizeInBytes/8);
+//            case 11 : return packetSizeInBytes;
             default : return packetSizeInBytes / 8;    
         }        
     }
