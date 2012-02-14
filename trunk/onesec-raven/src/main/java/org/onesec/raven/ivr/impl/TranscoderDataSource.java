@@ -17,7 +17,6 @@ package org.onesec.raven.ivr.impl;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
-import javax.media.Format;
 import javax.media.Time;
 import javax.media.format.AudioFormat;
 import javax.media.protocol.ContentDescriptor;

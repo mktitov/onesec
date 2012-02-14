@@ -70,6 +70,8 @@ public class ConcatDataStream implements PushBufferStream, Task
         this.contentDescriptor = new ContentDescriptor(dataSource.getContentType());
         this.owner = owner;
         this.packetLength = (int) codec.getMillisecondsForPacketSize(packetSize);
+        System.out.println("!! ms = "+packetLength);
+//        this.packetLength = (int) dataSource.getPacketSizeInMillis();
         this.maxSendAheadPacketsCount = maxSendAheadPacketsCount;
         this.silentBuffer = silentBuffer;
     }
@@ -170,6 +172,12 @@ public class ConcatDataStream implements PushBufferStream, Task
                     action = "getting new buffer from queue";
                     si = sourceInfo.get();
                     bufferToSend = bufferQueue.poll();
+                    if (bufferToSend!=null) {
+                        System.out.println("!! seq# " + bufferToSend.getSequenceNumber()
+                                +"; ts="+bufferToSend.getTimeStamp()+"; format = "+bufferToSend.getFormat());
+                        bufferToSend.setSequenceNumber(-1);
+                        bufferToSend.setTimeStamp(-1);
+                    }
                     if (bufferToSend!=null && si!=null && si.isRealTime()) {
                         if (   bufferToSend.getTimeStamp()+MAX_TIME_SKEW<cycleStartTs
                             || bufferQueue.size()>MAX_QUEUE_SIZE) 
@@ -214,6 +222,7 @@ public class ConcatDataStream implements PushBufferStream, Task
                     sleepTime = (packetNumber-expectedPacketNumber)*packetLength - correction;
                     if (sleepTime>0)
                         TimeUnit.MILLISECONDS.sleep(sleepTime);
+                    System.out.println("!! diff = "+(System.currentTimeMillis()-cycleStartTs));
                 } catch (InterruptedException ex) {
                     if (owner.isLogLevelEnabled(LogLevel.ERROR))
                         owner.getLogger().error(logMess(

@@ -20,7 +20,6 @@ package org.onesec.raven.ivr.impl;
 import com.sun.media.codec.audio.mp3.JavaDecoder;
 import java.util.Collection;
 import java.util.Vector;
-import javax.media.Codec;
 import javax.media.Demultiplexer;
 import javax.media.Format;
 import javax.media.PlugInManager;

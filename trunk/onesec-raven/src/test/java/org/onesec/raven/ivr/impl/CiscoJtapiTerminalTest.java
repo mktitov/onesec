@@ -169,7 +169,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
 
         endpoint = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, term);
         startEndpoint(endpoint);
-        endpoint.invite("089128672947", 0, 0, listener, scenario, null);
+        endpoint.invite("88024", 0, 0, listener, scenario, null);
 //        endpoint.invite("88027", 0, 0, listener, scenario, null);
         waitForConversationStop();
         stopEndpoint(endpoint);

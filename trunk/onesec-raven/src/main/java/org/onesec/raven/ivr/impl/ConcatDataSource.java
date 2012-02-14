@@ -238,7 +238,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
         return (logPrefix==null? "" : logPrefix)+"AudioStream. "+String.format(mess, args);
     }
     
-    private long getPacketSizeInMillis() {
+    long getPacketSizeInMillis() {
         return packetSizeInMillis;
     }
 
@@ -396,6 +396,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
                     return;
                 Buffer buffer = new Buffer();
                 stream.read(buffer);
+                System.out.println("!! Buffer data: "+(buffer.getData()==null?"null":((byte[])buffer.getData()).length));
                 if (buffer.isDiscard())
                     return;
                 boolean theEnd = false;
