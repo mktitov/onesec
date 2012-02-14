@@ -21,6 +21,7 @@ import com.cisco.jtapi.extensions.CiscoMediaCapability;
 import javax.media.Format;
 import javax.media.format.AudioFormat;
 import org.onesec.raven.codec.AlawAudioFormat;
+import org.onesec.raven.codec.g729.G729AudioFormat;
 
 /**
  *
@@ -40,7 +41,7 @@ public enum Codec
         switch (payload){
             case 11 :
                 ciscoMediaCapabilities = new CiscoMediaCapability[]{new CiscoMediaCapability(11, 60)};
-                audioFormat = new AudioFormat(AudioFormat.G729_RTP, 8000d, 8, 1);
+                audioFormat = new G729AudioFormat(new AudioFormat(AudioFormat.G729_RTP, 8000d, 8, 1));
                 break;
             case 8 :
                 ciscoMediaCapabilities = new CiscoMediaCapability[]{new CiscoMediaCapability(2, 60)};

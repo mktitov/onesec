@@ -69,7 +69,7 @@ public class TranscoderDataSourceTest extends Assert {
         IssDataSource dataSource = new IssDataSource(source, FileTypeDescriptor.WAVE);
         ContainerParserDataSource parser = new ContainerParserDataSource(codecManager, dataSource);
         PullToPushConverterDataSource conv = new PullToPushConverterDataSource(parser, executor, owner);
-        AudioFormat audioFormat = new AudioFormat(AudioFormat.ULAW, 8000, 8, 1, Format.NOT_SPECIFIED
+        AudioFormat audioFormat = new AudioFormat(AudioFormat.G723_RTP, 8000, 8, 1, Format.NOT_SPECIFIED
                 , Format.NOT_SPECIFIED);
         TranscoderDataSource t1 = new TranscoderDataSource(
                 codecManager, conv, Codec.G729.getAudioFormat(), owner, "T1. ");

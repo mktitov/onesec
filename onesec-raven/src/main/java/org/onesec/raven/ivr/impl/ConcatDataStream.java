@@ -70,18 +70,17 @@ public class ConcatDataStream implements PushBufferStream, Task
         this.contentDescriptor = new ContentDescriptor(dataSource.getContentType());
         this.owner = owner;
         this.packetLength = (int) codec.getMillisecondsForPacketSize(packetSize);
-        System.out.println("!! ms = "+packetLength);
 //        this.packetLength = (int) dataSource.getPacketSizeInMillis();
         this.maxSendAheadPacketsCount = maxSendAheadPacketsCount;
         this.silentBuffer = silentBuffer;
     }
     
-    public void sourceInitialized(ConcatDataSource.SourceProcessor source) {
+    void sourceInitialized(ConcatDataSource.SourceProcessor source) {
         sourceInfo.set(source);
         emptyQueueEvents.set(0);
     }
     
-    public void sourceClosed(ConcatDataSource.SourceProcessor source) {
+    void sourceClosed(ConcatDataSource.SourceProcessor source) {
         sourceInfo.compareAndSet(source, null);
     }
 
@@ -148,7 +147,6 @@ public class ConcatDataStream implements PushBufferStream, Task
                 , action, packetNumber, sleepTime));
     }
 
-    //TODO: log bufferQueue.length() every 10 secs
     public void run() {
         dataSource.setStreamThreadRunning(true);
         try
@@ -172,12 +170,6 @@ public class ConcatDataStream implements PushBufferStream, Task
                     action = "getting new buffer from queue";
                     si = sourceInfo.get();
                     bufferToSend = bufferQueue.poll();
-                    if (bufferToSend!=null) {
-                        System.out.println("!! seq# " + bufferToSend.getSequenceNumber()
-                                +"; ts="+bufferToSend.getTimeStamp()+"; format = "+bufferToSend.getFormat());
-                        bufferToSend.setSequenceNumber(-1);
-                        bufferToSend.setTimeStamp(-1);
-                    }
                     if (bufferToSend!=null && si!=null && si.isRealTime()) {
                         if (   bufferToSend.getTimeStamp()+MAX_TIME_SKEW<cycleStartTs
                             || bufferQueue.size()>MAX_QUEUE_SIZE) 
@@ -194,11 +186,6 @@ public class ConcatDataStream implements PushBufferStream, Task
                         if (tt>maxTransferTime)
                             maxTransferTime=tt;
                     }
-//                    if (bufferToSend==null && si!=null) {
-//                        emptyQueueEvents.incrementAndGet();
-//                        TimeUnit.MILLISECONDS.sleep(5);
-//                        continue;
-//                    }
                     ++packetNumber;
                     action = "sleeping";
                     long curTime = System.currentTimeMillis();
@@ -217,12 +204,9 @@ public class ConcatDataStream implements PushBufferStream, Task
                                 , bufferQueue.size()
                                 , droppedPacketCount));
                     }
-//                    sleepTime = (packetNumber-expectedPacketNumber-
-//                            (bufferToSend==null? 0 : maxSendAheadPacketsCount))*packetLength;
                     sleepTime = (packetNumber-expectedPacketNumber)*packetLength - correction;
                     if (sleepTime>0)
                         TimeUnit.MILLISECONDS.sleep(sleepTime);
-                    System.out.println("!! diff = "+(System.currentTimeMillis()-cycleStartTs));
                 } catch (InterruptedException ex) {
                     if (owner.isLogLevelEnabled(LogLevel.ERROR))
                         owner.getLogger().error(logMess(
