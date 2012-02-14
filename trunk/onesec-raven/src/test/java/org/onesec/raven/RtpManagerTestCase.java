@@ -75,13 +75,13 @@ public class RtpManagerTestCase extends OnesecRavenTestCase
         initNodes();
     }
 
-    protected OperationState sendOverRtp(String filename, Codec codec, final String host, final int port)
+        protected OperationState sendOverRtp(String filename, Codec codec, final String host, final int port)
             throws Exception
     {
         logger.debug("Sending RTP stream to the ({}:{}) ", host, port);
 
         final ConcatDataSource audioSource =
-                new ConcatDataSource(FileTypeDescriptor.WAVE, executor, codecManager, codec, 160, 5
+                new ConcatDataSource(FileTypeDescriptor.WAVE, executor, codecManager, codec, 240, 5
                 , 5, manager, registry.getService(BufferCache.class));
         final OutgoingRtpStream sendStream = manager.getOutgoingRtpStream(manager);
         sendStream.open(host, port, audioSource);

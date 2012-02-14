@@ -55,7 +55,7 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         state.join();
     }
 
-    @Test
+//    @Test
     public void dataSourceListenerEventsTest() throws Exception
     {
         IncomingRtpStream irtp = manager.getIncomingRtpStream(manager);
@@ -102,7 +102,7 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         DataSourceListener fileWriter = new DataSourceListener("target/recorded.wav");
         irtp.addDataSourceListener(fileWriter, null);
         OperationState sendControl = sendOverRtp(
-                "src/test/wav/test.wav", Codec.G711_MU_LAW, address, irtp.getPort());
+                "src/test/wav/test.wav", Codec.G729, address, irtp.getPort());
         sendControl.join();
         irtp.release();
     }

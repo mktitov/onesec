@@ -311,7 +311,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
             Buffer[] cachedBuffers = bufferCache.getCachedBuffers(sourceKey, sourceChecksum, codec, rtpPacketSize);
             if (cachedBuffers==null)
                 return false;
-            long currentTs = System.currentTimeMillis();
+//            long currentTs = System.currentTimeMillis();
 //            for (int i=0; i<cachedBuffers.length; ++i) {
 //                Buffer clone = (Buffer)cachedBuffers[i].clone();
 //                if (i==0)
@@ -396,7 +396,6 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
                     return;
                 Buffer buffer = new Buffer();
                 stream.read(buffer);
-                System.out.println("!! Buffer data: "+(buffer.getData()==null?"null":((byte[])buffer.getData()).length));
                 if (buffer.isDiscard())
                     return;
                 boolean theEnd = false;

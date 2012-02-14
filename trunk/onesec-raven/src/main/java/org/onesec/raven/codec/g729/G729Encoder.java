@@ -62,7 +62,8 @@ public class G729Encoder extends AbstractCodecExt implements PacketSizeControl
     public G729Encoder()
     {
         super("G.729 Encoder", AudioFormat.class
-            , new AudioFormat[]{new AudioFormat(AudioFormat.G729_RTP, 8000, AudioFormat.NOT_SPECIFIED, 1)});
+//            , new AudioFormat[]{new AudioFormat(AudioFormat.G729_RTP, 8000, AudioFormat.NOT_SPECIFIED, 1)});
+            , new AudioFormat[]{new G729AudioFormat(new AudioFormat(AudioFormat.G729_RTP, 8000, 8, 1))});
 
         supportedInputFormats = new AudioFormat[]{
             new AudioFormat(AudioFormat.LINEAR, 8000, 16, 1, AudioFormat.LITTLE_ENDIAN, AudioFormat.SIGNED)

@@ -73,17 +73,17 @@ public class TranscoderDataSource extends PushBufferDataSource {
             try {
                 if (owner.isLogLevelEnabled(LogLevel.DEBUG)) {
                     owner.getLogger().debug(logMess("Initializing "));
-                    owner.getLogger().debug(logMess("  Input format: "+sourceStream.getFormat()));
-                    owner.getLogger().debug(logMess("  Output format: "+outputFormat));
-                    owner.getLogger().debug(logMess("Building codec chain"));
+                    owner.getLogger().debug(logMess("Input format: "+sourceStream.getFormat()));
+                    owner.getLogger().debug(logMess("Output format: "+outputFormat));
+                    owner.getLogger().debug(logMess("Codec chain"));
                 }
                 CodecConfig[] codecChain = codecManager.buildCodecChain(
                         (AudioFormat)sourceStream.getFormat(), outputFormat);
                 if (owner.isLogLevelEnabled(LogLevel.DEBUG)) {
-                    for (CodecConfig codec: codecChain) {
-                        owner.getLogger().debug(logMess("  Codec: "+codec.getCodec()));
-                        owner.getLogger().debug(logMess("     in: "+codec.getInputFormat()));
-                        owner.getLogger().debug(logMess("    out: "+codec.getOutputFormat()));
+                    for (int i=0; i<codecChain.length; i++) {
+                        owner.getLogger().debug(logMess("[%s] Codec: %s", i, codecChain[i].getCodec()));
+                        owner.getLogger().debug(logMess("[%s] in : %s", i, codecChain[i].getInputFormat()));
+                        owner.getLogger().debug(logMess("[%s] out: %s", i, codecChain[i].getOutputFormat()));
                     }
                 }
                 streams[0].init(codecChain, outputFormat);
