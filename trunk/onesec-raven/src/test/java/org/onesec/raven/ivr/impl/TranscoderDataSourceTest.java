@@ -72,11 +72,11 @@ public class TranscoderDataSourceTest extends Assert {
         AudioFormat audioFormat = new AudioFormat(AudioFormat.G723_RTP, 8000, 8, 1, Format.NOT_SPECIFIED
                 , Format.NOT_SPECIFIED);
         TranscoderDataSource t1 = new TranscoderDataSource(
-                codecManager, conv, Codec.G729.getAudioFormat(), owner, "T1. ");
+                codecManager, conv, Codec.G711_MU_LAW.getAudioFormat(), owner, "T1. ");
 //        TranscoderDataSource t1 = new TranscoderDataSource(codecManager, conv, JMFHelper.DEFAULT_FORMAT);
 //        TranscoderDataSource t1 = new TranscoderDataSource(codecManager, conv, audioFormat);
         TranscoderDataSource t2 = new TranscoderDataSource(
-                codecManager, conv, Codec.G711_MU_LAW.getAudioFormat(), owner, "T2. ");
+                codecManager, conv, Codec.G729.getAudioFormat(), owner, "T2. ");
         TranscoderDataSource t3 = new TranscoderDataSource(
                 codecManager, t2, JMFHelper.DEFAULT_FORMAT, owner, "T3. ");
         long ts = System.currentTimeMillis();
