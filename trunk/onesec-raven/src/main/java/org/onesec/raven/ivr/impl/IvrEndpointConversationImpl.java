@@ -429,7 +429,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     private boolean initConversation() throws Exception {
         if (conversationState==null) {
             conversationState = scenario.createConversationState();
-            conversationState.setBinding(DTMF_BINDING, "-", BindingScope.REQUEST);
+            conversationState.setBinding(DTMF_BINDING, "-", BindingScope.CONVERSATION);
             conversationState.setBindingDefaultValue(DTMF_BINDING, "-");
             conversationState.setBinding(VARS_BINDING, new HashMap(), BindingScope.CONVERSATION);
             conversationState.setBinding(

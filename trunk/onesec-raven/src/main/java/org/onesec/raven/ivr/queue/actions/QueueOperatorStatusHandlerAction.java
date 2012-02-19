@@ -51,6 +51,8 @@ public class QueueOperatorStatusHandlerAction extends AsyncAction {
             if (oper==null)
                 return;
             boolean active = oper.getActive()!=null && oper.getActive();
+            conv.getOwner().getLogger().debug("DTMF: "+convBindings.get(IvrEndpointConversation.DTMF_BINDING));
+            conv.getOwner().getLogger().debug("active: "+active);
             if ("1".equals(convBindings.get(IvrEndpointConversation.DTMF_BINDING))) 
                 oper.setActive(!active);
             if (!convBindings.containsKey(HELLO_PLAYED_BINDING)) {
