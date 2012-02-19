@@ -36,4 +36,7 @@ public class OnesecSystemNodesInitializerImpl implements OnesecSystemNodesInitia
             servicesNode.addAndSaveChildren(bufferCache);            
         }
     }
+
+    public void treeInitialized(Tree tree) {
+    }
 }
