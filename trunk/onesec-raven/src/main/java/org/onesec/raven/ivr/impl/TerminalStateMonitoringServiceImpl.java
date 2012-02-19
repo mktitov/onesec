@@ -52,6 +52,8 @@ public class TerminalStateMonitoringServiceImpl implements TerminalStateMonitori
         serviceNode = node;
     }
 
+    public void treeInitialized(Tree tree) { }
+
     public synchronized void addTerminal(IvrTerminal terminal)
     {
         terminals.add(terminal);

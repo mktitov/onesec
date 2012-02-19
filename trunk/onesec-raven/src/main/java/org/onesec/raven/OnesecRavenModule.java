@@ -28,6 +28,7 @@ import org.onesec.core.services.ProviderConfiguratorListeners;
 import org.onesec.raven.impl.StateToNodeLoggerImpl;
 import org.onesec.raven.ivr.*;
 import org.onesec.raven.ivr.impl.*;
+import org.raven.tree.ResourceRegistrator;
 import org.raven.tree.TreeListener;
 import org.slf4j.Logger;
 
@@ -37,8 +38,8 @@ import org.slf4j.Logger;
  */
 public class OnesecRavenModule
 {
-    public static void bind(ServiceBinder binder)
-    {
+    
+    public static void bind(ServiceBinder binder) {
         binder.bind(StateToNodeLogger.class, StateToNodeLoggerImpl.class);
         binder.bind(TerminalStateMonitoringService.class, TerminalStateMonitoringServiceImpl.class);
         binder.bind(OnesecSystemNodesInitializer.class, OnesecSystemNodesInitializerImpl.class);
@@ -85,5 +86,9 @@ public class OnesecRavenModule
     {
         conf.add(terminalStateMonitoringService);
         conf.add(nodesInitializer);
+    }
+    
+    public static void contributeResourceManager(Configuration<ResourceRegistrator> conf) {
+        conf.add(new SoundResourcesRegistrator());
     }
 }

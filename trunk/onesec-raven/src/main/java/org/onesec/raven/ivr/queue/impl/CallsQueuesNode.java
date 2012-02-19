@@ -41,6 +41,7 @@ import org.raven.tree.NodeAttribute;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
 import static org.onesec.raven.ivr.queue.impl.CallQueueCdrRecordSchemaNode.*;
+import org.raven.util.NodeUtils;
 
 /**
  *
@@ -227,5 +228,23 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
 
     public void setCdrRecordSchema(RecordSchemaNode cdrRecordSchema) {
         this.cdrRecordSchema = cdrRecordSchema;
+    }
+    
+    public CallsQueueOperatorNode getOperatorByPhoneNumber(String phoneNumber) {
+        phoneNumber = normalizePhoneNumber(phoneNumber);
+        for (CallsQueueOperatorNode oper: NodeUtils.getChildsOfType(operatorsNode, CallsQueueOperatorNode.class)) {
+            String[] phones = RavenUtils.split(oper.getPhoneNumbers());
+            if (phones!=null)
+                for (String phone: phones) {
+                    phone = normalizePhoneNumber(phone);
+                    if (phone.equals(phoneNumber))
+                        return oper;
+                }
+        }
+        return null;
+    }
+    
+    private String normalizePhoneNumber(String num) {
+        return num.length()<=10? num : num.substring(num.length()-10);
     }
 }
