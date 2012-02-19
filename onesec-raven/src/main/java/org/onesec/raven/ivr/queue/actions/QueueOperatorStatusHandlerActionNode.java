@@ -57,7 +57,7 @@ public class QueueOperatorStatusHandlerActionNode extends BaseNode implements Iv
     private BindingSupportImpl bindingSupport;
 
     public IvrAction createAction() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return new QueueOperatorStatusHandlerAction(this);
     }
 
     @Override
