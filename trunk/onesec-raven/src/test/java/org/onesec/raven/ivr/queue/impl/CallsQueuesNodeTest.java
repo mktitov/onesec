@@ -324,8 +324,8 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         IvrConversationScenarioNode abonentScenario = createAbonentScenario();
 //        createEndpoint(tree.getRootNode(), executor, manager, abonentScenario, "88013");
         createMultichannelEndpoint(executor, manager, abonentScenario);
-        createEndpoint(pool, executor, manager, null, "88013");
-//        createEndpoint(pool, executor, manager, null, "88014");
+//        createEndpoint(pool, executor, manager, null, "88013");
+        createEndpoint(pool, executor, manager, null, "88014");
         
         assertTrue(pool.start());
         

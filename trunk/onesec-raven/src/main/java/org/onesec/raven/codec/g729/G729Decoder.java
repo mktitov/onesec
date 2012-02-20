@@ -47,7 +47,7 @@ public class G729Decoder extends AbstractCodecExt
             });
 
         supportedInputFormats = new AudioFormat[] {
-            new AudioFormat(AudioFormat.G729_RTP, 8000, AudioFormat.NOT_SPECIFIED, 1)};
+            new AudioFormat(AudioFormat.G729_RTP, 8000, 8, 1)};
     }
 
     private void depacketize(
@@ -119,6 +119,7 @@ public class G729Decoder extends AbstractCodecExt
         writeShorts(sp16, output, outputBuffer.getOffset());
         outputBuffer.setLength(OUTPUT_FRAME_SIZE_IN_BYTES);
 
+        outputBuffer.setFormat(outputFormat);
         int processResult = BUFFER_PROCESSED_OK;
 
         if (inputLength > 0)
