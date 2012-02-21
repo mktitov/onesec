@@ -47,7 +47,7 @@ public class SoundResourcesRegistrator implements ResourceRegistrator, Constants
         for (String name: names) {
             try {
                 ResInfo resInfo = new ResInfo(name);
-                if (!resourceManager.containsResource(name, resInfo.locale)) {
+                if (!resourceManager.containsResource(resInfo.ravenResName, resInfo.locale)) {
                     InputStream is = this.getClass().getResourceAsStream(resInfo.resPath);
                     try {
                         if (is==null)
