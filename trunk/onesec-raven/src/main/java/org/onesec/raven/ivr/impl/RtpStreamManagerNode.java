@@ -118,6 +118,7 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
     {
         super.doStop();
         releaseStreams(streams);
+        streams.clear();
         busyPorts.clear();
     }
 
