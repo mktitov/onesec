@@ -22,7 +22,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
+import org.onesec.raven.ivr.queue.CallsCommutationManager;
 import org.onesec.raven.ivr.queue.CallsQueue;
+import org.onesec.raven.ivr.queue.CallsQueueOperator;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.log.LogLevel;
@@ -38,7 +40,7 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
     private String phoneNumbers;
 
     private AtomicBoolean busy;
-    private AtomicReference<CallsCommutationManagerImpl> commutationManager;
+    private AtomicReference<CallsCommutationManager> commutationManager;
     private AtomicReference<String> request;
 
     @Override
@@ -46,7 +48,7 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
         super.initFields();
         busy = new AtomicBoolean(false);
         request = new AtomicReference<String>();
-        commutationManager = new AtomicReference<CallsCommutationManagerImpl>();
+        commutationManager = new AtomicReference<CallsCommutationManager>();
     }
 
     @Override
@@ -98,17 +100,30 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
     }
 
     @Override
-    protected void doRequestProcessed(CallsCommutationManagerImpl manager, boolean callHandled) {
+    protected void doRequestProcessed(CallsCommutationManager manager, boolean callHandled) {
         if (commutationManager.compareAndSet(manager, null)) {
             busy.set(false);
             request.set(null);
         }
     }
+
+    public CallsQueueOperator callTransferedFromOperator(String phoneNumber, CallsCommutationManager manager) {
+        doRequestProcessed(commutationManager.get(), false);
+        return ((CallsQueuesNode)getParent().getParent()).processCallTransferedEvent(phoneNumber);
+    }
+
+    public boolean callTransferedToOperator(CallsCommutationManager manager) {
+        if (busy.compareAndSet(false, true)) {
+            this.commutationManager.set(manager);
+            return true;
+        } else
+            return false;
+    }
     
     /**
      * for test purposes
      */
-    CallsCommutationManagerImpl getCommutationManager(){
+    CallsCommutationManager getCommutationManager(){
         return commutationManager.get();
     }
 }

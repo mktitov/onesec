@@ -47,7 +47,7 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager {
     private final String[] numbers;
     private final IvrConversationScenario conversationScenario;
     private final IvrConversationsBridgeManager conversationBridgeManager;
-    private final AbstractOperatorNode operator;
+    private AbstractOperatorNode operator;
     private final IvrEndpointPool endpointPool;
 
     private final Set<CommutationManagerCall> calls = new HashSet<CommutationManagerCall>();
@@ -97,8 +97,15 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager {
                 if (!callHandled.get())
                     queue.queueCall(req);
                 operator.requestProcessed(this, callHandled.get());
+                if (!callHandled.get())
+                    req.addToLog(String.format("NOT handled by op.(%s)", operator.getName()));
             }
         }
+    }
+
+    public synchronized void callTransfered(String phoneNumber) {
+        operator = operator.callTransferedFromOperator(phoneNumber, this);
+        req.addToLog("transfered to "+phoneNumber);
     }
 
     private void tryCommutateWithNumber(String number) {

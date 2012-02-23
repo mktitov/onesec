@@ -44,7 +44,7 @@ public class  CommutationManagerCallImpl
             new EnumMap<State, EnumSet<State>>(State.class);
 
     private final CallsCommutationManager manager;
-    private final String number;
+    private String number;
     private final Logger logger;
     
     private final AtomicReference<String> statusMessage;
@@ -123,8 +123,8 @@ public class  CommutationManagerCallImpl
                 case COMMUTATED: getRequest().fireCommutatedEvent(); break;
                 case HANDLED: 
                     if (isLogLevelEnabled(LogLevel.DEBUG))
-                        logger.debug(logMess("Operator's conversation completed"));
-                    addToLog(String.format("conv. for op. number (%s) completed (%s)", getOperatorNumber()
+                        logger.debug(logMess("Operator's conv. completed"));
+                    addToLog(String.format("conv. for op.num. (%s) completed (%s)", getOperatorNumber()
                             , completionCode));
                     manager.getRequest().fireDisconnectedQueueEvent();
                     nextState = State.INVALID;
@@ -135,12 +135,12 @@ public class  CommutationManagerCallImpl
                         if (completionCode!=null) {
                             if (isLogLevelEnabled(LogLevel.DEBUG))
                                 logger.debug(logMess("Operator's number (%s) not answered", getOperatorNumber()));
-                            addToLog("number (%s) not answer", getOperatorNumber());
+                            addToLog("no answer from (%s)", getOperatorNumber());
                         }
                         if (isLogLevelEnabled(LogLevel.DEBUG))
-                            logger.debug(logMess("Call not handled"));
+                            logger.debug(logMess("Call not handled by operator number (%s)", number));
                         //TODO: Не совсем корректно в случае параллельного вызова
-                        addToLog("operator (%s) didn't handle a call", manager.getOperator().getName());
+//                        addToLog("operator (%s) didn't handle a call", manager.getOperator().getName());
                     } 
                     manager.callFinished(this, success);
                     if (endpoint!=null) {
@@ -306,6 +306,16 @@ public class  CommutationManagerCallImpl
         @Override
         public void conversationStopped(IvrEndpointConversationStoppedEvent event) {
             moveToState(getState()==State.COMMUTATED? State.HANDLED:State.INVALID, null, event.getCompletionCode());
+        }
+
+        @Override
+        public void conversationTransfered(IvrEndpointConversationTransferedEvent event) {
+            synchronized(CommutationManagerCallImpl.this) {
+                if (state.get()==State.COMMUTATED) {
+                    number = event.getTransferAddress();
+                    manager.callTransfered(number);
+                }
+            }
         }
     }
 }

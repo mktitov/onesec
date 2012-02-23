@@ -42,6 +42,12 @@ public interface IvrEndpointConversationListener
      * @address number to which conversation was transfered
      */
     public void conversationTransfered(IvrEndpointConversationTransferedEvent event);
+    /**
+     * Fires when incoming RTP of the conversation were started
+     */
     public void incomingRtpStarted(IvrIncomingRtpStartedEvent event);
+    /**
+     * Fires when outgoing RTP of the conversation were started
+     */
     public void outgoingRtpStarted(IvrOutgoingRtpStartedEvent event);
 }

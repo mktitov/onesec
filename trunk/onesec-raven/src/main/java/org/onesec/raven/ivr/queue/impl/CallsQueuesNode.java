@@ -152,8 +152,7 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
                 "refreshData operation is unsupported by this data source");
     }
 
-    public void setData(DataSource dataSource, Object data, DataContext context) 
-    {
+    public void setData(DataSource dataSource, Object data, DataContext context) {
         if (!(data instanceof CallQueueRequest))
             return;
         try {
@@ -165,6 +164,16 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
                             , dataSource.getPath())
                         , ex);
         }
+    }
+    
+    public AbstractOperatorNode processCallTransferedEvent(String phoneNumber) {
+        CallsQueueOperatorNode oper = getOperatorByPhoneNumber(phoneNumber);
+        if (oper!=null) {
+        } else {
+            
+        }
+        
+        return oper;
     }
 
     String logMess(CallQueueRequest req, String message, Object... args)
