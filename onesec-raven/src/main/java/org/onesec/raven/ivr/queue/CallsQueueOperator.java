@@ -60,4 +60,6 @@ public interface CallsQueueOperator extends Node
     public boolean processRequest(CallsQueue queue, CallQueueRequestWrapper request
             , IvrConversationScenario conversationScenario, AudioFile greeting
             , String operatorPhoneNumbers);
+    public CallsQueueOperator callTransferedFromOperator(String phoneNumber, CallsCommutationManager commutationManager);
+    public boolean callTransferedToOperator(CallsCommutationManager commutationManager);
 }

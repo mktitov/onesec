@@ -28,6 +28,7 @@ import org.raven.sched.ExecutorService;
  */
 public interface CallsCommutationManager {
     public void callFinished(CommutationManagerCall call, boolean successfull);
+    public void callTransfered(String phoneNumber);
     public CallsQueueOperator getOperator();
     public long getWaitTimeout();
     public long getInviteTimeout();

@@ -22,6 +22,7 @@ import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.IvrConversationsBridgeManager;
 import org.onesec.raven.ivr.IvrEndpointPool;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
+import org.onesec.raven.ivr.queue.CallsCommutationManager;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.CallsQueueOperator;
 import org.raven.RavenUtils;
@@ -111,7 +112,7 @@ public abstract class AbstractOperatorNode extends BaseNode implements CallsQueu
             processingRequestCount.incrementAndGet();
         return res;
     }
-
+    
     void incOnNoFreeEndpointsRequests(){
         onNoFreeEndpointsRequests.incrementAndGet();
     }
@@ -158,7 +159,16 @@ public abstract class AbstractOperatorNode extends BaseNode implements CallsQueu
         doRequestProcessed(commutationManager, callHandled);
     }
 
-    protected abstract void doRequestProcessed(CallsCommutationManagerImpl commutationManager, boolean callHandled);
+    protected abstract void doRequestProcessed(CallsCommutationManager commutationManager, boolean callHandled);
+
+    
+//    public AbstractOperatorNode callTransferedFromOperator(String phoneNumber
+//            , CallsCommutationManagerImpl commutationManager) 
+//    {
+//        AbstractOperatorNode oper = ((CallsQueuesNode)getParent().getParent()).processCallTransferedEvent(phoneNumber);
+//        requestProcessed(commutationManager, false);
+//        return oper;
+//    }
 
     @Parameter(readOnly=true)
     public int getHandledRequests() {
