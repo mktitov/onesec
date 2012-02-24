@@ -84,6 +84,13 @@ public abstract class AbstractOperatorNode extends BaseNode implements CallsQueu
     protected AtomicInteger onNotStartedRequests;
     protected AtomicInteger processingRequestCount;
 
+    public AbstractOperatorNode(String name) {
+        super(name);
+    }
+
+    public AbstractOperatorNode() {
+    }
+
     @Override
     protected void initFields() {
         super.initFields();
@@ -115,6 +122,10 @@ public abstract class AbstractOperatorNode extends BaseNode implements CallsQueu
     
     void incOnNoFreeEndpointsRequests(){
         onNoFreeEndpointsRequests.incrementAndGet();
+    }
+    
+    protected CallsQueuesNode getCallsQueues() {
+        return (CallsQueuesNode) getParent().getParent();
     }
 
     protected abstract boolean doProcessRequest(CallsQueue queue, CallQueueRequestWrapper request

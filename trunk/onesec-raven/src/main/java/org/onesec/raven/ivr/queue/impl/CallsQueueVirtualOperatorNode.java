@@ -17,12 +17,12 @@
 
 package org.onesec.raven.ivr.queue.impl;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
+import org.onesec.raven.ivr.queue.CallsCommutationManager;
 import org.onesec.raven.ivr.queue.CallsQueue;
+import org.onesec.raven.ivr.queue.CallsQueueOperator;
 import org.raven.annotations.NodeClass;
 import org.raven.log.LogLevel;
 
@@ -55,7 +55,17 @@ public class CallsQueueVirtualOperatorNode extends AbstractOperatorNode {
         }
     }
 
+    public CallsQueueOperator callTransferedFromOperator(String phoneNumber
+            , CallsCommutationManager commutationManager) 
+    {
+        return getCallsQueues().processCallTransferedEvent(phoneNumber);
+    }
+
+    public boolean callTransferedToOperator(CallsCommutationManager commutationManager) {
+        return true;
+    }
+
     @Override
-    protected void doRequestProcessed(CallsCommutationManagerImpl commutationManager, boolean callHandled) {
+    protected void doRequestProcessed(CallsCommutationManager commutationManager, boolean callHandled) {
     }
 }

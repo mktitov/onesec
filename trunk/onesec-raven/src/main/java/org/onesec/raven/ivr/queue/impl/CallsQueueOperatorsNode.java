@@ -41,6 +41,10 @@ public class CallsQueueOperatorsNode extends BaseNode implements Viewable
         super(NAME);
     }
 
+    @Override
+    public void setName(String name) {
+    }
+    
     public Map<String, NodeAttribute> getRefreshAttributes() throws Exception {
         return null;
     }

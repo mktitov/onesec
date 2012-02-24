@@ -104,8 +104,8 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager {
     }
 
     public synchronized void callTransfered(String phoneNumber) {
-        operator = operator.callTransferedFromOperator(phoneNumber, this);
-        req.addToLog("transfered to "+phoneNumber);
+        operator = (AbstractOperatorNode) operator.callTransferedFromOperator(phoneNumber, this);
+        req.addToLog(String.format("transfered to op. (%s) phone (%s)", operator.getName(), phoneNumber));
     }
 
     private void tryCommutateWithNumber(String number) {
