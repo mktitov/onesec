@@ -109,7 +109,7 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
 
     public CallsQueueOperator callTransferedFromOperator(String phoneNumber, CallsCommutationManager manager) {
         doRequestProcessed(commutationManager.get(), false);
-        return ((CallsQueuesNode)getParent().getParent()).processCallTransferedEvent(phoneNumber);
+        return getCallsQueues().processCallTransferedEvent(phoneNumber);
     }
 
     public boolean callTransferedToOperator(CallsCommutationManager manager) {

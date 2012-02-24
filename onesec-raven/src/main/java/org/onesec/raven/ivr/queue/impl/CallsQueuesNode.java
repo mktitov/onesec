@@ -60,6 +60,7 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
     private RecordSchemaNode _cdrRecordSchema;
     private CallsQueueOperatorsNode operatorsNode;
     private CallsQueuesContainerNode queuesNode;
+    private CallsQueueTransferOperatorNode transferOperator;
 
     @Override
     protected void doStart() throws Exception
@@ -78,6 +79,10 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
             addAndSaveChildren(operatorsNode);
             operatorsNode.start();
         }
+        transferOperator = (CallsQueueTransferOperatorNode) operatorsNode.getChildren(
+                CallsQueueTransferOperatorNode.NAME);
+        if (transferOperator==null)
+            
         queuesNode = (CallsQueuesContainerNode) getChildren(CallsQueuesContainerNode.NAME);
         if (queuesNode==null){
             queuesNode = new CallsQueuesContainerNode();
