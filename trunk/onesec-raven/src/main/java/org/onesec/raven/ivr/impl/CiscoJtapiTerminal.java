@@ -34,6 +34,8 @@ import com.cisco.jtapi.extensions.CiscoTermInServiceEv;
 import com.cisco.jtapi.extensions.CiscoTermOutOfServiceEv;
 import com.cisco.jtapi.extensions.CiscoTerminal;
 import com.cisco.jtapi.extensions.CiscoTerminalObserver;
+import com.cisco.jtapi.extensions.CiscoTransferEndEv;
+import com.cisco.jtapi.extensions.CiscoTransferStartEv;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -342,6 +344,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                 case TermConnRingingEv.ID   : answerOnIncomingCall((TermConnRingingEv)ev); break;
                 case CallCtlConnEstablishedEv.ID: openLogicalChannel((CallCtlConnEstablishedEv)ev); break;
                 case MediaTermConnDtmfEv.ID: continueConv((MediaTermConnDtmfEv)ev); break;
+                case CiscoTransferEndEv.ID: 
                 case ConnDisconnectedEv.ID: unbindConnIdFromConv((ConnDisconnectedEv)ev); break;
                 case CallCtlConnFailedEv.ID: handleConnFailedEvent((CallCtlConnFailedEv)ev); break;
                 case CallInvalidEv.ID: stopConversation(ev.getCall(), CompletionCode.COMPLETED_BY_OPPONENT); break;

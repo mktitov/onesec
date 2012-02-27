@@ -369,9 +369,9 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         CallsQueueOperatorNode operator = new CallsQueueOperatorNode();
         operator.setName("Titov MK");
         queues.getOperatorsNode().addAndSaveChildren(operator);
-//        operator.setPhoneNumbers("88027");
+        operator.setPhoneNumbers("88027");
 //        operator.setPhoneNumbers("089128672947");
-        operator.setPhoneNumbers("88027,089128672947");
+//        operator.setPhoneNumbers("88027,089128672947");
         operator.setParallelCallAfter(5);
         operator.setEndpointPool(pool);
         operator.setConversationsBridgeManager(bridge);
