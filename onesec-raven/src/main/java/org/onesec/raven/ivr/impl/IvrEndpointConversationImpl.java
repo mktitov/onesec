@@ -64,20 +64,11 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
 {
     private enum RtpStatus {INVALID, CREATED, CONNECTED, WAITING_FOR_START}
 
-    @Service
-    private static Tree tree;
-
-    @Service
-    private static ProviderRegistry providerRegistry;
-
-    @Service
-    private static BufferCache bufferCache;
-    
-    @Service
-    private static StateListenersCoordinator stateListenersCoordinator;
-    
-    @Service
-    private static CodecManager codecManager;
+    @Service private static Tree tree;
+    @Service private static ProviderRegistry providerRegistry;
+    @Service private static BufferCache bufferCache;
+    @Service private static StateListenersCoordinator stateListenersCoordinator;
+    @Service private static CodecManager codecManager;
 
     private final Node owner;
     private final ExecutorService executor;
@@ -277,11 +268,16 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     public void logicalConnectionCreated() throws IvrEndpointConversationException {
         lock.writeLock().lock();
         try {
+            checkForTransfer();
             if (state.getId()==CONNECTING)
                 checkState();
         } finally {
             lock.writeLock().unlock();
         }
+    }
+    
+    private void checkForTransfer() {
+        
     }
     
     private boolean isAllLogicalConnectionEstablished() {
