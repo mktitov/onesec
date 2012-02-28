@@ -344,7 +344,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                 case TermConnRingingEv.ID   : answerOnIncomingCall((TermConnRingingEv)ev); break;
                 case CallCtlConnEstablishedEv.ID: openLogicalChannel((CallCtlConnEstablishedEv)ev); break;
                 case MediaTermConnDtmfEv.ID: continueConv((MediaTermConnDtmfEv)ev); break;
-                case CiscoTransferEndEv.ID: 
+                case CiscoTransferEndEv.ID: callTransfered((CiscoTransferEndEv)ev);
                 case ConnDisconnectedEv.ID: unbindConnIdFromConv((ConnDisconnectedEv)ev); break;
                 case CallCtlConnFailedEv.ID: handleConnFailedEvent((CallCtlConnFailedEv)ev); break;
                 case CallInvalidEv.ID: stopConversation(ev.getCall(), CompletionCode.COMPLETED_BY_OPPONENT); break;
@@ -446,7 +446,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
         ConvHolder conv = getConvHolderByCall(ev.getCall());
         if (conv!=null)
             try {
-                conv.conv.logicalConnectionCreated();
+                conv.conv.logicalConnectionCreated(ev.getConnection().getAddress().getName());
             } catch (IvrEndpointConversationException e) {
                 if (isLogLevelEnabled(LogLevel.ERROR))
                     logger.error(callLog(ev.getCall(), 
@@ -454,6 +454,25 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                             , ev.getConnection().getAddress().getName()), e);
                 conv.conv.stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
             }
+    }
+    
+    private void callTransfered(CiscoTransferEndEv ev) {
+//        if (isLogLevelEnabled(LogLevel.DEBUG))
+//            logger.debug(callLog(ev.getCall(), "Logical connection opened for address (%s)"
+//                    , ev.getConnection().getAddress().getName()));
+//        System.out.println("!!! Transfer controller address: "+ev.getTransferControllerAddress().getName());
+//        ConvHolder conv = getConvHolderByCall(ev.getCall());
+//        if (conv!=null) {
+//            conv.conv.opponentPartyTransfered();
+//        }
+//            try {
+//            } catch (IvrEndpointConversationException e) {
+//                if (isLogLevelEnabled(LogLevel.ERROR))
+//                    logger.error(callLog(ev.getCall(), 
+//                            "Error open logical connection for address (%s)"
+//                            , ev.getConnection().getAddress().getName()), e);
+//                conv.conv.stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
+//            }
     }
     
     private void initInRtp(CiscoMediaOpenLogicalChannelEv ev) {

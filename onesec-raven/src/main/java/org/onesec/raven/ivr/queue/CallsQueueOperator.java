@@ -25,8 +25,7 @@ import org.raven.tree.Node;
  *
  * @author Mikhail Titov
  */
-public interface CallsQueueOperator extends Node
-{
+public interface CallsQueueOperator extends Node {
     /**
      * Returns the total requests count received by operator
      */
@@ -62,4 +61,9 @@ public interface CallsQueueOperator extends Node
             , String operatorPhoneNumbers);
     public CallsQueueOperator callTransferedFromOperator(String phoneNumber, CallsCommutationManager commutationManager);
     public boolean callTransferedToOperator(CallsCommutationManager commutationManager);
+    /**
+     * Using this method commutation manager informs operator that request were processed
+     */
+    public void requestProcessed(CallsCommutationManager commutationManager, boolean callHandled);
+    public void incOnNoFreeEndpointsRequests();
 }

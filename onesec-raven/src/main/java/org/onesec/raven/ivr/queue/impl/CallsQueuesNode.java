@@ -24,7 +24,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.onesec.raven.ivr.queue.CallQueueException;
 import org.onesec.raven.ivr.queue.CallQueueRequest;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
+import org.onesec.raven.ivr.queue.CallsCommutationManager;
 import org.onesec.raven.ivr.queue.CallsQueue;
+import org.onesec.raven.ivr.queue.CallsQueueOperator;
 import org.raven.RavenUtils;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
@@ -81,8 +83,11 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
         }
         transferOperator = (CallsQueueTransferOperatorNode) operatorsNode.getChildren(
                 CallsQueueTransferOperatorNode.NAME);
-        if (transferOperator==null)
-            
+        if (transferOperator==null) {
+            transferOperator = new CallsQueueTransferOperatorNode();
+            operatorsNode.addAndSaveChildren(transferOperator);
+            transferOperator.start();
+        }
         queuesNode = (CallsQueuesContainerNode) getChildren(CallsQueuesContainerNode.NAME);
         if (queuesNode==null){
             queuesNode = new CallsQueuesContainerNode();
@@ -142,6 +147,10 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
         return queuesNode;
     }
 
+    public CallsQueueTransferOperatorNode getTransferOperator() {
+        return transferOperator;
+    }
+
     public boolean getDataImmediate(DataConsumer dataConsumer, DataContext context)
     {
         throw new UnsupportedOperationException("Pull method not supported by this data source");
@@ -171,13 +180,12 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
         }
     }
     
-    public AbstractOperatorNode processCallTransferedEvent(String phoneNumber) {
-        CallsQueueOperatorNode oper = getOperatorByPhoneNumber(phoneNumber);
-        if (oper!=null) {
-        } else {
-            
-        }
-        
+    public CallsQueueOperator processCallTransferedEvent(String phoneNumber
+            , CallsCommutationManager commutationManager) 
+    {
+        CallsQueueOperator oper = getOperatorByPhoneNumber(phoneNumber);
+        if (oper==null || !oper.callTransferedToOperator(commutationManager)) 
+            oper = transferOperator;
         return oper;
     }
 

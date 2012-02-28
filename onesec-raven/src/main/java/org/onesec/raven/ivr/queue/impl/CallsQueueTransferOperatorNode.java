@@ -15,6 +15,7 @@
  */
 package org.onesec.raven.ivr.queue.impl;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
@@ -22,43 +23,84 @@ import org.onesec.raven.ivr.queue.CallsCommutationManager;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.CallsQueueOperator;
 import org.raven.log.LogLevel;
+import org.raven.tree.impl.BaseNode;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class CallsQueueTransferOperatorNode extends AbstractOperatorNode {
+public class CallsQueueTransferOperatorNode extends BaseNode implements CallsQueueOperator {
     
     public final static String NAME = "Transfer operator";
+    
+    private AtomicInteger totalRequests;
+    private AtomicInteger handledRequests;
+    private AtomicInteger onNoFreeEndpointsRequests;
+    private AtomicInteger onNoAnswerRequests;
 
     public CallsQueueTransferOperatorNode() {
         super(NAME);
     }
 
     @Override
-    public void setName(String name) {
-    }
+    public void setName(String name) { }
 
     @Override
-    protected boolean doProcessRequest(CallsQueue queue, CallQueueRequestWrapper request
-            , IvrConversationScenario conversationScenario, AudioFile greeting, String operatorPhoneNumbers) 
-    {
+    protected void initFields() {
+        super.initFields();
+        totalRequests = new AtomicInteger();
+        handledRequests = new AtomicInteger();
+        onNoAnswerRequests = new AtomicInteger();
+        onNoFreeEndpointsRequests = new AtomicInteger();
+    }
+    
+    public int getTotalRequests() {
+        return totalRequests.get();
+    }
+
+    public int getHandledRequests() {
+        return handledRequests.get();
+    }
+
+    public int getOnBusyRequests() {
+        return 0;
+    }
+
+    public int getOnNoFreeEndpointsRequests() {
+        return onNoFreeEndpointsRequests.get();
+    }
+
+    public int getOnNoAnswerRequests() {
+        return onNoAnswerRequests.get();
+    }
+
+    public int getOnNotStartedRequests() {
+        return 0;
+    }
+
+    public boolean processRequest(CallsQueue queue, CallQueueRequestWrapper request, IvrConversationScenario conversationScenario, AudioFile greeting, String operatorPhoneNumbers) {
         if (isLogLevelEnabled(LogLevel.WARN))
-            getLogger().warn("{} must not be used as normal operator", NAME);
+            getLogger().warn("Transfer operator must not be used as normal operators");
         return false;
     }
 
-    @Override
-    protected void doRequestProcessed(CallsCommutationManager commutationManager, boolean callHandled) {
-    }
-
-    public CallsQueueOperator callTransferedFromOperator(String phoneNumber
-            , CallsCommutationManager commutationManager) 
-    {
-        return getCallsQueues().processCallTransferedEvent(phoneNumber);
+    public CallsQueueOperator callTransferedFromOperator(String phoneNumber, CallsCommutationManager commutationManager) {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     public boolean callTransferedToOperator(CallsCommutationManager commutationManager) {
+        totalRequests.incrementAndGet();
         return true;
+    }
+
+    public void requestProcessed(CallsCommutationManager commutationManager, boolean callHandled) {
+        if (callHandled)
+            handledRequests.incrementAndGet();
+        else
+            onNoAnswerRequests.incrementAndGet();
+    }
+
+    public void incOnNoFreeEndpointsRequests() {
+        onNoFreeEndpointsRequests.incrementAndGet();
     }
 }

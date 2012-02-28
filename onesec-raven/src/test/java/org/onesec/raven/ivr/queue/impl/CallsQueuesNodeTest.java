@@ -112,6 +112,11 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         assertStarted(operatorsNode);
         assertTrue(operatorsNode instanceof CallsQueueOperatorsNode);
         
+        Node transferOperatorNode = operatorsNode.getChildren(CallsQueueTransferOperatorNode.NAME);
+        assertNotNull(transferOperatorNode);
+        assertTrue(transferOperatorNode instanceof CallsQueueTransferOperatorNode);
+        assertStarted(operatorsNode);
+        
         Node queuesNode = queues.getChildren(CallsQueuesContainerNode.NAME);
         assertNotNull(queuesNode);
         assertTrue(queuesNode instanceof CallsQueuesContainerNode);
@@ -255,7 +260,8 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
     {
         prepareRealTest();
 
-        TimeUnit.SECONDS.sleep(1200);
+        TimeUnit.SECONDS.sleep(60);
+//        TimeUnit.SECONDS.sleep(1200);
 
         Logger log = LoggerFactory.getLogger(Node.class);
         log.debug("!! Finising test !!");
@@ -357,6 +363,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         queues.setLogLevel(LogLevel.TRACE);
         queues.setCdrRecordSchema(schema);
         assertTrue(queues.start());
+        queues.getTransferOperator().setLogLevel(LogLevel.DEBUG);
 
         collector = new DataCollector();
         collector.setName("cdr record collector");
