@@ -28,6 +28,7 @@ import org.onesec.raven.ivr.queue.CallsCommutationManager;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.CallsQueueOperator;
 import org.onesec.raven.ivr.queue.CommutationManagerCall;
+import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.ExecutorServiceException;
 import org.raven.sched.impl.AbstractTask;
@@ -47,7 +48,7 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager {
     private final String[] numbers;
     private final IvrConversationScenario conversationScenario;
     private final IvrConversationsBridgeManager conversationBridgeManager;
-    private AbstractOperatorNode operator;
+    private CallsQueueOperator operator;
     private final IvrEndpointPool endpointPool;
 
     private final Set<CommutationManagerCall> calls = new HashSet<CommutationManagerCall>();
@@ -59,7 +60,7 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager {
             , String[] numbers, IvrConversationScenario conversationScenario
             , IvrConversationsBridgeManager conversationsBridgeManager
             , IvrEndpointPool endpointPool
-            , AbstractOperatorNode operator)
+            , CallsQueueOperator operator)
     {
         this.executor = executor;
         this.req = req;
@@ -104,8 +105,16 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager {
     }
 
     public synchronized void callTransfered(String phoneNumber) {
-        operator = (AbstractOperatorNode) operator.callTransferedFromOperator(phoneNumber, this);
+        if (operator.isLogLevelEnabled(LogLevel.DEBUG))
+            operator.getLogger().debug(req.logMess(
+                    "Transfering call from (%s) to other operator", operator.getName()));
+        operator = operator.callTransferedFromOperator(phoneNumber, this);
         req.addToLog(String.format("transfered to op. (%s) phone (%s)", operator.getName(), phoneNumber));
+        req.fireOperatorQueueEvent(operator.getName());
+        req.fireOperatorNumberQueueEvent(phoneNumber);
+        if (operator.isLogLevelEnabled(LogLevel.DEBUG))
+            operator.getLogger().debug(req.logMess(
+                    "Call successfully transfered to the (%s) operator", operator.getName()));
     }
 
     private void tryCommutateWithNumber(String number) {

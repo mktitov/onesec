@@ -51,6 +51,9 @@ public abstract class AbstractOperatorNode extends BaseNode implements CallsQueu
     public final static String BUSY_ATTR = "busy";
     public final static String PROCESSING_REQUEST_ATTR = "processingRequest";
     
+    public final static String EXECUTOR_ATTR = "executor";
+            
+    
     @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
     private IvrEndpointPool endpointPool;
     
@@ -74,7 +77,6 @@ public abstract class AbstractOperatorNode extends BaseNode implements CallsQueu
 
     @NotNull @Parameter(defaultValue="true")
     private Boolean active;
-
 
     protected AtomicInteger totalRequests;
     protected AtomicInteger handledRequests;
@@ -120,7 +122,7 @@ public abstract class AbstractOperatorNode extends BaseNode implements CallsQueu
         return res;
     }
     
-    void incOnNoFreeEndpointsRequests(){
+    public void incOnNoFreeEndpointsRequests(){
         onNoFreeEndpointsRequests.incrementAndGet();
     }
     
@@ -161,7 +163,7 @@ public abstract class AbstractOperatorNode extends BaseNode implements CallsQueu
         return manager;
     }
 
-    void requestProcessed(CallsCommutationManagerImpl commutationManager, boolean callHandled) {
+    public void requestProcessed(CallsCommutationManager commutationManager, boolean callHandled) {
         if (callHandled)
             handledRequests.incrementAndGet();
         else

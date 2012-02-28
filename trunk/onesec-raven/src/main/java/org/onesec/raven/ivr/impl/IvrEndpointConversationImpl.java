@@ -52,7 +52,9 @@ import org.raven.conv.ConversationScenarioPoint;
 import org.raven.conv.ConversationScenarioState;
 import org.raven.conv.impl.GotoNode;
 import org.raven.expr.impl.BindingSupportImpl;
+import org.raven.sched.impl.AbstractTask;
 import org.raven.tree.Tree;
+import org.weda.beans.ObjectUtils;
 import org.weda.internal.annotations.Service;
 import static org.onesec.raven.ivr.IvrEndpointConversationState.*;
 
@@ -204,12 +206,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             this.call = (CiscoCall) call;
             callId = "[call id: " + this.call.getCallID().intValue()+", calling number: "
                     + call.getCallingAddress().getName() + "]";
-            Address addr = call.getCallingAddress();
-            if (addr!=null)
-                this.callingNumber = addr.getName();
-            addr = call.getCalledAddress();
-            if (addr!=null)
-                this.calledNumber = addr.getName();
+            callingNumber = getPartyNumber(true);
+            calledNumber = getPartyNumber(false);
             checkState();
         } finally {
             lock.writeLock().unlock();
@@ -265,10 +263,10 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         }
     }
     
-    public void logicalConnectionCreated() throws IvrEndpointConversationException {
+    public void logicalConnectionCreated(String opponentNumber) throws IvrEndpointConversationException {
         lock.writeLock().lock();
         try {
-            checkForTransfer();
+            checkForOpponentPartyTransfered(opponentNumber);
             if (state.getId()==CONNECTING)
                 checkState();
         } finally {
@@ -276,8 +274,29 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         }
     }
     
-    private void checkForTransfer() {
-        
+    private void checkForOpponentPartyTransfered(String opponentNumber) {
+        if (!ObjectUtils.in(opponentNumber, callingNumber, calledNumber)) {
+            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                owner.getLogger().debug(callLog("Call transfered to number (%s)", opponentNumber));
+            fireTransferedEvent(opponentNumber);
+        }
+//        String transferNumber = getPartyNumber(true);
+//        if (!ObjectUtils.equals(transferNumber, callingNumber)) 
+//            callingNumber = transferNumber;
+//        else {
+//            transferNumber = getPartyNumber(false);
+//            if (!ObjectUtils.equals(transferNumber, calledNumber))
+//                calledNumber = transferNumber;
+//            else
+//                transferNumber = null;
+//        }
+//        if (transferNumber!=null) {
+//        }
+    }
+    
+    private String getPartyNumber(boolean callingParty) {
+        Address addr = callingParty? call.getCallingAddress() : call.getCalledAddress();
+        return addr==null? null : addr.getName();
     }
     
     private boolean isAllLogicalConnectionEstablished() {
@@ -800,10 +819,14 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
 
     private void fireTransferedEvent(String address) {
         if (listeners!=null && !listeners.isEmpty()) {
-            IvrEndpointConversationTransferedEvent event =
+            final IvrEndpointConversationTransferedEvent event =
                     new IvrEndpointConversationTransferedEventImpl(this, address);
-            for (IvrEndpointConversationListener listener: listeners)
-                listener.conversationTransfered(event);
+            executor.executeQuietly(new AbstractTask(owner, "Sending conversation transfered event") {
+                @Override public void doRun() throws Exception {
+                    for (IvrEndpointConversationListener listener: listeners)
+                        listener.conversationTransfered(event);
+                }
+            });
         }
     }
 

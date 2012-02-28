@@ -58,7 +58,7 @@ public class CallsQueueVirtualOperatorNode extends AbstractOperatorNode {
     public CallsQueueOperator callTransferedFromOperator(String phoneNumber
             , CallsCommutationManager commutationManager) 
     {
-        return getCallsQueues().processCallTransferedEvent(phoneNumber);
+        return getCallsQueues().processCallTransferedEvent(phoneNumber, commutationManager);
     }
 
     public boolean callTransferedToOperator(CallsCommutationManager commutationManager) {
