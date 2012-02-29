@@ -137,8 +137,8 @@ public class  CommutationManagerCallImpl
                                 logger.debug(logMess("Operator's number (%s) not answered", getOperatorNumber()));
                             addToLog("no answer from (%s)", getOperatorNumber());
                         }
-                        if (isLogLevelEnabled(LogLevel.DEBUG))
-                            logger.debug(logMess("Call not handled by operator number (%s)", number));
+//                        if (isLogLevelEnabled(LogLevel.DEBUG))
+//                            logger.debug(logMess("Call not handled by operator number (%s)", number));
                         //TODO: Не совсем корректно в случае параллельного вызова
 //                        addToLog("operator (%s) didn't handle a call", manager.getOperator().getName());
                     } 

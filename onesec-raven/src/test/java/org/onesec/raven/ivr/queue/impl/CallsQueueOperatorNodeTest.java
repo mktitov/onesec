@@ -133,7 +133,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
         expect(request.logMess(isA(String.class), isA(String.class))).andReturn("log mess").anyTimes();
         pool.requestEndpoint(sendNullEndpoint());
         request.addToLog("no free endpoints in the pool");
-        request.addToLog("operator (operator) didn't handle a call");
+//        request.addToLog("operator (operator) didn't handle a call");
         queue.queueCall(request);
 
         replay(request, queue, pool, audioFile);
@@ -166,8 +166,8 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
         expect(request.isHandlingByOperator()).andReturn(false).anyTimes();
         endpoint.invite(eq("88024"), geq(4), eq(0), checkConvListener(), same(scenario)
                 , checkBindings(operator, request));
-        request.addToLog("number (88024) not answer");
-        request.addToLog("operator (operator) didn't handle a call");
+        request.addToLog("no answer from (88024)");
+        request.addToLog("NOT handled by op.(operator)");
         queue.queueCall(checkRequest(request));
 
         replay(request, queue, pool, endpoint, endpointState, stateWaitResult, audioFile);
@@ -187,7 +187,6 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
     }
 
     @Test(timeout=10000)
-//    @Test()
     public void commutateTest() throws Exception {
         final CallQueueRequestWrapper request = createMock(CallQueueRequestWrapper.class);
         final AudioFile audioFile = createMock(AudioFile.class);
@@ -238,7 +237,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
         request.fireCommutatedEvent();
 
         //HANDLED
-        request.addToLog("conv. for op. number (88024) completed (COMPLETED_BY_OPPONENT)");
+        request.addToLog("conv. for op.num. (88024) completed (COMPLETED_BY_OPPONENT)");
         request.fireDisconnectedQueueEvent();
         
         //INVALID

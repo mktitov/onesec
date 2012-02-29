@@ -39,6 +39,7 @@ import org.onesec.raven.ivr.actions.PauseActionNode;
 import org.onesec.raven.ivr.actions.StopConversationActionNode;
 import org.onesec.raven.ivr.impl.*;
 import org.onesec.raven.ivr.queue.CallQueueRequest;
+import org.onesec.raven.ivr.queue.OperatorsUsagePolicy;
 import org.onesec.raven.ivr.queue.actions.QueueCallActionNode;
 import org.onesec.raven.ivr.queue.actions.QueuedCallEventHandlerNode;
 import org.onesec.raven.ivr.queue.actions.WaitForCallCommutationActionNode;
@@ -260,8 +261,8 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
     {
         prepareRealTest();
 
-        TimeUnit.SECONDS.sleep(60);
-//        TimeUnit.SECONDS.sleep(1200);
+//        TimeUnit.SECONDS.sleep(60);
+        TimeUnit.SECONDS.sleep(1200);
 
         Logger log = LoggerFactory.getLogger(Node.class);
         log.debug("!! Finising test !!");
@@ -309,8 +310,9 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         ExecutorServiceNode executor = new ExecutorServiceNode();
         executor.setName("executor");
         tree.getRootNode().addAndSaveChildren(executor);
-        executor.setMaximumPoolSize(15);
-        executor.setCorePoolSize(15);
+        executor.setMaximumPoolSize(40);
+        executor.setCorePoolSize(40);
+        executor.setMaximumQueueSize(100);
         assertTrue(executor.start());
 
         IvrEndpointPoolNode pool = new IvrEndpointPoolNode();
@@ -330,7 +332,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         IvrConversationScenarioNode abonentScenario = createAbonentScenario();
 //        createEndpoint(tree.getRootNode(), executor, manager, abonentScenario, "88013");
         createMultichannelEndpoint(executor, manager, abonentScenario);
-//        createEndpoint(pool, executor, manager, null, "88013");
+        createEndpoint(pool, executor, manager, null, "88013");
         createEndpoint(pool, executor, manager, null, "88014");
         
         assertTrue(pool.start());
@@ -376,6 +378,20 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         CallsQueueOperatorNode operator = new CallsQueueOperatorNode();
         operator.setName("Titov MK");
         queues.getOperatorsNode().addAndSaveChildren(operator);
+//        operator.setPhoneNumbers("88027");
+        operator.setPhoneNumbers("089128672947");
+//        operator.setPhoneNumbers("88027,089128672947");
+        operator.setParallelCallAfter(5);
+        operator.setEndpointPool(pool);
+        operator.setConversationsBridgeManager(bridge);
+        operator.setLogLevel(LogLevel.TRACE);
+        operator.setGreeting(greeting);
+        operator.setExecutor(executor);
+        assertTrue(operator.start());
+
+        operator = new CallsQueueOperatorNode();
+        operator.setName("Titov MK 2");
+        queues.getOperatorsNode().addAndSaveChildren(operator);
         operator.setPhoneNumbers("88027");
 //        operator.setPhoneNumbers("089128672947");
 //        operator.setPhoneNumbers("88027,089128672947");
@@ -399,6 +415,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         queue.addAndSaveChildren(selector);
         selector.setPriority(0);
         selector.setLogLevel(LogLevel.TRACE);
+        selector.setOperatorsUsagePolicy(OperatorsUsagePolicy.SEQUENCE_USAGE);
         assertTrue(selector.start());
 
         CallsQueueOperatorRefNode operatorRef = new CallsQueueOperatorRefNode();
