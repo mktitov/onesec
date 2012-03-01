@@ -57,6 +57,7 @@ public class CallQueueCdrRecordSchemaNodeTest extends OnesecRavenTestCase
         checkField(schema, DISCONNECTED_TIME, RecordSchemaFieldType.TIMESTAMP);
         checkField(schema, CONVERSATION_START_TIME, RecordSchemaFieldType.TIMESTAMP);
         checkField(schema, CONVERSATION_DURATION, RecordSchemaFieldType.INTEGER);
+        checkField(schema, TRANSFERED, RecordSchemaFieldType.STRING);
     }
 
     private void checkRecordDbExtension(CallQueueCdrRecordSchemaNode schema)
