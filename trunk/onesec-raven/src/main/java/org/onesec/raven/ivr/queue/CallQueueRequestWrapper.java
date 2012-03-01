@@ -85,6 +85,10 @@ public interface CallQueueRequestWrapper extends CallQueueRequest
      */
     public void fireOperatorGreetingQueueEvent(AudioFile greeting);
     /**
+     * Fires when call were transfered to other operator
+     */
+    public void fireCallTransfered(String operatorId, String operatorNumber);
+    /**
      * Returns the wrapped request
      */
     public CallQueueRequest getWrappedRequest(); 

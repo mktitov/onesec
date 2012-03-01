@@ -42,6 +42,7 @@ public class CallQueueCdrRecordSchemaNode extends RecordSchemaNode
     public final static String CALLING_NUMBER = "callingNumber";
     public final static String OPERATOR_ID = "operatorId";
     public final static String OPERATOR_NUMBER = "operatorNumber";
+    public final static String TRANSFERED = "transfered";
     public final static String LOG = "log";
     public final static String QUEUED_TIME = "queuedTime";
     public final static String REJECTED_TIME = "rejectedTime";
@@ -63,6 +64,7 @@ public class CallQueueCdrRecordSchemaNode extends RecordSchemaNode
     @Message private static String callingNumberDisplayName;
     @Message private static String operatorIdDisplayName;
     @Message private static String operatorNumberDisplayName;
+    @Message private static String transferedDisplayName;
     @Message private static String logDisplayName;
     @Message private static String queuedTimeDisplayName;
     @Message private static String rejectedTimeDisplayName;
@@ -102,6 +104,7 @@ public class CallQueueCdrRecordSchemaNode extends RecordSchemaNode
         createField(CALLING_NUMBER, callingNumberDisplayName, RecordSchemaFieldType.STRING);
         createField(OPERATOR_ID, operatorIdDisplayName, RecordSchemaFieldType.STRING);
         createField(OPERATOR_NUMBER, operatorNumberDisplayName, RecordSchemaFieldType.STRING);
+        createField(TRANSFERED, transferedDisplayName, RecordSchemaFieldType.STRING);
         createField(LOG, logDisplayName, RecordSchemaFieldType.STRING);
         createField(QUEUED_TIME, queuedTimeDisplayName, RecordSchemaFieldType.TIMESTAMP);
         createField(REJECTED_TIME, rejectedTimeDisplayName, RecordSchemaFieldType.TIMESTAMP);

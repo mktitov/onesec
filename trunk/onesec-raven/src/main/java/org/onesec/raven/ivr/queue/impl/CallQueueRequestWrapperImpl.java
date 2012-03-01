@@ -41,23 +41,8 @@ import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
 import org.onesec.raven.ivr.queue.CommutationManagerCall;
 import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviour;
 import org.onesec.raven.ivr.queue.RequestWrapperListener;
-import org.onesec.raven.ivr.queue.event.CallQueuedEvent;
-import org.onesec.raven.ivr.queue.event.CommutatedQueueEvent;
-import org.onesec.raven.ivr.queue.event.DisconnectedQueueEvent;
-import org.onesec.raven.ivr.queue.event.NumberChangedQueueEvent;
-import org.onesec.raven.ivr.queue.event.OperatorNumberQueueEvent;
-import org.onesec.raven.ivr.queue.event.OperatorQueueEvent;
-import org.onesec.raven.ivr.queue.event.ReadyToCommutateQueueEvent;
-import org.onesec.raven.ivr.queue.event.RejectedQueueEvent;
-import org.onesec.raven.ivr.queue.event.impl.CallQueuedEventImpl;
-import org.onesec.raven.ivr.queue.event.impl.CommutatedQueueEventImpl;
-import org.onesec.raven.ivr.queue.event.impl.DisconnectedQueueEventImpl;
-import org.onesec.raven.ivr.queue.event.impl.NumberChangedQueueEventImpl;
-import org.onesec.raven.ivr.queue.event.impl.OperatorGreetingQueueEventImpl;
-import org.onesec.raven.ivr.queue.event.impl.OperatorNumberQueueEventImpl;
-import org.onesec.raven.ivr.queue.event.impl.OperatorQueueEventImpl;
-import org.onesec.raven.ivr.queue.event.impl.ReadyToCommutateQueueEventImpl;
-import org.onesec.raven.ivr.queue.event.impl.RejectedQueueEventImpl;
+import org.onesec.raven.ivr.queue.event.*;
+import org.onesec.raven.ivr.queue.event.impl.*;
 import org.raven.ds.Record;
 import org.raven.ds.RecordException;
 import org.raven.ds.impl.DataSourceHelper;
@@ -302,8 +287,17 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
                     cdr.setValue(CONVERSATION_START_TIME, getTimestamp());
                 } else if (event instanceof OperatorQueueEvent) {
                     cdr.setValue(OPERATOR_ID, ((OperatorQueueEvent)event).getOperatorId());
-                } else if (event instanceof OperatorNumberQueueEvent)
+                } else if (event instanceof OperatorNumberQueueEvent) {
                     cdr.setValue(OPERATOR_NUMBER, ((OperatorNumberQueueEvent)event).getOperatorNumber());
+                } else if (event instanceof CallTransferedQueueEvent) {
+                    cdr.setValue(TRANSFERED, 'T');
+                    CallTransferedQueueEvent transferEvent = (CallTransferedQueueEvent) event;
+                    cdr.setValue(OPERATOR_ID, transferEvent.getOperatorId());
+                    cdr.setValue(OPERATOR_NUMBER, transferEvent.getOperatorNumber());
+                    addToLog(String.format("transfered to op. (%s) number (%s)"
+                            , transferEvent.getOperatorId(), transferEvent.getOperatorNumber()));
+
+                }
             }
         }catch(Throwable e){
             if (owner.isLogLevelEnabled(LogLevel.ERROR))
@@ -370,6 +364,10 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
 
     public void fireOperatorNumberQueueEvent(String operatorNumber) {
         callQueueChangeEvent(new OperatorNumberQueueEventImpl(queue, requestId, operatorNumber));
+    }
+
+    public void fireCallTransfered(String operatorId, String operatorNumber) {
+        callQueueChangeEvent(new CallTransferedQueueEventImpl(queue, requestId, operatorId, operatorNumber));
     }
 
     public void fireOperatorGreetingQueueEvent(AudioFile greeting) {
