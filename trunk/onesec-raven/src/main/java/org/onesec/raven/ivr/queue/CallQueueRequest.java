@@ -17,8 +17,8 @@
 
 package org.onesec.raven.ivr.queue;
 
-import org.onesec.raven.ivr.queue.event.CallQueueEvent;
 import org.onesec.raven.ivr.IvrEndpointConversation;
+import org.onesec.raven.ivr.queue.event.*;
 import org.raven.ds.DataContext;
 
 /**

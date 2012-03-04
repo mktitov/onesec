@@ -16,20 +16,20 @@
  */
 package org.onesec.raven.ivr.queue.impl;
 
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+import static org.easymock.EasyMock.*;
 import org.junit.Before;
 import org.junit.Test;
-import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
-import org.onesec.raven.ivr.queue.CallsQueue;
-import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviour;
-import org.onesec.raven.ivr.queue.CallsQueueOperator;
-import org.onesec.raven.ivr.queue.CallsQueueOperatorRef;
-import org.onesec.raven.ivr.queue.OperatorsUsagePolicy;
+import org.onesec.raven.ivr.queue.*;
+import org.raven.RavenUtils;
 import org.raven.log.LogLevel;
 import org.raven.sched.impl.ExecutorServiceNode;
+import org.raven.table.Table;
 import org.raven.test.RavenCoreTestCase;
 import org.raven.tree.Node;
-import static org.easymock.EasyMock.*;
+import org.raven.tree.Viewable;
+import org.raven.tree.ViewableObject;
 
 /**
  *
@@ -57,8 +57,7 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
     }
     
     @Test
-    public void successQueued()
-    {
+    public void successQueued() {
         executor.stop();
         
         CallQueueRequestWrapper req = createMock(CallQueueRequestWrapper.class);
@@ -73,6 +72,41 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         queue.queueCall(req);
         
         verify(req);
+    }
+    
+    @Test
+    public void getViewableObjects() throws Exception {
+        executor.stop();
+        
+        CallQueueRequestWrapper req = createMock(CallQueueRequestWrapper.class);
+        CallsQueue targetQueue = createMock(CallsQueue.class);
+        expect(targetQueue.getName()).andReturn("target queue");
+        expect(req.getCallsQueue()).andReturn(null);
+        req.setCallsQueue(queue);
+//        req.setRequestId(1);
+        req.setPositionInQueue(1);
+        req.fireCallQueuedEvent();
+        expect(req.getRequestId()).andReturn(1l);
+        expect(req.getPriority()).andReturn(2);
+        expect(req.getLastQueuedTime()).andReturn(System.currentTimeMillis());
+        expect(req.getTargetQueue()).andReturn(targetQueue);
+        expect(req.getOnBusyBehaviourStep()).andReturn(0);
+        expect(req.getOperatorIndex()).andReturn(1);
+        
+        replay(req, targetQueue);
+        
+        assertTrue(queue.start());
+        queue.queueCall(req);
+        
+        List<ViewableObject> vos = queue.getViewableObjects(null);
+        assertNotNull(vos);
+        assertEquals(1, vos.size());
+        assertEquals(Viewable.RAVEN_TABLE_MIMETYPE, vos.get(0).getMimeType());
+        Table tab = (Table) vos.get(0).getData();
+        List<Object[]> rows = RavenUtils.tableAsList(tab);
+        assertEquals(1, rows.size());
+        
+        verify(req, targetQueue);
     }
     
     @Test
@@ -109,8 +143,7 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
     }
     
     @Test(timeout=5000)
-    public void rejectedByNotFoundPrioritySelector() throws InterruptedException
-    {
+    public void rejectedByNotFoundPrioritySelector() throws InterruptedException {
         CallQueueRequestWrapper req = createMock(CallQueueRequestWrapper.class);
         expect(req.getCallsQueue()).andReturn(null);
         req.setCallsQueue(queue);
@@ -119,6 +152,8 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         req.fireCallQueuedEvent();
         req.addToLog("not found priority selector");
         req.fireRejectedQueueEvent();
+        expect(req.isValid()).andReturn(Boolean.TRUE);
+        expect(req.logMess("Processing request...")).andReturn("");
         replay(req);
 
         queue.setLogLevel(LogLevel.NONE);
@@ -135,8 +170,7 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
     }
     
     @Test
-    public void rejectedByNoOperatorsNoOnBusyBehaviour() throws InterruptedException
-    {
+    public void rejectedByNoOperatorsNoOnBusyBehaviour() throws InterruptedException {
         executor.stop();
         
         CallsQueuePrioritySelectorNode selector = new CallsQueuePrioritySelectorNode();
@@ -153,6 +187,8 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         req.setPositionInQueue(1);
         expect(req.getPriority()).andReturn(1).anyTimes();
         req.fireCallQueuedEvent();
+        expect(req.isValid()).andReturn(Boolean.TRUE);
+        expect(req.logMess("Processing request...")).andReturn("");
         expect(req.getOperatorIndex()).andReturn(-1).anyTimes();
         expect(req.getOnBusyBehaviour()).andReturn(null);
         req.setOnBusyBehaviour(isA(CallsQueueOnBusyBehaviour.class));
@@ -187,6 +223,8 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
 //        req.setRequestId(1);
         req.setPositionInQueue(1);
         req.fireCallQueuedEvent();
+        expect(req.isValid()).andReturn(Boolean.TRUE);
+        expect(req.logMess("Processing request...")).andReturn("");
         req.incOperatorHops(); expectLastCall().anyTimes();
         expect(req.getPriority()).andReturn(1).anyTimes();
         expect(req.getOperatorIndex()).andReturn(-1);
@@ -207,8 +245,7 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
     }
     
     @Test
-    public void leaveInQueueTest() throws Exception
-    {
+    public void leaveInQueueTest() throws Exception {
         executor.stop();
         
         CallQueueRequestWrapper req = createMock(CallQueueRequestWrapper.class);
@@ -220,6 +257,8 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
 //        req.setRequestId(1);
         req.setPositionInQueue(1);
         req.fireCallQueuedEvent();
+        expect(req.isValid()).andReturn(Boolean.TRUE);
+        expect(req.logMess("Processing request...")).andReturn("");
         expect(req.getPriority()).andReturn(1).anyTimes();
         expect(req.getOperatorIndex()).andReturn(-1);
         expect(req.getOnBusyBehaviour()).andReturn(null);
@@ -240,8 +279,7 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
     }
     
     @Test
-    public void orderChangeAfterProcessTest() throws Exception
-    {
+    public void orderChangeAfterProcessTest() throws Exception {
         executor.stop();
         
         CallQueueRequestWrapper req = createMock("req", CallQueueRequestWrapper.class);
@@ -255,6 +293,8 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         req.setPositionInQueue(1);
         expectLastCall().anyTimes();
         req.fireCallQueuedEvent();        
+        expect(req.isValid()).andReturn(Boolean.TRUE);
+        expect(req.logMess("Processing request...")).andReturn("");
         expect(req.getPriority()).andReturn(1).anyTimes();
         expect(req.getOperatorIndex()).andReturn(-1);
         expect(req.getOnBusyBehaviour()).andReturn(null);
@@ -285,8 +325,7 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
     }
 
     @Test
-    public void operatorIndexTest() throws Exception
-    {
+    public void operatorIndexTest() throws Exception {
         executor.stop();
 
         CallQueueRequestWrapper req = createMock(CallQueueRequestWrapper.class);
@@ -302,6 +341,8 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
 //        req.setRequestId(1);
         req.setPositionInQueue(1); expectLastCall().times(3);
         req.fireCallQueuedEvent(); expectLastCall().times(3);
+        expect(req.isValid()).andReturn(Boolean.TRUE).times(3);
+        expect(req.logMess("Processing request...")).andReturn("").times(3);
         expect(req.getPriority()).andReturn(1).anyTimes();
         expect(req.getOperatorIndex()).andReturn(-1).andReturn(0).andReturn(1);
         req.incOperatorHops(); expectLastCall().anyTimes();
@@ -343,8 +384,7 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
     }
     
     @Test
-    public void uniformOperatorUsageTest() throws Exception
-    {
+    public void uniformOperatorUsageTest() throws Exception {
         executor.stop();
 
         CallsQueuePrioritySelectorNode selector = new CallsQueuePrioritySelectorNode();
@@ -372,6 +412,8 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         req.setCallsQueue(queue); expectLastCall().anyTimes();
         req.setPositionInQueue(1); expectLastCall().anyTimes();
         req.fireCallQueuedEvent(); expectLastCall().anyTimes();
+        expect(req.isValid()).andReturn(Boolean.TRUE).anyTimes();
+        expect(req.logMess("Processing request...")).andReturn("").anyTimes();
         req.setOperatorIndex(anyInt()); expectLastCall().anyTimes();
         expect(req.getPriority()).andReturn(1).anyTimes();
         req.incOperatorHops(); expectLastCall().anyTimes();
@@ -395,8 +437,7 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
     }
 
     @Test
-    public void uniformOperatorUsageTest2() throws Exception
-    {
+    public void uniformOperatorUsageTest2() throws Exception {
         executor.stop();
 
         CallsQueuePrioritySelectorNode selector = new CallsQueuePrioritySelectorNode();
@@ -424,6 +465,8 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         req.setCallsQueue(queue); expectLastCall().anyTimes();
         req.setPositionInQueue(1); expectLastCall().anyTimes();
         req.fireCallQueuedEvent(); expectLastCall().anyTimes();
+        expect(req.isValid()).andReturn(Boolean.TRUE).anyTimes();
+        expect(req.logMess("Processing request...")).andReturn("").anyTimes();
         req.setOperatorIndex(anyInt()); expectLastCall().anyTimes();
         req.fireRejectedQueueEvent();
         expect(req.getOnBusyBehaviour()).andReturn(null);
@@ -451,8 +494,7 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
     }
 
     @Test
-    public void uniformOperatorUsageTest3() throws Exception
-    {
+    public void uniformOperatorUsageTest3() throws Exception {
         executor.stop();
 
         CallsQueuePrioritySelectorNode selector = new CallsQueuePrioritySelectorNode();
@@ -480,6 +522,8 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         req.setCallsQueue(queue); expectLastCall().anyTimes();
         req.setPositionInQueue(1); expectLastCall().anyTimes();
         req.fireCallQueuedEvent(); expectLastCall().anyTimes();
+        expect(req.isValid()).andReturn(Boolean.TRUE).anyTimes();
+        expect(req.logMess("Processing request...")).andReturn("").anyTimes();
         req.setOperatorIndex(anyInt()); expectLastCall().anyTimes();
         req.fireRejectedQueueEvent();
         expect(req.getOnBusyBehaviour()).andReturn(null);
