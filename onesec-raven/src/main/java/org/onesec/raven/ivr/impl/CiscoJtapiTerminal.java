@@ -776,6 +776,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
             {
                 if (isLogLevelEnabled(LogLevel.DEBUG))
                     logger.debug(callLog(call, "Detected INVITE TIMEOUT. Canceling a call"));
+                getAndRemoveConvHolder(call);
                 conv.stopConversation(CompletionCode.OPPONENT_NOT_ANSWERED);
             } else if (stopCallAt>0 && conv.getState().getId()!=IvrEndpointConversationState.INVALID)
                 executor.executeQuietly(stopCallAt-System.currentTimeMillis()
@@ -812,6 +813,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
             if (conv.getState().getId()!=IvrEndpointConversationState.INVALID) {
                 if (isLogLevelEnabled(LogLevel.DEBUG))
                     logger.debug(callLog(call, "The call duration is TOO LONG. Canceling a call"));
+                getAndRemoveConvHolder(call);
                 conv.stopConversation(CompletionCode.CALL_DURATION_TOO_LONG);
             }
         }

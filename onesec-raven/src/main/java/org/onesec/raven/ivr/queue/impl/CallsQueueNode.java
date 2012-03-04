@@ -16,9 +16,8 @@
  */
 package org.onesec.raven.ivr.queue.impl;
 
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
+import java.text.SimpleDateFormat;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -37,23 +36,39 @@ import org.raven.sched.ExecutorService;
 import org.raven.sched.ManagedTask;
 import org.raven.sched.TaskRestartPolicy;
 import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
+import org.raven.table.TableImpl;
 import org.raven.tree.Node;
+import org.raven.tree.NodeAttribute;
+import org.raven.tree.Viewable;
+import org.raven.tree.ViewableObject;
 import org.raven.tree.impl.BaseNode;
+import org.raven.tree.impl.ViewableObjectImpl;
 import org.raven.util.NodeUtils;
 import org.weda.annotations.constraints.NotNull;
+import org.weda.internal.annotations.Message;
 
 /**
  *
  * @author Mikhail Titov
  */
 @NodeClass(parentNode=CallsQueuesContainerNode.class)
-public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask
+public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask, Viewable
 {
     @NotNull @Parameter(defaultValue="10")
     private Integer maxQueueSize;
 
     @NotNull @Parameter(valueHandlerType=SystemSchedulerValueHandlerFactory.TYPE)
     private ExecutorService executor;
+    
+    @Message private static String queueBusyMessage;
+    @Message private static String numberInQueueMessage;
+    @Message private static String priorityMessage;
+    @Message private static String requestIdMessage;
+    @Message private static String queueTimeMessage;
+    @Message private static String targetQueueMessage;
+    @Message private static String nextOnBusyBehaviourStepMessage;
+    @Message private static String lastOperatorIndexMessage;
+    @Message private static String requestMessage;
 
     private AtomicReference<String> statusMessage;
     private AtomicBoolean stopProcessing;
@@ -134,6 +149,41 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask
         } finally {
             lock.writeLock().unlock();
         }
+    }
+
+    public Boolean getAutoRefresh() {
+        return true;
+    }
+
+    public Map<String, NodeAttribute> getRefreshAttributes() throws Exception {
+        return null;
+    }
+
+    public List<ViewableObject> getViewableObjects(Map<String, NodeAttribute> refreshAttributes) 
+            throws Exception 
+    {
+        List<ViewableObject> vos = new ArrayList<ViewableObject>(1);
+        if (lock.readLock().tryLock(500, TimeUnit.MILLISECONDS)) {
+            try {
+                TableImpl tab = new TableImpl(new String[]{numberInQueueMessage, requestIdMessage,
+                        priorityMessage, queueTimeMessage, targetQueueMessage, 
+                        nextOnBusyBehaviourStepMessage, lastOperatorIndexMessage, requestMessage});
+                SimpleDateFormat fmt = new SimpleDateFormat("HH:mm:ss");
+                int numInQueue = 1;
+                for (CallQueueRequestWrapper req: queue) {
+                    tab.addRow(new Object[]{numInQueue++, req.getRequestId(), req.getPriority()
+                            , fmt.format(new Date(req.getLastQueuedTime()))
+                            , req.getTargetQueue().getName()
+                            , req.getOnBusyBehaviourStep(), req.getOperatorIndex(), req.toString()
+                    });
+                }
+                vos.add(new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, tab));
+            } finally {
+                lock.readLock().unlock();
+            }
+        } else 
+            vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, queueBusyMessage));
+        return vos;
     }
 
     public Node getTaskNode() {
@@ -236,7 +286,7 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask
                             }
                         }
                     }
-                }finally{
+                } finally {
                     if (!leaveInQueue && queue.peek()!=null) {
                         queue.pop();
                         fireQueueNumberChangedEvents();
