@@ -237,11 +237,11 @@ public class ExternalTextToSpeechEngineNode extends AbstractDataSource implement
             throws Exception 
     {
         List<ViewableObject> vos = new ArrayList<ViewableObject>(2);
-        vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, tableHeaderMessage));
+        vos.add(new ViewableObjectImpl(RAVEN_TEXT_MIMETYPE, tableHeaderMessage));
         TableImpl table = new TableImpl(new String[]{textColumnMessage, wavFileColumnMessage});
         for (Map.Entry entry: cache.entrySet())
             table.addRow(new Object[]{entry.getKey(), entry.getValue().toString()});
-        
+        vos.add(new ViewableObjectImpl(RAVEN_TABLE_MIMETYPE, table));
         return vos;
     }
 

@@ -18,6 +18,7 @@ package org.onesec.raven.ivr.impl;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.LineIterator;
@@ -25,10 +26,14 @@ import org.junit.Before;
 import org.junit.Test;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.ivr.InputStreamSource;
+import org.raven.RavenUtils;
 import org.raven.log.LogLevel;
 import org.raven.sched.impl.ExecutorServiceNode;
+import org.raven.table.Table;
 import org.raven.test.DataCollector;
 import org.raven.tree.NodeAttribute;
+import org.raven.tree.Viewable;
+import org.raven.tree.ViewableObject;
 
 /**
  *
@@ -65,14 +70,14 @@ public class ExternalTextToSpeechEngineNodeTest extends OnesecRavenTestCase {
         try { FileUtils.forceDelete(cacheDir); } catch (Exception e) {}
     }
     
-//    @Test
+    @Test
     public void invalidCacheDir() throws IOException {
         assertFalse(ttsNode.start());
         FileUtils.forceMkdir(cacheDir);
         assertTrue(ttsNode.start());
     }
 
-//    @Test
+    @Test
     public void normalExecutionTestAndCacheTest() throws Exception {
         FileUtils.forceMkdir(cacheDir);
         ttsNode.setCommandLine("\"cp ${textFilename} ${wavFilename}\".toString()");
@@ -98,7 +103,7 @@ public class ExternalTextToSpeechEngineNodeTest extends OnesecRavenTestCase {
         assertSame(res, collector.getDataList().get(0));
     }
     
-//    @Test
+    @Test
     public void executionTimeoutTest() throws Exception {
         FileUtils.forceMkdir(cacheDir);
         ttsNode.setCommandLine("'sleep 2'");
@@ -117,11 +122,69 @@ public class ExternalTextToSpeechEngineNodeTest extends OnesecRavenTestCase {
     
     @Test
     public void readFromCacheTest() throws Exception {
+        FileUtils.forceMkdir(cacheDir);
+        String test1Base = cacheDir.getPath()+"/test1";
+        String test2Base = cacheDir.getPath()+"/test2";
+        File text1File = new File(test1Base+".txt");
+        File wav1File = new File(test1Base+".wav");
+        File text2File = new File(test2Base+".txt");
+        FileUtils.writeStringToFile(text1File, "test");
+        FileUtils.writeStringToFile(wav1File, "test wav file");
+        FileUtils.writeStringToFile(text2File, "test2");
         
+        assertTrue(text2File.exists());
+        assertTrue(ttsNode.start());
+        assertFalse(text2File.exists());
+        NodeAttribute textAttr = collector.getNodeAttribute(ExternalTextToSpeechEngineNode.TEXT_ATTR);
+        assertNotNull(textAttr);
+        textAttr.setValue("test");
+        assertTrue(collector.start());
+        
+        collector.refereshData(null);
+        assertEquals(1, collector.getDataList().size());
+        Object res = collector.getDataList().get(0);
+        assertTrue(res instanceof InputStreamSource);
+        InputStreamSource source = (InputStreamSource) res;
+        assertEquals("test wav file", IOUtils.toString(source.getInputStream(), "utf-8"));
+        Thread.sleep(1000);
     }
     
     @Test
     public void getViewableObjectsTest() throws Exception {
+        FileUtils.forceMkdir(cacheDir);
+        ttsNode.setCommandLine("\"cp ${textFilename} ${wavFilename}\".toString()");
+        assertTrue(ttsNode.start());
+        
+        NodeAttribute textAttr = collector.getNodeAttribute(ExternalTextToSpeechEngineNode.TEXT_ATTR);
+        assertNotNull(textAttr);
+        textAttr.setValue("test");
+        assertTrue(collector.start());
+        
+        List<ViewableObject> vos = ttsNode.getViewableObjects(null);
+        assertNotNull(vos);
+        assertEquals(2, vos.size());
+        assertEquals(Viewable.RAVEN_TEXT_MIMETYPE, vos.get(0).getMimeType());
+        assertTrue(vos.get(0).getData() instanceof String);
+        assertEquals(Viewable.RAVEN_TABLE_MIMETYPE, vos.get(1).getMimeType());
+        Object v2 = vos.get(1).getData();
+        assertTrue(v2 instanceof Table);
+        Table tab = (Table) v2;
+        List<Object[]> rows = RavenUtils.tableAsList(tab);
+        assertEquals(0, rows.size());
+        
+        collector.refereshData(null);
+        vos = ttsNode.getViewableObjects(null);
+        assertNotNull(vos);
+        assertEquals(2, vos.size());
+        assertEquals(Viewable.RAVEN_TEXT_MIMETYPE, vos.get(0).getMimeType());
+        assertTrue(vos.get(0).getData() instanceof String);
+        assertEquals(Viewable.RAVEN_TABLE_MIMETYPE, vos.get(1).getMimeType());
+        v2 = vos.get(1).getData();
+        assertTrue(v2 instanceof Table);
+        tab = (Table) v2;
+        rows = RavenUtils.tableAsList(tab);
+        assertEquals(1, rows.size());
+        
         
     }
     
@@ -137,5 +200,4 @@ public class ExternalTextToSpeechEngineNodeTest extends OnesecRavenTestCase {
         while (it.hasNext())
             System.out.println("LINE: "+it.nextLine());
     }
-    
 }
