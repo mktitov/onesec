@@ -24,6 +24,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import javax.script.Bindings;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
@@ -42,11 +44,13 @@ import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.Task;
 import org.raven.sched.impl.AbstractTask;
+import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
 import org.raven.table.TableImpl;
 import org.raven.tree.Node;
 import org.raven.tree.NodeAttribute;
 import org.raven.tree.Viewable;
 import org.raven.tree.ViewableObject;
+import org.raven.tree.impl.DataSourcesNode;
 import org.raven.tree.impl.NodeAttributeImpl;
 import org.raven.tree.impl.ViewableObjectImpl;
 import org.weda.annotations.constraints.NotNull;
@@ -59,7 +63,7 @@ import org.weda.internal.services.MessagesRegistry;
  *
  * @author Mikhail Titov
  */
-@NodeClass
+@NodeClass(parentNode=DataSourcesNode.class)
 public class ExternalTextToSpeechEngineNode extends AbstractDataSource implements Viewable {
     
     public final static String TEXT_ATTR = "textToSpeech";
@@ -78,7 +82,7 @@ public class ExternalTextToSpeechEngineNode extends AbstractDataSource implement
     private Charset textFileEncoding;
     @NotNull @Parameter
     private String cacheDir;
-    @NotNull @Parameter
+    @NotNull @Parameter(valueHandlerType=SystemSchedulerValueHandlerFactory.TYPE)
     private ExecutorService executor;
     @NotNull @Parameter(defaultValue="utf-8")
     private Charset commandStreamsEncoding;
@@ -91,18 +95,31 @@ public class ExternalTextToSpeechEngineNode extends AbstractDataSource implement
     
     private Map<String, FileInputStreamSource> cache;
     private BindingSupportImpl bindingSupport;
+    private volatile long executionTime;
+    private volatile long operationsCount;
+    private AtomicInteger cacheHitCount;
+    private AtomicInteger errorsCount;
 
     @Override
     protected void initFields() {
         super.initFields();
         cache = new ConcurrentHashMap<String, FileInputStreamSource>();
         bindingSupport = new BindingSupportImpl();
+        resetStat();
     }
 
     @Override
     protected void doStart() throws Exception {
         super.doStart();
+        resetStat();
         readCache();
+    }
+    
+    private void resetStat() {
+        executionTime = 0;
+        operationsCount = 0;
+        cacheHitCount = new AtomicInteger();
+        errorsCount = new AtomicInteger();
     }
 
     @Override
@@ -116,6 +133,7 @@ public class ExternalTextToSpeechEngineNode extends AbstractDataSource implement
         String text = context.getSessionAttributes().get(TEXT_ATTR).getValue();
         FileInputStreamSource source = cache.get(text);
         if (source!=null) {
+            cacheHitCount.incrementAndGet();
             dataConsumer.setData(this, source, context);
             return true;
         }
@@ -151,27 +169,33 @@ public class ExternalTextToSpeechEngineNode extends AbstractDataSource implement
     }
     
     private boolean executeProcess(String commandLine, DataConsumer dataConsumer) {
+        long ts = System.currentTimeMillis();
         try {
-            if (isLogLevelEnabled(LogLevel.DEBUG))
-                getLogger().debug("Executing command: {}", commandLine);
-            Process proc = Runtime.getRuntime().exec(commandLine);
-            ProcessInfo procInfo = new ProcessInfo(proc, commandLine);
-            runProcessMonitor(procInfo);
-            if (isLogLevelEnabled(LogLevel.ERROR))
-                executor.executeQuietly(new StreamLoggerTask("error", proc.getErrorStream(), false));
-            if (isLogLevelEnabled(LogLevel.DEBUG))
-                executor.executeQuietly(new StreamLoggerTask("output", proc.getInputStream(), true));
-            int res = proc.waitFor();
-            if (res!=0) {
+            try {
+                if (isLogLevelEnabled(LogLevel.DEBUG))
+                    getLogger().debug("Executing command: {}", commandLine);
+                Process proc = Runtime.getRuntime().exec(commandLine);
+                ProcessInfo procInfo = new ProcessInfo(proc, commandLine);
+                runProcessMonitor(procInfo);
                 if (isLogLevelEnabled(LogLevel.ERROR))
-                    getLogger().error("The process return NON ZERO status code - ({})", res);
+                    executor.executeQuietly(new StreamLoggerTask("error", proc.getErrorStream(), false));
+                if (isLogLevelEnabled(LogLevel.DEBUG))
+                    executor.executeQuietly(new StreamLoggerTask("output", proc.getInputStream(), true));
+                int res = proc.waitFor();
+                if (res!=0) {
+                    errorsCount.incrementAndGet();
+                    if (isLogLevelEnabled(LogLevel.ERROR))
+                        getLogger().error("The process return NON ZERO status code - ({})", res);
+                    return false;
+                } 
+                return true;
+            } catch (Throwable e) {
+                if (isLogLevelEnabled(LogLevel.ERROR))
+                    getLogger().error("Error executing process ({})", commandLine);
                 return false;
-            } 
-            return true;
-        } catch (Throwable e) {
-            if (isLogLevelEnabled(LogLevel.ERROR))
-                getLogger().error("Error executing process ({})", commandLine);
-            return false;
+            }
+        } finally {
+            addStat(ts);
         }
     }
     
@@ -191,6 +215,11 @@ public class ExternalTextToSpeechEngineNode extends AbstractDataSource implement
     public void formExpressionBindings(Bindings bindings) {
         super.formExpressionBindings(bindings);
         bindingSupport.addTo(bindings);
+    }
+    
+    private synchronized void addStat(long startTime) {
+        executionTime += System.currentTimeMillis()-startTime;
+        ++operationsCount;
     }
 
     @Override
@@ -223,6 +252,36 @@ public class ExternalTextToSpeechEngineNode extends AbstractDataSource implement
                 } else 
                     cache.put(text, new FileInputStreamSource(wavFile, this));
             }
+    }
+    
+    @Parameter(readOnly=true)
+    public Long getTotalExecutionTimeMS() {
+        return executionTime;
+    }
+    
+    @Parameter(readOnly=true)
+    public Long getAvgExecutionTimeMS() {
+        return operationsCount==0? 0 : executionTime/operationsCount;
+    }
+    
+    @Parameter(readOnly=true)
+    public Long getOperationsCount() {
+        return operationsCount;
+    }
+    
+    @Parameter(readOnly=true)
+    public Integer getCacheHitCount() {
+        return cacheHitCount.get();
+    }
+    
+    @Parameter(readOnly=true)
+    public Long getCacheHitPercent() {
+        return operationsCount==0? 0 : 100*cacheHitCount.get()/operationsCount;
+    }
+    
+    @Parameter(readOnly=true)
+    public Integer getErrorsCount() {
+        return errorsCount.get();
     }
 
     public Boolean getAutoRefresh() {
