@@ -29,6 +29,7 @@ import com.cisco.jtapi.extensions.CiscoRTPOutputProperties;
 import com.cisco.jtapi.extensions.CiscoRTPOutputStartedEv;
 import com.cisco.jtapi.extensions.CiscoRTPOutputStoppedEv;
 import com.cisco.jtapi.extensions.CiscoRTPParams;
+import com.cisco.jtapi.extensions.CiscoRegistrationException;
 import com.cisco.jtapi.extensions.CiscoRouteTerminal;
 import com.cisco.jtapi.extensions.CiscoTermInServiceEv;
 import com.cisco.jtapi.extensions.CiscoTermOutOfServiceEv;
@@ -186,7 +187,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
     public void stop() {
         if (stopping.compareAndSet(false, true)) {
             resetListeners();
-            unregisterTerminal();
+            unregisterTerminal(ciscoTerm);
             unregisterTerminalListeners();
         }
     }
@@ -263,17 +264,21 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
         Terminal[] terminals = addr.getTerminals();
         if (terminals==null || terminals.length==0)
             throw new Exception(String.format("Address (%s) does not have terminals", address));
-        Terminal terminal = terminals[0];
+        CiscoTerminal terminal = (CiscoTerminal) terminals[0];
         if (terminal instanceof CiscoRouteTerminal) {
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 logger.debug("Registering {} terminal", CiscoRouteTerminal.class.getName());
             CiscoRouteTerminal routeTerm = (CiscoRouteTerminal) terminal;
+            if (routeTerm.isRegisteredByThisApp())
+                unexpectedUnregistration(routeTerm);
             routeTerm.register(codec.getCiscoMediaCapabilities(), CiscoRouteTerminal.DYNAMIC_MEDIA_REGISTRATION);
             return routeTerm;
         } else if (terminal instanceof CiscoMediaTerminal) {
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 logger.debug("Registering {} terminal", CiscoMediaTerminal.class.getName());
             CiscoMediaTerminal mediaTerm = (CiscoMediaTerminal) terminal;
+            if (mediaTerm.isRegisteredByThisApp())
+                unexpectedUnregistration(mediaTerm);
             mediaTerm.register(codec.getCiscoMediaCapabilities());
             maxChannels = 1;
             return mediaTerm;
@@ -288,16 +293,24 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
         termAddress.addObserver(this);
         termAddress.addCallObserver(this);
     }
+    
+    private void unexpectedUnregistration(Terminal term) {
+        if (isLogLevelEnabled(LogLevel.WARN))
+            logger.warn("Unexpected terminal unregistration. Triyng to register terminal but it "
+                    + "already registered by this application! "
+                    + "So unregistering terminal first");
+        unregisterTerminal(term);
+    }
 
-    private void unregisterTerminal() {
+    private void unregisterTerminal(Terminal term) {
         try {
-            if (ciscoTerm instanceof CiscoRouteTerminal)
-                ((CiscoRouteTerminal)ciscoTerm).unregister();
-            else if (ciscoTerm instanceof CiscoMediaTerminal)
-                ((CiscoMediaTerminal)ciscoTerm).unregister();
+            if (term instanceof CiscoRouteTerminal)
+                ((CiscoRouteTerminal)term).unregister();
+            else if (term instanceof CiscoMediaTerminal)
+                ((CiscoMediaTerminal)term).unregister();
         } catch (Throwable e) {
             if (isLogLevelEnabled(LogLevel.ERROR))
-                logger.error("Problem with unregistering terminal", e);
+                logger.error("Problem with terminal unregistration", e);
         }
     }
 

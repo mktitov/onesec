@@ -596,7 +596,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                 warn("Wait for read lock was interrupted", ex);
         }
     }
-
+    
     public void run()
     {
         managerThreadStoped.set(false);
