@@ -17,13 +17,14 @@
 
 package org.onesec.raven.ivr.impl;
 
-import java.util.List;
 import java.util.ArrayList;
-import org.onesec.raven.ivr.IvrEndpoint;
-import org.easymock.IMocksControl;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+import static org.easymock.EasyMock.*;
 import org.easymock.IAnswer;
 import org.easymock.IArgumentMatcher;
+import org.easymock.IMocksControl;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.onesec.core.StateWaitResult;
@@ -32,13 +33,12 @@ import org.onesec.core.provider.ProviderControllerState;
 import org.onesec.core.services.ProviderRegistry;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.ivr.EndpointRequest;
+import org.onesec.raven.ivr.IvrEndpoint;
+import org.onesec.raven.ivr.IvrEndpointPool;
 import org.raven.log.LogLevel;
 import org.raven.sched.impl.ExecutorServiceNode;
 import org.raven.tree.Node;
 import org.raven.tree.impl.ContainerNode;
-import static org.easymock.EasyMock.*;
-import org.junit.After;
-import org.onesec.raven.ivr.IvrEndpointPool;
 
 /**
  *
@@ -73,6 +73,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         tree.getRootNode().addAndSaveChildren(pool);
         pool.setExecutor(executor);
         pool.setLogLevel(LogLevel.TRACE);
+        pool.setMaxRequestsPerSecond(10);
 
         endpoint = createEndpoint("88013");
         
@@ -83,6 +84,11 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
     public void completeTest() {
         pool.stop();
         executor.stop();
+    }
+    
+//    @Test
+    public void test() {
+        System.out.println("=>"+(99999/1000));
     }
 
 //    @Test
@@ -143,7 +149,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         verify(req, req2);
     }
 
-//    @Test(timeout=25000)
+    @Test(timeout=25000)
     public void asyncTest() throws Exception {
         createEndpoint("88014");
 
@@ -274,7 +280,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         verify(req1, req2);
     }
 
-    @Test
+//    @Test
     public void addressRangesTest() throws Exception {
         pool.stop();
         TimeUnit.SECONDS.sleep(2);
