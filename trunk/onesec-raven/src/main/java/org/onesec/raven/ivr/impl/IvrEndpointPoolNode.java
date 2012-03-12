@@ -17,14 +17,7 @@
 
 package org.onesec.raven.ivr.impl;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -34,22 +27,11 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import org.onesec.raven.ivr.Codec;
-import org.onesec.raven.ivr.EndpointRequest;
-import org.onesec.raven.ivr.IvrEndpoint;
-import org.onesec.raven.ivr.IvrEndpointPool;
-import org.onesec.raven.ivr.IvrEndpointState;
-import org.onesec.raven.ivr.RtpAddress;
+import org.onesec.raven.ivr.*;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.log.LogLevel;
-import org.raven.sched.ExecutorService;
-import org.raven.sched.ExecutorServiceException;
-import org.raven.sched.ManagedTask;
-import org.raven.sched.Schedulable;
-import org.raven.sched.Scheduler;
-import org.raven.sched.Task;
-import org.raven.sched.TaskRestartPolicy;
+import org.raven.sched.*;
 import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
 import org.raven.table.TableImpl;
 import org.raven.tree.Node;
@@ -112,18 +94,22 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
 
     @NotNull @Parameter(defaultValue="false")
     private Boolean enableIncomingCalls;
+    
+    @Parameter
+    private Integer maxRequestsPerSecond;
 
     private ReadWriteLock lock;
     private Condition endpointReleased;
     private Map<Integer, RequestInfo> busyEndpoints;
     private Map<Integer, Long> usageCounters;
-//    private LinkedBlockingQueue<RequestInfo> queue;
     private PriorityBlockingQueue<RequestInfo> queue;
     private AtomicBoolean stopManagerTask;
     private AtomicBoolean managerThreadStoped;
     private AtomicReference<String> statusMessage;
     private final static AtomicLong requestSeq = new AtomicLong();
-
+    private int sessionMaxRequestsPerSecond;
+    private int requestsCountInSecond;
+    private long lastMaxRequestsPerSecondCheckTime;
 
     @Message
     private static String totalUsageCountMessage;
@@ -153,8 +139,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     private static String waitingTimeMessage;
 
     @Override
-    protected void initFields()
-    {
+    protected void initFields() {
         super.initFields();
         lock = new ReentrantReadWriteLock();
         endpointReleased = lock.writeLock().newCondition();
@@ -167,8 +152,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     }
 
     @Override
-    protected void doStart() throws Exception
-    {
+    protected void doStart() throws Exception {
         super.doStart();
         if (!managerThreadStoped.get())
             throw new Exception("Can't start pool because of manager task is still running");
@@ -182,6 +166,9 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         synchEndpointsWithAddressRanges();
         executor.execute(this);
         loadAverage = new LoadAverageStatistic(LOADAVERAGE_INTERVAL, getChildrenCount());
+        sessionMaxRequestsPerSecond = maxRequestsPerSecond==null? Integer.MAX_VALUE : maxRequestsPerSecond;
+        lastMaxRequestsPerSecondCheckTime = 0;
+        requestsCountInSecond = 0;
     }
 
     @Override
@@ -294,21 +281,33 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
             }
         }
     }
+    
+    private synchronized void applyMaxRequestsPerSecondPolicy() {
+        long ts = System.currentTimeMillis();
+        if (ts/1000 > lastMaxRequestsPerSecondCheckTime/1000) {
+            lastMaxRequestsPerSecondCheckTime = ts;
+            requestsCountInSecond=1;
+        } else if (requestsCountInSecond<=sessionMaxRequestsPerSecond) {
+            ++requestsCountInSecond;
+        } else {
+            try {
+                Thread.sleep(1000-ts%1000);
+                requestsCountInSecond = 1;
+                lastMaxRequestsPerSecondCheckTime = System.currentTimeMillis();
+            } catch (InterruptedException ex) { }
+        }
+    }
 
-    private boolean sendResponse(RequestInfo requestInfo)
-    {
-        try
-        {
+    private boolean sendResponse(RequestInfo requestInfo) {
+        try {
+            applyMaxRequestsPerSecondPolicy();
             statusMessage.set("Executing response for request from ("+requestInfo.getTaskNode().getPath()+")");
             executor.execute(requestInfo);
             return true;
-        }
-        catch(ExecutorServiceException e)
-        {
+        } catch(ExecutorServiceException e) {
             if (isLogLevelEnabled(LogLevel.ERROR))
                 error("Error executing task for ("+requestInfo.getTaskNode().getPath()+")", e);
         }
-
         return false;
     }
 
@@ -414,6 +413,14 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
 
     public void setRtpPacketSize(Integer rtpPacketSize) {
         this.rtpPacketSize = rtpPacketSize;
+    }
+
+    public Integer getMaxRequestsPerSecond() {
+        return maxRequestsPerSecond;
+    }
+
+    public void setMaxRequestsPerSecond(Integer maxRequestsPerSecond) {
+        this.maxRequestsPerSecond = maxRequestsPerSecond;
     }
 
     private void releaseEndpoint(IvrEndpoint endpoint, long duration)
