@@ -16,7 +16,7 @@
 package org.onesec.raven.ivr.queue.impl;
 
 import org.onesec.raven.ivr.queue.BehaviourResult;
-import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
+import org.onesec.raven.ivr.queue.CallQueueRequestController;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviourStep;
 import org.raven.annotations.Parameter;
@@ -53,9 +53,9 @@ public abstract class AbstractMoveToQueueOnBusyBehaviourStepNode extends BaseNod
         this.resetOnBusyBehaviour = resetOnBusyBehaviour;
     }
     
-    protected abstract CallsQueue getQueue(CallQueueRequestWrapper request);
+    protected abstract CallsQueue getQueue(CallQueueRequestController request);
 
-    public BehaviourResult handleBehaviour(final CallsQueue queue, final CallQueueRequestWrapper request) {
+    public BehaviourResult handleBehaviour(final CallsQueue queue, final CallQueueRequestController request) {
         if (resetOnBusyBehaviour) 
             request.setOnBusyBehaviour(null);
         final CallsQueue _callsQueue = getQueue(request);

@@ -13,21 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.onesec.raven.ivr.queue.impl;
+package org.onesec.raven.ivr.queue;
 
-import org.onesec.raven.ivr.queue.CallQueueRequestController;
-import org.onesec.raven.ivr.queue.CallsQueue;
-import org.raven.annotations.NodeClass;
+import org.onesec.raven.ivr.IvrEndpointConversation;
 
 /**
  *
  * @author Mikhail Titov
  */
-@NodeClass(parentNode=CallsQueueOnBusyBehaviourNode.class)
-public class MoveToTargetQueueOnBusyBehaviourStepNode extends AbstractMoveToQueueOnBusyBehaviourStepNode 
-{
-    @Override
-    protected CallsQueue getQueue(CallQueueRequestController request) {
-        return request.getTargetQueue();
-    }
+public interface LazyCallQueueRequest extends CallQueueRequest {
+    public String getAbonentNumber();
+    public void setConversation(IvrEndpointConversation conversation);
 }

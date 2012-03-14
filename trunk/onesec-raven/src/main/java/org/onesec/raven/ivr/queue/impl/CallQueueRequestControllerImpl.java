@@ -35,9 +35,8 @@ import org.onesec.raven.ivr.IvrEndpointConversationListener;
 import org.onesec.raven.ivr.IvrEndpointConversationState;
 import org.onesec.raven.ivr.IvrEndpointConversationStoppedEvent;
 import org.onesec.raven.ivr.IvrEndpointConversationTransferedEvent;
-import org.onesec.raven.ivr.queue.event.CallQueueEvent;
 import org.onesec.raven.ivr.queue.CallQueueRequest;
-import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
+import org.onesec.raven.ivr.queue.CallQueueRequestController;
 import org.onesec.raven.ivr.queue.CommutationManagerCall;
 import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviour;
 import org.onesec.raven.ivr.queue.RequestWrapperListener;
@@ -55,7 +54,7 @@ import static org.onesec.raven.ivr.queue.impl.CallQueueCdrRecordSchemaNode.*;
  *
  * @author Mikhail Titov
  */
-public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
+public class CallQueueRequestControllerImpl implements CallQueueRequestController
 {
     private final CallQueueRequest request;
     private final CallsQueuesNode owner;
@@ -80,7 +79,7 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
     private long lastQueuedTime;
     private boolean forceResetCallsQueueFlag = false;
 
-    public CallQueueRequestWrapperImpl(
+    public CallQueueRequestControllerImpl(
             CallsQueuesNode owner, CallQueueRequest request, long requestId)
         throws RecordException
     {
@@ -285,10 +284,6 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
                 } else if (event instanceof CommutatedQueueEvent) {
                     cdr.setValue(COMMUTATED_TIME, getTimestamp());
                     cdr.setValue(CONVERSATION_START_TIME, getTimestamp());
-                } else if (event instanceof OperatorQueueEvent) {
-                    cdr.setValue(OPERATOR_ID, ((OperatorQueueEvent)event).getOperatorId());
-                } else if (event instanceof OperatorNumberQueueEvent) {
-                    cdr.setValue(OPERATOR_NUMBER, ((OperatorNumberQueueEvent)event).getOperatorNumber());
                 } else if (event instanceof CallTransferedQueueEvent) {
                     cdr.setValue(TRANSFERED, 'T');
                     CallTransferedQueueEvent transferEvent = (CallTransferedQueueEvent) event;
@@ -296,7 +291,10 @@ public class CallQueueRequestWrapperImpl implements CallQueueRequestWrapper
                     cdr.setValue(OPERATOR_NUMBER, transferEvent.getOperatorNumber());
                     addToLog(String.format("transfered to op. (%s) number (%s)"
                             , transferEvent.getOperatorId(), transferEvent.getOperatorNumber()));
-
+                } else if (event instanceof OperatorQueueEvent) {
+                    cdr.setValue(OPERATOR_ID, ((OperatorQueueEvent)event).getOperatorId());
+                } else if (event instanceof OperatorNumberQueueEvent) {
+                    cdr.setValue(OPERATOR_NUMBER, ((OperatorNumberQueueEvent)event).getOperatorNumber());
                 }
             }
         }catch(Throwable e){

@@ -13,21 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.onesec.raven.ivr.queue.impl;
-
-import org.onesec.raven.ivr.queue.CallQueueRequestController;
-import org.onesec.raven.ivr.queue.CallsQueue;
-import org.raven.annotations.NodeClass;
+package org.onesec.raven.ivr.queue;
 
 /**
- *
+ * Lazy abonent commutation commutation manager
  * @author Mikhail Titov
  */
-@NodeClass(parentNode=CallsQueueOnBusyBehaviourNode.class)
-public class MoveToTargetQueueOnBusyBehaviourStepNode extends AbstractMoveToQueueOnBusyBehaviourStepNode 
-{
-    @Override
-    protected CallsQueue getQueue(CallQueueRequestController request) {
-        return request.getTargetQueue();
-    }
+public interface AbonentCommutationManager {
+    
+    public void commutate();
+    
 }

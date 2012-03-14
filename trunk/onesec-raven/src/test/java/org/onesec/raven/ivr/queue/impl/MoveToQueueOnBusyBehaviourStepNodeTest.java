@@ -18,7 +18,7 @@
 package org.onesec.raven.ivr.queue.impl;
 
 import org.easymock.IArgumentMatcher;
-import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
+import org.onesec.raven.ivr.queue.CallQueueRequestController;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.junit.Before;
 import org.junit.Test;
@@ -63,7 +63,7 @@ public class MoveToQueueOnBusyBehaviourStepNodeTest extends OnesecRavenTestCase 
     public void test(){
         ExecutorService executor = createMock(ExecutorService.class);
         CallsQueue sourceQueue = createMock(CallsQueue.class);
-        CallQueueRequestWrapper request = createMock(CallQueueRequestWrapper.class);
+        CallQueueRequestController request = createMock(CallQueueRequestController.class);
         expect(executor.executeQuietly(executeTask())).andReturn(true);
         expect(request.logMess("Moving to the queue (%s)", "move to queue")).andReturn("status");
         request.setForceResetCallsQueueFlag();
@@ -81,7 +81,7 @@ public class MoveToQueueOnBusyBehaviourStepNodeTest extends OnesecRavenTestCase 
     public void test2(){
         ExecutorService executor = createMock(ExecutorService.class);
         CallsQueue sourceQueue = createMock(CallsQueue.class);
-        CallQueueRequestWrapper request = createMock(CallQueueRequestWrapper.class);
+        CallQueueRequestController request = createMock(CallQueueRequestController.class);
         expect(executor.executeQuietly(executeTask())).andReturn(true);
         request.setOnBusyBehaviour(null);
         expect(request.logMess("Moving to the queue (%s)", "move to queue")).andReturn("status");

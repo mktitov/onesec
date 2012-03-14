@@ -18,7 +18,7 @@ package org.onesec.raven.ivr.queue.impl;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.IvrConversationScenario;
-import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
+import org.onesec.raven.ivr.queue.CallQueueRequestController;
 import org.onesec.raven.ivr.queue.CallsCommutationManager;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.CallsQueueOperator;
@@ -78,7 +78,7 @@ public class CallsQueueTransferOperatorNode extends BaseNode implements CallsQue
         return 0;
     }
 
-    public boolean processRequest(CallsQueue queue, CallQueueRequestWrapper request, IvrConversationScenario conversationScenario, AudioFile greeting, String operatorPhoneNumbers) {
+    public boolean processRequest(CallsQueue queue, CallQueueRequestController request, IvrConversationScenario conversationScenario, AudioFile greeting, String operatorPhoneNumbers) {
         if (isLogLevelEnabled(LogLevel.WARN))
             getLogger().warn("Transfer operator must not be used as normal operators");
         return false;

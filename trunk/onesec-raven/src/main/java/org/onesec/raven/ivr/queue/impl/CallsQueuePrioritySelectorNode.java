@@ -19,7 +19,7 @@ package org.onesec.raven.ivr.queue.impl;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
+import org.onesec.raven.ivr.queue.CallQueueRequestController;
 import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviour;
 import org.onesec.raven.ivr.queue.CallsQueueOperatorRef;
 import org.onesec.raven.ivr.queue.CallsQueuePrioritySelector;
@@ -90,7 +90,7 @@ public class CallsQueuePrioritySelectorNode extends BaseNode implements CallsQue
             operator.setSortIndex(i++);
     }
 
-    public int getStartIndex(CallQueueRequestWrapper request, int operatorsCount){
+    public int getStartIndex(CallQueueRequestController request, int operatorsCount){
         if (operatorsUsagePolicy==OperatorsUsagePolicy.SEQUENCE_USAGE)
             return request.getOperatorIndex()+1;
         else 

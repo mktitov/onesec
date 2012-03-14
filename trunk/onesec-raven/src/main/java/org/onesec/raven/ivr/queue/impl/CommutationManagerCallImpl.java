@@ -207,7 +207,7 @@ public class  CommutationManagerCallImpl
         return manager.getOperator();
     }
 
-    public CallQueueRequestWrapper getRequest() {
+    public CallQueueRequestController getRequest() {
         return manager.getRequest();
     }
 

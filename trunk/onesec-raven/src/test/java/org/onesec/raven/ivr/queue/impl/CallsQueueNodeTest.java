@@ -60,7 +60,7 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
     public void successQueued() {
         executor.stop();
         
-        CallQueueRequestWrapper req = createMock(CallQueueRequestWrapper.class);
+        CallQueueRequestController req = createMock(CallQueueRequestController.class);
         expect(req.getCallsQueue()).andReturn(null);
         req.setCallsQueue(queue);
 //        req.setRequestId(1);
@@ -78,7 +78,7 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
     public void getViewableObjects() throws Exception {
         executor.stop();
         
-        CallQueueRequestWrapper req = createMock(CallQueueRequestWrapper.class);
+        CallQueueRequestController req = createMock(CallQueueRequestController.class);
         CallsQueue targetQueue = createMock(CallsQueue.class);
         expect(targetQueue.getName()).andReturn("target queue");
         expect(req.getCallsQueue()).andReturn(null);
@@ -114,8 +114,8 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
     {
         executor.stop();
         
-        CallQueueRequestWrapper req = createMock(CallQueueRequestWrapper.class);
-        CallQueueRequestWrapper req1 = createMock(CallQueueRequestWrapper.class);
+        CallQueueRequestController req = createMock(CallQueueRequestController.class);
+        CallQueueRequestController req1 = createMock(CallQueueRequestController.class);
         req.setCallsQueue(queue);
         expect(req.getCallsQueue()).andReturn(null);
 //        req.setRequestId(1);
@@ -144,7 +144,7 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
     
     @Test(timeout=5000)
     public void rejectedByNotFoundPrioritySelector() throws InterruptedException {
-        CallQueueRequestWrapper req = createMock(CallQueueRequestWrapper.class);
+        CallQueueRequestController req = createMock(CallQueueRequestController.class);
         expect(req.getCallsQueue()).andReturn(null);
         req.setCallsQueue(queue);
 //        req.setRequestId(1);
@@ -179,7 +179,7 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         selector.setPriority(1);
         assertTrue(selector.start());
         
-        CallQueueRequestWrapper req = createMock(CallQueueRequestWrapper.class);
+        CallQueueRequestController req = createMock(CallQueueRequestController.class);
         expect(req.getCallsQueue()).andReturn(null);
         req.setCallsQueue(queue);
 //        expect(req.getRequestId()).andReturn(0l);
@@ -213,7 +213,7 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         executor.stop();
         TestPrioritySelector selector = addPrioritySelector("selector 1", 1, null);
         
-        CallQueueRequestWrapper req = createMock(CallQueueRequestWrapper.class);
+        CallQueueRequestController req = createMock(CallQueueRequestController.class);
         CallsQueueOperatorRef operatorRef = createMock(CallsQueueOperatorRef.class);
         CallsQueueOperator operator = createMock(CallsQueueOperator.class);
         
@@ -248,7 +248,7 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
     public void leaveInQueueTest() throws Exception {
         executor.stop();
         
-        CallQueueRequestWrapper req = createMock(CallQueueRequestWrapper.class);
+        CallQueueRequestController req = createMock(CallQueueRequestController.class);
         CallsQueueOnBusyBehaviour onBusyBehaviour = createMock(CallsQueueOnBusyBehaviour.class);
         
         expect(req.getCallsQueue()).andReturn(null);
@@ -264,7 +264,7 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         expect(req.getOnBusyBehaviour()).andReturn(null);
         req.setOnBusyBehaviour(onBusyBehaviour);
         expect(onBusyBehaviour.handleBehaviour(
-                isA(CallsQueue.class), isA(CallQueueRequestWrapper.class))).andReturn(Boolean.TRUE);
+                isA(CallsQueue.class), isA(CallQueueRequestController.class))).andReturn(Boolean.TRUE);
 
         replay(req, onBusyBehaviour);
         
@@ -282,8 +282,8 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
     public void orderChangeAfterProcessTest() throws Exception {
         executor.stop();
         
-        CallQueueRequestWrapper req = createMock("req", CallQueueRequestWrapper.class);
-        CallQueueRequestWrapper req1 = createMock("req1", CallQueueRequestWrapper.class);
+        CallQueueRequestController req = createMock("req", CallQueueRequestController.class);
+        CallQueueRequestController req1 = createMock("req1", CallQueueRequestController.class);
         CallsQueueOnBusyBehaviour onBusyBehaviour = createMock(CallsQueueOnBusyBehaviour.class);
         
         expect(req.getCallsQueue()).andReturn(null);
@@ -300,7 +300,7 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         expect(req.getOnBusyBehaviour()).andReturn(null);
         req.setOnBusyBehaviour(onBusyBehaviour);
         expect(onBusyBehaviour.handleBehaviour(
-                isA(CallsQueue.class), isA(CallQueueRequestWrapper.class))).andReturn(Boolean.FALSE);
+                isA(CallsQueue.class), isA(CallQueueRequestController.class))).andReturn(Boolean.FALSE);
         
         expect(req1.getCallsQueue()).andReturn(null);
         req1.setCallsQueue(queue);
@@ -328,7 +328,7 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
     public void operatorIndexTest() throws Exception {
         executor.stop();
 
-        CallQueueRequestWrapper req = createMock(CallQueueRequestWrapper.class);
+        CallQueueRequestController req = createMock(CallQueueRequestController.class);
         CallsQueueOperatorRef operatorRef = createMock("operatorRef1", CallsQueueOperatorRef.class);
         CallsQueueOperatorRef operatorRef1 = createMock("operatorRef2", CallsQueueOperatorRef.class);
         CallsQueueOperator operator = createMock(CallsQueueOperator.class);
@@ -404,7 +404,7 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         selector.addAndSaveChildren(ref2);
         assertTrue(ref2.start());
 
-        CallQueueRequestWrapper req = createMock(CallQueueRequestWrapper.class);
+        CallQueueRequestController req = createMock(CallQueueRequestController.class);
         CallsQueueOperatorRef operatorRef1 = createMock("operatorRef1", CallsQueueOperatorRef.class);
         CallsQueueOperatorRef operatorRef2 = createMock("operatorRef2", CallsQueueOperatorRef.class);
 
@@ -457,7 +457,7 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         selector.addAndSaveChildren(ref2);
         assertTrue(ref2.start());
 
-        CallQueueRequestWrapper req = createMock(CallQueueRequestWrapper.class);
+        CallQueueRequestController req = createMock(CallQueueRequestController.class);
         CallsQueueOperatorRef operatorRef1 = createMock("operatorRef1", CallsQueueOperatorRef.class);
         CallsQueueOperatorRef operatorRef2 = createMock("operatorRef2", CallsQueueOperatorRef.class);
 
@@ -514,7 +514,7 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         selector.addAndSaveChildren(ref2);
         assertTrue(ref2.start());
 
-        CallQueueRequestWrapper req = createMock(CallQueueRequestWrapper.class);
+        CallQueueRequestController req = createMock(CallQueueRequestController.class);
         CallsQueueOperatorRef operatorRef1 = createMock("operatorRef1", CallsQueueOperatorRef.class);
         CallsQueueOperatorRef operatorRef2 = createMock("operatorRef2", CallsQueueOperatorRef.class);
 

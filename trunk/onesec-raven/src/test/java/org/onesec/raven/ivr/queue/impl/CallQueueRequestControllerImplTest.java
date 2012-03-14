@@ -27,7 +27,7 @@ import org.onesec.raven.ivr.IvrEndpointConversationListener;
 import org.onesec.raven.ivr.IvrEndpointConversationState;
 import org.onesec.raven.ivr.queue.CallQueueRequest;
 import org.onesec.raven.ivr.queue.CallQueueRequestListener;
-import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
+import org.onesec.raven.ivr.queue.CallQueueRequestController;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.event.DisconnectedQueueEvent;
 import static org.easymock.EasyMock.*;
@@ -39,7 +39,7 @@ import org.raven.test.DataCollector;
  *
  * @author Mikhail Titov
  */
-public class CallQueueRequestWrapperImplTest extends OnesecRavenTestCase
+public class CallQueueRequestControllerImplTest extends OnesecRavenTestCase
 {
     private CallsQueuesNode callsQueues;
     private CallQueueCdrRecordSchemaNode schema;
@@ -89,7 +89,7 @@ public class CallQueueRequestWrapperImplTest extends OnesecRavenTestCase
 
         replay(req, conv, queue);
 
-        CallQueueRequestWrapperImpl wrapper = new CallQueueRequestWrapperImpl(callsQueues, req, 1);
+        CallQueueRequestControllerImpl wrapper = new CallQueueRequestControllerImpl(callsQueues, req, 1);
         assertTrue(wrapper.isValid());
         wrapper.callQueueChangeEvent(queuedEvent);
 
@@ -118,7 +118,7 @@ public class CallQueueRequestWrapperImplTest extends OnesecRavenTestCase
         
         replay(request, conv, queue, state);
         
-        CallQueueRequestWrapper wrapper = new CallQueueRequestWrapperImpl(callsQueues, request, 1);
+        CallQueueRequestController wrapper = new CallQueueRequestControllerImpl(callsQueues, request, 1);
         assertFalse(wrapper.isValid());
         
         verify(request, conv, queue, state);

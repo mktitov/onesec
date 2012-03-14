@@ -20,7 +20,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.ivr.queue.BehaviourResult;
-import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
+import org.onesec.raven.ivr.queue.CallQueueRequestController;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.raven.tree.Node;
 import static org.easymock.EasyMock.*;
@@ -46,7 +46,7 @@ public class CallsQueueOnBusyBehaviourNodeTest extends OnesecRavenTestCase
     public void noStepsTest()
     {
         CallsQueue queue = createMock(CallsQueue.class);
-        CallQueueRequestWrapper request = createMock(CallQueueRequestWrapper.class);
+        CallQueueRequestController request = createMock(CallQueueRequestController.class);
         expect(request.getOnBusyBehaviourStep()).andReturn(0);
         request.setOnBusyBehaviourStep(1);
         request.addToLog("reached the end of the \"on busy behaviour steps\" sequence");
@@ -65,7 +65,7 @@ public class CallsQueueOnBusyBehaviourNodeTest extends OnesecRavenTestCase
         addTestStep(new BehaviourResultImpl(true, BehaviourResult.StepPolicy.GOTO_NEXT_STEP));
         
         CallsQueue queue = createMock(CallsQueue.class);
-        CallQueueRequestWrapper request = createMock(CallQueueRequestWrapper.class);
+        CallQueueRequestController request = createMock(CallQueueRequestController.class);
         expect(request.getOnBusyBehaviourStep()).andReturn(0);
         request.setOnBusyBehaviourStep(1);
         
@@ -82,7 +82,7 @@ public class CallsQueueOnBusyBehaviourNodeTest extends OnesecRavenTestCase
         addTestStep(new BehaviourResultImpl(false, BehaviourResult.StepPolicy.GOTO_NEXT_STEP));
         
         CallsQueue queue = createMock(CallsQueue.class);
-        CallQueueRequestWrapper request = createMock(CallQueueRequestWrapper.class);
+        CallQueueRequestController request = createMock(CallQueueRequestController.class);
         expect(request.getOnBusyBehaviourStep()).andReturn(0);
         request.setOnBusyBehaviourStep(1);
         
@@ -99,7 +99,7 @@ public class CallsQueueOnBusyBehaviourNodeTest extends OnesecRavenTestCase
         addTestStep(new BehaviourResultImpl(true, BehaviourResult.StepPolicy.LEAVE_AT_THIS_STEP));
 
         CallsQueue queue = createMock(CallsQueue.class);
-        CallQueueRequestWrapper request = createMock(CallQueueRequestWrapper.class);
+        CallQueueRequestController request = createMock(CallQueueRequestController.class);
         expect(request.getOnBusyBehaviourStep()).andReturn(0);
         request.setOnBusyBehaviourStep(0);
 
@@ -116,7 +116,7 @@ public class CallsQueueOnBusyBehaviourNodeTest extends OnesecRavenTestCase
         addTestStep(new BehaviourResultImpl(true, BehaviourResult.StepPolicy.IMMEDIATELY_EXECUTE_NEXT_STEP));
 
         CallsQueue queue = createMock(CallsQueue.class);
-        CallQueueRequestWrapper request = createStrictMock(CallQueueRequestWrapper.class);
+        CallQueueRequestController request = createStrictMock(CallQueueRequestController.class);
         expect(request.getOnBusyBehaviourStep()).andReturn(0);
         request.setOnBusyBehaviourStep(1);
         expect(request.getOnBusyBehaviourStep()).andReturn(1);
@@ -144,7 +144,7 @@ public class CallsQueueOnBusyBehaviourNodeTest extends OnesecRavenTestCase
         addTestStep(b2, new BehaviourResultImpl(true, BehaviourResult.StepPolicy.LEAVE_AT_THIS_STEP));
 
         CallsQueue queue = createMock(CallsQueue.class);
-        CallQueueRequestWrapper request = createMock(CallQueueRequestWrapper.class);
+        CallQueueRequestController request = createMock(CallQueueRequestController.class);
         expect(request.getOnBusyBehaviourStep()).andReturn(0);
         request.setOnBusyBehaviourStep(0);
 

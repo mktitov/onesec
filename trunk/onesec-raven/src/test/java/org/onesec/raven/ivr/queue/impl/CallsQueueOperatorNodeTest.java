@@ -94,7 +94,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
     @Test
     public void requestOnStoppedNode()
     {
-        CallQueueRequestWrapper request = createMock(CallQueueRequestWrapper.class);
+        CallQueueRequestController request = createMock(CallQueueRequestController.class);
         CallsQueue queue = createMock(CallsQueue.class);
         replay(request, queue);
 
@@ -106,7 +106,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
     @Test
     public void requestOnNotActiveNode()
     {
-        CallQueueRequestWrapper request = createMock(CallQueueRequestWrapper.class);
+        CallQueueRequestController request = createMock(CallQueueRequestController.class);
         CallsQueue queue = createMock(CallsQueue.class);
         replay(request, queue);
 
@@ -119,7 +119,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
 
     @Test
     public void noFreeEndpointInThePoolTest() throws ExecutorServiceException, InterruptedException {
-        CallQueueRequestWrapper request = createMock(CallQueueRequestWrapper.class);
+        CallQueueRequestController request = createMock(CallQueueRequestController.class);
         CallsQueue queue = createMock(CallsQueue.class);
         AudioFile audioFile = createMock(AudioFile.class);
         IvrEndpointPool pool = createMock(IvrEndpointPool.class);
@@ -147,7 +147,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
 
     @Test(timeout=10000)
     public void inviteTimeoutTest() throws Exception {
-        CallQueueRequestWrapper request = createMock(CallQueueRequestWrapper.class);
+        CallQueueRequestController request = createMock(CallQueueRequestController.class);
         AudioFile audioFile = createMock(AudioFile.class);
         CallsQueue queue = createMock(CallsQueue.class);
         IvrEndpointPool pool = createMock(IvrEndpointPool.class);
@@ -188,7 +188,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
 
     @Test(timeout=10000)
     public void commutateTest() throws Exception {
-        final CallQueueRequestWrapper request = createMock(CallQueueRequestWrapper.class);
+        final CallQueueRequestController request = createMock(CallQueueRequestController.class);
         final AudioFile audioFile = createMock(AudioFile.class);
         IvrEndpointConversation abonentConversation = createMock(
                 "abonentConversation", IvrEndpointConversation.class);
@@ -295,7 +295,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
     }
 
     public static Map<String, Object> checkBindings(
-            final CallsQueueOperator operator, final CallQueueRequestWrapper request
+            final CallsQueueOperator operator, final CallQueueRequestController request
             , final IvrEndpointConversation operatorConversation
             , final CallsCommutationManagerListener commListener)
     {
@@ -325,7 +325,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
     }
 
     public static Map<String, Object> checkBindings(
-            final CallsQueueOperator operator, final CallQueueRequestWrapper request)
+            final CallsQueueOperator operator, final CallQueueRequestController request)
     {
         reportMatcher(new IArgumentMatcher() {
             public boolean matches(Object argument) {
@@ -370,7 +370,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
         return null;
     }
 
-    public static CallQueueRequestWrapper checkRequest(final CallQueueRequestWrapper request) {
+    public static CallQueueRequestController checkRequest(final CallQueueRequestController request) {
         reportMatcher(new IArgumentMatcher() {
             public boolean matches(Object argument) {
                 flag.set(true);

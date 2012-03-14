@@ -19,7 +19,7 @@ package org.onesec.raven.ivr.queue.impl;
 
 import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.IvrConversationScenario;
-import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
+import org.onesec.raven.ivr.queue.CallQueueRequestController;
 import org.onesec.raven.ivr.queue.CallsCommutationManager;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.CallsQueueOperator;
@@ -35,7 +35,7 @@ import org.raven.log.LogLevel;
 public class CallsQueueVirtualOperatorNode extends AbstractOperatorNode {
 
     @Override
-    protected boolean doProcessRequest(CallsQueue queue, CallQueueRequestWrapper request
+    protected boolean doProcessRequest(CallsQueue queue, CallQueueRequestController request
             , IvrConversationScenario conversationScenario, AudioFile greeting
             , String operatorPhoneNumbers)
     {

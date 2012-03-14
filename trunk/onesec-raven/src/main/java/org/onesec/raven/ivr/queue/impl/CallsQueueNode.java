@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
+import org.onesec.raven.ivr.queue.CallQueueRequestController;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviour;
 import org.onesec.raven.ivr.queue.CallsQueueOperatorRef;
@@ -73,7 +73,7 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask,
     private AtomicReference<String> statusMessage;
     private AtomicBoolean stopProcessing;
     AtomicBoolean processingThreadRunning;
-    LinkedList<CallQueueRequestWrapper> queue;
+    LinkedList<CallQueueRequestController> queue;
     private ReadWriteLock lock;
     private Condition requestAddedCondition;
     private CallsQueueRequestComparator requestComparator;
@@ -113,7 +113,7 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask,
         return TaskRestartPolicy.RESTART_NODE;
     }
     
-    public void queueCall(CallQueueRequestWrapper request) 
+    public void queueCall(CallQueueRequestController request) 
     {
         if (!Status.STARTED.equals(getStatus()) || stopProcessing.get()) {
             request.addToLog(String.format("Queue (%s) not ready", getName()));
@@ -130,7 +130,7 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask,
         addRequestToQueue(request);
     }
     
-    private void addRequestToQueue(CallQueueRequestWrapper request)
+    private void addRequestToQueue(CallQueueRequestController request)
     {
         lock.writeLock().lock();
         try {
@@ -138,7 +138,7 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask,
             if (queue.size()>1)
                 Collections.sort(queue, requestComparator);
             if (queue.size()>maxQueueSize){
-                CallQueueRequestWrapper rejReq = queue.removeLast();
+                CallQueueRequestController rejReq = queue.removeLast();
                 rejReq.addToLog("queue size was exceeded");
                 rejReq.fireRejectedQueueEvent();
             }else {
@@ -170,7 +170,7 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask,
                         nextOnBusyBehaviourStepMessage, lastOperatorIndexMessage, requestMessage});
                 SimpleDateFormat fmt = new SimpleDateFormat("HH:mm:ss");
                 int numInQueue = 1;
-                for (CallQueueRequestWrapper req: queue) {
+                for (CallQueueRequestController req: queue) {
                     tab.addRow(new Object[]{numInQueue++, req.getRequestId(), req.getPriority()
                             , fmt.format(new Date(req.getLastQueuedTime()))
                             , req.getTargetQueue().getName()
@@ -240,7 +240,7 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask,
                 requestAddedCondition.await(1, TimeUnit.SECONDS);
                 boolean leaveInQueue = false;
                 try {
-                    CallQueueRequestWrapper request = queue.peek();
+                    CallQueueRequestController request = queue.peek();
                     if (request!=null && request.isValid()){
                         statusMessage.set(request.logMess("Processing request..."));
                         if (isLogLevelEnabled(LogLevel.DEBUG))
@@ -297,7 +297,7 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask,
             }
     }
     
-    private CallsQueuePrioritySelector searchForPrioritySelector(CallQueueRequestWrapper request)
+    private CallsQueuePrioritySelector searchForPrioritySelector(CallQueueRequestController request)
     {
         List<CallsQueuePrioritySelector> selectors = NodeUtils.getChildsOfType(
                 this, CallsQueuePrioritySelector.class);
@@ -315,7 +315,7 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask,
     private void clearQueue()
     {
         statusMessage.set("Stoping processing requests. Clearing queue...");
-        for (CallQueueRequestWrapper req: queue) {
+        for (CallQueueRequestController req: queue) {
             req.addToLog("queue stopped");
             req.fireRejectedQueueEvent();
         }
@@ -326,7 +326,7 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask,
     {
         int lastElement = Math.min(maxQueueSize, queue.size());
         int pos = 1;
-        for (CallQueueRequestWrapper req: queue){
+        for (CallQueueRequestController req: queue){
             if (pos>lastElement)
                 break;
             req.setPositionInQueue(pos);
@@ -334,7 +334,7 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask,
         }
     }
 
-    private String logMess(CallQueueRequestWrapper req, String mess, Object... args)
+    private String logMess(CallQueueRequestController req, String mess, Object... args)
     {
         return req.logMess("CallsQueue. "+mess, args);
     }

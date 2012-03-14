@@ -22,6 +22,6 @@ package org.onesec.raven.ivr.queue;
  * @author Mikhail Titov
  */
 public interface CallsQueue {
-    public void queueCall(CallQueueRequestWrapper request);
+    public void queueCall(CallQueueRequestController request);
     public String getName();
 }

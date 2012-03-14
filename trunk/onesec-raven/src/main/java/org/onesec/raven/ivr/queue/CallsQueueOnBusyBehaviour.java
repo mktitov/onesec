@@ -31,5 +31,5 @@ public interface CallsQueueOnBusyBehaviour extends Node
      * @return <b>true</b> if request must stay in the current queue or <b>false</b> if request
      *      must be removed from the queue
      */
-    public boolean handleBehaviour(CallsQueue queue, CallQueueRequestWrapper request);
+    public boolean handleBehaviour(CallsQueue queue, CallQueueRequestController request);
 }

@@ -17,15 +17,15 @@
 package org.onesec.raven.ivr.queue.impl;
 
 import java.util.Comparator;
-import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
+import org.onesec.raven.ivr.queue.CallQueueRequestController;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class CallsQueueRequestComparator implements Comparator<CallQueueRequestWrapper>
+public class CallsQueueRequestComparator implements Comparator<CallQueueRequestController>
 {
-    public int compare(CallQueueRequestWrapper o1, CallQueueRequestWrapper o2)
+    public int compare(CallQueueRequestController o1, CallQueueRequestController o2)
     {
         int res = new Integer(o1.getPriority()).compareTo(o2.getPriority());
         if (res==0 && o1!=o2)
