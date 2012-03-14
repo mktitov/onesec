@@ -74,6 +74,9 @@ public class CallQueueRequestImpl implements QueuedCallStatus
 
     public void addRequestListener(CallQueueRequestListener listener) {
         listeners.add(listener);
+        listener.conversationAssigned(conversation);
+        if (canceledFlag.get())
+            listener.requestCanceled();
     }
 
     public synchronized Status getStatus() {
@@ -90,6 +93,10 @@ public class CallQueueRequestImpl implements QueuedCallStatus
 
     public IvrEndpointConversation getConversation() {
         return conversation;
+    }
+
+    public String getConversationInfo() {
+        return conversation.getObjectName();
     }
 
     public DataContext getContext() {
@@ -130,7 +137,11 @@ public class CallQueueRequestImpl implements QueuedCallStatus
     }
 
     public void cancel() {
-        canceledFlag.compareAndSet(false, true);
+        if (canceledFlag.compareAndSet(false, true))
+            fireRequestCanceled();
+    }
+    
+    private void fireRequestCanceled() {
         for (CallQueueRequestListener listener: listeners)
             listener.requestCanceled();
     }

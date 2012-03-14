@@ -100,7 +100,7 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
     {
         if (isLogLevelEnabled(LogLevel.DEBUG))
             getLogger().debug("{}. CallsQueues. Queueing call to the queue {}"
-                    , request.getConversation().getObjectName(), request.getQueueId());
+                    , request.getConversationInfo(), request.getQueueId());
         try{
             CallQueueRequestController requestWrapper = 
                     new CallQueueRequestControllerImpl(this, request, requestIdSeq.incrementAndGet());
@@ -191,7 +191,7 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
 
     String logMess(CallQueueRequest req, String message, Object... args)
     {
-        return req.getConversation().getObjectName()+". CallsQueues.  "+String.format(message, args);
+        return req.getConversationInfo()+". CallsQueues.  "+String.format(message, args);
     }
 
     private void checkRecordSchema(RecordSchemaNode schema) throws Exception
