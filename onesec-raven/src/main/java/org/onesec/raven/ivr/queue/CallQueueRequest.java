@@ -28,9 +28,14 @@ import org.raven.ds.DataContext;
 public interface CallQueueRequest
 {
     /**
-     * Returns the conversation for the call
+     * Returns the conversation for the call. Can return null if conversation is not assigned to
+     * the request yet (lazy request)
      */
     public IvrEndpointConversation getConversation();
+    /**
+     * Returns information about conversation.
+     */
+    public String getConversationInfo();
     /**
      * Informs the request that something changed for this request in the queue.
      * @see CallQueuedEvent

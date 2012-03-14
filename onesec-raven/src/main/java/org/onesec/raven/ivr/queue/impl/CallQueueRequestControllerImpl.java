@@ -35,11 +35,7 @@ import org.onesec.raven.ivr.IvrEndpointConversationListener;
 import org.onesec.raven.ivr.IvrEndpointConversationState;
 import org.onesec.raven.ivr.IvrEndpointConversationStoppedEvent;
 import org.onesec.raven.ivr.IvrEndpointConversationTransferedEvent;
-import org.onesec.raven.ivr.queue.CallQueueRequest;
-import org.onesec.raven.ivr.queue.CallQueueRequestController;
-import org.onesec.raven.ivr.queue.CommutationManagerCall;
-import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviour;
-import org.onesec.raven.ivr.queue.RequestWrapperListener;
+import org.onesec.raven.ivr.queue.*;
 import org.onesec.raven.ivr.queue.event.*;
 import org.onesec.raven.ivr.queue.event.impl.*;
 import org.raven.ds.Record;
@@ -58,10 +54,12 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
 {
     private final CallQueueRequest request;
     private final CallsQueuesNode owner;
-    private final Listener listener;
+//    private final Listener listener;
     private final long requestId;
     private final AtomicBoolean cdrSent = new AtomicBoolean(false);
     private final Set<RequestWrapperListener> listeners = new HashSet<RequestWrapperListener>();
+    private final Record cdr;
+    private final boolean lazyRequest;
 
     private int priority;
     private String queueId;
@@ -69,7 +67,6 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
     private CallsQueue queue;
     private CallsQueue targetQueue;
     private StringBuilder log;
-    private Record cdr;
     private int onBusyBehaviourStep;
     private CallsQueueOnBusyBehaviour onBusyBehaviour;
     private AtomicBoolean valid;
@@ -92,15 +89,17 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
         this.valid = new AtomicBoolean(true);
         this.operatorIndex = -1;
         this.operatorHops = 0;
-        listener = new Listener(request.getConversation(), request);
-        request.getConversation().addConversationListener(listener);
+        this.lazyRequest = request instanceof LazyCallQueueRequest;
+//        listener = new Listener(request.getConversation(), request);
+//        request.getConversation().addConversationListener(listener);
         RecordSchemaNode schema = owner.getCdrRecordSchema();
         if (schema!=null) {
             cdr = schema.createRecord();
-            cdr.setValue(CALLING_NUMBER, request.getConversation().getCallingNumber());
             cdr.setValue(QUEUED_TIME, getTimestamp());
             cdr.setValue(PRIORITY, request.getPriority());
-        }
+        } else
+            cdr = null;
+        request.addRequestListener(new RequestListener());
     }
 
     public void addRequestListener(CallQueueRequestListener listener) { }
@@ -178,6 +177,10 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
 
     public IvrEndpointConversation getConversation() {
         return request.getConversation();
+    }
+
+    public String getConversationInfo() {
+        return request.getConversationInfo();
     }
 
     public Integer getPositionInQueue() {
@@ -382,13 +385,11 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
     }
 
     @Override
-    public String toString() 
-    {
-        return getConversation().getObjectName();
+    public String toString() {
+        return getConversationInfo();
     }
 
-    public String logMess(String message, Object... args)
-    {
+    public String logMess(String message, Object... args) {
         return request.getConversation().toString()
                 +" [reqId: "+requestId+(queue==null?"":"; queue: "+queue.getName())+"]. "
                 +String.format(message, args);
@@ -408,26 +409,37 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
         }
     }
     
-    private class Listener implements IvrEndpointConversationListener, CallQueueRequestListener
-    {
-        private final IvrEndpointConversation conversation;
-        private final CallQueueRequest request;
-
-        public Listener(IvrEndpointConversation conversation, CallQueueRequest request) {
-            this.conversation = conversation;
-            this.request = request;
-            conversation.addConversationListener(this);
-            request.addRequestListener(this);
-            if (request.isCanceled())
-                invalidate();
-        }
+    private class RequestListener implements CallQueueRequestListener {
 
         public void requestCanceled() {
             invalidate();
         }
 
+        public void conversationAssigned(IvrEndpointConversation conv) {
+            try {
+                if (cdr!=null)
+                    cdr.setValue(CALLING_NUMBER, lazyRequest? conv.getCalledNumber() : conv.getCallingNumber());
+            } catch (RecordException e) {
+                if (owner.isLogLevelEnabled(LogLevel.ERROR))
+                    owner.getLogger().error(logMess("CDR Error"), e);
+            }
+            conv.addConversationListener(new Listener());
+        }
+    }
+    
+    private class Listener implements IvrEndpointConversationListener {
+
+//        public Listener(IvrEndpointConversation conversation, CallQueueRequest request) {
+//            this.conversation = conversation;
+//            this.request = request;
+//            conversation.addConversationListener(this);
+//            request.addRequestListener(this);
+//            if (request.isCanceled())
+//                invalidate();
+//        }
+//
         public void listenerAdded(IvrEndpointConversationEvent event) {
-            if (conversation.getState().getId()==IvrEndpointConversationState.INVALID)
+            if (event.getConversation().getState().getId()==IvrEndpointConversationState.INVALID)
                 invalidate();
         }
 

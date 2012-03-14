@@ -17,11 +17,20 @@
 
 package org.onesec.raven.ivr.queue;
 
+import org.onesec.raven.ivr.IvrEndpointConversation;
+
 /**
  *
  * @author Mikhail Titov
  */
 public interface CallQueueRequestListener
 {
+    /**
+     * Fires when request canceled
+     */
     public void requestCanceled();
+    /**
+     * Fires when conversation assigned to the request
+     */
+    public void conversationAssigned(IvrEndpointConversation conversation);
 }

@@ -15,6 +15,8 @@
  */
 package org.onesec.raven.ivr.queue;
 
+import org.onesec.raven.ivr.IvrEndpointConversation;
+
 /**
  * Lazy abonent commutation commutation manager
  * @author Mikhail Titov
@@ -22,5 +24,7 @@ package org.onesec.raven.ivr.queue;
 public interface AbonentCommutationManager {
     
     public void commutate();
+    
+    public void abonentReadyToCommutate(IvrEndpointConversation abonentConversation);
     
 }

@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import org.onesec.raven.ivr.*;
+import static org.onesec.raven.ivr.impl.IvrInformerRecordSchemaNode.*;
+import org.raven.BindingNames;
 import org.raven.ds.DataContext;
 import org.raven.ds.Record;
 import org.raven.ds.RecordException;
@@ -31,8 +33,6 @@ import org.raven.tree.Node;
 import org.weda.beans.ObjectUtils;
 import org.weda.internal.annotations.Service;
 import org.weda.services.TypeConverter;
-import static org.onesec.raven.ivr.impl.IvrInformerRecordSchemaNode.*;
-import org.raven.BindingNames;
 
 /**
  * Stores {@link IvrInformer ivr informer} session information
