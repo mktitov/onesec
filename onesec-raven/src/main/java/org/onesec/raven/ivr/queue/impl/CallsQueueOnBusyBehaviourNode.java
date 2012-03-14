@@ -19,7 +19,7 @@ package org.onesec.raven.ivr.queue.impl;
 import java.util.List;
 import org.onesec.raven.ivr.queue.BehaviourResult;
 import org.onesec.raven.ivr.queue.BehaviourResult.StepPolicy;
-import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
+import org.onesec.raven.ivr.queue.CallQueueRequestController;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviour;
 import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviourStep;
@@ -46,7 +46,7 @@ public class CallsQueueOnBusyBehaviourNode extends BaseNode implements CallsQueu
         super(NAME);
     }
 
-    public boolean handleBehaviour(CallsQueue queue, CallQueueRequestWrapper request) 
+    public boolean handleBehaviour(CallsQueue queue, CallQueueRequestController request) 
     {
         if (isLogLevelEnabled(LogLevel.DEBUG))
             getLogger().debug(logMess(request, "Processing..."));
@@ -91,7 +91,7 @@ public class CallsQueueOnBusyBehaviourNode extends BaseNode implements CallsQueu
         this.replaceBy = replaceBy;
     }
 
-    private String logMess(CallQueueRequestWrapper req, String mess, Object... args)
+    private String logMess(CallQueueRequestController req, String mess, Object... args)
     {
         return req.logMess("OnBusyBehaviour. "+mess, args);
     }

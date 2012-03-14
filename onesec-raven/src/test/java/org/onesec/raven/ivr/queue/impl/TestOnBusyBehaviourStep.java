@@ -17,7 +17,7 @@
 package org.onesec.raven.ivr.queue.impl;
 
 import org.onesec.raven.ivr.queue.BehaviourResult;
-import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
+import org.onesec.raven.ivr.queue.CallQueueRequestController;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviourStep;
 import org.raven.tree.impl.BaseNode;
@@ -43,7 +43,7 @@ public class TestOnBusyBehaviourStep extends BaseNode implements CallsQueueOnBus
         this.behaviourResult = behaviourResult;
     }
 
-    public BehaviourResult handleBehaviour(CallsQueue queue, CallQueueRequestWrapper request)
+    public BehaviourResult handleBehaviour(CallsQueue queue, CallQueueRequestController request)
     {
         behaviourHandled = true;
         return behaviourResult;

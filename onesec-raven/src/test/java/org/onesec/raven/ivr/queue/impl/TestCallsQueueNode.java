@@ -16,7 +16,7 @@
  */
 package org.onesec.raven.ivr.queue.impl;
 
-import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
+import org.onesec.raven.ivr.queue.CallQueueRequestController;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.raven.tree.impl.BaseNode;
 
@@ -26,9 +26,9 @@ import org.raven.tree.impl.BaseNode;
  */
 public class TestCallsQueueNode extends BaseNode implements CallsQueue {
 
-    CallQueueRequestWrapper lastRequest;
+    CallQueueRequestController lastRequest;
     
-    public void queueCall(CallQueueRequestWrapper request) {
+    public void queueCall(CallQueueRequestController request) {
         this.lastRequest = request;
     }
 }

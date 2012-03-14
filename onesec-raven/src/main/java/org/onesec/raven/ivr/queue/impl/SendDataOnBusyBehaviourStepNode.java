@@ -20,7 +20,7 @@ package org.onesec.raven.ivr.queue.impl;
 import java.util.Collection;
 import javax.script.Bindings;
 import org.onesec.raven.ivr.queue.BehaviourResult;
-import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
+import org.onesec.raven.ivr.queue.CallQueueRequestController;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviourStep;
 import org.raven.BindingNames;
@@ -67,7 +67,7 @@ public class SendDataOnBusyBehaviourStepNode extends BaseNode
         return null;
     }
 
-    public BehaviourResult handleBehaviour(CallsQueue queue, CallQueueRequestWrapper request)
+    public BehaviourResult handleBehaviour(CallsQueue queue, CallQueueRequestController request)
     {
         Object data = request;
         if (useExpression) {

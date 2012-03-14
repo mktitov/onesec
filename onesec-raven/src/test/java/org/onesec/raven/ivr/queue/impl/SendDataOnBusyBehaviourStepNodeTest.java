@@ -21,7 +21,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.ivr.queue.BehaviourResult;
-import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
+import org.onesec.raven.ivr.queue.CallQueueRequestController;
 import org.raven.ds.DataContext;
 import org.raven.test.DataCollector;
 import org.raven.test.DataHandler;
@@ -54,7 +54,7 @@ public class SendDataOnBusyBehaviourStepNodeTest extends OnesecRavenTestCase
     @Test
     public void sendDataTest()
     {
-        CallQueueRequestWrapper req = createMock(CallQueueRequestWrapper.class);
+        CallQueueRequestController req = createMock(CallQueueRequestController.class);
         DataContext dataContext = createMock(DataContext.class);
         DataHandler dataHandler = createMock(DataHandler.class);
 
@@ -76,7 +76,7 @@ public class SendDataOnBusyBehaviourStepNodeTest extends OnesecRavenTestCase
     @Test
     public void expressionTest()
     {
-        CallQueueRequestWrapper req = createMock(CallQueueRequestWrapper.class);
+        CallQueueRequestController req = createMock(CallQueueRequestController.class);
         DataContext dataContext = createMock(DataContext.class);
         DataHandler dataHandler = createMock(DataHandler.class);
 

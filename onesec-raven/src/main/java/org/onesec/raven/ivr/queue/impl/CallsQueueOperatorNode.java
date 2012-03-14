@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.IvrConversationScenario;
-import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
+import org.onesec.raven.ivr.queue.CallQueueRequestController;
 import org.onesec.raven.ivr.queue.CallsCommutationManager;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.CallsQueueOperator;
@@ -76,7 +76,7 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
     }
 
     @Override
-    protected boolean doProcessRequest(CallsQueue queue, CallQueueRequestWrapper request
+    protected boolean doProcessRequest(CallsQueue queue, CallQueueRequestController request
             , IvrConversationScenario conversationScenario, AudioFile greeting
             , String operatorPhoneNumbers)
     {

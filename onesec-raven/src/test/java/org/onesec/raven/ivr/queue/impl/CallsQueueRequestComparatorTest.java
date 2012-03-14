@@ -20,7 +20,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import org.junit.Assert;
-import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
+import org.onesec.raven.ivr.queue.CallQueueRequestController;
 import org.junit.Test;
 import static org.easymock.EasyMock.*;
 
@@ -33,8 +33,8 @@ public class CallsQueueRequestComparatorTest extends Assert
     @Test
     public void diffPrioritiesTest()
     {
-        CallQueueRequestWrapper req1 = createMock(CallQueueRequestWrapper.class);
-        CallQueueRequestWrapper req2 = createMock(CallQueueRequestWrapper.class);
+        CallQueueRequestController req1 = createMock(CallQueueRequestController.class);
+        CallQueueRequestController req2 = createMock(CallQueueRequestController.class);
         
         expect(req1.getPriority()).andReturn(1).anyTimes();
         expect(req2.getPriority()).andReturn(2).anyTimes();
@@ -51,8 +51,8 @@ public class CallsQueueRequestComparatorTest extends Assert
     @Test
     public void samePrioritiesTest()
     {
-        CallQueueRequestWrapper req1 = createMock(CallQueueRequestWrapper.class);
-        CallQueueRequestWrapper req2 = createMock(CallQueueRequestWrapper.class);
+        CallQueueRequestController req1 = createMock(CallQueueRequestController.class);
+        CallQueueRequestController req2 = createMock(CallQueueRequestController.class);
         
         expect(req1.getPriority()).andReturn(1).anyTimes();
         expect(req1.getRequestId()).andReturn(1l).anyTimes();

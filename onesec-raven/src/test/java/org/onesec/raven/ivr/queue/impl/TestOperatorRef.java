@@ -17,7 +17,7 @@
 
 package org.onesec.raven.ivr.queue.impl;
 
-import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
+import org.onesec.raven.ivr.queue.CallQueueRequestController;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.CallsQueueOperatorRef;
 import org.raven.tree.impl.BaseNode;
@@ -39,7 +39,7 @@ public class TestOperatorRef extends BaseNode implements CallsQueueOperatorRef
         this.operatorRef = operatorRef;
     }
 
-    public boolean processRequest(CallsQueue queue, CallQueueRequestWrapper request) {
+    public boolean processRequest(CallsQueue queue, CallQueueRequestController request) {
         return operatorRef.processRequest(queue, request);
     }
 

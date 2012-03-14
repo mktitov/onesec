@@ -25,7 +25,7 @@ public interface CallsQueueOperatorRef
     /**
      * Returns the operator 
      */
-    public boolean processRequest(CallsQueue queue, CallQueueRequestWrapper request);
+    public boolean processRequest(CallsQueue queue, CallQueueRequestController request);
 
     public int getSortIndex();
 

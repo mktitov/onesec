@@ -25,7 +25,7 @@ import org.raven.ds.DataContext;
  *
  * @author Mikhail Titov
  */
-public interface CallQueueRequestWrapper extends CallQueueRequest
+public interface CallQueueRequestController extends CallQueueRequest
 {
     /**
      * Returns the request id

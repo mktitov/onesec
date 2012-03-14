@@ -17,7 +17,7 @@
 
 package org.onesec.raven.ivr.queue.impl;
 
-import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
+import org.onesec.raven.ivr.queue.CallQueueRequestController;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
@@ -43,7 +43,7 @@ public class MoveToQueueOnBusyBehaviourStepNode extends AbstractMoveToQueueOnBus
     }
 
     @Override
-    protected CallsQueue getQueue(CallQueueRequestWrapper request) {
+    protected CallsQueue getQueue(CallQueueRequestController request) {
         return callsQueue;
     }
 }

@@ -43,5 +43,5 @@ public interface CallsQueuePrioritySelector extends Node
     /**
      * Returns the index of operator (in the operators list) with which to process begin the request
      */
-    public int getStartIndex(CallQueueRequestWrapper request, int operatorsCount);
+    public int getStartIndex(CallQueueRequestController request, int operatorsCount);
 }

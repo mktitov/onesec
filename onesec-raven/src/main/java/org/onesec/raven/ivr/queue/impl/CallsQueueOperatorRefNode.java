@@ -18,7 +18,7 @@ package org.onesec.raven.ivr.queue.impl;
 
 import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.impl.AudioFileNode;
-import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
+import org.onesec.raven.ivr.queue.CallQueueRequestController;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.CallsQueueOperator;
 import org.onesec.raven.ivr.queue.CallsQueueOperatorRef;
@@ -96,7 +96,7 @@ public class CallsQueueOperatorRefNode extends BaseNode implements CallsQueueOpe
         this.phoneNumbers = phoneNumbers;
     }
 
-    public boolean processRequest(CallsQueue queue, CallQueueRequestWrapper request) {
+    public boolean processRequest(CallsQueue queue, CallQueueRequestController request) {
         try {
             return operator.processRequest(
                     queue, request, conversationScenario, greeting, phoneNumbers);

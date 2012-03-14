@@ -21,7 +21,7 @@ import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.IvrConversationsBridgeManager;
 import org.onesec.raven.ivr.IvrEndpointPool;
-import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
+import org.onesec.raven.ivr.queue.CallQueueRequestController;
 import org.onesec.raven.ivr.queue.CallsCommutationManager;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.CallsQueueOperator;
@@ -106,7 +106,7 @@ public abstract class AbstractOperatorNode extends BaseNode implements CallsQueu
     }
     
     //CallQueueOpertor's method
-    public boolean processRequest(CallsQueue queue, CallQueueRequestWrapper request
+    public boolean processRequest(CallsQueue queue, CallQueueRequestController request
             , IvrConversationScenario conversationScenario, AudioFile greeting
             , String operatorPhoneNumbers)
     {
@@ -130,7 +130,7 @@ public abstract class AbstractOperatorNode extends BaseNode implements CallsQueu
         return (CallsQueuesNode) getParent().getParent();
     }
 
-    protected abstract boolean doProcessRequest(CallsQueue queue, CallQueueRequestWrapper request
+    protected abstract boolean doProcessRequest(CallsQueue queue, CallQueueRequestController request
             , IvrConversationScenario conversationScenario, AudioFile greeting
             , String operatorPhoneNumbers);
 
@@ -144,7 +144,7 @@ public abstract class AbstractOperatorNode extends BaseNode implements CallsQueu
      * @return 
      */
     protected CallsCommutationManagerImpl commutate(CallsQueue queue
-            , CallQueueRequestWrapper request
+            , CallQueueRequestController request
             , String phoneNumbers, IvrConversationScenario conversationScenario, AudioFile greeting)
         throws Exception
     {

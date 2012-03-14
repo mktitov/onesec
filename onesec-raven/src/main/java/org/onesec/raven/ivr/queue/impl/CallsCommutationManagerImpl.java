@@ -35,7 +35,7 @@ import org.raven.sched.impl.AbstractTask;
  */
 public class CallsCommutationManagerImpl implements CallsCommutationManager {
     private final ExecutorService executor;
-    private final CallQueueRequestWrapper req;
+    private final CallQueueRequestController req;
     private final long inviteTimeout;
     private long inviteEndTime;
     private final Integer parallelCallAfter;
@@ -51,7 +51,7 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager {
     private final AtomicBoolean callHandled = new AtomicBoolean(false);
     private int numberPos = 0;
 
-    public CallsCommutationManagerImpl(ExecutorService executor, CallQueueRequestWrapper req
+    public CallsCommutationManagerImpl(ExecutorService executor, CallQueueRequestController req
             , int inviteTimeout, Integer parallelCallAfter, CallsQueue queue, long waitTimeout
             , String[] numbers, IvrConversationScenario conversationScenario
             , IvrConversationsBridgeManager conversationsBridgeManager
@@ -168,7 +168,7 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager {
         return queue;
     }
 
-    public CallQueueRequestWrapper getRequest() {
+    public CallQueueRequestController getRequest() {
         return req;
     }
 

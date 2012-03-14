@@ -56,7 +56,7 @@ public interface CallsQueueOperator extends Node {
      * Returns true if operator (this object) taken request for processing. If method returns false
      * then operator is busy for now
      */
-    public boolean processRequest(CallsQueue queue, CallQueueRequestWrapper request
+    public boolean processRequest(CallsQueue queue, CallQueueRequestController request
             , IvrConversationScenario conversationScenario, AudioFile greeting
             , String operatorPhoneNumbers);
     public CallsQueueOperator callTransferedFromOperator(String phoneNumber, CallsCommutationManager commutationManager);

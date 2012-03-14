@@ -35,7 +35,7 @@ public interface CallsCommutationManager {
     public IvrConversationsBridgeManager getConversationsBridgeManager();
     public IvrEndpointPool getEndpointPool();
     public IvrConversationScenario getConversationScenario();
-    public CallQueueRequestWrapper getRequest();
+    public CallQueueRequestController getRequest();
     public CallsQueue getQueue();
     public void incOnNoFreeEndpointsRequests();
     public ExecutorService getExecutor();

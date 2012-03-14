@@ -21,7 +21,7 @@ import org.junit.Test;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.ivr.queue.BehaviourResult;
 import org.onesec.raven.ivr.queue.BehaviourResult.StepPolicy;
-import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
+import org.onesec.raven.ivr.queue.CallQueueRequestController;
 import static org.easymock.EasyMock.*;
 /**
  *
@@ -37,7 +37,7 @@ public class WaitForOperatorOnBusyBehaviourStepNodeTest extends OnesecRavenTestC
         tree.getRootNode().addAndSaveChildren(waiter);
         waiter.setWaitTimeout(5);
 
-        CallQueueRequestWrapper req = createStrictMock(CallQueueRequestWrapper.class);
+        CallQueueRequestController req = createStrictMock(CallQueueRequestController.class);
         long time = System.currentTimeMillis();
         expect(req.getLastQueuedTime()).andReturn(time);
         req.setOperatorIndex(-1);

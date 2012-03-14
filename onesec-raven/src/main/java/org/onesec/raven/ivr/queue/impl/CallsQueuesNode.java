@@ -23,7 +23,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import org.onesec.raven.ivr.queue.CallQueueException;
 import org.onesec.raven.ivr.queue.CallQueueRequest;
-import org.onesec.raven.ivr.queue.CallQueueRequestWrapper;
+import org.onesec.raven.ivr.queue.CallQueueRequestController;
 import org.onesec.raven.ivr.queue.CallsCommutationManager;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.CallsQueueOperator;
@@ -102,8 +102,8 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
             getLogger().debug("{}. CallsQueues. Queueing call to the queue {}"
                     , request.getConversation().getObjectName(), request.getQueueId());
         try{
-            CallQueueRequestWrapper requestWrapper = 
-                    new CallQueueRequestWrapperImpl(this, request, requestIdSeq.incrementAndGet());
+            CallQueueRequestController requestWrapper = 
+                    new CallQueueRequestControllerImpl(this, request, requestIdSeq.incrementAndGet());
             if (!Status.STARTED.equals(getStatus())){
                 if (isLogLevelEnabled(LogLevel.WARN))
                     getLogger().warn(

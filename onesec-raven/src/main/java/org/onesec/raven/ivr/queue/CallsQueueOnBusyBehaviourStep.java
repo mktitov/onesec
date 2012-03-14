@@ -24,5 +24,5 @@ import org.raven.tree.Node;
  */
 public interface CallsQueueOnBusyBehaviourStep extends Node
 {
-    public BehaviourResult handleBehaviour(CallsQueue queue, CallQueueRequestWrapper request);
+    public BehaviourResult handleBehaviour(CallsQueue queue, CallQueueRequestController request);
 }
