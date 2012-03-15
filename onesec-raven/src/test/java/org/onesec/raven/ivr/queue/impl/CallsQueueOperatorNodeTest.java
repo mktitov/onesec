@@ -17,33 +17,23 @@
 
 package org.onesec.raven.ivr.queue.impl;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import org.onesec.raven.ivr.AudioFile;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import static org.easymock.EasyMock.*;
 import org.easymock.IAnswer;
 import org.easymock.IArgumentMatcher;
 import org.junit.Before;
-import org.onesec.raven.ivr.EndpointRequest;
 import org.junit.Test;
 import org.onesec.core.StateWaitResult;
 import org.onesec.raven.OnesecRavenTestCase;
-import org.onesec.raven.ivr.CompletionCode;
-import org.onesec.raven.ivr.IvrConversationsBridge;
-import org.onesec.raven.ivr.IvrConversationsBridgeListener;
-import org.onesec.raven.ivr.IvrConversationsBridgeManager;
-import org.onesec.raven.ivr.IvrEndpoint;
-import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.onesec.raven.ivr.IvrEndpointConversationListener;
-import org.onesec.raven.ivr.IvrEndpointPool;
-import org.onesec.raven.ivr.IvrEndpointState;
+import org.onesec.raven.ivr.*;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.onesec.raven.ivr.impl.IvrEndpointConversationStoppedEventImpl;
+import org.onesec.raven.ivr.queue.*;
 import org.raven.sched.ExecutorServiceException;
 import org.raven.sched.impl.ExecutorServiceNode;
-import static org.easymock.EasyMock.*;
-import org.onesec.raven.ivr.queue.*;
 
 /**
  *

@@ -112,7 +112,7 @@ public class QueueCallAction extends AsyncAction
                 callStatus.replayToReadyToCommutate();
                 do {
                     TimeUnit.MILLISECONDS.sleep(10);
-                } while (!callStatus.isCommutated() && !hasCancelRequest());
+                } while (!callStatus.isCommutated() && !hasCancelRequest() && !callStatus.isDisconnected());
                 if (hasCancelRequest()) return;
             }
             if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))

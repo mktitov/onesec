@@ -16,6 +16,8 @@
  */
 package org.onesec.raven.ivr.queue.impl;
 
+import java.util.Collection;
+import java.util.Collections;
 import org.onesec.raven.ivr.queue.CallQueueRequestController;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.raven.tree.impl.BaseNode;
@@ -30,5 +32,9 @@ public class TestCallsQueueNode extends BaseNode implements CallsQueue {
     
     public void queueCall(CallQueueRequestController request) {
         this.lastRequest = request;
+    }
+
+    public Collection<CallQueueRequestController> getRequests() {
+        return Collections.EMPTY_LIST;
     }
 }
