@@ -130,7 +130,7 @@ public class  CommutationManagerCallImpl
                     nextState = State.INVALID;
                     break;
                 case INVALID: 
-                    boolean success = state.get()==State.HANDLED;
+                    boolean success = state.get()==State.HANDLED || state.get()==State.OPERATOR_READY;
                     if (!success) {
                         if (completionCode!=null) {
                             if (isLogLevelEnabled(LogLevel.DEBUG))

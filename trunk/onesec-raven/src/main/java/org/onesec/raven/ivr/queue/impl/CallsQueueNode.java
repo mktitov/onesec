@@ -79,8 +79,7 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask,
     private CallsQueueRequestComparator requestComparator;
 
     @Override
-    protected void initFields()
-    {
+    protected void initFields() {
         super.initFields();
         statusMessage = new AtomicReference<String>("Waiting for request...");
         stopProcessing = new AtomicBoolean(true);
@@ -149,6 +148,19 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask,
         } finally {
             lock.writeLock().unlock();
         }
+    }
+
+    public Collection<CallQueueRequestController> getRequests() {
+        try {
+            if (lock.readLock().tryLock(500, TimeUnit.MILLISECONDS)) {
+                try {
+                    return new ArrayList<CallQueueRequestController>(queue);
+                } finally {
+                    lock.readLock().unlock();
+                }
+            }
+        } catch (InterruptedException e) { }
+        return Collections.EMPTY_LIST;
     }
 
     public Boolean getAutoRefresh() {

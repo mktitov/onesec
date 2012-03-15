@@ -82,6 +82,8 @@ public class TimeWindowsGroupActionNode extends BaseNode implements Viewable {
 
     @Override
     public Collection<Node> getEffectiveChildrens() {
+        if (getStatus()!=Node.Status.STARTED)
+            return null;
         return timeWindows.isCurrentTimeInPeriod()? super.getEffectiveChildrens() : null;
     }
 

@@ -130,8 +130,9 @@ public class CallQueueRequestImpl implements QueuedCallStatus
             conversation.continueConversation('-');
     }
 
-    public synchronized void replayToReadyToCommutate()
-    {
+    public synchronized void replayToReadyToCommutate() {
+        if (status==Status.DISCONNECTED || status==Status.REJECTED)
+            return;
         status = Status.COMMUTATING;
         commutationManager.abonentReadyToCommutate(conversation);
     }

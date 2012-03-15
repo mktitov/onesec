@@ -17,6 +17,8 @@
 
 package org.onesec.raven.ivr.queue;
 
+import java.util.Collection;
+
 /**
  *
  * @author Mikhail Titov
@@ -24,4 +26,5 @@ package org.onesec.raven.ivr.queue;
 public interface CallsQueue {
     public void queueCall(CallQueueRequestController request);
     public String getName();
+    public Collection<CallQueueRequestController> getRequests();
 }
