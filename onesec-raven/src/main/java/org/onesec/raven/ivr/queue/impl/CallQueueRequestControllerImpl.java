@@ -390,7 +390,7 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
     }
 
     public String logMess(String message, Object... args) {
-        return request.getConversation().toString()
+        return request.getConversationInfo().toString()
                 +" [reqId: "+requestId+(queue==null?"":"; queue: "+queue.getName())+"]. "
                 +String.format(message, args);
     }

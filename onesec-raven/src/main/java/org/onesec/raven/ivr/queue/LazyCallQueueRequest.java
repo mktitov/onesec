@@ -23,5 +23,4 @@ import org.onesec.raven.ivr.IvrEndpointConversation;
  */
 public interface LazyCallQueueRequest extends CallQueueRequest {
     public String getAbonentNumber();
-    public void setConversation(IvrEndpointConversation conversation);
 }

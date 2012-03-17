@@ -16,13 +16,22 @@
 package org.onesec.raven.ivr.queue.impl;
 
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.concurrent.atomic.AtomicLong;
 import org.onesec.raven.ivr.*;
 import org.onesec.raven.ivr.impl.IvrEndpointConversationListenerAdapter;
 import org.onesec.raven.ivr.queue.AbonentCommutationManager;
-import org.onesec.raven.ivr.queue.CallQueueRequestController;
+import org.onesec.raven.ivr.queue.CallQueueRequest;
+import org.onesec.raven.ivr.queue.CallQueueRequestListener;
+import org.onesec.raven.ivr.queue.CommutationManagerCall;
+import org.onesec.raven.ivr.queue.event.CallQueueEvent;
+import org.onesec.raven.ivr.queue.event.DisconnectedQueueEvent;
+import org.onesec.raven.ivr.queue.event.ReadyToCommutateQueueEvent;
+import org.onesec.raven.ivr.queue.event.RejectedQueueEvent;
+import org.raven.ds.DataContext;
+import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorServiceException;
 import org.raven.tree.Node;
 
@@ -30,57 +39,154 @@ import org.raven.tree.Node;
  *
  * @author Mikhail Titov
  */
-//TODO: need operator conversation listener
-public class AbonentCommutationManagerImpl implements AbonentCommutationManager {
+public class AbonentCommutationManagerImpl implements CallQueueRequest, AbonentCommutationManager {
+    
+    private final static AtomicLong counter = new AtomicLong();
     
     private final String abonentNumber;
-    private final CallQueueRequestController request;
     private final Node owner;
     private final IvrEndpointPool endpointPool;
     private final IvrConversationScenario conversationScenario;
     private final int inviteTimeout;
     private final long endpointWaitTimeout;
+    private final DataContext context;
+    private final long requestId = counter.incrementAndGet();
+    
+    private volatile String queueId;
+    private volatile int priority;
+    
     private volatile String statusMessage;
+    private volatile IvrEndpointConversation conversation;
+    private volatile boolean canceled = false;
+    private volatile CommutationManagerCall commutationManager;
+    private volatile boolean disconnected = false;
+    private final List<CallQueueRequestListener> listeners = new LinkedList<CallQueueRequestListener>();
 
-    public AbonentCommutationManagerImpl(String abonentNumber, CallQueueRequestController request
-            , Node owner, IvrEndpointPool endpointPool, IvrConversationScenario conversationScenario
-            , int inviteTimeout, long endpointWaitTimeout, String statusMessage) 
+    public AbonentCommutationManagerImpl(String abonentNumber, String queueId, int priority
+            , Node owner, DataContext context
+            , IvrEndpointPool endpointPool, IvrConversationScenario conversationScenario
+            , int inviteTimeout, long endpointWaitTimeout) 
     {
         this.abonentNumber = abonentNumber;
-        this.request = request;
         this.owner = owner;
+        this.context = context;
         this.endpointPool = endpointPool;
         this.conversationScenario = conversationScenario;
         this.inviteTimeout = inviteTimeout;
         this.endpointWaitTimeout = endpointWaitTimeout;
-        this.statusMessage = statusMessage;
-        statusMessage = "Searching for free endpoint in the pool for: "+request.toString();
+        this.priority = priority;
+        this.queueId = queueId;
+//        statusMessage = "Searching for free endpoint in the pool for: "+request.toString();
     }
 
-    public void commutate() {
+    public void addRequestListener(CallQueueRequestListener listener) {
+        synchronized(listeners) {
+            listeners.add(listener);
+        }
+    }
+
+    public void callQueueChangeEvent(CallQueueEvent event) {
+        if (event instanceof ReadyToCommutateQueueEvent) {
+            commutationManager = ((ReadyToCommutateQueueEvent)event).getCommutationManager();
+            initiateCallToAbonent();
+        } else if (event instanceof DisconnectedQueueEvent) {
+            disconnected = true;
+        } else if (event instanceof RejectedQueueEvent) {
+            disconnected = true;
+        }
+    }
+
+    public boolean isCommutationValid() {
+        return !disconnected;
+    }
+
+    public DataContext getContext() {
+        return context;
+    }
+
+    public IvrEndpointConversation getConversation() {
+        return conversation;
+    }
+
+    public String getConversationInfo() {
+        return conversation==null? conversation.getObjectName() : logMess("");
+    }
+
+    public String getOperatorPhoneNumbers() {
+        return null;
+    }
+
+    public int getPriority() {
+        return priority;
+    }
+
+    public String getQueueId() {
+        return queueId;
+    }
+
+    public boolean isCanceled() {
+        return canceled;
+    }
+
+    public void setOperatorPhoneNumbers(String phoneNumbers) {
+    }
+
+    public void setPriority(int priority) {
+        this.priority = priority;
+    }
+
+    public void setQueueId(String queueId) {
+        this.queueId = queueId;
+    }
+
+    private void initiateCallToAbonent() {
         try {
+            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                owner.getLogger().debug(logMess("Initiating call to abonent"));
             endpointPool.requestEndpoint(new EndpointRequestListener());
         } catch (ExecutorServiceException ex) {
-            //TODO: inform request that commutation finished
+            if (owner.isLogLevelEnabled(LogLevel.ERROR))
+                owner.getLogger().error(logMess("Error while requesting endpoint from the pool"), ex);
+            fireRequestCanceledEvent();
         }
     }
 
     public void abonentReadyToCommutate(IvrEndpointConversation abonentConversation) {
-        //TODO: inform request that abonent ready to commutate
-        throw new UnsupportedOperationException("Not supported yet.");
+        commutationManager.abonentReadyToCommutate(abonentConversation);
     }
     
-    private void doCommutate(IvrEndpoint endpoint) {
+    private void callToAbonent(IvrEndpoint endpoint) {
+        if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+            owner.getLogger().debug(logMess("Calling to the abonent"));
         Map<String, Object> bindings = new HashMap<String, Object>();
-        bindings.put("abonentCommutationManager", this);
+        bindings.put(ABONENT_COMMUTATION_MANAGER_BINDING, this);
         endpoint.invite(abonentNumber, inviteTimeout, 0, new ConversationListener()
                 , conversationScenario, bindings);
+    }
+    
+    private String logMess(String message, Object... args) {
+        return "[reqId: "+requestId+"; abon number: "+abonentNumber+"] "
+                +String.format(message, args);
+    }
+    
+    private void fireRequestCanceledEvent() {
+        synchronized(listeners) {
+            for (CallQueueRequestListener listener: listeners)
+                listener.requestCanceled();
+        }
+    }
+    
+    private void fireConversationAssignedEvent() {
+        synchronized(listeners) {
+            for (CallQueueRequestListener listener: listeners)
+                listener.conversationAssigned(conversation);
+        }
     }
     
     private class EndpointRequestListener implements EndpointRequest {
 
         public void processRequest(IvrEndpoint endpoint) {
-            doCommutate(endpoint);
+            callToAbonent(endpoint);
         }
 
         public long getWaitTimeout() {
@@ -96,14 +202,16 @@ public class AbonentCommutationManagerImpl implements AbonentCommutationManager 
         }
 
         public int getPriority() {
-            return request.getPriority();
+            return priority;
         }
     }
     
     private class ConversationListener extends IvrEndpointConversationListenerAdapter {
+
         @Override
-        public void conversationStopped(IvrEndpointConversationStoppedEvent event) {
-            //TODO: inform request that commutation finished
+        public void listenerAdded(IvrEndpointConversationEvent event) {
+            conversation = event.getConversation();
+            fireConversationAssignedEvent();
         }
     }
 }
