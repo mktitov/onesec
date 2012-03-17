@@ -13,19 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.onesec.raven.ivr.queue;
+package org.onesec.raven.ivr.queue.actions;
 
-import org.onesec.raven.ivr.IvrEndpointConversation;
+import org.onesec.raven.ivr.IvrAction;
+import org.onesec.raven.ivr.IvrActionNode;
+import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
+import org.raven.annotations.NodeClass;
+import org.raven.tree.impl.BaseNode;
 
 /**
- * Lazy abonent commutation commutation manager
+ *
  * @author Mikhail Titov
  */
-public interface AbonentCommutationManager {
-    
-    public static final String ABONENT_COMMUTATION_MANAGER_BINDING = "abonentCommutationManager";
-    
-    public void abonentReadyToCommutate(IvrEndpointConversation abonentConversation);
-    public boolean isCommutationValid();
-    
+@NodeClass(parentNode=IvrConversationScenarioNode.class)
+public class WaitForAbonentCommutationActionNode extends BaseNode implements IvrActionNode {
+
+    public IvrAction createAction() {
+        return new WaitForAbonentCommutationAction();
+    }
 }
