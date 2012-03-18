@@ -79,7 +79,7 @@ public interface CallQueueRequestController extends CallQueueRequest
     /**
      * Fires when queue tries to call to operator using number passed in the parameter
      */
-    public void fireOperatorNumberQueueEvent(String operatorNumber);
+//    public void fireOperatorNumberQueueEvent(String operatorNumber);
     /**
      * Sets the operator greeting audio file
      */
