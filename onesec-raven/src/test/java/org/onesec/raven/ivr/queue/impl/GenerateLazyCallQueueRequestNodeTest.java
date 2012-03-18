@@ -20,7 +20,6 @@ import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.onesec.raven.ivr.impl.IvrEndpointPoolNode;
 import org.onesec.raven.ivr.queue.AbonentCommutationManager;
-import org.onesec.raven.ivr.queue.CallQueueRequest;
 import org.onesec.raven.ivr.queue.LazyCallQueueRequest;
 import org.raven.expr.impl.ScriptAttributeValueHandlerFactory;
 import org.raven.test.DataCollector;
