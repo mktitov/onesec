@@ -113,7 +113,7 @@ public class AbonentCommutationManagerImpl implements LazyCallQueueRequest, Abon
     }
 
     public String getConversationInfo() {
-        return conversation==null? conversation.getObjectName() : logMess("");
+        return conversation!=null? conversation.getObjectName() : logMess("");
     }
 
     public String getOperatorPhoneNumbers() {

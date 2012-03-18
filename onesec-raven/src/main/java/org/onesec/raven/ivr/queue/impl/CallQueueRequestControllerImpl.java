@@ -349,6 +349,7 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
     public boolean fireReadyToCommutateQueueEvent(CommutationManagerCall operator) {
         if (handlingByOperator.compareAndSet(false, true)) {
             callQueueChangeEvent(new ReadyToCommutateQueueEventImpl(queue, requestId, operator));
+            fireOperatorNumberQueueEvent(operator.getOperatorNumber());
             fireRequestProcessingByOperator(operator);
             return true;
         } 
@@ -363,7 +364,7 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
         callQueueChangeEvent(new OperatorQueueEventImpl(queue, requestId, operatorId));
     }
 
-    public void fireOperatorNumberQueueEvent(String operatorNumber) {
+    private void fireOperatorNumberQueueEvent(String operatorNumber) {
         callQueueChangeEvent(new OperatorNumberQueueEventImpl(queue, requestId, operatorNumber));
     }
 

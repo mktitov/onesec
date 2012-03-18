@@ -105,7 +105,7 @@ public class  CommutationManagerCallImpl
                     }
                     nextState = State.INVALID;
                     break;
-                case INVITING: getRequest().fireOperatorNumberQueueEvent(getOperatorNumber()); break;
+                case INVITING: /*getRequest().fireOperatorNumberQueueEvent(getOperatorNumber());*/ break;
                 case OPERATOR_READY: 
                     if (isLogLevelEnabled(LogLevel.DEBUG))
                         logger.debug(logMess("Number (%s) ready to commutate", getOperatorNumber()));

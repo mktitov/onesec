@@ -147,7 +147,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
 
         request.fireOperatorQueueEvent(operator.getName());
         request.fireOperatorGreetingQueueEvent(audioFile);
-        request.fireOperatorNumberQueueEvent("88024");
+//        request.fireOperatorNumberQueueEvent("88024");
         request.addToLog("handling by operator (operator)");
         pool.requestEndpoint(sendEndpoint(endpoint));
         pool.releaseEndpoint(endpoint);
@@ -204,7 +204,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
         pool.requestEndpoint(sendEndpoint(operatorEndpoint));
         
         //INVITING STEP
-        request.fireOperatorNumberQueueEvent("88024");
+//        request.fireOperatorNumberQueueEvent("88024");
         operatorEndpoint.invite(eq("88024"), geq(4), eq(0), handleConversationListener(convListener)
                 , same(scenario), checkBindings(operator, request, operatorConversation, commListener));
         
