@@ -391,7 +391,7 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
     }
 
     public String logMess(String message, Object... args) {
-        return request.getConversationInfo().toString()
+        return request.getConversationInfo()
                 +" [reqId: "+requestId+(queue==null?"":"; queue: "+queue.getName())+"]. "
                 +String.format(message, args);
     }
@@ -419,7 +419,9 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
         public void conversationAssigned(IvrEndpointConversation conv) {
             try {
                 if (cdr!=null)
-                    cdr.setValue(CALLING_NUMBER, lazyRequest? conv.getCalledNumber() : conv.getCallingNumber());
+                    cdr.setValue(CALLING_NUMBER, lazyRequest? 
+                            ((LazyCallQueueRequest)request).getAbonentNumber() 
+                            : conv.getCallingNumber());
             } catch (RecordException e) {
                 if (owner.isLogLevelEnabled(LogLevel.ERROR))
                     owner.getLogger().error(logMess("CDR Error"), e);
@@ -440,7 +442,7 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
 //        }
 //
         public void listenerAdded(IvrEndpointConversationEvent event) {
-            if (event.getConversation().getState().getId()==IvrEndpointConversationState.INVALID)
+            if (!lazyRequest && event.getConversation().getState().getId()==IvrEndpointConversationState.INVALID)
                 invalidate();
         }
 
