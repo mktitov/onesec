@@ -23,9 +23,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.onesec.raven.ivr.*;
 import org.onesec.raven.ivr.impl.IvrEndpointConversationListenerAdapter;
 import org.onesec.raven.ivr.queue.AbonentCommutationManager;
-import org.onesec.raven.ivr.queue.CallQueueRequest;
 import org.onesec.raven.ivr.queue.CallQueueRequestListener;
 import org.onesec.raven.ivr.queue.CommutationManagerCall;
+import org.onesec.raven.ivr.queue.LazyCallQueueRequest;
 import org.onesec.raven.ivr.queue.event.CallQueueEvent;
 import org.onesec.raven.ivr.queue.event.DisconnectedQueueEvent;
 import org.onesec.raven.ivr.queue.event.ReadyToCommutateQueueEvent;
@@ -39,7 +39,7 @@ import org.raven.tree.Node;
  *
  * @author Mikhail Titov
  */
-public class AbonentCommutationManagerImpl implements CallQueueRequest, AbonentCommutationManager {
+public class AbonentCommutationManagerImpl implements LazyCallQueueRequest, AbonentCommutationManager {
     
     private final static AtomicLong counter = new AtomicLong();
     
@@ -98,6 +98,10 @@ public class AbonentCommutationManagerImpl implements CallQueueRequest, AbonentC
 
     public boolean isCommutationValid() {
         return !disconnected;
+    }
+
+    public String getAbonentNumber() {
+        return abonentNumber;
     }
 
     public DataContext getContext() {

@@ -15,8 +15,6 @@
  */
 package org.onesec.raven.ivr.queue;
 
-import org.onesec.raven.ivr.IvrEndpointConversation;
-
 /**
  *
  * @author Mikhail Titov
