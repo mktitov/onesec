@@ -192,7 +192,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 if (call==null) {
                     state.setState(CONNECTING);
                     checkState();
-                } else if (inRtpStatus!=RtpStatus.CONNECTED && outRtpStatus==RtpStatus.CONNECTED)
+                } else if (inRtpStatus!=RtpStatus.CONNECTED || outRtpStatus!=RtpStatus.CONNECTED)
                     state.setState(CONNECTING);
                 break;
         }
