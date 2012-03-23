@@ -231,6 +231,7 @@
                 <groupId>com.cisco</groupId>
                 <artifactId>cisco-jtapi</artifactId>
                 <version>6.1.4.1</version>
+<!--                <version>8.6.2.1-2</version>-->
                 <scope>compile</scope>
             </dependency>
             
