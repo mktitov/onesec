@@ -304,8 +304,17 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         provider.setToNumber(88049);
         provider.setHost("10.16.15.1");
         provider.setPassword(privateProperties.getProperty("cti_user1"));
-        System.out.println("\n!!! private properties: "+privateProperties.getProperty("cti_user1")+"\n");
         provider.setUser("cti_user1");
+        assertTrue(provider.start());
+
+        provider = new ProviderNode();
+        provider.setName("631609 provider");
+        callOperator.getProvidersNode().addAndSaveChildren(provider);
+        provider.setFromNumber(631609);
+        provider.setToNumber(631750);
+        provider.setHost("10.0.137.125");
+        provider.setPassword(privateProperties.getProperty("ccm_dialer_proxy_kom"));
+        provider.setUser("ccm_dialer_proxy_kom");
         assertTrue(provider.start());
 
         ExecutorServiceNode executor = new ExecutorServiceNode();
@@ -334,7 +343,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
 //        createEndpoint(tree.getRootNode(), executor, manager, abonentScenario, "88013");
         createMultichannelEndpoint(executor, manager, abonentScenario);
 //        createEndpoint(pool, executor, manager, null, "88013");
-        createEndpoint(pool, executor, manager, null, "88014");
+        createEndpoint(pool, executor, manager, null, "631750");
         
         assertTrue(pool.start());
         
@@ -345,7 +354,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         createCallsQueues(executor, operatorScenarioNode, pool, bridgeManager, cdrSchema);
 
     }
-
+    
     private RecordSchemaNode createCdrRecordSchema()
     {
         CallQueueCdrRecordSchemaNode cdr = new CallQueueCdrRecordSchemaNode();
@@ -379,9 +388,9 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         CallsQueueOperatorNode operator = new CallsQueueOperatorNode();
         operator.setName("Titov MK");
         queues.getOperatorsNode().addAndSaveChildren(operator);
-        operator.setPhoneNumbers("88027");
+//        operator.setPhoneNumbers("88027");
 //        operator.setPhoneNumbers("089128672947");
-//        operator.setPhoneNumbers("88027,089128672947");
+        operator.setPhoneNumbers("88027,089128672947");
         operator.setParallelCallAfter(5);
         operator.setEndpointPool(pool);
         operator.setConversationsBridgeManager(bridge);
@@ -435,7 +444,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         endpoint.setName("endpoint");
         tree.getRootNode().addAndSaveChildren(endpoint);
         endpoint.setLogLevel(LogLevel.TRACE);
-        endpoint.setAddress("88049");
+        endpoint.setAddress("631609");
         endpoint.setConversationScenario(scenario);
         endpoint.setExecutor(executor);
         endpoint.setRtpStreamManager(manager);
@@ -550,10 +559,11 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         ProviderRegistry providerRegistry = registry.getService(ProviderRegistry.class);
         assertNotNull(providerRegistry);
         Thread.sleep(100);
-        ProviderController provider = providerRegistry.getProviderControllers().iterator().next();
-        assertNotNull(provider);
-        StateWaitResult res = provider.getState().waitForState(
-                new int[]{ProviderControllerState.IN_SERVICE}, 30000);
-        assertFalse(res.isWaitInterrupted());
+        for (ProviderController provider: providerRegistry.getProviderControllers()) {
+            assertNotNull(provider);
+            StateWaitResult res = provider.getState().waitForState(
+                    new int[]{ProviderControllerState.IN_SERVICE}, 30000);
+            assertFalse(res.isWaitInterrupted());
+        }
     }
 }

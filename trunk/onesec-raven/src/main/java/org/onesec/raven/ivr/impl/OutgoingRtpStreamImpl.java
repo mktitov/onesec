@@ -20,10 +20,11 @@ package org.onesec.raven.ivr.impl;
 import java.io.IOException;
 import java.net.InetAddress;
 import javax.media.control.BufferControl;
-import javax.media.rtp.RTPManager;
-import javax.media.rtp.SendStream;
-import javax.media.rtp.SessionAddress;
-import javax.media.rtp.TransmissionStats;
+import javax.media.rtp.*;
+import javax.media.rtp.event.ReceiveStreamEvent;
+import javax.media.rtp.event.RemoteEvent;
+import javax.media.rtp.event.SendStreamEvent;
+import javax.media.rtp.event.SessionEvent;
 import org.onesec.raven.ivr.AudioStream;
 import org.onesec.raven.ivr.OutgoingRtpStream;
 import org.onesec.raven.ivr.RTPManagerService;
@@ -75,6 +76,11 @@ public class OutgoingRtpStreamImpl extends AbstractRtpStream implements Outgoing
             rtpManager = rtpManagerService.createRtpManager();
             rtpManager.initialize(new SessionAddress(address, port));
             rtpManager.addTarget(destAddress);
+//            Listener listener = new Listener();
+//            rtpManager.addReceiveStreamListener(listener);
+//            rtpManager.addRemoteListener(listener);
+//            rtpManager.addSendStreamListener(listener);
+//            rtpManager.addSessionListener(listener);
             sendStream = rtpManager.createSendStream(audioStream.getDataSource(), 0);
             sendStream.setBitRate(1);
             BufferControl control = (BufferControl)rtpManager.getControl(BufferControl.class.getName());
@@ -136,6 +142,25 @@ public class OutgoingRtpStreamImpl extends AbstractRtpStream implements Outgoing
                         "Outgoing RTP. Error start outgoing rtp stream (remote address: %s; remote port: %s)"
                         , remoteHost, remotePort)
                     , ex);
+        }
+    }
+    
+    private class Listener implements ReceiveStreamListener, RemoteListener, SendStreamListener, SessionListener {
+
+        public void update(ReceiveStreamEvent event) {
+            owner.getLogger().debug(logMess("ReceiveStreamListener event: %s", event.getClass().getName()));
+        }
+
+        public void update(RemoteEvent event) {
+            owner.getLogger().debug(logMess("RemoteEvent event: %s", event.getClass().getName()));
+        }
+
+        public void update(SendStreamEvent event) {
+            owner.getLogger().debug(logMess("SendStreamEvent event: %s", event.getClass().getName()));
+        }
+
+        public void update(SessionEvent event) {
+            owner.getLogger().debug(logMess("SessionEvent event: %s", event.getClass().getName()));
         }
     }
 }

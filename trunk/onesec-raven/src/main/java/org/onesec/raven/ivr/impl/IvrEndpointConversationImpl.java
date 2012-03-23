@@ -266,6 +266,9 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     public void logicalConnectionCreated(String opponentNumber) throws IvrEndpointConversationException {
         lock.writeLock().lock();
         try {
+            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                owner.getLogger().debug(callLog(
+                        "Logical connection created for opponent number (%s)", opponentNumber));
             checkForOpponentPartyTransfered(opponentNumber);
             if (state.getId()==CONNECTING)
                 checkState();
@@ -302,6 +305,12 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     private boolean isAllLogicalConnectionEstablished() {
         Connection[] cons = call.getConnections();
         if (cons!=null) {
+            if (owner.isLogLevelEnabled(LogLevel.DEBUG)) 
+                for (Connection con: cons) 
+                    owner.getLogger().debug(callLog(
+                            "Call connection: address=%s; state=%s; callControlState=%s"
+                            , con.getAddress().getName(), con.getState()
+                            , ((CallControlConnection)con).getCallControlState()));
             for (Connection con: cons)
                 if (((CallControlConnection)con).getCallControlState()!=CallControlConnection.ESTABLISHED)
                     return false;
@@ -313,6 +322,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     public void startIncomingRtp() throws IvrEndpointConversationException {
         lock.writeLock().lock();
         try {
+            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                owner.getLogger().debug(callLog("Trying to start incoming RTP stream"));
             if (state.getId()!=CONNECTING)
                 throw new IvrEndpointConversationStateException(
                         "Can't start incoming RTP", "CONNECTING", state.getIdName());
@@ -327,8 +338,12 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                     fireIncomingRtpStartedEvent();
                     inRtpStatus = RtpStatus.CONNECTED;
                     checkState();
-                } else
+                } else {
+                    if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                        owner.getLogger().debug(callLog(
+                                "Incoming RTP. Can't start. Outgoing RTP not created, waiting..."));
                     inRtpStatus = RtpStatus.WAITING_FOR_START;
+                }
             } catch (RtpStreamException e){
                 if (owner.isLogLevelEnabled(LogLevel.ERROR))
                     owner.getLogger().error(callLog("Error starting incoming RTP"), e);
@@ -342,6 +357,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     public void startOutgoingRtp() throws IvrEndpointConversationException {
         lock.writeLock().lock();
         try {
+            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                owner.getLogger().debug(callLog("Trying to start outgoing RTP stream"));
             if (state.getId()!=CONNECTING)
                 throw new IvrEndpointConversationStateException(
                         "Can't start incoming RTP", "CONNECTING", state.getIdName());
@@ -360,8 +377,13 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                     outRtpStatus = RtpStatus.CONNECTED;
                     fireOutgoingRtpStartedEvent();
                     checkState();
-                } else 
+                } else {
+                    if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                        owner.getLogger().debug(callLog(
+                                "Outgoing RTP. Can't start. "
+                                + "Not all logical connections are established. Waiting..."));
                     outRtpStatus = RtpStatus.WAITING_FOR_START;
+                }
             } catch (Exception e) {
                 if (owner.isLogLevelEnabled(LogLevel.ERROR))
                     owner.getLogger().error(callLog("Error starting outgoing RTP"), e);
