@@ -15,7 +15,6 @@
  */
 package org.onesec.raven.ivr.impl;
 
-import com.sun.media.ExtBuffer;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -49,7 +48,7 @@ public class RealTimeDataSourceMerger extends PushBufferDataSource {
         this.logPrefix = logPrefix;
     }
     
-    public void addDataSource(PushBufferDataSource dataSource) {
+    public void addDataSource(PushBufferDataSource dataSource) throws CodecManagerException {
         DataSourceHandler handler = new DataSourceHandler(dataSource);
         handler.init();
         datasources.add(handler);
@@ -156,6 +155,7 @@ public class RealTimeDataSourceMerger extends PushBufferDataSource {
         public void transferData(PushBufferStream stream) {
             Buffer buffer = new Buffer();
             buffer.setData(new byte[BUFFER_SIZE]);
+            buffer.setLength(BUFFER_SIZE);
         }
     }
 }
