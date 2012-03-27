@@ -16,7 +16,7 @@
 package org.onesec.raven.impl;
 
 /**
- *
+ * Goal: Optimized queue for one thread write another read.
  * @author Mikhail Titov
  */
 public class RingQueue<E>  {
@@ -31,11 +31,12 @@ public class RingQueue<E>  {
         this.data = (E[])new Object[maxSize];
     }
     
-    public void push(E element) throws RingQueueException {
+    public boolean push(E element) {
         if (writePos-readPos >= maxSize)
-            throw new RingQueueException("The ring queue is full");
+            return false;
         data[(int)((writePos++)%maxSize)] = element;
-    }
+        return true; 
+   }
     
     public boolean hasElement() {
         return readPos<writePos;
