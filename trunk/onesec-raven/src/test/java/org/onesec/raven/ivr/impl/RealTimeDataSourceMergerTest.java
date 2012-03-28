@@ -15,31 +15,38 @@
  */
 package org.onesec.raven.ivr.impl;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import javax.media.protocol.FileTypeDescriptor;
-import org.junit.*;
-import static org.junit.Assert.*;
+import javax.media.protocol.PushBufferDataSource;
+import static org.easymock.EasyMock.*;
+import org.easymock.IArgumentMatcher;
+import org.junit.Assert;
+import static org.junit.Assert.assertSame;
+import org.junit.Before;
+import org.junit.Test;
+import org.onesec.raven.JMFHelper;
 import org.onesec.raven.ivr.CodecManager;
+import org.onesec.raven.ivr.InputStreamSource;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
+import org.raven.sched.ExecutorServiceException;
+import org.raven.sched.Task;
 import org.raven.tree.Node;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import static org.easymock.EasyMock.*;
-import org.easymock.IArgumentMatcher;
-import org.onesec.raven.JMFHelper;
-import org.onesec.raven.ivr.InputStreamSource;
-import org.raven.sched.Task;
 
 /**
  *
  * @author Mikhail Titov
  */
 public class RealTimeDataSourceMergerTest extends Assert {
-    private CodecManager codecManager;
     private static Logger logger = LoggerFactory.getLogger(ContainerParserDataSource.class);
     private static volatile int tasksFinished;
+    private CodecManager codecManager;
+    private Node owner;
+    private ExecutorService executor;
 
     
     @Before
@@ -48,26 +55,14 @@ public class RealTimeDataSourceMergerTest extends Assert {
         tasksFinished = 0;
     }
     
-    @Test
+//    @Test
     public void mergeOneStream() throws Exception {
-        ExecutorService executor = createMock("executor", ExecutorService.class);
-        Node owner =  createMock("owner", Node.class);
-        
-        executor.execute(executeTask(owner));
-        expectLastCall().atLeastOnce();
-        expect(owner.getLogger()).andReturn(logger).anyTimes();
-        expect(owner.isLogLevelEnabled(anyObject(LogLevel.class))).andReturn(Boolean.TRUE).anyTimes();
+        trainMocks();
         replay(executor, owner);
         
-        InputStreamSource source = new TestInputStreamSource("src/test/wav/test.wav");
-        IssDataSource dataSource = new IssDataSource(source, FileTypeDescriptor.WAVE);
-        ContainerParserDataSource parser = new ContainerParserDataSource(codecManager, dataSource);
-        PullToPushConverterDataSource conv = new PullToPushConverterDataSource(parser, executor, owner);
         RealTimeDataSourceMerger merger = new RealTimeDataSourceMerger(codecManager, owner, null, executor);
-        merger.addDataSource(conv);
+        merger.addDataSource(createDataSourceFromFile("src/test/wav/test2.wav"));
         merger.connect();
-//        conv.connect();
-//        conv.start();
         JMFHelper.OperationController controller = JMFHelper.writeToFile(merger, "target/merger_1_source.wav");
         TimeUnit.SECONDS.sleep(4);
         merger.disconnect();
@@ -76,14 +71,75 @@ public class RealTimeDataSourceMergerTest extends Assert {
         verify(executor, owner);
     }
     
-    @Test
-    public void mergeTwoStreams() {
+//    @Test
+    public void mergeTwoStreams() throws Exception {
+        trainMocks();
+        replay(executor, owner);
         
+        RealTimeDataSourceMerger merger = new RealTimeDataSourceMerger(codecManager, owner, null, executor);
+        merger.addDataSource(createDataSourceFromFile("src/test/wav/test2.wav"));
+        merger.addDataSource(createDataSourceFromFile("src/test/wav/test.wav"));
+        merger.connect();
+        JMFHelper.OperationController controller = JMFHelper.writeToFile(merger, "target/merger_2_sources.wav");
+        TimeUnit.SECONDS.sleep(4);
+        merger.disconnect();
+        controller.stop();
+        
+        verify(executor, owner);
+    }
+    
+//    @Test
+    public void dynamicAddStream() throws Exception {
+        trainMocks();
+        replay(executor, owner);
+        
+        RealTimeDataSourceMerger merger = new RealTimeDataSourceMerger(codecManager, owner, null, executor);
+        merger.addDataSource(createDataSourceFromFile("src/test/wav/test2.wav"));
+        merger.addDataSource(createDataSourceFromFile("src/test/wav/test.wav"));
+        merger.connect();
+        JMFHelper.OperationController controller = JMFHelper.writeToFile(merger, "target/merger_3_sources.wav");
+        TimeUnit.MILLISECONDS.sleep(1000);
+        merger.addDataSource(createDataSourceFromFile("src/test/wav/greeting.wav"));
+        TimeUnit.SECONDS.sleep(4);
+        merger.disconnect();
+        controller.stop();
+        
+        verify(executor, owner);
     }
     
     @Test
-    public void dynamicAddStream() {
+    public void dynamicAddStream2() throws Exception {
+        trainMocks();
+        replay(executor, owner);
         
+        RealTimeDataSourceMerger merger = new RealTimeDataSourceMerger(codecManager, owner, null, executor);
+        merger.connect();
+        JMFHelper.OperationController controller = JMFHelper.writeToFile(merger, "target/merger_1d_sources.wav");
+        TimeUnit.MILLISECONDS.sleep(1000);
+        merger.addDataSource(createDataSourceFromFile("src/test/wav/greeting.wav"));
+        TimeUnit.SECONDS.sleep(4);
+        merger.disconnect();
+        controller.stop();
+        
+        verify(executor, owner);
+    }
+    
+    private PushBufferDataSource createDataSourceFromFile(String filename) throws FileNotFoundException {
+        InputStreamSource source = new TestInputStreamSource(filename);
+        IssDataSource dataSource = new IssDataSource(source, FileTypeDescriptor.WAVE);
+        ContainerParserDataSource parser = new ContainerParserDataSource(codecManager, dataSource);
+        PullToPushConverterDataSource conv = new PullToPushConverterDataSource(parser, executor, owner);
+        return conv;
+    }
+    
+    private void trainMocks() throws ExecutorServiceException {
+        executor = createMock("executor", ExecutorService.class);
+        owner =  createMock("owner", Node.class);
+        
+        executor.execute(executeTask(owner));
+        expectLastCall().atLeastOnce();
+        expect(owner.getLogger()).andReturn(logger).anyTimes();
+        expect(owner.isLogLevelEnabled(anyObject(LogLevel.class))).andReturn(Boolean.TRUE).anyTimes();
     }
     
     public static Task executeTask(final Node owner) {
