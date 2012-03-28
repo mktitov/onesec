@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.media.Buffer;
 import javax.media.Format;
 import javax.media.Time;
+import javax.media.format.AudioFormat;
 import javax.media.protocol.BufferTransferHandler;
 import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.PushBufferDataSource;
@@ -42,6 +43,8 @@ import org.raven.tree.Node;
 public class RealTimeDataSourceMerger extends PushBufferDataSource {
     private final static ContentDescriptor CONTENT_DESCRIPTOR = 
             new ContentDescriptor(ContentDescriptor.RAW);
+    private final static AudioFormat FORMAT = new AudioFormat(AudioFormat.LINEAR, 8000d, 8, 1, -1, 1, 8, 16000.0, byte[].class);
+    
     private final CodecManager codecManager;
     private final Node owner;
     private final String logPrefix;
@@ -54,6 +57,10 @@ public class RealTimeDataSourceMerger extends PushBufferDataSource {
     private final AtomicBoolean connected = new AtomicBoolean(false);
     private final AtomicBoolean started = new AtomicBoolean(false);
     private final PushBufferStream[] streams = new PushBufferStream[]{new Stream()};
+    
+    static {
+//        format.
+    }
 
     public RealTimeDataSourceMerger(CodecManager codecManager, Node owner, String logPrefix
             , ExecutorService executor) 
@@ -109,6 +116,11 @@ public class RealTimeDataSourceMerger extends PushBufferDataSource {
         if (!connected.get())
             return;
         stopped = true;
+        DataSourceHandler handler = firstHandler;
+        while (handler!=null) {
+            handler.datasource.disconnect();
+            handler = handler.nextHandler;
+        }
         connected.set(false);
     }
 
@@ -158,7 +170,8 @@ public class RealTimeDataSourceMerger extends PushBufferDataSource {
         private volatile BufferTransferHandler transferHandler;
 
         public Format getFormat() {
-            return Codec.LINEAR.getAudioFormat();
+//            return Codec.LINEAR.getAudioFormat();
+            return FORMAT;
         }
 
         public void read(Buffer buffer) throws IOException {
@@ -214,6 +227,7 @@ public class RealTimeDataSourceMerger extends PushBufferDataSource {
                     long expectedPacketNumber = timeDiff/TICK_INTERVAL;
                     long correction = timeDiff % TICK_INTERVAL;
                     long sleepTime = (packetNumber-expectedPacketNumber) * TICK_INTERVAL - correction;
+//                    System.out.println(">>> SLEEP TIME: "+sleepTime);
                     if (sleepTime>0)
                         TimeUnit.MILLISECONDS.sleep(sleepTime);
                 }
@@ -225,27 +239,43 @@ public class RealTimeDataSourceMerger extends PushBufferDataSource {
         private void mergeAndTranssmit() {
             byte[] data = new byte[BUFFER_SIZE];
             DataSourceHandler handler = firstHandler;
-            while (handler!=null) {
+            int decHandlersBy = 0;
+            while (handler!=null && handlersCount>0) {
                 Buffer buffer = handler.buffers.peek();
                 int len = BUFFER_SIZE;
                 int offset = 0;
                 while (buffer!=null && len>0) {
-                    byte[] bufdata = (byte[]) buffer.getData();
-                    int bufOffset = buffer.getOffset();
                     int buflen = buffer.getLength();
-                    int bytesToRead = Math.min(len, buflen);
-                    for (int i=bufOffset; i<bytesToRead; ++i) 
-                        data[offset++] += (byte) (bufdata[i]/handlersCount);
-                    if (bytesToRead==buflen)
+                    if (buffer.isDiscard()) {
                         handler.buffers.pop();
-                    else 
-                        buffer.setOffset(bufOffset+bytesToRead);
-                    len-=bytesToRead;
+                        buffer = handler.buffers.peek();
+                    } else {
+                        byte[] bufdata = (byte[]) buffer.getData();
+                        int bufOffset = buffer.getOffset();
+                        int bytesToRead = Math.min(len, buflen);
+//                        System.out.println(String.format(
+//                                "### processing buffer: len=%d, offset=%d, bytesToRead: %d"
+//                                , buflen, bufOffset, bytesToRead));
+                        for (int i=bufOffset; i<bufOffset+bytesToRead; ++i) 
+                            data[offset++] += (byte) (bufdata[i]/handlersCount);
+                        if (bytesToRead==buflen || buffer.isEOM()) {
+                            handler.buffers.pop();
+                            if (buffer.isEOM())
+                                decHandlersBy++;
+                            buffer = handler.buffers.peek();
+                        } else {
+                            buffer.setOffset(bufOffset+bytesToRead);
+                            buffer.setLength(buflen-bytesToRead);
+                        }
+                        len-=bytesToRead;
+                    }
                 }
                 handler = handler.nextHandler;
             }
+            if (decHandlersBy>0)
+                handlersCount -= decHandlersBy;
             Buffer buf = new Buffer();
-            buf.setFormat(Codec.LINEAR.getAudioFormat());
+            buf.setFormat(FORMAT);
             buf.setData(data);
             buf.setOffset(0);
             buf.setLength(data.length);
@@ -264,7 +294,7 @@ public class RealTimeDataSourceMerger extends PushBufferDataSource {
 
         public DataSourceHandler(PushBufferDataSource datasource) throws CodecManagerException {
             this.datasource = new TranscoderDataSource(codecManager, datasource, 
-                    Codec.LINEAR.getAudioFormat(), owner, logMess(""));
+                    FORMAT, owner, logMess(""));
         }
         
         public void init() throws IOException {
