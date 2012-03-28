@@ -16,9 +16,8 @@
 package org.onesec.raven.ivr.impl;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.media.Buffer;
 import javax.media.Format;
 import javax.media.Time;
@@ -32,6 +31,7 @@ import org.onesec.raven.ivr.CodecManager;
 import org.onesec.raven.ivr.CodecManagerException;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
+import org.raven.sched.ExecutorServiceException;
 import org.raven.sched.Task;
 import org.raven.tree.Node;
 
@@ -40,7 +40,8 @@ import org.raven.tree.Node;
  * @author Mikhail Titov
  */
 public class RealTimeDataSourceMerger extends PushBufferDataSource {
-
+    private final static ContentDescriptor CONTENT_DESCRIPTOR = 
+            new ContentDescriptor(ContentDescriptor.RAW);
     private final CodecManager codecManager;
     private final Node owner;
     private final String logPrefix;
@@ -50,6 +51,9 @@ public class RealTimeDataSourceMerger extends PushBufferDataSource {
     private volatile DataSourceHandler lastHandler;
     private volatile int handlersCount = 0;
     private volatile boolean stopped = false;
+    private final AtomicBoolean connected = new AtomicBoolean(false);
+    private final AtomicBoolean started = new AtomicBoolean(false);
+    private final PushBufferStream[] streams = new PushBufferStream[]{new Stream()};
 
     public RealTimeDataSourceMerger(CodecManager codecManager, Node owner, String logPrefix
             , ExecutorService executor) 
@@ -61,7 +65,7 @@ public class RealTimeDataSourceMerger extends PushBufferDataSource {
     }
 
     
-    public void addDataSource(PushBufferDataSource dataSource) throws CodecManagerException {
+    public void addDataSource(PushBufferDataSource dataSource) throws CodecManagerException, IOException {
         DataSourceHandler handler = new DataSourceHandler(dataSource);
         handler.init();
         synchronized(this) {
@@ -76,47 +80,69 @@ public class RealTimeDataSourceMerger extends PushBufferDataSource {
 
     @Override
     public PushBufferStream[] getStreams() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return streams;
     }
 
     @Override
     public String getContentType() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return ContentDescriptor.RAW;
     }
 
     @Override
     public void connect() throws IOException {
-        throw new UnsupportedOperationException("Not supported yet.");
+        if (connected.compareAndSet(false, true))
+            try {
+                DataSourceHandler handler = firstHandler;
+                while (handler!=null) {
+                    handler.datasource.connect();
+                    handler = handler.nextHandler;
+                }
+                executor.execute((Task)streams[0]);
+            } catch (ExecutorServiceException ex) {
+                if (owner.isLogLevelEnabled(LogLevel.ERROR))
+                    owner.getLogger().error(logMess("Error executing STREAM task"), ex);
+                throw new IOException(ex);
+            }
     }
 
-    @Override
-    public void disconnect() {
-        throw new UnsupportedOperationException("Not supported yet.");
+    @Override public void disconnect() {
+        if (!connected.get())
+            return;
+        stopped = true;
+        connected.set(false);
     }
 
-    @Override
-    public void start() throws IOException {
-        throw new UnsupportedOperationException("Not supported yet.");
+    @Override public void start() throws IOException {
+        if (!started.compareAndSet(false, true))
+            return;
+        DataSourceHandler handler = firstHandler;
+        while (handler!=null) {
+            handler.datasource.start();
+            handler = handler.nextHandler;
+        }
     }
 
     @Override
     public void stop() throws IOException {
-        throw new UnsupportedOperationException("Not supported yet.");
+        if (!started.compareAndSet(true, false))
+            return;
+        DataSourceHandler handler = firstHandler;
+        while (handler!=null) {
+            handler.datasource.stop();
+            handler = handler.nextHandler;
+        }
     }
 
-    @Override
-    public Object getControl(String arg0) {
-        throw new UnsupportedOperationException("Not supported yet.");
+    @Override public Object getControl(String arg0) {
+        return null;
     }
 
-    @Override
-    public Object[] getControls() {
-        throw new UnsupportedOperationException("Not supported yet.");
+    @Override public Object[] getControls() {
+        return null;
     }
 
-    @Override
-    public Time getDuration() {
-        throw new UnsupportedOperationException("Not supported yet.");
+    @Override public Time getDuration() {
+        return DURATION_UNKNOWN;
     }
     
     String logMess(String mess, Object... args) {
@@ -127,37 +153,42 @@ public class RealTimeDataSourceMerger extends PushBufferDataSource {
         
         private final static long TICK_INTERVAL = 20;
         private final static int BUFFER_SIZE = (int) (TICK_INTERVAL * 8);
+        
+        private volatile Buffer bufferToTranssmit;
+        private volatile BufferTransferHandler transferHandler;
 
         public Format getFormat() {
-            throw new UnsupportedOperationException("Not supported yet.");
+            return Codec.LINEAR.getAudioFormat();
         }
 
         public void read(Buffer buffer) throws IOException {
-            throw new UnsupportedOperationException("Not supported yet.");
+            Buffer buf = bufferToTranssmit;
+            if (buf!=null)
+                buffer.copy(buf);
         }
 
         public void setTransferHandler(BufferTransferHandler transferHandler) {
-            throw new UnsupportedOperationException("Not supported yet.");
+            this.transferHandler = transferHandler;
         }
 
         public ContentDescriptor getContentDescriptor() {
-            throw new UnsupportedOperationException("Not supported yet.");
+            return CONTENT_DESCRIPTOR;
         }
 
         public long getContentLength() {
-            throw new UnsupportedOperationException("Not supported yet.");
+            return LENGTH_UNKNOWN;
         }
 
         public boolean endOfStream() {
-            throw new UnsupportedOperationException("Not supported yet.");
+            return false;
         }
 
         public Object[] getControls() {
-            throw new UnsupportedOperationException("Not supported yet.");
+            return null;
         }
 
         public Object getControl(String controlType) {
-            throw new UnsupportedOperationException("Not supported yet.");
+            return null;
         }
 
         public Node getTaskNode() {
@@ -170,6 +201,8 @@ public class RealTimeDataSourceMerger extends PushBufferDataSource {
 
         public void run() {
             try {
+                if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                    owner.getLogger().debug(logMess("Merger task executed"));
                 long startTime = System.currentTimeMillis();
                 long packetNumber = 0;
                 while (!stopped) {
@@ -211,6 +244,15 @@ public class RealTimeDataSourceMerger extends PushBufferDataSource {
                 }
                 handler = handler.nextHandler;
             }
+            Buffer buf = new Buffer();
+            buf.setFormat(Codec.LINEAR.getAudioFormat());
+            buf.setData(data);
+            buf.setOffset(0);
+            buf.setLength(data.length);
+            bufferToTranssmit = buf;
+            BufferTransferHandler _transferHandler = transferHandler;
+            if (_transferHandler!=null)
+                _transferHandler.transferData(this);
         }
     }
     
@@ -225,8 +267,12 @@ public class RealTimeDataSourceMerger extends PushBufferDataSource {
                     Codec.LINEAR.getAudioFormat(), owner, logMess(""));
         }
         
-        public void init() {
+        public void init() throws IOException {
             datasource.getStreams()[0].setTransferHandler(this);
+            if (connected.get())
+                datasource.connect();
+            if (started.get())
+                datasource.start();
         }
 
         public void transferData(PushBufferStream stream) {
