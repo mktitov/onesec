@@ -32,4 +32,8 @@ public interface IvrConversationsBridgeManager extends Node
     public IvrConversationsBridge createBridge(IvrEndpointConversation conv1, IvrEndpointConversation conv2
            , String logPrefix)
         throws IvrConversationBridgeExeption;
+    /**
+     * Adds new conversations bridge listener
+     */
+//    public void addBridgeListener(IvrConversationsBridgeListener listener);
 }

@@ -18,16 +18,13 @@
 package org.onesec.raven.ivr.impl;
 
 import java.util.ArrayList;
-import java.util.concurrent.atomic.AtomicBoolean;
-import org.onesec.raven.ivr.ConversationCdr;
-import org.onesec.raven.ivr.IvrConversationBridgeExeption;
-import org.onesec.raven.ivr.IvrConversationsBridge;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.media.format.AudioFormat;
-import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.DataSource;
 import org.easymock.EasyMock;
+import static org.easymock.EasyMock.*;
 import org.easymock.IArgumentMatcher;
 import org.junit.Before;
 import org.junit.Test;
@@ -38,25 +35,11 @@ import org.onesec.core.services.ProviderRegistry;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.impl.CCMCallOperatorNode;
 import org.onesec.raven.impl.ProviderNode;
-import org.onesec.raven.ivr.AudioStream;
-import org.onesec.raven.ivr.ConversationCompletionCallback;
-import org.onesec.raven.ivr.IncomingRtpStream;
-import org.onesec.raven.ivr.IncomingRtpStreamDataSourceListener;
-import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.onesec.raven.ivr.IvrEndpointConversationEvent;
-import org.onesec.raven.ivr.IvrEndpointConversationListener;
-import org.onesec.raven.ivr.IvrEndpointConversationState;
-import org.onesec.raven.ivr.IvrEndpointConversationStoppedEvent;
-import org.onesec.raven.ivr.IvrEndpointConversationTransferedEvent;
-import org.onesec.raven.ivr.IvrEndpointState;
-import org.onesec.raven.ivr.IvrIncomingRtpStartedEvent;
-import org.onesec.raven.ivr.IvrOutgoingRtpStartedEvent;
-import org.onesec.raven.ivr.RtpStreamException;
+import org.onesec.raven.ivr.*;
 import org.onesec.raven.ivr.actions.PauseActionNode;
 import org.raven.log.LogLevel;
 import org.raven.sched.impl.ExecutorServiceNode;
 import org.raven.tree.Node;
-import static org.easymock.EasyMock.*;
 
 /**
  *
@@ -108,7 +91,7 @@ public class IvrConversationsBridgeManagerNodeTest extends OnesecRavenTestCase
         conv2Mocks.verify();
     }
 
-    @Test
+//    @Test
     public void realTest() throws Exception
     {
         bridgeManager = new IvrConversationsBridgeManagerNode();
@@ -169,6 +152,7 @@ public class IvrConversationsBridgeManagerNodeTest extends OnesecRavenTestCase
         while (bridgeActive.get())
             Thread.sleep(100);
     }
+    
     private void waitForProvider() throws Exception
     {
         ProviderRegistry providerRegistry = registry.getService(ProviderRegistry.class);
