@@ -40,6 +40,7 @@ import org.raven.tree.Viewable;
 import org.raven.tree.ViewableObject;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.ViewableObjectImpl;
+import org.raven.util.NodeUtils;
 import org.weda.internal.annotations.Message;
 
 /**
@@ -65,7 +66,7 @@ public class IvrConversationsBridgeManagerNode extends BaseNode
     private static String activatingTimestampMessage;
     @Message
     private static String activatedTimestampMessage;
-
+    
     @Override
     protected void initFields()
     {
@@ -89,9 +90,15 @@ public class IvrConversationsBridgeManagerNode extends BaseNode
         }
     }
 
-    public void bridgeActivated(IvrConversationsBridge bridge) { }
+    public void bridgeActivated(IvrConversationsBridge bridge) { 
+        for (IvrConversationsBridgeListener listener: getBridgeListeners())
+            listener.bridgeActivated(bridge);
+    }
 
-    public void bridgeReactivated(IvrConversationsBridge bridge) { }
+    public void bridgeReactivated(IvrConversationsBridge bridge) { 
+        for (IvrConversationsBridgeListener listener: getBridgeListeners())
+            listener.bridgeReactivated(bridge);
+    }
 
     public void bridgeDeactivated(IvrConversationsBridge bridge) {
         lock.writeLock().lock();
@@ -100,6 +107,8 @@ public class IvrConversationsBridgeManagerNode extends BaseNode
         } finally {
             lock.writeLock().unlock();
         }
+        for (IvrConversationsBridgeListener listener: getBridgeListeners())
+            listener.bridgeDeactivated(bridge);
     }
 
     /**
@@ -141,12 +150,15 @@ public class IvrConversationsBridgeManagerNode extends BaseNode
         return Arrays.asList(obj);
     }
 
-    private String formatTs(long ts, SimpleDateFormat fmt)
-    {
+    private String formatTs(long ts, SimpleDateFormat fmt) {
         return ts==0? "" : fmt.format(new Date(ts));
     }
 
     public Boolean getAutoRefresh() {
         return Boolean.TRUE;
+    }
+    
+    private List<IvrConversationsBridgeListener> getBridgeListeners() {
+        return NodeUtils.extractNodesOfType(getDependentNodes(), IvrConversationsBridgeListener.class);
     }
 }
