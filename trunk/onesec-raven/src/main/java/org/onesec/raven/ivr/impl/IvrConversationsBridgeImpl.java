@@ -182,8 +182,14 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
     private String logMess(String message, Object... args)
     {
         return (logPrefix==null?"":logPrefix)+"Bridge. "
-                +conv1.getCallingNumber()+" >-< "+conv2.getCalledNumber()+" : "
+                +"("+conv1.getCallingNumber()+"->"+conv1.getCalledNumber()+") >-< "
+                +"("+conv2.getCallingNumber()+"->"+conv2.getCalledNumber()+") : "
                 +String.format(message, args);
+    }
+
+    @Override
+    public String toString() {
+        return logMess("");
     }
     
     private class BridgeConnection
