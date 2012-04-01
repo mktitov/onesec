@@ -23,10 +23,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import javax.media.Codec;
-import javax.media.Demultiplexer;
-import javax.media.Format;
-import javax.media.PlugInManager;
+import javax.media.*;
 import javax.media.format.AudioFormat;
 import javax.media.protocol.ContentDescriptor;
 import org.onesec.raven.codec.AlawEncoder;
@@ -51,6 +48,7 @@ public class CodecManagerImpl implements CodecManager {
     private final Map<Format/*inFormat*/, Map<Format/*outFormat*/, CodecConfigMeta[]>> cache =
             new HashMap<Format, Map<Format, CodecConfigMeta[]>>();
     private final Map<String, Class> parsers = new HashMap<String, Class>();
+    private final Map<String, Class> coders = new HashMap<String, Class>();
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
     private FormatInfo[] formats;
 
@@ -100,6 +98,7 @@ public class CodecManagerImpl implements CodecManager {
         
         getFormatInfo();
         getDemultiplexorsInfo();
+        getMultiplexorsInfo();
     }
     
     private void getFormatInfo() {
@@ -133,7 +132,23 @@ public class CodecManagerImpl implements CodecManager {
                         parsers.put(desc.getContentType(), demux.getClass());
             } catch (Exception ex) {
                 if (logger.isErrorEnabled())
-                    logger.error("Error creating instance of codec ({})", className);
+                    logger.error("Error creating instance of demultiplexor ({})", className);
+            }
+        }
+    }
+    
+    private void getMultiplexorsInfo() {
+        Collection<String> muxs = PlugInManager.getPlugInList(null, null, PlugInManager.MULTIPLEXER);
+        for (String className: muxs) {
+            try {
+                Multiplexer demux = (Multiplexer) Class.forName(className).newInstance();
+                ContentDescriptor[] descs = demux.getSupportedOutputContentDescriptors(null);
+                if (descs!=null)
+                    for (ContentDescriptor desc: descs)
+                        coders.put(desc.getContentType(), demux.getClass());
+            } catch (Exception ex) {
+                if (logger.isErrorEnabled())
+                    logger.error("Error creating instance of multiplexor ({})", className);
             }
         }
     }
@@ -153,6 +168,17 @@ public class CodecManagerImpl implements CodecManager {
         } catch (Exception ex) {
             if (logger.isErrorEnabled())
                 logger.error("Error creating instance of demultiplexor class", ex);
+            return null;
+        }
+    }
+    
+    public Multiplexer buildMultiplexer(String contentType) {
+        Class parserClass = coders.get(contentType);
+        try {
+            return parserClass==null? null : (Multiplexer)parserClass.newInstance();
+        } catch (Exception ex) {
+            if (logger.isErrorEnabled())
+                logger.error("Error creating instance of multiplexer class", ex);
             return null;
         }
     }

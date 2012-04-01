@@ -20,14 +20,17 @@ import com.ibm.media.codec.audio.rc.RCModule;
 import com.sun.media.parser.audio.WavParser;
 import javax.media.Demultiplexer;
 import javax.media.Format;
+import javax.media.Multiplexer;
 import javax.media.format.AudioFormat;
 import javax.media.protocol.FileTypeDescriptor;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+import static org.onesec.raven.ivr.Codec.*;
 import org.onesec.raven.ivr.CodecConfig;
-import org.junit.*;
 import org.onesec.raven.ivr.CodecManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import static org.onesec.raven.ivr.Codec.*;
 
 /**
  *
@@ -53,7 +56,7 @@ public class CodecManagerImplTest extends Assert {
 //        }
     }
     
-    @Test
+//    @Test
     public void buildCodecChainTest() throws Exception {
         long startTs = System.currentTimeMillis();
         CodecConfig[] codecs = manager.buildCodecChain(G711_MU_LAW.getAudioFormat(), G729.getAudioFormat());
@@ -87,6 +90,12 @@ public class CodecManagerImplTest extends Assert {
             logger.debug("   OUTPUT FORMAT: {}", codec.getOutputFormat());
         }
 //        assertEquals(2, codecs.length);
+    }
+    
+    @Test
+    public void buildMultiplexerTest() throws Exception {
+        Multiplexer mux = manager.buildMultiplexer(FileTypeDescriptor.WAVE);
+        assertNotNull(mux);
     }
 //    @Test
 //    public void buildCodecChainTest2() throws Exception {

@@ -13,21 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.onesec.raven.ivr;
-
-import javax.media.Demultiplexer;
-import javax.media.Format;
-import javax.media.Multiplexer;
-import javax.media.format.AudioFormat;
+package org.onesec.raven.ivr.impl;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface CodecManager {
-    public CodecConfig[] buildCodecChain(AudioFormat inFormat, AudioFormat outFormat) throws CodecManagerException;
-    public Demultiplexer buildDemultiplexer(String contentType);
-    public Multiplexer buildMultiplexer(String contentType);
-    public Format getAlawRtpFormat();
-    public Format getG729RtpFormat();
+public class FileWriterDataSourceException extends Exception{
+
+    public FileWriterDataSourceException(String message, Throwable cause) {
+        super(message, cause);
+    }
+
+    public FileWriterDataSourceException(String message) {
+        super(message);
+    }
 }
