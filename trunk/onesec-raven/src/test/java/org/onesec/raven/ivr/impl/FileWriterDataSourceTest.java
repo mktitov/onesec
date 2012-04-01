@@ -15,6 +15,7 @@
  */
 package org.onesec.raven.ivr.impl;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
@@ -22,11 +23,9 @@ import javax.media.protocol.FileTypeDescriptor;
 import javax.media.protocol.PushBufferDataSource;
 import static org.easymock.EasyMock.*;
 import org.easymock.IArgumentMatcher;
-import org.junit.Assert;
 import static org.junit.Assert.assertSame;
 import org.junit.Before;
 import org.junit.Test;
-import org.onesec.raven.JMFHelper;
 import org.onesec.raven.ivr.CodecManager;
 import org.onesec.raven.ivr.InputStreamSource;
 import org.raven.log.LogLevel;
@@ -41,13 +40,12 @@ import org.slf4j.LoggerFactory;
  *
  * @author Mikhail Titov
  */
-public class RealTimeDataSourceMergerTest extends Assert {
+public class FileWriterDataSourceTest {
     private static Logger logger = LoggerFactory.getLogger(ContainerParserDataSource.class);
     private static volatile int tasksFinished;
     private CodecManager codecManager;
     private Node owner;
     private ExecutorService executor;
-
     
     @Before
     public void prepare() throws IOException {
@@ -55,92 +53,40 @@ public class RealTimeDataSourceMergerTest extends Assert {
         tasksFinished = 0;
     }
     
-//    @Test
-    public void addNumbersTest() {
-        int x=2, y=6;
-        int a, b;
-        do {
-            a = x & y; b = x ^ y; x = a << 1; y = b;
-        } while(a>0);
-        System.out.println("res: "+b);
-    }
-    
-//    @Test
-    public void addNumbers2Test() {
-        int a = 254;
-        int r = 0;
-        byte b = (byte) (0|a);
-        System.out.println("byte value: "+(b));
-        System.out.println("!! RES: "+(r|b));
-    }
-    
-//    @Test
-    public void mergeOneStream() throws Exception {
-        trainMocks();
-        replay(executor, owner);
-        
-        RealTimeDataSourceMerger merger = new RealTimeDataSourceMerger(codecManager, owner, null, executor);
-        merger.addDataSource(createDataSourceFromFile("src/test/wav/test2.wav"));
-        merger.connect();
-        JMFHelper.OperationController controller = JMFHelper.writeToFile(merger, "target/merger_1_source.wav");
-        TimeUnit.SECONDS.sleep(4);
-        merger.disconnect();
-        controller.stop();
-        
-        verify(executor, owner);
-    }
-    
-//    @Test
-    public void mergeTwoStreams() throws Exception {
-        trainMocks();
-        replay(executor, owner);
-        
-        RealTimeDataSourceMerger merger = new RealTimeDataSourceMerger(codecManager, owner, null, executor);
-        merger.addDataSource(createDataSourceFromFile("src/test/wav/test2.wav"));
-        merger.addDataSource(createDataSourceFromFile("src/test/wav/test.wav"));
-        merger.connect();
-        JMFHelper.OperationController controller = JMFHelper.writeToFile(merger, "target/merger_2_sources.wav");
-        TimeUnit.SECONDS.sleep(4);
-        merger.disconnect();
-        controller.stop();
-        
-        verify(executor, owner);
-    }
-    
     @Test
-    public void dynamicAddStream() throws Exception {
+    public void test() throws Exception {
+        trainMocks();
+        replay(executor, owner);
+        PushBufferDataSource ds = createDataSourceFromFile("src/test/wav/test2.wav");
+        
+        FileWriterDataSource writer = new FileWriterDataSource(owner
+                , new File("target/mux_test.wav"), ds, codecManager, FileTypeDescriptor.WAVE
+                , null);
+        writer.start();
+        TimeUnit.SECONDS.sleep(10);
+        writer.stop();
+                
+        verify(executor, owner);
+    }
+    
+//    @Test
+    public void testWithDataSourceMerger() throws Exception {
         trainMocks();
         replay(executor, owner);
         
         RealTimeDataSourceMerger merger = new RealTimeDataSourceMerger(codecManager, owner, null, executor);
         merger.addDataSource(createDataSourceFromFile("src/test/wav/test2.wav"));
         merger.addDataSource(createDataSourceFromFile("src/test/wav/test.wav"));
-        merger.connect();
-        JMFHelper.OperationController controller = JMFHelper.writeToFile(merger, "target/merger_3_sources.wav");
-        TimeUnit.MILLISECONDS.sleep(1000);
-        merger.addDataSource(createDataSourceFromFile("src/test/wav/greeting.wav"));
+        
+        FileWriterDataSource writer = new FileWriterDataSource(owner
+                , new File("target/mux_with_merger_test.wav"), merger, codecManager, FileTypeDescriptor.WAVE
+                , null);
+        writer.start();
         TimeUnit.SECONDS.sleep(4);
-        merger.disconnect();
-        controller.stop();
-        
+        writer.stop();
+                
         verify(executor, owner);
-    }
-    
-//    @Test
-    public void dynamicAddStream2() throws Exception {
-        trainMocks();
-        replay(executor, owner);
         
-        RealTimeDataSourceMerger merger = new RealTimeDataSourceMerger(codecManager, owner, null, executor);
-        merger.connect();
-        JMFHelper.OperationController controller = JMFHelper.writeToFile(merger, "target/merger_1d_sources.wav");
-        TimeUnit.MILLISECONDS.sleep(1000);
-        merger.addDataSource(createDataSourceFromFile("src/test/wav/greeting.wav"));
-        TimeUnit.SECONDS.sleep(4);
-        merger.disconnect();
-        controller.stop();
-        
-        verify(executor, owner);
     }
     
     private PushBufferDataSource createDataSourceFromFile(String filename) throws FileNotFoundException {
@@ -178,5 +124,4 @@ public class RealTimeDataSourceMergerTest extends Assert {
         });
         return null;
     }
-    
 }

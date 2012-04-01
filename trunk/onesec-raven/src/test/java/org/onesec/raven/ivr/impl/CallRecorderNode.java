@@ -19,13 +19,11 @@ import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.concurrent.ConcurrentHashMap;
-import javax.annotation.processing.Processor;
-import javax.media.DataSink;
+import javax.media.protocol.DataSource;
+import javax.media.protocol.FileTypeDescriptor;
+import javax.media.protocol.PushBufferDataSource;
 import javax.script.Bindings;
-import org.onesec.raven.ivr.CodecManager;
-import org.onesec.raven.ivr.IvrConversationsBridge;
-import org.onesec.raven.ivr.IvrConversationsBridgeListener;
-import org.onesec.raven.ivr.IvrConversationsBridgeManager;
+import org.onesec.raven.ivr.*;
 import org.raven.annotations.Parameter;
 import org.raven.ds.impl.RecordSchemaNode;
 import org.raven.expr.impl.BindingSupportImpl;
@@ -46,7 +44,7 @@ import org.weda.internal.annotations.Service;
 public class CallRecorderNode extends BaseNode implements IvrConversationsBridgeListener {
     
     @Service
-    protected static CodecManager codecManager;
+    private static CodecManager codecManager;
     
     @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
     private IvrConversationsBridgeManager conversationBridgeManager;
@@ -96,8 +94,11 @@ public class CallRecorderNode extends BaseNode implements IvrConversationsBridge
                 getLogger().debug("Recording for bridge ({}) where filtered", bridge);
             return;
         }
-        final Recorder recorder = new Recorder(bridge);
         try {
+            File file = generateRecordFile(bridge);
+            final Recorder recorder = new Recorder(bridge, codecManager, file);
+            if (isLogLevelEnabled(LogLevel.DEBUG))
+                getLogger().debug(logMess(bridge, "Recorder created. Recorording to the file (%s)", file));
             String mess = "Recording conversation from bridge: "+bridge;
             executor.execute(new AbstractTask(this, mess) {
                 @Override public void doRun() throws Exception {
@@ -105,22 +106,39 @@ public class CallRecorderNode extends BaseNode implements IvrConversationsBridge
                 }
             });
             recorders.put(bridge, recorder);
-        } catch (ExecutorServiceException e) {
+        } catch (Exception e) {
             if (isLogLevelEnabled(LogLevel.ERROR))
-                getLogger().error(String.format(
-                        "Error creating RECORDER for conversation bridge: %s", bridge)
-                        , e);
+                getLogger().error(logMess(bridge, "Error creating recorder"), e);
         }
     }
 
     public void bridgeReactivated(IvrConversationsBridge bridge) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        final Recorder recorder = recorders.remove(bridge);
+        try {
+            executor.execute(new AbstractTask(this, logMess(bridge, "Handling stream substitution")) {
+                @Override public void doRun() throws Exception {
+                    recorder.handleStreamSubstitution();
+                }
+            });
+        } catch (Exception e) {
+            if (isLogLevelEnabled(LogLevel.ERROR))
+                getLogger().error(logMess(bridge, "Error handling stream substitution"), e);
+        }
     }
 
     public void bridgeDeactivated(IvrConversationsBridge bridge) {
-        Recorder recorder = recorders.remove(bridge);
-        if (recorder!=null) {
-            
+        final Recorder recorder = recorders.remove(bridge);
+        try {
+            if (recorder!=null) {
+                executor.execute(new AbstractTask(this, logMess(bridge, "Finishing recording")) {
+                    @Override public void doRun() throws Exception {
+                        recorder.stopRecording();
+                    }
+                });
+            }
+        } catch (ExecutorServiceException e) {
+            if (isLogLevelEnabled(LogLevel.ERROR))
+                getLogger().error(logMess(bridge, "Error stop recording"), e);
         }
     }
     
@@ -146,6 +164,7 @@ public class CallRecorderNode extends BaseNode implements IvrConversationsBridge
         try {
             createBindings(bridge);
             bindingSupport.put("time", new SimpleDateFormat("HHmmss_S"));
+            bindingSupport.put("date", new SimpleDateFormat("yyyyMMdd"));
             String filename = fileNameExpression;
             if (filename==null || filename.isEmpty())
                 throw new Exception("Error generating file name for recording, fileNameExpression "
@@ -169,6 +188,14 @@ public class CallRecorderNode extends BaseNode implements IvrConversationsBridge
     public void formExpressionBindings(Bindings bindings) {
         super.formExpressionBindings(bindings);
         bindingSupport.addTo(bindings);
+    }
+    
+    private String logMess(IvrConversationsBridge bridge, String mess, Object... args) {
+        return (bridge==null? "" : bridge.toString())+"Recorder. "+String.format(mess, args);
+    }
+
+    private String logMess(String mess, Object... args) {
+        return logMess(null, mess, args);
     }
 
     public String getBaseDir() {
@@ -211,33 +238,80 @@ public class CallRecorderNode extends BaseNode implements IvrConversationsBridge
         this.filterExpression = filterExpression;
     }
     
-    private class Recorder {
+    private class Recorder implements IncomingRtpStreamDataSourceListener {
         
         private final IvrConversationsBridge bridge;
         private final long recordStartTime = System.currentTimeMillis();
         private final RealTimeDataSourceMerger merger;
+        private final FileWriterDataSource fileWriter;
+        private final File file;
         
-        private volatile String statusMessage;
         private volatile boolean stopped = false;
-        private volatile Processor processor = null;
-        private volatile DataSink dataSink = null;
+        private volatile IncomingRtpStream inRtp1;
+        private volatile IncomingRtpStream inRtp2;
 
-        public Recorder(IvrConversationsBridge bridge) {
+        public Recorder(IvrConversationsBridge bridge, CodecManager codecManager, File file) 
+                throws FileWriterDataSourceException 
+        {
             this.bridge = bridge;
-            merger = new RealTimeDataSourceMerger(codecManager, CallRecorderNode.this, null, executor);
+            this.file = file;
+            merger = new RealTimeDataSourceMerger(codecManager, CallRecorderNode.this
+                    , logMess(bridge, ""), executor);
+            fileWriter = new FileWriterDataSource(CallRecorderNode.this, file, merger, codecManager
+                    , FileTypeDescriptor.WAVE, logMess(bridge, ""));
         }
         
-        public void startRecording() throws ExecutorServiceException {
-            statusMessage = "Recording conversation from bridge: "+bridge;
+        public void startRecording() {
+            try {
+                inRtp1 = bridge.getConversation1().getIncomingRtpStream();
+                inRtp2 = bridge.getConversation2().getIncomingRtpStream();
+                inRtp1.addDataSourceListener(this, null);
+                inRtp2.addDataSourceListener(this, null);
+                fileWriter.start();
+            } catch (Exception ex) {
+                stopped = true;
+                if (isLogLevelEnabled(LogLevel.ERROR))
+                    getLogger().error(logMess(bridge, "Error starting writing to file (%s)", file), ex);
+                fileWriter.stop();
+            }
         }
         
         public void stopRecording() {
-            
+            stopped = true;
+            fileWriter.stop();
         }
         
         public void handleStreamSubstitution() {
-            
+            try {
+                if (inRtp1 != bridge.getConversation1().getIncomingRtpStream()) {
+                    inRtp1 = bridge.getConversation1().getIncomingRtpStream();
+                    inRtp1.addDataSourceListener(this, null);
+                }
+                if (inRtp2 != bridge.getConversation2().getIncomingRtpStream()) {
+                    inRtp2 = bridge.getConversation2().getIncomingRtpStream();
+                    inRtp2.addDataSourceListener(this, null);
+                }
+            } catch (RtpStreamException e) {
+                stopped = true;
+                if (isLogLevelEnabled(LogLevel.ERROR))
+                    getLogger().error(logMess(bridge, "Error handling stream substitution"), e);
+                fileWriter.stop();
+            }
         }
 
+        public void dataSourceCreated(IncomingRtpStream stream, DataSource dataSource) {
+            try {
+                if (!stopped)
+                    merger.addDataSource((PushBufferDataSource)dataSource);
+            } catch (Exception e) {
+                stopped = true;
+                if (isLogLevelEnabled(LogLevel.ERROR))
+                    getLogger().error(logMess(bridge, "Error starting writing to file (%s)", file), e);
+                fileWriter.stop();
+            }
+        }
+
+        public void streamClosing(IncomingRtpStream stream) {
+        }
     }
 }

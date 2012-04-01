@@ -27,7 +27,6 @@ import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.PushBufferDataSource;
 import javax.media.protocol.PushBufferStream;
 import org.onesec.raven.impl.RingQueue;
-import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.CodecManager;
 import org.onesec.raven.ivr.CodecManagerException;
 import org.raven.log.LogLevel;
@@ -40,10 +39,11 @@ import org.raven.tree.Node;
  *
  * @author Mikhail Titov
  */
-public class RealTimeDataSourceMerger extends PushBufferDataSource {
+    public class RealTimeDataSourceMerger extends PushBufferDataSource {
     private final static ContentDescriptor CONTENT_DESCRIPTOR = 
             new ContentDescriptor(ContentDescriptor.RAW);
-    private final static AudioFormat FORMAT = new AudioFormat(AudioFormat.LINEAR, 8000d, 8, 1, -1, 1, 8, 16000.0, byte[].class);
+    private final static AudioFormat FORMAT = new AudioFormat(AudioFormat.LINEAR, 8000d, 8, 1, -1
+            , 0, 8, 16000.0, byte[].class);
     
     private final CodecManager codecManager;
     private final Node owner;
@@ -257,7 +257,8 @@ public class RealTimeDataSourceMerger extends PushBufferDataSource {
 //                                "### processing buffer: len=%d, offset=%d, bytesToRead: %d"
 //                                , buflen, bufOffset, bytesToRead));
                         for (int i=bufOffset; i<bufOffset+bytesToRead; ++i) 
-                            data[offset++] += (byte) (bufdata[i]/handlersCount);
+//                            data[offset++] += (byte) (bufdata[i]/handlersCount);
+                            data[offset] = add(data[offset++], bufdata[i]);
                         if (bytesToRead==buflen || buffer.isEOM()) {
                             handler.buffers.pop();
                             if (buffer.isEOM())
@@ -284,6 +285,21 @@ public class RealTimeDataSourceMerger extends PushBufferDataSource {
             if (_transferHandler!=null)
                 _transferHandler.transferData(this);
         }
+        
+        
+        
+        private byte add(byte x, byte y) {
+            int ix = x & 0x000000FF; int iy = y & 0x000000FF;
+            return (byte) (ix + iy/handlersCount);
+        }
+        
+//        private byte add(byte x, byte y) {
+//            byte a, b;
+//            do {
+//                a = (byte) (x & y); b = (byte) (x ^ y); x = (byte) (a << (byte)1); y = b;
+//            } while(a>0);
+//            return b;
+//        }
     }
     
     private class DataSourceHandler implements BufferTransferHandler {
