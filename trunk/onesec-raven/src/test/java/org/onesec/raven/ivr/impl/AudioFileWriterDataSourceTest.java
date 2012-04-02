@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author Mikhail Titov
  */
-public class FileWriterDataSourceTest {
+public class AudioFileWriterDataSourceTest {
     private static Logger logger = LoggerFactory.getLogger(ContainerParserDataSource.class);
     private static volatile int tasksFinished;
     private CodecManager codecManager;
@@ -59,7 +59,7 @@ public class FileWriterDataSourceTest {
         replay(executor, owner);
         PushBufferDataSource ds = createDataSourceFromFile("src/test/wav/test2.wav");
         
-        FileWriterDataSource writer = new FileWriterDataSource(owner
+        AudioFileWriterDataSource writer = new AudioFileWriterDataSource(owner
                 , new File("target/mux_test.wav"), ds, codecManager, FileTypeDescriptor.WAVE
                 , null);
         writer.start();
@@ -78,7 +78,7 @@ public class FileWriterDataSourceTest {
         merger.addDataSource(createDataSourceFromFile("src/test/wav/test2.wav"));
         merger.addDataSource(createDataSourceFromFile("src/test/wav/test.wav"));
         
-        FileWriterDataSource writer = new FileWriterDataSource(owner
+        AudioFileWriterDataSource writer = new AudioFileWriterDataSource(owner
                 , new File("target/mux_with_merger_test.wav"), merger, codecManager, FileTypeDescriptor.WAVE
                 , null);
         writer.start();
