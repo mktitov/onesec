@@ -18,6 +18,8 @@ package org.onesec.raven.ivr.impl;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.concurrent.TimeUnit;
 import javax.media.format.AudioFormat;
 import javax.media.protocol.FileTypeDescriptor;
@@ -146,7 +148,7 @@ public class CallRecorderNodeTest extends OnesecRavenTestCase {
         
     }
     
-    @Test
+//    @Test
     public void streamsReassingTest() throws Exception {
         IvrConversationsBridge bridge = createMock(IvrConversationsBridge.class);
         IvrEndpointConversation conv1 = createMock("conv1", IvrEndpointConversation.class);
@@ -196,6 +198,41 @@ public class CallRecorderNodeTest extends OnesecRavenTestCase {
         
         verify(bridge, conv1, conv2, inRtp1, inRtp2, inRtp11);
         
+    }
+ 
+    @Test
+    public void deleteOldRecordsTest() {
+        CallRecorderNode recorder = new CallRecorderNode();
+        recorder.setName("recorder");
+        tree.getRootNode().addAndSaveChildren(recorder);
+        recorder.setConversationBridgeManager(bridgeManager);
+        recorder.setExecutor(executor);
+        recorder.setBaseDir("target/recs");
+        recorder.setLogLevel(LogLevel.TRACE);
+        recorder.setKeepRecordsForDays(1);
+        assertTrue(recorder.start());
+        
+        SimpleDateFormat fmt = new SimpleDateFormat("yyyy.MM/dd");
+        Calendar c = Calendar.getInstance();
+        c.add(Calendar.DATE, -1);
+
+        File liveDir = new File("target/recs/"+fmt.format(c.getTime()));
+        liveDir.mkdirs();
+        c.add(Calendar.DATE, -1);
+        File del1Dir = new File("target/recs/"+fmt.format(c.getTime()));
+        del1Dir.mkdirs();
+        c.add(Calendar.MONTH, -1);
+        File del2Dir = new File("target/recs/"+fmt.format(c.getTime()));
+        del2Dir.mkdirs();
+        
+        assertTrue(liveDir.exists());
+        assertTrue(del1Dir.exists());
+        assertTrue(del2Dir.exists());
+        
+        recorder.executeScheduledJob(null);
+        assertTrue(liveDir.exists());
+        assertFalse(del1Dir.exists());
+        assertFalse(del2Dir.exists());
     }
     
     private PushBufferDataSource createDataSourceFromFile(String filename) throws FileNotFoundException {
