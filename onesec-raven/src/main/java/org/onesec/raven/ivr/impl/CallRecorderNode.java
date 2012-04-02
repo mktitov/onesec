@@ -16,6 +16,8 @@
 package org.onesec.raven.ivr.impl;
 
 import java.io.File;
+import java.io.FileFilter;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -23,14 +25,19 @@ import javax.media.protocol.DataSource;
 import javax.media.protocol.FileTypeDescriptor;
 import javax.media.protocol.PushBufferDataSource;
 import javax.script.Bindings;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.filefilter.DirectoryFileFilter;
 import org.onesec.raven.ivr.*;
 import org.raven.annotations.Parameter;
 import org.raven.ds.impl.RecordSchemaNode;
+import org.raven.ds.impl.RecordSchemaValueTypeHandlerFactory;
 import org.raven.expr.impl.BindingSupportImpl;
 import org.raven.expr.impl.ScriptAttributeValueHandlerFactory;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.ExecutorServiceException;
+import org.raven.sched.Schedulable;
+import org.raven.sched.Scheduler;
 import org.raven.sched.impl.AbstractTask;
 import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
 import org.raven.table.TableImpl;
@@ -48,7 +55,7 @@ import org.weda.internal.annotations.Service;
  *
  * @author Mikhail Titov
  */
-public class CallRecorderNode extends BaseNode implements IvrConversationsBridgeListener, Viewable {
+public class CallRecorderNode extends BaseNode implements IvrConversationsBridgeListener, Viewable, Schedulable {
     
     @Service
     private static CodecManager codecManager;
@@ -70,8 +77,14 @@ public class CallRecorderNode extends BaseNode implements IvrConversationsBridge
             , valueHandlerType=ScriptAttributeValueHandlerFactory.TYPE)
     private String fileNameExpression;
     
-    @Parameter
+    @Parameter(valueHandlerType=RecordSchemaValueTypeHandlerFactory.TYPE)
     private RecordSchemaNode recordSchema;
+    
+    @Parameter(valueHandlerType=SystemSchedulerValueHandlerFactory.TYPE)
+    private Scheduler cleanupScheduler;
+    
+    @Parameter(defaultValue="60")
+    private Integer keepRecordsForDays;
     
     @Message private static String callInfoMessage;
     @Message private static String recordStartTimeMessage;
@@ -232,6 +245,53 @@ public class CallRecorderNode extends BaseNode implements IvrConversationsBridge
         super.formExpressionBindings(bindings);
         bindingSupport.addTo(bindings);
     }
+
+    public void executeScheduledJob(Scheduler scheduler) {
+        Integer days = keepRecordsForDays;
+        if (days==null || days<=0) {
+            if (isLogLevelEnabled(LogLevel.WARN))
+                getLogger().warn("Can't clean up old call records because of keepRecordsForDays "
+                        + "is null or has invalid value");
+            return;
+        }
+        File[] dirs = baseDirFile.listFiles((FileFilter)DirectoryFileFilter.DIRECTORY);
+        Calendar c = Calendar.getInstance();
+        c.add(Calendar.DATE, -1*days);
+        int yearMonth = new Integer(new SimpleDateFormat("yyyyMM").format(c.getTime()));
+        int day = c.get(Calendar.DATE);
+        if (dirs!=null)
+            for (File dir: dirs) {
+                try {
+                    String elems[] = dir.getName().split("\\.");
+                    if (elems==null || elems.length!=2)
+                        throw new Exception(String.format(
+                                "Invalid directory name (%s) must have a format (yyyy.MM)"
+                                , dir.getName()));
+                    int dirYearMonth = new Integer(elems[0]+elems[1]);
+                    if (dirYearMonth<yearMonth) 
+                        deleteDir(dir);
+                    else if (dirYearMonth==yearMonth) {
+                        File[] dayDirs = dir.listFiles((FileFilter)DirectoryFileFilter.DIRECTORY);
+                        if (dayDirs!=null)
+                            for (File dayDir: dayDirs) {
+                                int dirDay = new Integer(dayDir.getName());
+                                if (dirDay<day)
+                                    deleteDir(dayDir);
+                            }
+                    }
+                } catch (Throwable e) {
+                    if (isLogLevelEnabled(LogLevel.ERROR))
+                        getLogger().error(String.format(
+                                "Error analyzing (%s) directory for old calls", dir.getName()), e);
+                }
+            }
+    }
+    
+    private void deleteDir(File dir) throws IOException {
+        if (isLogLevelEnabled(LogLevel.DEBUG))
+            getLogger().debug("Deleting directory ({})", dir);
+        FileUtils.forceDelete(dir);
+    }
     
     private String logMess(IvrConversationsBridge bridge, String mess, Object... args) {
         return (bridge==null? "" : bridge.toString())+"Recorder. "+String.format(mess, args);
@@ -239,6 +299,30 @@ public class CallRecorderNode extends BaseNode implements IvrConversationsBridge
 
     private String logMess(String mess, Object... args) {
         return logMess(null, mess, args);
+    }
+
+    public Scheduler getCleanupScheduler() {
+        return cleanupScheduler;
+    }
+
+    public void setCleanupScheduler(Scheduler cleanupScheduler) {
+        this.cleanupScheduler = cleanupScheduler;
+    }
+
+    public Integer getKeepRecordsForDays() {
+        return keepRecordsForDays;
+    }
+
+    public void setKeepRecordsForDays(Integer keepRecordsForDays) {
+        this.keepRecordsForDays = keepRecordsForDays;
+    }
+
+    public RecordSchemaNode getRecordSchema() {
+        return recordSchema;
+    }
+
+    public void setRecordSchema(RecordSchemaNode recordSchema) {
+        this.recordSchema = recordSchema;
     }
 
     public String getBaseDir() {
