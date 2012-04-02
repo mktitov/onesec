@@ -32,7 +32,7 @@ import org.raven.tree.Node;
  *
  * @author Mikhail Titov
  */
-public class FileWriterDataSource {
+public class AudioFileWriterDataSource {
     private final Node owner;
     private final File file;
     private final PushBufferDataSource dataSource;
@@ -43,7 +43,7 @@ public class FileWriterDataSource {
     private final AtomicBoolean fileClosed = new AtomicBoolean(false);
     private final AtomicBoolean muxClosed = new AtomicBoolean(false);
 
-    public FileWriterDataSource(Node owner, File file, PushBufferDataSource dataSource
+    public AudioFileWriterDataSource(Node owner, File file, PushBufferDataSource dataSource
             , CodecManager codecManager, String contentType, String logPrefix) 
         throws FileWriterDataSourceException 
     {
@@ -123,7 +123,7 @@ public class FileWriterDataSource {
     }
     
     private String logMess(String mess, Object... args) {
-        return (logPrefix==null? "" : logPrefix)+"File writer. "+String.format(mess, args);
+        return (logPrefix==null? "" : logPrefix)+"Audio file writer. "+String.format(mess, args);
     }
 
     private void initMux(Buffer buffer) {

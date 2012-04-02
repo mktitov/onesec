@@ -17,7 +17,7 @@ package org.onesec.raven.ivr.impl;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.media.protocol.DataSource;
 import javax.media.protocol.FileTypeDescriptor;
@@ -27,21 +27,28 @@ import org.onesec.raven.ivr.*;
 import org.raven.annotations.Parameter;
 import org.raven.ds.impl.RecordSchemaNode;
 import org.raven.expr.impl.BindingSupportImpl;
+import org.raven.expr.impl.ScriptAttributeValueHandlerFactory;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.ExecutorServiceException;
 import org.raven.sched.impl.AbstractTask;
 import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
+import org.raven.table.TableImpl;
+import org.raven.tree.NodeAttribute;
+import org.raven.tree.Viewable;
+import org.raven.tree.ViewableObject;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
+import org.raven.tree.impl.ViewableObjectImpl;
 import org.weda.annotations.constraints.NotNull;
+import org.weda.internal.annotations.Message;
 import org.weda.internal.annotations.Service;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class CallRecorderNode extends BaseNode implements IvrConversationsBridgeListener {
+public class CallRecorderNode extends BaseNode implements IvrConversationsBridgeListener, Viewable {
     
     @Service
     private static CodecManager codecManager;
@@ -58,11 +65,18 @@ public class CallRecorderNode extends BaseNode implements IvrConversationsBridge
     @NotNull @Parameter(defaultValue="true")
     private Boolean filterExpression;
     
-    @NotNull @Parameter(defaultValue="\"${c2NumB}_${c1NumA}_${time}.wav\"")
+    @NotNull 
+    @Parameter(defaultValue="\"${c2NumB}_${c1NumA}_${time}.wav\".toString()"
+            , valueHandlerType=ScriptAttributeValueHandlerFactory.TYPE)
     private String fileNameExpression;
     
     @Parameter
     private RecordSchemaNode recordSchema;
+    
+    @Message private static String callInfoMessage;
+    @Message private static String recordStartTimeMessage;
+    @Message private static String recordDurationMessage;
+    @Message private static String recordFileMessage;
     
     private ConcurrentHashMap<IvrConversationsBridge, Recorder> recorders;
     private volatile File baseDirFile;
@@ -113,7 +127,7 @@ public class CallRecorderNode extends BaseNode implements IvrConversationsBridge
     }
 
     public void bridgeReactivated(IvrConversationsBridge bridge) {
-        final Recorder recorder = recorders.remove(bridge);
+        final Recorder recorder = recorders.get(bridge);
         try {
             executor.execute(new AbstractTask(this, logMess(bridge, "Handling stream substitution")) {
                 @Override public void doRun() throws Exception {
@@ -163,8 +177,8 @@ public class CallRecorderNode extends BaseNode implements IvrConversationsBridge
             throw new Exception(String.format("Can't create directory (%s)", dir));
         try {
             createBindings(bridge);
-            bindingSupport.put("time", new SimpleDateFormat("HHmmss_S"));
-            bindingSupport.put("date", new SimpleDateFormat("yyyyMMdd"));
+            bindingSupport.put("time", new SimpleDateFormat("HHmmss_S").format(date));
+            bindingSupport.put("date", new SimpleDateFormat("yyyyMMdd").format(date));
             String filename = fileNameExpression;
             if (filename==null || filename.isEmpty())
                 throw new Exception("Error generating file name for recording, fileNameExpression "
@@ -173,6 +187,35 @@ public class CallRecorderNode extends BaseNode implements IvrConversationsBridge
         } finally {
             bindingSupport.reset();
         }
+    }
+
+    public Boolean getAutoRefresh() {
+        return true;
+    }
+
+    public Map<String, NodeAttribute> getRefreshAttributes() throws Exception {
+        return null;
+    }
+
+    public List<ViewableObject> getViewableObjects(Map<String, NodeAttribute> refreshAttributes) 
+            throws Exception 
+    {
+        List<ViewableObject> vos = new ArrayList<ViewableObject>(1);
+        TableImpl tab = new TableImpl(new String[]{callInfoMessage, recordStartTimeMessage
+                , recordDurationMessage, recordFileMessage});
+        List<Recorder> recordersList = new ArrayList<Recorder>(recorders.values());
+        Collections.sort(recordersList);
+        SimpleDateFormat fmt = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
+        long curTime = System.currentTimeMillis();
+        for (Recorder rec: recordersList)
+            tab.addRow(new Object[]{
+                rec.bridge.toString(), 
+                fmt.format(new Date(rec.recordStartTime)),
+                (curTime-rec.recordStartTime)/1000,
+                rec.file.toString()
+                });
+        vos.add(new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, tab));
+        return vos;
     }
 
     private void createBindings(IvrConversationsBridge bridge) {
@@ -238,12 +281,12 @@ public class CallRecorderNode extends BaseNode implements IvrConversationsBridge
         this.filterExpression = filterExpression;
     }
     
-    private class Recorder implements IncomingRtpStreamDataSourceListener {
+    private class Recorder implements IncomingRtpStreamDataSourceListener, Comparable<Recorder> {
         
         private final IvrConversationsBridge bridge;
         private final long recordStartTime = System.currentTimeMillis();
         private final RealTimeDataSourceMerger merger;
-        private final FileWriterDataSource fileWriter;
+        private final AudioFileWriterDataSource fileWriter;
         private final File file;
         
         private volatile boolean stopped = false;
@@ -257,7 +300,7 @@ public class CallRecorderNode extends BaseNode implements IvrConversationsBridge
             this.file = file;
             merger = new RealTimeDataSourceMerger(codecManager, CallRecorderNode.this
                     , logMess(bridge, ""), executor);
-            fileWriter = new FileWriterDataSource(CallRecorderNode.this, file, merger, codecManager
+            fileWriter = new AudioFileWriterDataSource(CallRecorderNode.this, file, merger, codecManager
                     , FileTypeDescriptor.WAVE, logMess(bridge, ""));
         }
         
@@ -312,6 +355,10 @@ public class CallRecorderNode extends BaseNode implements IvrConversationsBridge
         }
 
         public void streamClosing(IncomingRtpStream stream) {
+        }
+
+        public int compareTo(Recorder o) {
+            return new Long(recordStartTime).compareTo(o.recordStartTime);
         }
     }
 }
