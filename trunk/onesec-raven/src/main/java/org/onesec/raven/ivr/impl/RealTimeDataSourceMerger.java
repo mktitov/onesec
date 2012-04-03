@@ -18,6 +18,7 @@ package org.onesec.raven.ivr.impl;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.media.Buffer;
 import javax.media.Format;
 import javax.media.Time;
@@ -234,32 +235,34 @@ import org.raven.tree.Node;
 
         private void mergeAndTranssmit() {
             byte[] data = new byte[BUFFER_SIZE];
+//            Arrays.fill(data, (byte)128);
             DataSourceHandler handler = firstHandler;
             int decHandlersBy = 0;
+            int maxlen = 0;
             while (handler!=null && handlersCount>0) {
-                Buffer buffer = handler.buffers.peek();
+                Buffer buffer = handler.peek();
                 int len = BUFFER_SIZE;
                 int offset = 0;
                 while (buffer!=null && len>0) {
                     int buflen = buffer.getLength();
                     if (buffer.isDiscard()) {
-                        handler.buffers.pop();
-                        buffer = handler.buffers.peek();
+                        handler.pop();
+                        buffer = handler.peek();
                     } else {
                         byte[] bufdata = (byte[]) buffer.getData();
                         int bufOffset = buffer.getOffset();
                         int bytesToRead = Math.min(len, buflen);
-//                        System.out.println(String.format(
-//                                "### processing buffer: len=%d, offset=%d, bytesToRead: %d"
-//                                , buflen, bufOffset, bytesToRead));
+                        System.out.println(String.format(
+                                "### processing buffer: len=%d, offset=%d, bytesToRead: %d"
+                                , buflen, bufOffset, bytesToRead));
                         for (int i=bufOffset; i<bufOffset+bytesToRead; ++i) 
 //                            data[offset++] += (byte) (bufdata[i]/handlersCount);
                             data[offset] = add(data[offset++], bufdata[i]);
                         if (bytesToRead==buflen || buffer.isEOM()) {
-                            handler.buffers.pop();
+                            handler.pop();
                             if (buffer.isEOM())
                                 decHandlersBy++;
-                            buffer = handler.buffers.peek();
+                            buffer = handler.peek();
                         } else {
                             buffer.setOffset(bufOffset+bytesToRead);
                             buffer.setLength(buflen-bytesToRead);
@@ -267,6 +270,8 @@ import org.raven.tree.Node;
                         len-=bytesToRead;
                     }
                 }
+                if (offset>maxlen)
+                    maxlen=offset;
                 handler = handler.nextHandler;
             }
             if (decHandlersBy>0)
@@ -275,7 +280,8 @@ import org.raven.tree.Node;
             buf.setFormat(FORMAT);
             buf.setData(data);
             buf.setOffset(0);
-            buf.setLength(data.length);
+            buf.setLength(maxlen);
+            System.out.println("maxlen: "+maxlen);
             bufferToTranssmit = buf;
             BufferTransferHandler _transferHandler = transferHandler;
             if (_transferHandler!=null)
@@ -300,9 +306,10 @@ import org.raven.tree.Node;
     
     private class DataSourceHandler implements BufferTransferHandler {
         private final PushBufferDataSource datasource;
-        private final RingQueue<Buffer> buffers = new RingQueue<Buffer>(10);
+        private final RingQueue<Buffer> buffers = new RingQueue<Buffer>(20);
         
         private volatile DataSourceHandler nextHandler;
+        private final AtomicInteger bytesCount = new AtomicInteger(0);
 
         public DataSourceHandler(PushBufferDataSource datasource) throws CodecManagerException {
             this.datasource = new TranscoderDataSource(codecManager, datasource, 
@@ -316,11 +323,22 @@ import org.raven.tree.Node;
             if (started.get())
                 datasource.start();
         }
+        
+        public Buffer peek() {
+            return bytesCount.get()>1200? buffers.peek() : null;
+        }
+        
+        public Buffer pop() {
+            return buffers.pop();
+        }
 
         public void transferData(PushBufferStream stream) {
             try {
                 Buffer buffer = new Buffer();
                 stream.read(buffer);
+                byte[] data = (byte[]) buffer.getData();
+                if (data!=null)
+                    bytesCount.addAndGet(data.length);
                 buffers.push(buffer);
             } catch (IOException e) {
                 if (owner.isLogLevelEnabled(LogLevel.ERROR))
