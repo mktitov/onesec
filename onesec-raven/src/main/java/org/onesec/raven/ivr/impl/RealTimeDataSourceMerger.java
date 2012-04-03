@@ -58,10 +58,6 @@ import org.raven.tree.Node;
     private final AtomicBoolean started = new AtomicBoolean(false);
     private final PushBufferStream[] streams = new PushBufferStream[]{new Stream()};
     
-    static {
-//        format.
-    }
-
     public RealTimeDataSourceMerger(CodecManager codecManager, Node owner, String logPrefix
             , ExecutorService executor) 
     {

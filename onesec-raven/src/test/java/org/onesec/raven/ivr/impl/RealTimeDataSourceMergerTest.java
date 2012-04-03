@@ -27,6 +27,7 @@ import static org.junit.Assert.assertSame;
 import org.junit.Before;
 import org.junit.Test;
 import org.onesec.raven.JMFHelper;
+import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.CodecManager;
 import org.onesec.raven.ivr.InputStreamSource;
 import org.raven.log.LogLevel;
@@ -107,13 +108,33 @@ public class RealTimeDataSourceMergerTest extends Assert {
         verify(executor, owner);
     }
     
-    @Test
-    public void dynamicAddStream() throws Exception {
+//    @Test
+    public void mergeTwoStreams2() throws Exception {
         trainMocks();
         replay(executor, owner);
         
         RealTimeDataSourceMerger merger = new RealTimeDataSourceMerger(codecManager, owner, null, executor);
         merger.addDataSource(createDataSourceFromFile("src/test/wav/test2.wav"));
+        merger.addDataSource(createDataSourceFromFile("src/test/wav/test.wav"));
+        merger.connect();
+        JMFHelper.OperationController controller = JMFHelper.writeToFile(merger, "target/merger_2_sources.wav");
+        TimeUnit.SECONDS.sleep(4);
+        merger.disconnect();
+        controller.stop();
+        
+        verify(executor, owner);
+    }
+    
+    @Test
+    public void dynamicAddStream() throws Exception {
+        trainMocks();
+        replay(executor, owner);
+        
+        PushBufferDataSource ds = createDataSourceFromFile("src/test/wav/test2.wav");
+        TranscoderDataSource tds1 = new TranscoderDataSource(codecManager, ds
+                , Codec.G729.getAudioFormat(), owner, null);
+        RealTimeDataSourceMerger merger = new RealTimeDataSourceMerger(codecManager, owner, null, executor);
+        merger.addDataSource(tds1);
         merger.addDataSource(createDataSourceFromFile("src/test/wav/test.wav"));
         merger.connect();
         JMFHelper.OperationController controller = JMFHelper.writeToFile(merger, "target/merger_3_sources.wav");
