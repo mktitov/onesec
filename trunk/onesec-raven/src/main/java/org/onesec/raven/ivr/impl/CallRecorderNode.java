@@ -28,7 +28,13 @@ import javax.script.Bindings;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.DirectoryFileFilter;
 import org.onesec.raven.ivr.*;
+import org.raven.RavenUtils;
 import org.raven.annotations.Parameter;
+import org.raven.ds.DataConsumer;
+import org.raven.ds.DataContext;
+import org.raven.ds.Record;
+import org.raven.ds.RecordSchemaField;
+import org.raven.ds.RecordSchemaFieldType;
 import org.raven.ds.impl.RecordSchemaNode;
 import org.raven.ds.impl.RecordSchemaValueTypeHandlerFactory;
 import org.raven.expr.impl.BindingSupportImpl;
@@ -50,12 +56,19 @@ import org.raven.tree.impl.ViewableObjectImpl;
 import org.weda.annotations.constraints.NotNull;
 import org.weda.internal.annotations.Message;
 import org.weda.internal.annotations.Service;
+import static org.onesec.raven.ivr.impl.CallRecordingRecordSchemaNode.*;
+import org.raven.annotations.NodeClass;
+import org.raven.ds.impl.DataContextImpl;
+import org.raven.ds.impl.DataSourceHelper;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class CallRecorderNode extends BaseNode implements IvrConversationsBridgeListener, Viewable, Schedulable {
+@NodeClass
+public class CallRecorderNode extends BaseNode 
+    implements IvrConversationsBridgeListener, Viewable, Schedulable, org.raven.ds.DataSource
+{
     
     @Service
     private static CodecManager codecManager;
@@ -113,6 +126,49 @@ public class CallRecorderNode extends BaseNode implements IvrConversationsBridge
             throw new Exception(String.format("File (%s) is not a directory", baseDir));
         if (!baseDirFile.canWrite())
             throw new Exception(String.format("No rights to create files in the directory (%s)", baseDir));
+        checkRecord();
+    }
+    
+    private void checkRecord() throws Exception {
+        RecordSchemaNode schema = recordSchema;
+        if (schema==null)
+            return;
+        Map<String, RecordSchemaField> fields = RavenUtils.getRecordSchemaFields(schema);
+        try {
+            checkSchemaField(fields, CallRecordingRecordSchemaNode.ID, RecordSchemaFieldType.LONG);
+            checkSchemaField(fields, CallRecordingRecordSchemaNode.CONV1_NUMA, RecordSchemaFieldType.STRING);
+            checkSchemaField(fields, CallRecordingRecordSchemaNode.CONV1_NUMB, RecordSchemaFieldType.STRING);
+            checkSchemaField(fields, CallRecordingRecordSchemaNode.CONV2_NUMA, RecordSchemaFieldType.STRING);
+            checkSchemaField(fields, CallRecordingRecordSchemaNode.CONV2_NUMB, RecordSchemaFieldType.STRING);
+            checkSchemaField(fields, CallRecordingRecordSchemaNode.FILE, RecordSchemaFieldType.STRING);
+            checkSchemaField(fields, CallRecordingRecordSchemaNode.RECORDING_TIME, RecordSchemaFieldType.TIMESTAMP);
+            checkSchemaField(fields, CallRecordingRecordSchemaNode.RECORDING_DURATION, RecordSchemaFieldType.INTEGER);
+        } catch(Exception e) {
+            throw new Exception(String.format(
+                    "Record schema (%s) validation error. %s"
+                    , schema.getPath(), e.getMessage()));
+        }
+    }
+    
+    private void checkSchemaField(Map<String, RecordSchemaField> fields, String name
+            , RecordSchemaFieldType type) 
+        throws Exception 
+    {
+        RecordSchemaField field = fields.get(name);
+        if (field==null)
+            throw new Exception("Schema does not contains field - "+name);
+        if (!type.equals(field.getFieldType()))
+            throw new Exception(String.format(
+                    "Invalid type of the field (%s). Expected (%s) but was (%s)"
+                    , name, type, field.getFieldType()));
+    }
+
+    public boolean getDataImmediate(DataConsumer dataConsumer, DataContext context) {
+        throw new UnsupportedOperationException("DataSource not supports pull operations");
+    }
+
+    public Collection<NodeAttribute> generateAttributes() {
+        return null;
     }
     
     public void bridgeActivated(IvrConversationsBridge bridge) {
@@ -123,7 +179,7 @@ public class CallRecorderNode extends BaseNode implements IvrConversationsBridge
         }
         try {
             File file = generateRecordFile(bridge);
-            final Recorder recorder = new Recorder(bridge, codecManager, file);
+            final Recorder recorder = new Recorder(bridge, codecManager, file, recordSchema);
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 getLogger().debug(logMess(bridge, "Recorder created. Recorording to the file (%s)", file));
             String mess = "Recording conversation from bridge: "+bridge;
@@ -223,8 +279,8 @@ public class CallRecorderNode extends BaseNode implements IvrConversationsBridge
         for (Recorder rec: recordersList)
             tab.addRow(new Object[]{
                 rec.bridge.toString(), 
-                fmt.format(new Date(rec.recordStartTime)),
-                (curTime-rec.recordStartTime)/1000,
+                fmt.format(new Date(rec.recordingStartTime)),
+                (curTime-rec.recordingStartTime)/1000,
                 rec.file.toString()
                 });
         vos.add(new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, tab));
@@ -368,20 +424,23 @@ public class CallRecorderNode extends BaseNode implements IvrConversationsBridge
     private class Recorder implements IncomingRtpStreamDataSourceListener, Comparable<Recorder> {
         
         private final IvrConversationsBridge bridge;
-        private final long recordStartTime = System.currentTimeMillis();
+        private final long recordingStartTime = System.currentTimeMillis();
         private final RealTimeDataSourceMerger merger;
         private final AudioFileWriterDataSource fileWriter;
         private final File file;
+        private final RecordSchemaNode schema;
         
         private volatile boolean stopped = false;
         private volatile IncomingRtpStream inRtp1;
         private volatile IncomingRtpStream inRtp2;
 
-        public Recorder(IvrConversationsBridge bridge, CodecManager codecManager, File file) 
-                throws FileWriterDataSourceException 
+        public Recorder(IvrConversationsBridge bridge, CodecManager codecManager, File file
+                , RecordSchemaNode schema) 
+            throws FileWriterDataSourceException 
         {
             this.bridge = bridge;
             this.file = file;
+            this.schema = schema;
             merger = new RealTimeDataSourceMerger(codecManager, CallRecorderNode.this
                     , logMess(bridge, ""), executor);
             fileWriter = new AudioFileWriterDataSource(CallRecorderNode.this, file, merger, codecManager
@@ -406,6 +465,26 @@ public class CallRecorderNode extends BaseNode implements IvrConversationsBridge
         public void stopRecording() {
             stopped = true;
             fileWriter.stop();
+            createAndSendRecord();
+        }
+        
+        private void createAndSendRecord() {
+            if (schema==null)
+                return;
+            try {
+                Record rec = schema.createRecord();
+                rec.setValue(CONV1_NUMA, bridge.getConversation1().getCallingNumber());
+                rec.setValue(CONV1_NUMB, bridge.getConversation1().getCalledNumber());
+                rec.setValue(CONV2_NUMA, bridge.getConversation2().getCallingNumber());
+                rec.setValue(CONV2_NUMB, bridge.getConversation2().getCalledNumber());
+                rec.setValue(RECORDING_TIME, new Date(recordingStartTime));
+                rec.setValue(RECORDING_DURATION, (System.currentTimeMillis()-recordingStartTime)/1000);
+                rec.setValue(FILE, file.getPath());
+                DataSourceHelper.sendDataToConsumers(CallRecorderNode.this, rec, new DataContextImpl());
+            } catch (Throwable e) {
+                if (isLogLevelEnabled(LogLevel.ERROR))
+                    getLogger().error("Error while generating and sending record to consumers", e);
+            }
         }
         
         public void handleStreamSubstitution() {
@@ -442,7 +521,7 @@ public class CallRecorderNode extends BaseNode implements IvrConversationsBridge
         }
 
         public int compareTo(Recorder o) {
-            return new Long(recordStartTime).compareTo(o.recordStartTime);
+            return new Long(recordingStartTime).compareTo(o.recordingStartTime);
         }
     }
 }

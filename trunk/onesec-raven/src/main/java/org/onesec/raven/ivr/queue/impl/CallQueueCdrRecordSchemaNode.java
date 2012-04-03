@@ -19,12 +19,7 @@ package org.onesec.raven.ivr.queue.impl;
 
 import org.raven.annotations.NodeClass;
 import org.raven.ds.RecordSchemaFieldType;
-import org.raven.ds.impl.DatabaseRecordExtension;
-import org.raven.ds.impl.DatabaseRecordFieldExtension;
-import org.raven.ds.impl.IdRecordFieldExtension;
-import org.raven.ds.impl.RecordSchemaFieldNode;
-import org.raven.ds.impl.RecordSchemaNode;
-import org.raven.ds.impl.RecordSchemasNode;
+import org.raven.ds.impl.*;
 import org.raven.tree.Node;
 import org.weda.internal.annotations.Message;
 
