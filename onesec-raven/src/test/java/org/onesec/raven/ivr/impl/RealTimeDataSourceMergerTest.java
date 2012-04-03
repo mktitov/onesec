@@ -92,6 +92,22 @@ public class RealTimeDataSourceMergerTest extends Assert {
     }
     
 //    @Test
+    public void mergeOneStreamLittlePackets() throws Exception {
+        trainMocks();
+        replay(executor, owner);
+        
+        RealTimeDataSourceMerger merger = new RealTimeDataSourceMerger(codecManager, owner, null, executor);
+        merger.addDataSource(new BufferSplitterDataSource(createDataSourceFromFile("src/test/wav/test2.wav"), 240));
+        merger.connect();
+        JMFHelper.OperationController controller = JMFHelper.writeToFile(merger, "target/merger_1l_source.wav");
+        TimeUnit.SECONDS.sleep(4);
+        merger.disconnect();
+        controller.stop();
+        
+        verify(executor, owner);
+    }
+    
+//    @Test
     public void mergeTwoStreams() throws Exception {
         trainMocks();
         replay(executor, owner);
@@ -108,16 +124,17 @@ public class RealTimeDataSourceMergerTest extends Assert {
         verify(executor, owner);
     }
     
-//    @Test
-    public void mergeTwoStreams2() throws Exception {
+    @Test
+    public void mergeTwoStreamsLittlePackets() throws Exception {
         trainMocks();
         replay(executor, owner);
         
         RealTimeDataSourceMerger merger = new RealTimeDataSourceMerger(codecManager, owner, null, executor);
-        merger.addDataSource(createDataSourceFromFile("src/test/wav/test2.wav"));
-        merger.addDataSource(createDataSourceFromFile("src/test/wav/test.wav"));
+        PushBufferDataSource ds = createDataSourceFromFile("src/test/wav/test2.wav");
+        merger.addDataSource(new BufferSplitterDataSource(ds, 160));
+        merger.addDataSource(new BufferSplitterDataSource(createDataSourceFromFile("src/test/wav/test.wav"), 160));
         merger.connect();
-        JMFHelper.OperationController controller = JMFHelper.writeToFile(merger, "target/merger_2_sources.wav");
+        JMFHelper.OperationController controller = JMFHelper.writeToFile(merger, "target/merger_2l_sources.wav");
         TimeUnit.SECONDS.sleep(4);
         merger.disconnect();
         controller.stop();
@@ -125,8 +142,8 @@ public class RealTimeDataSourceMergerTest extends Assert {
         verify(executor, owner);
     }
     
-    @Test
-    public void dynamicAddStream() throws Exception {
+//    @Test
+    public void dynamicAddStream2() throws Exception {
         trainMocks();
         replay(executor, owner);
         
@@ -148,7 +165,7 @@ public class RealTimeDataSourceMergerTest extends Assert {
     }
     
 //    @Test
-    public void dynamicAddStream2() throws Exception {
+    public void dynamicAddStream() throws Exception {
         trainMocks();
         replay(executor, owner);
         
