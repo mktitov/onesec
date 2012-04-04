@@ -16,6 +16,7 @@
 package org.onesec.raven.ivr.impl;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -162,6 +163,8 @@ import org.raven.tree.Node;
         
         private final static long TICK_INTERVAL = 20;
         private final static int BUFFER_SIZE = (int) (TICK_INTERVAL * 8);
+        private final int[] data = new int[BUFFER_SIZE];
+        private final byte[] byteData = new byte[BUFFER_SIZE];
         
         private volatile Buffer bufferToTranssmit;
         private volatile BufferTransferHandler transferHandler;
@@ -234,8 +237,7 @@ import org.raven.tree.Node;
         }
 
         private void mergeAndTranssmit() {
-            byte[] data = new byte[BUFFER_SIZE];
-//            Arrays.fill(data, (byte)128);
+            Arrays.fill(data, 0);
             DataSourceHandler handler = firstHandler;
             int decHandlersBy = 0;
             int maxlen = 0;
@@ -257,7 +259,8 @@ import org.raven.tree.Node;
                                 , buflen, bufOffset, bytesToRead));
                         for (int i=bufOffset; i<bufOffset+bytesToRead; ++i) 
 //                            data[offset++] += (byte) (bufdata[i]/handlersCount);
-                            data[offset] = add(data[offset++], bufdata[i]);
+                            data[offset++] += (bufdata[i] & 0x00FF);
+//                            data[offset] = add(data[offset++], bufdata[i]);
                         if (bytesToRead==buflen || buffer.isEOM()) {
                             handler.pop();
                             if (buffer.isEOM())
@@ -274,11 +277,19 @@ import org.raven.tree.Node;
                     maxlen=offset;
                 handler = handler.nextHandler;
             }
+            int min=255; int max=0;
+            for (int i=0; i<maxlen; i++) {
+                int val = (int) (data[i]*1.3/handlersCount);
+                byteData[i] = (byte) (val);
+                if (min>val) min = val;
+                if (max<val) max = val;
+            }
+            System.out.println("min: "+min+"; max: "+max);
             if (decHandlersBy>0)
                 handlersCount -= decHandlersBy;
             Buffer buf = new Buffer();
             buf.setFormat(FORMAT);
-            buf.setData(data);
+            buf.setData(byteData);
             buf.setOffset(0);
             buf.setLength(maxlen);
             System.out.println("maxlen: "+maxlen);
@@ -290,9 +301,9 @@ import org.raven.tree.Node;
         
         
         
-        private byte add(byte x, byte y) {
-            int ix = x & 0x000000FF; int iy = y & 0x000000FF;
-            return (byte) (ix + iy/handlersCount);
+        private int add(int x, byte y) {
+            return (x & 0x00FF)+(y & 0x00FF);
+//            return (ix + iy/handlersCount);
         }
         
 //        private byte add(byte x, byte y) {

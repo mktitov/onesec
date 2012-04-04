@@ -82,6 +82,7 @@ public class RealTimeDataSourceMergerTest extends Assert {
         
         RealTimeDataSourceMerger merger = new RealTimeDataSourceMerger(codecManager, owner, null, executor);
         merger.addDataSource(createDataSourceFromFile("src/test/wav/test2.wav"));
+//        merger.addDataSource(createDataSourceFromFile("src/test/wav/1sec_silence.wav"));
         merger.connect();
         JMFHelper.OperationController controller = JMFHelper.writeToFile(merger, "target/merger_1_source.wav");
         TimeUnit.SECONDS.sleep(4);
@@ -107,7 +108,7 @@ public class RealTimeDataSourceMergerTest extends Assert {
         verify(executor, owner);
     }
     
-//    @Test
+    @Test
     public void mergeTwoStreams() throws Exception {
         trainMocks();
         replay(executor, owner);
@@ -124,7 +125,7 @@ public class RealTimeDataSourceMergerTest extends Assert {
         verify(executor, owner);
     }
     
-    @Test
+//    @Test
     public void mergeTwoStreamsLittlePackets() throws Exception {
         trainMocks();
         replay(executor, owner);
