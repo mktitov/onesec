@@ -80,7 +80,8 @@ public class RealTimeDataSourceMergerTest extends Assert {
         trainMocks();
         replay(executor, owner);
         
-        RealTimeDataSourceMerger merger = new RealTimeDataSourceMerger(codecManager, owner, null, executor);
+        RealTimeDataSourceMerger merger = new RealTimeDataSourceMerger(codecManager, owner, null
+                , executor, 0, 3);
         merger.addDataSource(createDataSourceFromFile("src/test/wav/test2.wav"));
 //        merger.addDataSource(createDataSourceFromFile("src/test/wav/1sec_silence.wav"));
         merger.connect();
@@ -97,7 +98,8 @@ public class RealTimeDataSourceMergerTest extends Assert {
         trainMocks();
         replay(executor, owner);
         
-        RealTimeDataSourceMerger merger = new RealTimeDataSourceMerger(codecManager, owner, null, executor);
+        RealTimeDataSourceMerger merger = new RealTimeDataSourceMerger(codecManager, owner, null
+                , executor, 0, 3);
         merger.addDataSource(new BufferSplitterDataSource(createDataSourceFromFile("src/test/wav/test2.wav"), 240));
         merger.connect();
         JMFHelper.OperationController controller = JMFHelper.writeToFile(merger, "target/merger_1l_source.wav");
@@ -113,7 +115,8 @@ public class RealTimeDataSourceMergerTest extends Assert {
         trainMocks();
         replay(executor, owner);
         
-        RealTimeDataSourceMerger merger = new RealTimeDataSourceMerger(codecManager, owner, null, executor);
+        RealTimeDataSourceMerger merger = new RealTimeDataSourceMerger(codecManager, owner, null
+                , executor, 0, 3);
         merger.addDataSource(createDataSourceFromFile("src/test/wav/test2.wav"));
         merger.addDataSource(createDataSourceFromFile("src/test/wav/test.wav"));
         merger.connect();
@@ -130,7 +133,8 @@ public class RealTimeDataSourceMergerTest extends Assert {
         trainMocks();
         replay(executor, owner);
         
-        RealTimeDataSourceMerger merger = new RealTimeDataSourceMerger(codecManager, owner, null, executor);
+        RealTimeDataSourceMerger merger = new RealTimeDataSourceMerger(codecManager, owner, null
+                , executor, 0, 3);
         PushBufferDataSource ds = createDataSourceFromFile("src/test/wav/test2.wav");
         merger.addDataSource(new BufferSplitterDataSource(ds, 160));
         merger.addDataSource(new BufferSplitterDataSource(createDataSourceFromFile("src/test/wav/test.wav"), 160));
@@ -151,7 +155,8 @@ public class RealTimeDataSourceMergerTest extends Assert {
         PushBufferDataSource ds = createDataSourceFromFile("src/test/wav/test2.wav");
         TranscoderDataSource tds1 = new TranscoderDataSource(codecManager, ds
                 , Codec.G729.getAudioFormat(), owner, null);
-        RealTimeDataSourceMerger merger = new RealTimeDataSourceMerger(codecManager, owner, null, executor);
+        RealTimeDataSourceMerger merger = new RealTimeDataSourceMerger(codecManager, owner, null
+                , executor, 0, 3);
         merger.addDataSource(tds1);
         merger.addDataSource(createDataSourceFromFile("src/test/wav/test.wav"));
         merger.connect();
@@ -170,7 +175,8 @@ public class RealTimeDataSourceMergerTest extends Assert {
         trainMocks();
         replay(executor, owner);
         
-        RealTimeDataSourceMerger merger = new RealTimeDataSourceMerger(codecManager, owner, null, executor);
+        RealTimeDataSourceMerger merger = new RealTimeDataSourceMerger(codecManager, owner, null
+                , executor, 0, 3);
         merger.connect();
         JMFHelper.OperationController controller = JMFHelper.writeToFile(merger, "target/merger_1d_sources.wav");
         TimeUnit.MILLISECONDS.sleep(1000);

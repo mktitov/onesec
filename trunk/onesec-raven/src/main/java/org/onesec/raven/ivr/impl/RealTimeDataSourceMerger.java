@@ -51,6 +51,8 @@ import org.raven.tree.Node;
     private final Node owner;
     private final String logPrefix;
     private final ExecutorService executor;
+    private final int noiseLevel;
+    private final double maxGainCoef;
 
     private volatile DataSourceHandler firstHandler;
     private volatile DataSourceHandler lastHandler;
@@ -61,12 +63,14 @@ import org.raven.tree.Node;
     private final PushBufferStream[] streams = new PushBufferStream[]{new Stream()};
     
     public RealTimeDataSourceMerger(CodecManager codecManager, Node owner, String logPrefix
-            , ExecutorService executor) 
+            , ExecutorService executor, int noiseLevel, double maxGainCoef) 
     {
         this.codecManager = codecManager;
         this.owner = owner;
         this.logPrefix = logPrefix;
         this.executor = executor;
+        this.noiseLevel = noiseLevel;
+        this.maxGainCoef = maxGainCoef;
     }
 
     
@@ -164,6 +168,7 @@ import org.raven.tree.Node;
         private final static long TICK_INTERVAL = 20;
         private final static int BUFFER_SIZE = (int) (TICK_INTERVAL * 8);
         private final int[] data = new int[BUFFER_SIZE];
+        private final int[] workData = new int[BUFFER_SIZE];
         private final byte[] byteData = new byte[BUFFER_SIZE];
         
         private volatile Buffer bufferToTranssmit;
@@ -241,10 +246,13 @@ import org.raven.tree.Node;
             DataSourceHandler handler = firstHandler;
             int decHandlersBy = 0;
             int maxlen = 0;
+            int buffersCount = 0;
             while (handler!=null && handlersCount>0) {
+                Arrays.fill(workData, 0);
                 Buffer buffer = handler.peek();
                 int len = BUFFER_SIZE;
                 int offset = 0;
+                int max=0;
                 while (buffer!=null && len>0) {
                     int buflen = buffer.getLength();
                     if (buffer.isDiscard()) {
@@ -254,12 +262,17 @@ import org.raven.tree.Node;
                         byte[] bufdata = (byte[]) buffer.getData();
                         int bufOffset = buffer.getOffset();
                         int bytesToRead = Math.min(len, buflen);
-                        System.out.println(String.format(
-                                "### processing buffer: len=%d, offset=%d, bytesToRead: %d"
-                                , buflen, bufOffset, bytesToRead));
-                        for (int i=bufOffset; i<bufOffset+bytesToRead; ++i) 
+//                        System.out.println(String.format(
+//                                "### processing buffer: len=%d, offset=%d, bytesToRead: %d"
+//                                , buflen, bufOffset, bytesToRead));
+                        for (int i=bufOffset; i<bufOffset+bytesToRead; ++i) {
+                            int val = bufdata[i] & 0x00FF;
+                            int diff = Math.abs(val-127);
+                            if (diff>max) 
+                                max = diff;
+                            workData[offset++] = (bufdata[i] & 0x00FF);
+                        }
 //                            data[offset++] += (byte) (bufdata[i]/handlersCount);
-                            data[offset++] += (bufdata[i] & 0x00FF);
 //                            data[offset] = add(data[offset++], bufdata[i]);
                         if (bytesToRead==buflen || buffer.isEOM()) {
                             handler.pop();
@@ -273,33 +286,59 @@ import org.raven.tree.Node;
                         len-=bytesToRead;
                     }
                 }
-                if (offset>maxlen)
-                    maxlen=offset;
+                if (max>=maxGainCoef) {
+                    ++buffersCount;
+                    for (int i=0; i<offset; ++i)
+                        data[i]+=workData[i];
+                    if (offset>maxlen)
+                        maxlen=offset;
+                } 
+//                else 
+//                    System.out.println("!!! DROPPED !!!");
                 handler = handler.nextHandler;
             }
-            int min=255; int max=0;
-            for (int i=0; i<maxlen; i++) {
-                int val = (int) (data[i]*1.3/handlersCount);
-                byteData[i] = (byte) (val);
-                if (min>val) min = val;
-                if (max<val) max = val;
-            }
-            System.out.println("min: "+min+"; max: "+max);
+            swapBuffers(maxlen, buffersCount);
             if (decHandlersBy>0)
                 handlersCount -= decHandlersBy;
             Buffer buf = new Buffer();
             buf.setFormat(FORMAT);
             buf.setData(byteData);
             buf.setOffset(0);
-            buf.setLength(maxlen);
-            System.out.println("maxlen: "+maxlen);
+            buf.setLength(maxlen==0? BUFFER_SIZE : maxlen);
+//            System.out.println("maxlen: "+maxlen);
             bufferToTranssmit = buf;
             BufferTransferHandler _transferHandler = transferHandler;
             if (_transferHandler!=null)
                 _transferHandler.transferData(this);
         }
         
-        
+        private void swapBuffers(int len, int buffersCount) {
+            if (buffersCount==0)
+                Arrays.fill(byteData, (byte)127);
+            else  {
+                int min=255; int max=0;
+                for (int i=0; i<len; i++) {
+                    int val = (int) (data[i]/buffersCount);
+                    data[i] = val;
+                    if (min>val) min = val;
+                    if (max<val) max = val;
+                }
+//                System.out.println("min: "+min+"; max: "+max);
+                max = Math.max(max, 255-min);
+//                System.out.println("max max: "+max);
+                double koef = max>0? 255./max : 1.;
+//                System.out.println("koef: "+koef);
+                koef = Math.min(koef, maxGainCoef);
+                for (int i=0; i<len; ++i) {
+                    if (koef>1.01) {
+//                        System.out.println("before: "+data[i]);
+                        data[i] = (int) (koef*(data[i]-127)+127);
+//                        System.out.println("after: "+data[i]);
+                    }
+                    byteData[i] = (byte) data[i];
+                }
+            }
+        }
         
         private int add(int x, byte y) {
             return (x & 0x00FF)+(y & 0x00FF);
