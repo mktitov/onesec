@@ -28,13 +28,13 @@ import javax.script.Bindings;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.DirectoryFileFilter;
 import org.onesec.raven.ivr.*;
+import static org.onesec.raven.ivr.impl.CallRecordingRecordSchemaNode.*;
 import org.raven.RavenUtils;
+import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
-import org.raven.ds.DataConsumer;
-import org.raven.ds.DataContext;
-import org.raven.ds.Record;
-import org.raven.ds.RecordSchemaField;
-import org.raven.ds.RecordSchemaFieldType;
+import org.raven.ds.*;
+import org.raven.ds.impl.DataContextImpl;
+import org.raven.ds.impl.DataSourceHelper;
 import org.raven.ds.impl.RecordSchemaNode;
 import org.raven.ds.impl.RecordSchemaValueTypeHandlerFactory;
 import org.raven.expr.impl.BindingSupportImpl;
@@ -56,10 +56,6 @@ import org.raven.tree.impl.ViewableObjectImpl;
 import org.weda.annotations.constraints.NotNull;
 import org.weda.internal.annotations.Message;
 import org.weda.internal.annotations.Service;
-import static org.onesec.raven.ivr.impl.CallRecordingRecordSchemaNode.*;
-import org.raven.annotations.NodeClass;
-import org.raven.ds.impl.DataContextImpl;
-import org.raven.ds.impl.DataSourceHelper;
 
 /**
  *
@@ -98,6 +94,12 @@ public class CallRecorderNode extends BaseNode
     
     @Parameter(defaultValue="60")
     private Integer keepRecordsForDays;
+    
+    @Parameter(defaultValue="3")
+    private Integer noiseLevel;
+    
+    @Parameter(defaultValue="3")
+    private Double maxGainCoef;
     
     @Message private static String callInfoMessage;
     @Message private static String recordStartTimeMessage;
@@ -179,7 +181,8 @@ public class CallRecorderNode extends BaseNode
         }
         try {
             File file = generateRecordFile(bridge);
-            final Recorder recorder = new Recorder(bridge, codecManager, file, recordSchema);
+            final Recorder recorder = new Recorder(bridge, codecManager, file, recordSchema
+                    , noiseLevel, maxGainCoef);
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 getLogger().debug(logMess(bridge, "Recorder created. Recorording to the file (%s)", file));
             String mess = "Recording conversation from bridge: "+bridge;
@@ -357,6 +360,22 @@ public class CallRecorderNode extends BaseNode
         return logMess(null, mess, args);
     }
 
+    public Double getMaxGainCoef() {
+        return maxGainCoef;
+    }
+
+    public void setMaxGainCoef(Double maxGainCoef) {
+        this.maxGainCoef = maxGainCoef;
+    }
+
+    public Integer getNoiseLevel() {
+        return noiseLevel;
+    }
+
+    public void setNoiseLevel(Integer noiseLevel) {
+        this.noiseLevel = noiseLevel;
+    }
+
     public Scheduler getCleanupScheduler() {
         return cleanupScheduler;
     }
@@ -435,14 +454,14 @@ public class CallRecorderNode extends BaseNode
         private volatile IncomingRtpStream inRtp2;
 
         public Recorder(IvrConversationsBridge bridge, CodecManager codecManager, File file
-                , RecordSchemaNode schema) 
+                , RecordSchemaNode schema, int noiseLevel, double maxGainCoef) 
             throws FileWriterDataSourceException 
         {
             this.bridge = bridge;
             this.file = file;
             this.schema = schema;
             merger = new RealTimeDataSourceMerger(codecManager, CallRecorderNode.this
-                    , logMess(bridge, ""), executor);
+                    , logMess(bridge, ""), executor, noiseLevel, maxGainCoef);
             fileWriter = new AudioFileWriterDataSource(CallRecorderNode.this, file, merger, codecManager
                     , FileTypeDescriptor.WAVE, logMess(bridge, ""));
         }

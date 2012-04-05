@@ -53,7 +53,7 @@ public class AudioFileWriterDataSourceTest {
         tasksFinished = 0;
     }
     
-    @Test
+//    @Test
     public void test() throws Exception {
         trainMocks();
         replay(executor, owner);
@@ -69,12 +69,12 @@ public class AudioFileWriterDataSourceTest {
         verify(executor, owner);
     }
     
-//    @Test
+    @Test
     public void testWithDataSourceMerger() throws Exception {
         trainMocks();
         replay(executor, owner);
         
-        RealTimeDataSourceMerger merger = new RealTimeDataSourceMerger(codecManager, owner, null, executor);
+        RealTimeDataSourceMerger merger = new RealTimeDataSourceMerger(codecManager, owner, null, executor, 3, 3);
         merger.addDataSource(createDataSourceFromFile("src/test/wav/test2.wav"));
         merger.addDataSource(createDataSourceFromFile("src/test/wav/test.wav"));
         

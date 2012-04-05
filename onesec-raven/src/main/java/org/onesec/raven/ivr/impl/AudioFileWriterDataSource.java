@@ -20,6 +20,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.media.Buffer;
 import javax.media.Format;
 import javax.media.Multiplexer;
@@ -68,6 +70,13 @@ public class AudioFileWriterDataSource {
     public void stop() {
         closeMux();
         closeFile();
+        try {
+            dataSource.stop();
+        } catch (IOException ex) {
+            if (owner.isLogLevelEnabled(LogLevel.ERROR))
+                owner.getLogger().error(logMess("Error stopping data source"), ex);
+        }
+        dataSource.disconnect();
     }
     
     private void createFile() {
