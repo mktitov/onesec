@@ -70,6 +70,9 @@ public class CallRecorderNode extends BaseNode
     public static final String CONV1_BINDINGS = "conv1Bindings";
     public static final String CONV2_BINDING = "conversation2";
     public static final String CONV2_BINDINGS = "conv2Bindings";
+    public static final String DATE_BINDING = "date";
+    public static final String PATH_BINDING = "path";
+    public static final String TIME_BINDING = "time";
     
     @Service
     private static CodecManager codecManager;
@@ -255,8 +258,9 @@ public class CallRecorderNode extends BaseNode
             throw new Exception(String.format("Can't create directory (%s)", dir));
         try {
             createBindings(bridge, context);
-            bindingSupport.put("time", new SimpleDateFormat("HHmmss_S").format(date));
-            bindingSupport.put("date", new SimpleDateFormat("yyyyMMdd").format(date));
+            bindingSupport.put(PATH_BINDING, dir.getAbsolutePath());
+            bindingSupport.put(TIME_BINDING, new SimpleDateFormat("HHmmss_S").format(date));
+            bindingSupport.put(DATE_BINDING, new SimpleDateFormat("yyyyMMdd").format(date));
             String filename = fileNameExpression;
             if (filename==null || filename.isEmpty())
                 throw new Exception("Error generating file name for recording, fileNameExpression "
