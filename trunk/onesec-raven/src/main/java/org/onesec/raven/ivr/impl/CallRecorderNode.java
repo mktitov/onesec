@@ -29,6 +29,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.DirectoryFileFilter;
 import org.onesec.raven.ivr.*;
 import static org.onesec.raven.ivr.impl.CallRecordingRecordSchemaNode.*;
+import org.raven.BindingNames;
 import org.raven.RavenUtils;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
@@ -65,6 +66,10 @@ import org.weda.internal.annotations.Service;
 public class CallRecorderNode extends BaseNode 
     implements IvrConversationsBridgeListener, Viewable, Schedulable, org.raven.ds.DataSource
 {
+    public static final String CONV1_BINDING = "conversation1";
+    public static final String CONV1_BINDINGS = "conv1Bindings";
+    public static final String CONV2_BINDING = "conversation2";
+    public static final String CONV2_BINDINGS = "conv2Bindings";
     
     @Service
     private static CodecManager codecManager;
@@ -174,15 +179,16 @@ public class CallRecorderNode extends BaseNode
     }
     
     public void bridgeActivated(IvrConversationsBridge bridge) {
-        if (!applyFilter(bridge)) {
+        DataContext context = new DataContextImpl();
+        if (!applyFilter(bridge, context)) {
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 getLogger().debug("Recording for bridge ({}) where filtered", bridge);
             return;
         }
         try {
-            File file = generateRecordFile(bridge);
+            File file = generateRecordFile(bridge, context);
             final Recorder recorder = new Recorder(bridge, codecManager, file, recordSchema
-                    , noiseLevel, maxGainCoef);
+                    , noiseLevel, maxGainCoef, context);
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 getLogger().debug(logMess(bridge, "Recorder created. Recorording to the file (%s)", file));
             String mess = "Recording conversation from bridge: "+bridge;
@@ -228,9 +234,9 @@ public class CallRecorderNode extends BaseNode
         }
     }
     
-    private boolean applyFilter(IvrConversationsBridge bridge) {
+    private boolean applyFilter(IvrConversationsBridge bridge, DataContext context) {
         try {
-            createBindings(bridge);
+            createBindings(bridge, context);
             Boolean res = filterExpression;
             return res==null || !res? false : true;
         } finally {
@@ -238,7 +244,7 @@ public class CallRecorderNode extends BaseNode
         }
     }
     
-    private File generateRecordFile(IvrConversationsBridge bridge) throws Exception {
+    private File generateRecordFile(IvrConversationsBridge bridge, DataContext context) throws Exception {
         Date date = new Date();
         File dir = new File(baseDirFile, 
                 new SimpleDateFormat("yyyy.MM").format(date) + File.separator
@@ -248,7 +254,7 @@ public class CallRecorderNode extends BaseNode
         if (!dir.exists())
             throw new Exception(String.format("Can't create directory (%s)", dir));
         try {
-            createBindings(bridge);
+            createBindings(bridge, context);
             bindingSupport.put("time", new SimpleDateFormat("HHmmss_S").format(date));
             bindingSupport.put("date", new SimpleDateFormat("yyyyMMdd").format(date));
             String filename = fileNameExpression;
@@ -290,13 +296,16 @@ public class CallRecorderNode extends BaseNode
         return vos;
     }
 
-    private void createBindings(IvrConversationsBridge bridge) {
-        bindingSupport.put("c1NumA", bridge.getConversation1().getCallingNumber());
-        bindingSupport.put("c1NumB", bridge.getConversation1().getCalledNumber());
-        bindingSupport.put("c2NumA", bridge.getConversation2().getCallingNumber());
-        bindingSupport.put("c2NumB", bridge.getConversation2().getCalledNumber());
-        bindingSupport.put("conversation1", bridge.getConversation1());
-        bindingSupport.put("conversation2", bridge.getConversation2());
+    private void createBindings(IvrConversationsBridge bridge, DataContext context) {
+        bindingSupport.put(CONV1_NUMA, bridge.getConversation1().getCallingNumber());
+        bindingSupport.put(CONV1_NUMB, bridge.getConversation1().getCalledNumber());
+        bindingSupport.put(CONV2_NUMA, bridge.getConversation2().getCallingNumber());
+        bindingSupport.put(CONV2_NUMB, bridge.getConversation2().getCalledNumber());
+        bindingSupport.put(CONV1_BINDING, bridge.getConversation1());
+        bindingSupport.put(CONV2_BINDING, bridge.getConversation2());
+        bindingSupport.put(CONV1_BINDINGS, bridge.getConversation1().getConversationScenarioState().getBindings());
+        bindingSupport.put(CONV2_BINDINGS, bridge.getConversation2().getConversationScenarioState().getBindings());
+        bindingSupport.put(BindingNames.DATA_CONTEXT_BINDING, context);
     }
 
     @Override
@@ -448,18 +457,20 @@ public class CallRecorderNode extends BaseNode
         private final AudioFileWriterDataSource fileWriter;
         private final File file;
         private final RecordSchemaNode schema;
+        private final DataContext context;
         
         private volatile boolean stopped = false;
         private volatile IncomingRtpStream inRtp1;
         private volatile IncomingRtpStream inRtp2;
 
         public Recorder(IvrConversationsBridge bridge, CodecManager codecManager, File file
-                , RecordSchemaNode schema, int noiseLevel, double maxGainCoef) 
+                , RecordSchemaNode schema, int noiseLevel, double maxGainCoef, DataContext context) 
             throws FileWriterDataSourceException 
         {
             this.bridge = bridge;
             this.file = file;
             this.schema = schema;
+            this.context = context;
             merger = new RealTimeDataSourceMerger(codecManager, CallRecorderNode.this
                     , logMess(bridge, ""), executor, noiseLevel, maxGainCoef);
             fileWriter = new AudioFileWriterDataSource(CallRecorderNode.this, file, merger, codecManager
@@ -499,7 +510,7 @@ public class CallRecorderNode extends BaseNode
                 rec.setValue(RECORDING_TIME, new Date(recordingStartTime));
                 rec.setValue(RECORDING_DURATION, (System.currentTimeMillis()-recordingStartTime)/1000);
                 rec.setValue(FILE, file.getPath());
-                DataSourceHelper.sendDataToConsumers(CallRecorderNode.this, rec, new DataContextImpl());
+                DataSourceHelper.sendDataToConsumers(CallRecorderNode.this, rec, context);
             } catch (Throwable e) {
                 if (isLogLevelEnabled(LogLevel.ERROR))
                     getLogger().error("Error while generating and sending record to consumers", e);

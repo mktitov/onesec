@@ -286,7 +286,7 @@ import org.raven.tree.Node;
                         len-=bytesToRead;
                     }
                 }
-                if (max>=maxGainCoef) {
+                if (max>=noiseLevel) {
                     ++buffersCount;
                     for (int i=0; i<offset; ++i)
                         data[i]+=workData[i];
