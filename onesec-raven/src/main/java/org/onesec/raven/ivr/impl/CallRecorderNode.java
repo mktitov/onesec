@@ -481,7 +481,9 @@ public class CallRecorderNode extends BaseNode
                     , FileTypeDescriptor.WAVE, logMess(bridge, ""));
         }
         
-        public void startRecording() {
+        public synchronized void startRecording() {
+            if (stopped)
+                return;
             try {
                 inRtp1 = bridge.getConversation1().getIncomingRtpStream();
                 inRtp2 = bridge.getConversation2().getIncomingRtpStream();
@@ -496,7 +498,7 @@ public class CallRecorderNode extends BaseNode
             }
         }
         
-        public void stopRecording() {
+        public synchronized void stopRecording() {
             stopped = true;
             fileWriter.stop();
             createAndSendRecord();
@@ -521,7 +523,7 @@ public class CallRecorderNode extends BaseNode
             }
         }
         
-        public void handleStreamSubstitution() {
+        public synchronized void handleStreamSubstitution() {
             try {
                 if (inRtp1 != bridge.getConversation1().getIncomingRtpStream()) {
                     inRtp1 = bridge.getConversation1().getIncomingRtpStream();
