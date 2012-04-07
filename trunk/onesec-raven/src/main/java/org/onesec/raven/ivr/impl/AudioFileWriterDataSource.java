@@ -209,7 +209,7 @@ public class AudioFileWriterDataSource {
                     createFile();
                     firstBuffer = false;
                 }
-                while (mux.process(buffer, 0) > 1) ;
+                while (!muxClosed.get() && mux.process(buffer, 0) > 1) ;
                 if (buffer.isEOM()) {
                     closeMux();
                     closeFile();
