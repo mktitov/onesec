@@ -29,15 +29,15 @@ import com.cisco.jtapi.extensions.CiscoRTPOutputProperties;
 import com.cisco.jtapi.extensions.CiscoRTPOutputStartedEv;
 import com.cisco.jtapi.extensions.CiscoRTPOutputStoppedEv;
 import com.cisco.jtapi.extensions.CiscoRTPParams;
-import com.cisco.jtapi.extensions.CiscoRegistrationException;
 import com.cisco.jtapi.extensions.CiscoRouteTerminal;
 import com.cisco.jtapi.extensions.CiscoTermInServiceEv;
 import com.cisco.jtapi.extensions.CiscoTermOutOfServiceEv;
 import com.cisco.jtapi.extensions.CiscoTerminal;
 import com.cisco.jtapi.extensions.CiscoTerminalObserver;
 import com.cisco.jtapi.extensions.CiscoTransferEndEv;
-import com.cisco.jtapi.extensions.CiscoTransferStartEv;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -137,6 +137,8 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
 
     @Message private static String callIdColumnMessage;
     @Message private static String callInfoColumnMessage;
+    @Message private static String callCreationTimeColumnMessage;
+    @Message private static String callDurationColumnMessage;
     @Message private static String endpointBusyMessage;
     @Message private static String callsCountMessage;
 
@@ -245,9 +247,14 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
         if (lock.readLock().tryLock(500, TimeUnit.MILLISECONDS)){
             try{
                 callsCount = calls.size();
-                TableImpl table = new TableImpl(new String[]{callIdColumnMessage, callInfoColumnMessage});
-                for (Map.Entry entry: calls.entrySet())
-                    table.addRow(new Object[]{entry.getKey().toString(), entry.getValue().toString()});
+                TableImpl table = new TableImpl(new String[]{callIdColumnMessage
+                        , callCreationTimeColumnMessage, callDurationColumnMessage, callInfoColumnMessage});
+                for (Map.Entry<Call, ConvHolder> entry: calls.entrySet())
+                    table.addRow(new Object[]{
+                        entry.getKey().toString(),
+                        new SimpleDateFormat("dd.MM.yyyy HH:mm:ss").format(new Date(entry.getValue().created)),
+                        entry.getValue().getDuration(),
+                        entry.getValue().toString()});
                 obj = new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, table);
             }finally{
                 lock.readLock().unlock();
@@ -383,7 +390,8 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                     if (isLogLevelEnabled(LogLevel.DEBUG))
                         logger.debug(callLog(call, "Creating conversation"));
                     IvrEndpointConversationImpl conv = new IvrEndpointConversationImpl(
-                            term, executor, conversationScenario, rtpStreamManager, enableIncomingRtp, null);
+                            term, executor, conversationScenario, rtpStreamManager
+                            , enableIncomingRtp, null);
                     conv.setCall((CallControlCall) call);
                     conv.addConversationListener(this);
                     calls.put(call, new ConvHolder(conv, true));
@@ -752,10 +760,15 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
     private class ConvHolder {
         private final IvrEndpointConversationImpl conv;
         private final boolean incoming;
+        private final long created = System.currentTimeMillis();
 
         public ConvHolder(IvrEndpointConversationImpl conv, boolean incoming) {
             this.conv = conv;
             this.incoming = incoming;
+        }
+        
+        public long getDuration() {
+            return (System.currentTimeMillis() - created)/1000;
         }
 
         @Override
