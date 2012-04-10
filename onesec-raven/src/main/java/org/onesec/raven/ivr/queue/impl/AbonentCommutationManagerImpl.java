@@ -164,7 +164,8 @@ public class AbonentCommutationManagerImpl implements LazyCallQueueRequest, Abon
             owner.getLogger().debug(logMess("Calling to the abonent"));
         Map<String, Object> bindings = new HashMap<String, Object>();
         bindings.put(ABONENT_COMMUTATION_MANAGER_BINDING, this);
-        endpoint.invite(abonentNumber, inviteTimeout, 0, new ConversationListener()
+        endpoint.invite(abonentNumber, inviteTimeout, 0
+                , new ConversationListener(endpoint, endpointPool)
                 , conversationScenario, bindings);
     }
     
@@ -211,11 +212,23 @@ public class AbonentCommutationManagerImpl implements LazyCallQueueRequest, Abon
     }
     
     private class ConversationListener extends IvrEndpointConversationListenerAdapter {
+        private final IvrEndpoint endpoint;
+        private final IvrEndpointPool endpointPool;
+
+        public ConversationListener(IvrEndpoint endpoint, IvrEndpointPool endpointPool) {
+            this.endpoint = endpoint;
+            this.endpointPool = endpointPool;
+        }
 
         @Override
         public void listenerAdded(IvrEndpointConversationEvent event) {
             conversation = event.getConversation();
             fireConversationAssignedEvent();
+        }
+
+        @Override
+        public void conversationStopped(IvrEndpointConversationStoppedEvent event) {
+            endpointPool.releaseEndpoint(endpoint);
         }
     }
 }

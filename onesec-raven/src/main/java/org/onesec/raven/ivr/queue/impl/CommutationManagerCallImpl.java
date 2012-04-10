@@ -18,6 +18,7 @@
 package org.onesec.raven.ivr.queue.impl;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 import org.onesec.raven.ivr.*;
@@ -28,6 +29,7 @@ import org.raven.sched.ExecutorServiceException;
 import org.raven.sched.impl.AbstractTask;
 import org.raven.tree.Node;
 import org.slf4j.Logger;
+import org.weda.beans.ObjectUtils;
 
 /**
  *
@@ -48,6 +50,7 @@ public class  CommutationManagerCallImpl
     private final Logger logger;
     
     private final AtomicReference<String> statusMessage;
+    private final AtomicBoolean canceled = new AtomicBoolean(false);
     private final List<CallsCommutationManagerListener> listeners =
             new LinkedList<CallsCommutationManagerListener>();
     private IvrEndpointConversation operatorConversation = null;
@@ -130,14 +133,15 @@ public class  CommutationManagerCallImpl
                     nextState = State.INVALID;
                     break;
                 case INVALID: 
-                    boolean success = state.get()==State.HANDLED || state.get()==State.OPERATOR_READY;
+                    boolean success = ObjectUtils.in(state.get(), State.HANDLED, State.OPERATOR_READY)
+                                        || canceled.get();
                     if (!success) {
                         if (completionCode!=null) {
                             if (isLogLevelEnabled(LogLevel.DEBUG))
                                 logger.debug(logMess("Operator's number (%s) not answered", getOperatorNumber()));
                             addToLog("no answer from (%s)", getOperatorNumber());
                         }
-                    } else if (state.get()==State.OPERATOR_READY)
+                    } else if (state.get()==State.OPERATOR_READY || canceled.get())
                         manager.getRequest().fireDisconnectedQueueEvent();
                     manager.callFinished(this, success);
                     if (endpoint!=null) {
@@ -226,6 +230,10 @@ public class  CommutationManagerCallImpl
         } catch (ExecutorServiceException ex) {
             moveToState(State.NO_FREE_ENDPOINTS, ex, null);
         }
+    }
+
+    public void cancel() {
+        canceled.set(true);
     }
 
     public void processRequest(IvrEndpoint endpoint) {

@@ -144,15 +144,16 @@ public class IvrInformerSession extends ConversationCdrRegistrator implements En
             closeSession(rec==null);
             return;
         }
-        abonentNumber = converter.convert(String.class, rec.getValue(ABONENT_NUMBER_FIELD), null);
-        statusMessage.set(String.format("Calling to the abonent number (%s)", abonentNumber));
-        abonentNumber = informer.translateNumber(abonentNumber, rec);
+        String _abonentNumber = converter.convert(String.class, rec.getValue(ABONENT_NUMBER_FIELD), null);
+        statusMessage.set(String.format("Calling to the abonent number (%s)", _abonentNumber));
+        _abonentNumber = informer.translateNumber(_abonentNumber, rec);
+        abonentNumber = _abonentNumber;
         Map<String, Object> bindings = new HashMap<String, Object>();
         bindings.put(AsyncIvrInformer.RECORD_BINDING, rec);
         bindings.put(AsyncIvrInformer.INFORMER_BINDING, this);
         bindings.put(BindingNames.DATA_CONTEXT_BINDING, dataContext);
         rec.setValue(CALL_START_TIME_FIELD, new Timestamp(System.currentTimeMillis()));
-        endpoint.invite(abonentNumber, inviteTimeout, maxCallDuration, this, scenario, bindings);
+        endpoint.invite(_abonentNumber, inviteTimeout, maxCallDuration, this, scenario, bindings);
     }
 
     @Override

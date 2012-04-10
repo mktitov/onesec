@@ -37,6 +37,8 @@ import org.slf4j.Logger;
  */
 public class AbonentCommutationManagerImplTest {
     
+    private static IvrEndpointConversationListener listener;
+    
     @Before
     public void prepare() {
         
@@ -79,6 +81,8 @@ public class AbonentCommutationManagerImplTest {
         requestListener.conversationAssigned(conversation);
         //abonentReadyToCommutate
         commutationManager.abonentReadyToCommutate(conversation);
+        //abonent conversation stopped
+        pool.releaseEndpoint(endpoint);
         
         replay(context, owner, logger, readyEvent, commutationManager, pool, endpoint, scenario
                 , conversationEvent, conversation, requestListener, disconnectedEvent);
@@ -97,6 +101,7 @@ public class AbonentCommutationManagerImplTest {
         manager.abonentReadyToCommutate(conversation);
         manager.callQueueChangeEvent(disconnectedEvent);
         assertFalse(manager.isCommutationValid());
+        listener.conversationStopped(null);
         
         verify(context, owner, logger, readyEvent, commutationManager, pool, endpoint, scenario
                 , conversationEvent, conversation, requestListener, disconnectedEvent);
@@ -125,7 +130,7 @@ public class AbonentCommutationManagerImplTest {
     {
         reportMatcher(new IArgumentMatcher() {
             public boolean matches(Object argument) {
-                IvrEndpointConversationListener listener = (IvrEndpointConversationListener) argument;
+                listener = (IvrEndpointConversationListener) argument;
                 listener.listenerAdded(event);
                 return true;
             }

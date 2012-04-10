@@ -99,7 +99,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     private String callingNumber;
     private String calledNumber;
     private Collection<IvrEndpointConversationListener> listeners;
-    private boolean stopping = false;
+    private volatile boolean stopping = false;
+    private final AtomicBoolean stoppedEventSended = new AtomicBoolean(false);
 
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
@@ -824,9 +825,15 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     public String toString() {
         return callId;
     }
-
+    
+//    public boolean trySetStoppedEventSended() {
+//        return stoppedEventSended.compareAndSet(false, true);
+//    }
+//
     private void fireEvent(boolean conversationStartEvent, CompletionCode completionCode)
     {
+//        if (!conversationStartEvent && !trySetStoppedEventSended())
+//            return;
         if (listeners!=null && !listeners.isEmpty()) {
             IvrEndpointConversationEvent event = conversationStartEvent? 
                 new IvrEndpointConversationEventImpl(this) :

@@ -48,7 +48,6 @@ public class ConcatDataStream implements PushBufferStream, Task
     private final ContentDescriptor contentDescriptor;
     private final Node owner;
     private final int packetLength; //ms?
-    private final int maxSendAheadPacketsCount;
     
     private BufferTransferHandler transferHandler;
     private Buffer bufferToSend;
@@ -71,7 +70,6 @@ public class ConcatDataStream implements PushBufferStream, Task
         this.owner = owner;
         this.packetLength = (int) codec.getMillisecondsForPacketSize(packetSize);
 //        this.packetLength = (int) dataSource.getPacketSizeInMillis();
-        this.maxSendAheadPacketsCount = maxSendAheadPacketsCount;
         this.silentBuffer = silentBuffer;
     }
     
@@ -179,7 +177,7 @@ public class ConcatDataStream implements PushBufferStream, Task
                         }
                     }
                     action = "sending transfer event";
-                    if (bufferToSend!=null || si==null) {
+                    if (bufferToSend!=null || si==null || !si.isRealTime()) {
                         sendBuffer();
                         long tt = System.currentTimeMillis()-cycleStartTs;
                         transferTimeSum+=tt;
