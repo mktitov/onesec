@@ -41,6 +41,10 @@ public interface CommutationManagerCall
      */
     public void commutate();
     /**
+     * Cancel processing request. 
+     */
+    public void cancel();
+    /**
      * Informs about that the operator's conversation is ready to commutation
      * @param operatorConversation the operator conversation
      */
