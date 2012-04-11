@@ -100,7 +100,6 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     private String calledNumber;
     private Collection<IvrEndpointConversationListener> listeners;
     private volatile boolean stopping = false;
-    private final AtomicBoolean stoppedEventSended = new AtomicBoolean(false);
 
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
 

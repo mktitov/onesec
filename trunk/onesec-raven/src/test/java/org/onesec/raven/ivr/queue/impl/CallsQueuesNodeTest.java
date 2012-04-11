@@ -311,7 +311,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         provider.setName("631609 provider");
         callOperator.getProvidersNode().addAndSaveChildren(provider);
         provider.setFromNumber(631609);
-        provider.setToNumber(631750);
+        provider.setToNumber(631799);
         provider.setHost("10.0.137.125");
         provider.setPassword(privateProperties.getProperty("ccm_dialer_proxy_kom"));
         provider.setUser("ccm_dialer_proxy_kom");
@@ -343,7 +343,8 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
 //        createEndpoint(tree.getRootNode(), executor, manager, abonentScenario, "88013");
         createMultichannelEndpoint(executor, manager, abonentScenario);
 //        createEndpoint(pool, executor, manager, null, "88013");
-        createEndpoint(pool, executor, manager, null, "631750");
+        createEndpoint(pool, executor, manager, null, "631799");
+        createEndpoint(pool, executor, manager, null, "631798");
         
         assertTrue(pool.start());
         
@@ -389,8 +390,8 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         operator.setName("Titov MK");
         queues.getOperatorsNode().addAndSaveChildren(operator);
 //        operator.setPhoneNumbers("88027");
-//        operator.setPhoneNumbers("089128672947");
-        operator.setPhoneNumbers("88027,089128672947");
+        operator.setPhoneNumbers("089128672947");
+//        operator.setPhoneNumbers("88027,089128672947");
         operator.setParallelCallAfter(5);
         operator.setEndpointPool(pool);
         operator.setConversationsBridgeManager(bridge);
@@ -402,8 +403,8 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         operator = new CallsQueueOperatorNode();
         operator.setName("Titov MK 2");
         queues.getOperatorsNode().addAndSaveChildren(operator);
-        operator.setPhoneNumbers("88027");
-//        operator.setPhoneNumbers("089128672947");
+//        operator.setPhoneNumbers("88027");
+        operator.setPhoneNumbers("089128672947");
 //        operator.setPhoneNumbers("88027,089128672947");
         operator.setParallelCallAfter(5);
         operator.setEndpointPool(pool);
@@ -562,7 +563,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         for (ProviderController provider: providerRegistry.getProviderControllers()) {
             assertNotNull(provider);
             StateWaitResult res = provider.getState().waitForState(
-                    new int[]{ProviderControllerState.IN_SERVICE}, 30000);
+                    new int[]{ProviderControllerState.IN_SERVICE}, 40000);
             assertFalse(res.isWaitInterrupted());
         }
     }
