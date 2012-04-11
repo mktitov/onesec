@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.impl;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.util.LinkedList;
 import java.util.List;
@@ -38,6 +39,7 @@ import javax.media.rtp.SessionAddress;
 import javax.media.rtp.event.ByeEvent;
 import javax.media.rtp.event.NewReceiveStreamEvent;
 import javax.media.rtp.event.ReceiveStreamEvent;
+import javax.media.rtp.event.RemotePayloadChangeEvent;
 import org.onesec.raven.ivr.IncomingRtpStream;
 import org.onesec.raven.ivr.IncomingRtpStreamDataSourceListener;
 import org.onesec.raven.ivr.RTPManagerService;
@@ -52,6 +54,7 @@ import org.weda.internal.annotations.Service;
 public class IncomingRtpStreamImpl extends AbstractRtpStream 
         implements IncomingRtpStream, ReceiveStreamListener
 {
+
     public enum Status {INITIALIZING, OPENED, CLOSED}
     
     public final static AudioFormat FORMAT = new AudioFormat(
@@ -179,50 +182,50 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
             if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                 owner.getLogger().debug(logMess("Received stream event (%s)", event.getClass().getName()));
 
-            if (event instanceof NewReceiveStreamEvent)
-            {
-                stream = event.getReceiveStream();
-                if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                    owner.getLogger().debug(logMess("Received new stream"));
-
-                sourceCloneBuilder = new DataSourceCloneBuilder(
-                        (PushBufferDataSource)stream.getDataSource(), owner, logMess(""));
-                sourceCloneBuilder.open();
-
-    //            source = Manager.createCloneableDataSource(stream.getDataSource());
-
-    //            RTPControl ctl = (RTPControl)source.getControl("javax.media.rtp.RTPControl");
-    //            if (ctl!=null)
-    //                if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-    //                    owner.getLogger().debug(logMess("The format of the stream: %s", ctl.getFormat()));
-
-                lock.lock();
-                try{
-                    owner.getLogger().debug(logMess("Sending dataSourceCreatedEvent to consumers"));
-                    status = Status.OPENED;
-                    if (!consumers.isEmpty())
-                        for (Consumer consumer: consumers)
-                            consumer.fireDataSourceCreatedEvent();
-
-                }finally{
-                    lock.unlock();
-                }
-            }
-            else if (event instanceof ByeEvent)
-            {
+            if (event instanceof NewReceiveStreamEvent) {
+                initStream(event);
+            } else if (event instanceof ByeEvent) {
                 lock.lock();
                 try {
                     status = Status.CLOSED;
                 } finally {
                     lock.unlock();
                 }
-    //            Thread.sleep(500);
-    //            release();
+            } else if (event instanceof RemotePayloadChangeEvent) {
+                RemotePayloadChangeEvent payloadEvent = (RemotePayloadChangeEvent) event;
+                if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                owner.getLogger().debug(logMess("Payload changed to %d", payloadEvent.getNewPayload()));
+                if (payloadEvent.getNewPayload()<19) {
+                    if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                        owner.getLogger().debug("Trying to handle received stream");
+                    initStream(event);
+                }
             }
         } catch (Exception e) {
             if (owner.isLogLevelEnabled(LogLevel.ERROR))
                 owner.getLogger().error(logMess("Error initializing rtp data source"), e);
             status = Status.CLOSED;
+        }
+    }
+    
+    private void initStream(final ReceiveStreamEvent event) throws IOException {
+        stream = event.getReceiveStream();
+        if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+            owner.getLogger().debug(logMess("Received new stream"));
+
+        sourceCloneBuilder = new DataSourceCloneBuilder(
+                (PushBufferDataSource)stream.getDataSource(), owner, logMess(""));
+        sourceCloneBuilder.open();
+        lock.lock();
+        try{
+            owner.getLogger().debug(logMess("Sending dataSourceCreatedEvent to consumers"));
+            status = Status.OPENED;
+            if (!consumers.isEmpty())
+                for (Consumer consumer: consumers)
+                    consumer.fireDataSourceCreatedEvent();
+
+        }finally{
+            lock.unlock();
         }
     }
 
@@ -325,18 +328,9 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
                                     + "of consumer already closed"));
                         return;
                     }
-//                    inDataSource = !firstConsumerAdded? source : ((SourceCloneable)source).createClone();
                     inDataSource = sourceCloneBuilder.createClone();
                     inDataSource = new RealTimeDataSource((PushBufferDataSource)inDataSource, owner, logPrefix);
-                    
-//                    inDataSource = ((SourceCloneable)source).createClone();
-//                    firstConsumerAdded = true;
-
-//                    processor = ControllerStateWaiter.createRealizedProcessor(inDataSource, format, 4000);
-//                    outDataSource = processor.getDataOutput();
-//                    processor.start();
                 }
-//                listener.dataSourceCreated(IncomingRtpStreamImpl.this, outDataSource);
                 listener.dataSourceCreated(IncomingRtpStreamImpl.this, inDataSource);
             } catch(Exception e) {
                 if (owner.isLogLevelEnabled(LogLevel.ERROR))
