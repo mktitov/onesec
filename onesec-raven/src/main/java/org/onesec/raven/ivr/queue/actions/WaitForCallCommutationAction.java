@@ -43,10 +43,12 @@ public class WaitForCallCommutationAction extends AsyncAction
     private final static String NAME = "Wait for commutation action";
     private final static String BEEP_RESOURCE_NAME = "/org/onesec/raven/ivr/phone_beep.wav";
     private final static int WAIT_TIMEOUT = 100;
+    private final static int ABONENT_READY_WAIT_TIMEOUT = 1500;
 
     private final Lock lock = new ReentrantLock();
     private final Condition abonentReadyCondition = lock.newCondition();
     private final Condition preamblePlayedCondition = lock.newCondition();
+    private volatile boolean abonentReady = false;
     private final Node owner;
 
     public WaitForCallCommutationAction(Node owner) {
@@ -74,24 +76,40 @@ public class WaitForCallCommutationAction extends AsyncAction
                 commutationManager.operatorReadyToCommutate(conv);
                 bindings.put(executedFlagKey, true);
             }
-
-            boolean preamblePlayed = executed;
-            while (!hasCancelRequest() && commutationManager.isCommutationValid()){
-                if (!preamblePlayed) {
-                    lock.lock();
-                    try {
-                        if (abonentReadyCondition.await(WAIT_TIMEOUT, TimeUnit.MILLISECONDS)) {
-                            preamblePlayed = true;
-                            IvrUtils.playAudioInAction(this, conv
-                                    , new ResourceInputStreamSource(BEEP_RESOURCE_NAME), this);
-                            preamblePlayedCondition.signal();
-                        }
-                    } finally {
-                        lock.unlock();
-                    }
-                } else
-                    TimeUnit.MILLISECONDS.sleep(WAIT_TIMEOUT);
+            
+            while (!executed && !hasCancelRequest() && commutationManager.isCommutationValid()) {
+                IvrUtils.playAudioInAction(this, conv, new ResourceInputStreamSource(BEEP_RESOURCE_NAME), this);
+                lock.lock();
+                try {
+                    if (!abonentReady)
+                        abonentReadyCondition.await(ABONENT_READY_WAIT_TIMEOUT, TimeUnit.MILLISECONDS);
+                    if (abonentReady)
+                        preamblePlayedCondition.signal();
+                } finally {
+                    lock.unlock();
+                }
             }
+
+            while (!hasCancelRequest() && commutationManager.isCommutationValid())
+                TimeUnit.MILLISECONDS.sleep(WAIT_TIMEOUT);
+                
+//            boolean preamblePlayed = executed;
+//            while (!hasCancelRequest() && commutationManager.isCommutationValid()){
+//                if (!preamblePlayed) {
+//                    lock.lock();
+//                    try {
+//                        if (abonentReadyCondition.await(WAIT_TIMEOUT, TimeUnit.MILLISECONDS)) {
+//                            preamblePlayed = true;
+//                            IvrUtils.playAudioInAction(this, conv
+//                                    , new ResourceInputStreamSource(BEEP_RESOURCE_NAME), this);
+//                            preamblePlayedCondition.signal();
+//                        }
+//                    } finally {
+//                        lock.unlock();
+//                    }
+//                } else
+//                    TimeUnit.MILLISECONDS.sleep(WAIT_TIMEOUT);
+//            }
         } finally {
             commutationManager.removeListener(this);
         }
@@ -104,6 +122,7 @@ public class WaitForCallCommutationAction extends AsyncAction
     public void abonentReady() {
         lock.lock();
         try {
+            abonentReady = true;
             abonentReadyCondition.signal();
             try {
                 preamblePlayedCondition.await();
