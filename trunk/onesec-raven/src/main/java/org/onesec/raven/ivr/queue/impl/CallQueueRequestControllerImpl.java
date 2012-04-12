@@ -457,7 +457,6 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
         }
 
         public void conversationTransfered(IvrEndpointConversationTransferedEvent event) {
-            invalidate();
         }
     }
 }

@@ -145,8 +145,12 @@ public class IvrInformerSession extends ConversationCdrRegistrator implements En
             return;
         }
         String _abonentNumber = converter.convert(String.class, rec.getValue(ABONENT_NUMBER_FIELD), null);
+        if (_abonentNumber==null && informer.isLogLevelEnabled(LogLevel.WARN))
+            informer.getLogger().warn("Record has NULL abonent number");
         statusMessage.set(String.format("Calling to the abonent number (%s)", _abonentNumber));
         _abonentNumber = informer.translateNumber(_abonentNumber, rec);
+        if (_abonentNumber==null && informer.isLogLevelEnabled(LogLevel.WARN))
+            informer.getLogger().warn("Abonent number translated to NULL");
         abonentNumber = _abonentNumber;
         Map<String, Object> bindings = new HashMap<String, Object>();
         bindings.put(AsyncIvrInformer.RECORD_BINDING, rec);

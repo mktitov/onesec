@@ -189,7 +189,7 @@ public class AbonentCommutationManagerImpl implements LazyCallQueueRequest, Abon
     }
     
     private class EndpointRequestListener implements EndpointRequest {
-
+        
         public void processRequest(IvrEndpoint endpoint) {
             callToAbonent(endpoint);
         }
@@ -214,6 +214,7 @@ public class AbonentCommutationManagerImpl implements LazyCallQueueRequest, Abon
     private class ConversationListener extends IvrEndpointConversationListenerAdapter {
         private final IvrEndpoint endpoint;
         private final IvrEndpointPool endpointPool;
+        private volatile boolean conversationStarted = false;
 
         public ConversationListener(IvrEndpoint endpoint, IvrEndpointPool endpointPool) {
             this.endpoint = endpoint;
@@ -227,8 +228,15 @@ public class AbonentCommutationManagerImpl implements LazyCallQueueRequest, Abon
         }
 
         @Override
+        public void conversationStarted(IvrEndpointConversationEvent event) {
+            conversationStarted = true;
+        }
+
+        @Override
         public void conversationStopped(IvrEndpointConversationStoppedEvent event) {
             endpointPool.releaseEndpoint(endpoint);
+            if (!conversationStarted)
+                fireRequestCanceledEvent();
         }
     }
 }
