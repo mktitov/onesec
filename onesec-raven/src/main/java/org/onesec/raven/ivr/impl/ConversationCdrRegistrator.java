@@ -17,13 +17,7 @@
 
 package org.onesec.raven.ivr.impl;
 
-import org.onesec.raven.ivr.ConversationCdr;
-import org.onesec.raven.ivr.IvrEndpointConversationEvent;
-import org.onesec.raven.ivr.IvrEndpointConversationListener;
-import org.onesec.raven.ivr.IvrEndpointConversationStoppedEvent;
-import org.onesec.raven.ivr.IvrEndpointConversationTransferedEvent;
-import org.onesec.raven.ivr.IvrIncomingRtpStartedEvent;
-import org.onesec.raven.ivr.IvrOutgoingRtpStartedEvent;
+import org.onesec.raven.ivr.*;
 
 /**
  *
@@ -56,4 +50,6 @@ public class ConversationCdrRegistrator implements IvrEndpointConversationListen
     public void incomingRtpStarted(IvrIncomingRtpStartedEvent event) { }
 
     public void outgoingRtpStarted(IvrOutgoingRtpStartedEvent event) { }
+
+    public void dtmfReceived(IvrDtmfReceivedConversationEvent event) { }
 }

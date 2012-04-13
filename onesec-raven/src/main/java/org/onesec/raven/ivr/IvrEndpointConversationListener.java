@@ -50,4 +50,6 @@ public interface IvrEndpointConversationListener
      * Fires when outgoing RTP of the conversation were started
      */
     public void outgoingRtpStarted(IvrOutgoingRtpStartedEvent event);
+    
+    public void dtmfReceived(IvrDtmfReceivedConversationEvent event);
 }

@@ -150,6 +150,10 @@ public class TestEndpointConversationNode extends BaseNode implements IvrEndpoin
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
+    public void sendDTMF(String digits) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
     public ConversationScenarioState getConversationScenarioState() {
         return conversationScenarioState;
     }

@@ -21,21 +21,7 @@ import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.media.protocol.DataSource;
-import org.onesec.raven.ivr.AudioStream;
-import org.onesec.raven.ivr.IncomingRtpStream;
-import org.onesec.raven.ivr.IncomingRtpStreamDataSourceListener;
-import org.onesec.raven.ivr.IvrConversationsBridge;
-import org.onesec.raven.ivr.IvrConversationsBridgeListener;
-import org.onesec.raven.ivr.IvrConversationsBridgeStatus;
-import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.onesec.raven.ivr.IvrEndpointConversationEvent;
-import org.onesec.raven.ivr.IvrEndpointConversationListener;
-import org.onesec.raven.ivr.IvrEndpointConversationState;
-import org.onesec.raven.ivr.IvrEndpointConversationStoppedEvent;
-import org.onesec.raven.ivr.IvrEndpointConversationTransferedEvent;
-import org.onesec.raven.ivr.IvrIncomingRtpStartedEvent;
-import org.onesec.raven.ivr.IvrOutgoingRtpStartedEvent;
-import org.onesec.raven.ivr.RtpStreamException;
+import org.onesec.raven.ivr.*;
 import org.raven.log.LogLevel;
 import org.raven.tree.Node;
 
@@ -274,6 +260,12 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
                 }
                 checkBridgeState();
             }
+        }
+
+        public void dtmfReceived(IvrDtmfReceivedConversationEvent ev) {
+            if (ev.getConversation()!=conv1)
+                return;
+            conv2.sendDTMF(""+ev.getDtmf());
         }
 
         public void streamClosing(IncomingRtpStream stream) {

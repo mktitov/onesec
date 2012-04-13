@@ -33,16 +33,7 @@ import org.onesec.core.services.ProviderRegistry;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.impl.CCMCallOperatorNode;
 import org.onesec.raven.impl.ProviderNode;
-import org.onesec.raven.ivr.ConversationCompletionCallback;
-import org.onesec.raven.ivr.ConversationCdr;
-import org.onesec.raven.ivr.IvrEndpointConversationEvent;
-import org.onesec.raven.ivr.IvrEndpointConversationListener;
-import org.onesec.raven.ivr.IvrEndpointConversationStoppedEvent;
-import org.onesec.raven.ivr.IvrEndpointConversationTransferedEvent;
-import org.onesec.raven.ivr.IvrEndpointState;
-import org.onesec.raven.ivr.IvrIncomingRtpStartedEvent;
-import org.onesec.raven.ivr.IvrOutgoingRtpStartedEvent;
-import org.onesec.raven.ivr.SendMessageDirection;
+import org.onesec.raven.ivr.*;
 import org.onesec.raven.ivr.actions.DtmfProcessPointActionNode;
 import org.onesec.raven.ivr.actions.PauseActionNode;
 import org.onesec.raven.ivr.actions.PlayAudioActionNode;
@@ -650,6 +641,9 @@ public class IvrEndpointNodeTest
         }
 
         public void conversationTransfered(IvrEndpointConversationTransferedEvent event) {
+        }
+
+        public void dtmfReceived(IvrDtmfReceivedConversationEvent event) {
         }
     }
 }

@@ -258,6 +258,8 @@ public class IvrConversationsBridgeManagerNodeTest extends OnesecRavenTestCase
     public void listenerAdded(IvrEndpointConversationEvent event) {
     }
 
+    public void dtmfReceived(IvrDtmfReceivedConversationEvent event) { }
+
     public synchronized void conversationStarted(IvrEndpointConversationEvent event) {
         conversations.add(event.getConversation());
         if (conversations.size()==2){

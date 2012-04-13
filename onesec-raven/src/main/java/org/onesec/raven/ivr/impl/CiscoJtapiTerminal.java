@@ -71,22 +71,7 @@ import javax.telephony.media.events.MediaTermConnDtmfEv;
 import org.onesec.core.provider.ProviderController;
 import org.onesec.core.services.ProviderRegistry;
 import org.onesec.core.services.StateListenersCoordinator;
-import org.onesec.raven.ivr.Codec;
-import org.onesec.raven.ivr.CompletionCode;
-import org.onesec.raven.ivr.IncomingRtpStream;
-import org.onesec.raven.ivr.IvrConversationScenario;
-import org.onesec.raven.ivr.IvrEndpointConversationEvent;
-import org.onesec.raven.ivr.IvrEndpointConversationException;
-import org.onesec.raven.ivr.IvrEndpointConversationListener;
-import org.onesec.raven.ivr.IvrEndpointConversationState;
-import org.onesec.raven.ivr.IvrEndpointConversationStoppedEvent;
-import org.onesec.raven.ivr.IvrEndpointConversationTransferedEvent;
-import org.onesec.raven.ivr.IvrEndpointException;
-import org.onesec.raven.ivr.IvrIncomingRtpStartedEvent;
-import org.onesec.raven.ivr.IvrOutgoingRtpStartedEvent;
-import org.onesec.raven.ivr.IvrTerminal;
-import org.onesec.raven.ivr.IvrTerminalState;
-import org.onesec.raven.ivr.RtpStreamManager;
+import org.onesec.raven.ivr.*;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.impl.AbstractTask;
@@ -217,7 +202,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                     throw new Exception("Can't invite oppenent to conversation. Too many opened channels");
                 call = provider.createCall();
                 IvrEndpointConversationImpl conv = new IvrEndpointConversationImpl(term, executor, scenario
-                        , rtpStreamManager, enableIncomingRtp, bindings);
+                        , rtpStreamManager, enableIncomingRtp, address, bindings);
                 conv.addConversationListener(listener);
                 conv.addConversationListener(this);
                 ConvHolder holder = new ConvHolder(conv, false);
@@ -391,7 +376,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                         logger.debug(callLog(call, "Creating conversation"));
                     IvrEndpointConversationImpl conv = new IvrEndpointConversationImpl(
                             term, executor, conversationScenario, rtpStreamManager
-                            , enableIncomingRtp, null);
+                            , enableIncomingRtp, address, null);
                     conv.setCall((CallControlCall) call);
                     conv.addConversationListener(this);
                     calls.put(call, new ConvHolder(conv, true));
@@ -755,6 +740,14 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
         });
     }
 
+    public void dtmfReceived(final IvrDtmfReceivedConversationEvent event) {
+        fireConversationEvent(new MethodCaller() {
+            @Override public void callMethod(IvrEndpointConversationListener listener) {
+                listener.dtmfReceived(event);
+            }
+        });
+    }
+
     //--------------- End of the IvrEndpointConversationListener methods -----------------//
 
     private class ConvHolder {
@@ -822,6 +815,8 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
         public void incomingRtpStarted(IvrIncomingRtpStartedEvent event) { }
 
         public void outgoingRtpStarted(IvrOutgoingRtpStartedEvent event) { }
+
+        public void dtmfReceived(IvrDtmfReceivedConversationEvent event) { }
     }
     
     private class MaxCallDurationHandler extends AbstractTask {
