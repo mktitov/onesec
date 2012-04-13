@@ -29,12 +29,7 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.onesec.raven.ivr.IvrEndpointConversationEvent;
-import org.onesec.raven.ivr.IvrEndpointConversationListener;
-import org.onesec.raven.ivr.IvrEndpointConversationState;
-import org.onesec.raven.ivr.IvrEndpointConversationStoppedEvent;
-import org.onesec.raven.ivr.IvrEndpointConversationTransferedEvent;
+import org.onesec.raven.ivr.*;
 import org.onesec.raven.ivr.queue.*;
 import org.onesec.raven.ivr.queue.event.*;
 import org.onesec.raven.ivr.queue.event.impl.*;
@@ -456,7 +451,8 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
             invalidate();
         }
 
-        public void conversationTransfered(IvrEndpointConversationTransferedEvent event) {
-        }
+        public void conversationTransfered(IvrEndpointConversationTransferedEvent event) { }
+
+        public void dtmfReceived(IvrDtmfReceivedConversationEvent event) { }
     }
 }

@@ -18,17 +18,7 @@
 package org.onesec.raven.ivr.impl;
 
 import java.util.Map;
-import org.onesec.raven.ivr.CompletionCode;
-import org.onesec.raven.ivr.IvrConversationScenario;
-import org.onesec.raven.ivr.IvrEndpoint;
-import org.onesec.raven.ivr.IvrEndpointConversationEvent;
-import org.onesec.raven.ivr.IvrEndpointConversationListener;
-import org.onesec.raven.ivr.IvrEndpointConversationStoppedEvent;
-import org.onesec.raven.ivr.IvrEndpointConversationTransferedEvent;
-import org.onesec.raven.ivr.IvrEndpointState;
-import org.onesec.raven.ivr.IvrIncomingRtpStartedEvent;
-import org.onesec.raven.ivr.IvrOutgoingRtpStartedEvent;
-import org.onesec.raven.ivr.IvrTerminalState;
+import org.onesec.raven.ivr.*;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.log.LogLevel;
@@ -144,6 +134,8 @@ public class IvrEndpointNode extends AbstractEndpointNode
     public void outgoingRtpStarted(IvrOutgoingRtpStartedEvent event) { }
 
     public void listenerAdded(IvrEndpointConversationEvent event) { }
+
+    public void dtmfReceived(IvrDtmfReceivedConversationEvent event) { }
 
     public IvrEndpointState getEndpointState() {
         return endpointState;

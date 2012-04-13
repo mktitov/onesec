@@ -106,4 +106,8 @@ public interface IvrEndpointConversation extends ObjectDescription
      * @param direction point to the terminal to which the message will be sent
      */
     public void sendMessage(String message, String encoding, SendMessageDirection direction);
+    /**
+     * Sends every char in <b>digits</b> as dtmf signals.
+     */
+    public void sendDTMF(String digits);
 }

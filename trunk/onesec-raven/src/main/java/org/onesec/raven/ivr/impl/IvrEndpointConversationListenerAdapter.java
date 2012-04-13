@@ -32,4 +32,6 @@ public class IvrEndpointConversationListenerAdapter implements IvrEndpointConver
     public void incomingRtpStarted(IvrIncomingRtpStartedEvent event) { }
 
     public void outgoingRtpStarted(IvrOutgoingRtpStartedEvent event) { }
+
+    public void dtmfReceived(IvrDtmfReceivedConversationEvent event) { }
 }
