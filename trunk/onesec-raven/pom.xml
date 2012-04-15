@@ -55,6 +55,11 @@
             <artifactId>junit</artifactId>
         </dependency>
         
+        <dependency>
+            <groupId>com.logica</groupId>
+            <artifactId>smpp</artifactId>
+        </dependency>
+            
 <!--        <dependency>
             <groupId>net.sf.fmj</groupId>
             <artifactId>fmj</artifactId>
