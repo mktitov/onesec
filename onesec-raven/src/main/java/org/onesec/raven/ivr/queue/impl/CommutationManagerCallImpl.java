@@ -37,7 +37,7 @@ import org.weda.beans.ObjectUtils;
  */
 public class  CommutationManagerCallImpl 
     implements CommutationManagerCall, IvrConversationsBridgeListener, EndpointRequest
-            , RequestWrapperListener
+            , RequestControllerListener
 {
     public final static String SEARCHING_FOR_ENDPOINT_MSG = "Looking up for free endpoint in the pool (%s)";
     public enum State {INIT, NO_FREE_ENDPOINTS, INVITING, OPERATOR_READY, ABONENT_READY, COMMUTATED
