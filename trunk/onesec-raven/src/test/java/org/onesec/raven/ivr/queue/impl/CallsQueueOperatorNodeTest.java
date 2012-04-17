@@ -117,7 +117,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
         request.addToLog("handling by operator (operator)");
         request.fireOperatorGreetingQueueEvent(audioFile);
         request.fireOperatorQueueEvent(operator.getName());
-        request.addRequestWrapperListener(isA(RequestWrapperListener.class));
+        request.addRequestWrapperListener(isA(RequestControllerListener.class));
         expect(request.isValid()).andReturn(Boolean.TRUE);
         expect(request.isHandlingByOperator()).andReturn(false);
         expect(request.logMess(isA(String.class), isA(String.class))).andReturn("log mess").anyTimes();
@@ -151,7 +151,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
         request.addToLog("handling by operator (operator)");
         pool.requestEndpoint(sendEndpoint(endpoint));
         pool.releaseEndpoint(endpoint);
-        request.addRequestWrapperListener(isA(RequestWrapperListener.class));
+        request.addRequestWrapperListener(isA(RequestControllerListener.class));
         expect(request.isValid()).andReturn(Boolean.TRUE).anyTimes();
         expect(request.isHandlingByOperator()).andReturn(false).anyTimes();
         endpoint.invite(eq("88024"), geq(4), eq(0), checkConvListener(), same(scenario)
@@ -200,7 +200,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
         request.addToLog("handling by operator (operator)");
         expect(request.isValid()).andReturn(Boolean.TRUE).anyTimes();
         expect(request.isHandlingByOperator()).andReturn(false).anyTimes();
-        request.addRequestWrapperListener(isA(RequestWrapperListener.class));
+        request.addRequestWrapperListener(isA(RequestControllerListener.class));
         pool.requestEndpoint(sendEndpoint(operatorEndpoint));
         
         //INVITING STEP

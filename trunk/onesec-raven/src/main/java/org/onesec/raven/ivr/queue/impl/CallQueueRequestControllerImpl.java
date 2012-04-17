@@ -52,7 +52,7 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
 //    private final Listener listener;
     private final long requestId;
     private final AtomicBoolean cdrSent = new AtomicBoolean(false);
-    private final Set<RequestWrapperListener> listeners = new HashSet<RequestWrapperListener>();
+    private final Set<RequestControllerListener> listeners = new HashSet<RequestControllerListener>();
     private final Record cdr;
     private final boolean lazyRequest;
 
@@ -99,7 +99,7 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
 
     public void addRequestListener(CallQueueRequestListener listener) { }
 
-    public void addRequestWrapperListener(RequestWrapperListener listener) {
+    public void addRequestWrapperListener(RequestControllerListener listener) {
         synchronized (listeners) {
             listeners.add(listener);
         }
@@ -393,14 +393,14 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
 
     private void fireRequestInvalidated() {
         synchronized(listeners) {
-            for (RequestWrapperListener listener: listeners) 
+            for (RequestControllerListener listener: listeners) 
                 listener.requestInvalidated();
         }
     }
 
     private void fireRequestProcessingByOperator(CommutationManagerCall operator) {
         synchronized(listeners) {
-            for (RequestWrapperListener listener: listeners) 
+            for (RequestControllerListener listener: listeners) 
                 listener.processingByOperator(operator);
         }
     }

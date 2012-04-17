@@ -166,5 +166,5 @@ public interface CallQueueRequestController extends CallQueueRequest
     /**
      * Adds a request wrapper listener
      */
-    public void addRequestWrapperListener(RequestWrapperListener listener);
+    public void addRequestWrapperListener(RequestControllerListener listener);
 }

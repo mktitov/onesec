@@ -17,7 +17,7 @@ package org.onesec.raven.ivr.queue;
  *
  * @author Mikhail Titov
  */
-public interface RequestWrapperListener {
+public interface RequestControllerListener {
     /**
      * Inform listener that request was invalidated
      */
