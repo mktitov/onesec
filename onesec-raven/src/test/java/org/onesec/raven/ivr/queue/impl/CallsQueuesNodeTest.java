@@ -389,8 +389,8 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         CallsQueueOperatorNode operator = new CallsQueueOperatorNode();
         operator.setName("Titov MK");
         queues.getOperatorsNode().addAndSaveChildren(operator);
-//        operator.setPhoneNumbers("88027");
-        operator.setPhoneNumbers("02089128672947");
+        operator.setPhoneNumbers("88027");
+//        operator.setPhoneNumbers("02089128672947");
 //        operator.setPhoneNumbers("88027,089128672947");
         operator.setParallelCallAfter(5);
         operator.setEndpointPool(pool);
@@ -398,21 +398,22 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         operator.setLogLevel(LogLevel.TRACE);
         operator.setGreeting(greeting);
         operator.setExecutor(executor);
+        operator.setInviteTimeout(60);
         assertTrue(operator.start());
 
-        operator = new CallsQueueOperatorNode();
-        operator.setName("Titov MK 2");
-        queues.getOperatorsNode().addAndSaveChildren(operator);
-        operator.setPhoneNumbers("88027");
-//        operator.setPhoneNumbers("089128672947");
-//        operator.setPhoneNumbers("88027,089128672947");
-        operator.setParallelCallAfter(5);
-        operator.setEndpointPool(pool);
-        operator.setConversationsBridgeManager(bridge);
-        operator.setLogLevel(LogLevel.TRACE);
-        operator.setGreeting(greeting);
-        operator.setExecutor(executor);
-        assertTrue(operator.start());
+//        operator = new CallsQueueOperatorNode();
+//        operator.setName("Titov MK 2");
+//        queues.getOperatorsNode().addAndSaveChildren(operator);
+//        operator.setPhoneNumbers("88027");
+////        operator.setPhoneNumbers("089128672947");
+////        operator.setPhoneNumbers("88027,089128672947");
+//        operator.setParallelCallAfter(5);
+//        operator.setEndpointPool(pool);
+//        operator.setConversationsBridgeManager(bridge);
+//        operator.setLogLevel(LogLevel.TRACE);
+//        operator.setGreeting(greeting);
+//        operator.setExecutor(executor);
+//        assertTrue(operator.start());
 
         CallsQueueNode queue = new CallsQueueNode();
         queue.setName("test");

@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import org.onesec.raven.ivr.*;
 import org.onesec.raven.ivr.impl.IvrEndpointConversationListenerAdapter;
@@ -59,7 +60,7 @@ public class AbonentCommutationManagerImpl implements LazyCallQueueRequest, Abon
     private volatile IvrEndpointConversation conversation;
     private volatile boolean canceled = false;
     private volatile CommutationManagerCall commutationManager;
-    private volatile boolean disconnected = false;
+    private AtomicBoolean disconnected = new AtomicBoolean(false);
     private final List<CallQueueRequestListener> listeners = new LinkedList<CallQueueRequestListener>();
 
     public AbonentCommutationManagerImpl(String abonentNumber, String queueId, int priority
@@ -90,14 +91,23 @@ public class AbonentCommutationManagerImpl implements LazyCallQueueRequest, Abon
             commutationManager = ((ReadyToCommutateQueueEvent)event).getCommutationManager();
             initiateCallToAbonent();
         } else if (event instanceof DisconnectedQueueEvent) {
-            disconnected = true;
+            processDisconnect();
         } else if (event instanceof RejectedQueueEvent) {
-            disconnected = true;
+            processDisconnect();
+        }
+    }
+    
+    private synchronized void processDisconnect() {
+        if (   disconnected.compareAndSet(false, true) 
+            && conversation!=null 
+            && IvrEndpointConversationState.TALKING!=conversation.getState().getId())
+        {
+            conversation.stopConversation(CompletionCode.COMPLETED_BY_ENDPOINT);
         }
     }
 
     public boolean isCommutationValid() {
-        return !disconnected;
+        return !disconnected.get();
     }
 
     public String getAbonentNumber() {
@@ -147,7 +157,10 @@ public class AbonentCommutationManagerImpl implements LazyCallQueueRequest, Abon
         try {
             if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                 owner.getLogger().debug(logMess("Initiating call to abonent"));
-            endpointPool.requestEndpoint(new EndpointRequestListener());
+            if (!disconnected.get())
+                endpointPool.requestEndpoint(new EndpointRequestListener());
+            else if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                owner.getLogger().debug("Request is already in DISCONNECTED state, so no need to initiate call");
         } catch (ExecutorServiceException ex) {
             if (owner.isLogLevelEnabled(LogLevel.ERROR))
                 owner.getLogger().error(logMess("Error while requesting endpoint from the pool"), ex);
@@ -159,14 +172,20 @@ public class AbonentCommutationManagerImpl implements LazyCallQueueRequest, Abon
         commutationManager.abonentReadyToCommutate(abonentConversation);
     }
     
-    private void callToAbonent(IvrEndpoint endpoint) {
+    private synchronized void callToAbonent(IvrEndpoint endpoint) {
         if (owner.isLogLevelEnabled(LogLevel.DEBUG))
             owner.getLogger().debug(logMess("Calling to the abonent"));
-        Map<String, Object> bindings = new HashMap<String, Object>();
-        bindings.put(ABONENT_COMMUTATION_MANAGER_BINDING, this);
-        endpoint.invite(abonentNumber, inviteTimeout, 0
-                , new ConversationListener(endpoint, endpointPool)
-                , conversationScenario, bindings);
+        if (disconnected.get()) {
+            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                owner.getLogger().debug("Request is already in the DISCONNECTED state, so no need for call to the abonent");
+            endpointPool.releaseEndpoint(endpoint);
+        } else {
+            Map<String, Object> bindings = new HashMap<String, Object>();
+            bindings.put(ABONENT_COMMUTATION_MANAGER_BINDING, this);
+            endpoint.invite(abonentNumber, inviteTimeout, 0
+                    , new ConversationListener(endpoint, endpointPool)
+                    , conversationScenario, bindings);
+        }
     }
     
     private String logMess(String message, Object... args) {
