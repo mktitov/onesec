@@ -215,8 +215,10 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
             } catch (Throwable e) {
                 if (isLogLevelEnabled(LogLevel.WARN)) {
                     logger.warn(String.format("Problem with inviting abonent with number (%s)", opponentNum), e);
-                    listener.conversationStopped(new IvrEndpointConversationStoppedEventImpl(
-                            null, CompletionCode.TERMINAL_NOT_READY));
+                    IvrEndpointConversationStoppedEvent ev = new IvrEndpointConversationStoppedEventImpl(
+                            null, CompletionCode.TERMINAL_NOT_READY);
+                    listener.conversationStopped(ev);
+                    conversationStopped(ev);
                 }
                 if (call!=null)
                     stopConversation(call, CompletionCode.OPPONENT_UNKNOWN_ERROR);

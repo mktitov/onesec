@@ -62,6 +62,7 @@ public class AbonentCommutationManagerImplTest {
         IvrConversationScenario scenario = createMock(IvrConversationScenario.class);
         IvrEndpointConversationEvent conversationEvent = createMock(IvrEndpointConversationEvent.class);
         IvrEndpointConversation conversation = createMock(IvrEndpointConversation.class);
+        IvrEndpointConversationState convState = createMock(IvrEndpointConversationState.class);
         CallQueueRequestListener requestListener = createMock(CallQueueRequestListener.class);
         DisconnectedQueueEvent disconnectedEvent = createMock(DisconnectedQueueEvent.class);
         
@@ -82,10 +83,12 @@ public class AbonentCommutationManagerImplTest {
         //abonentReadyToCommutate
         commutationManager.abonentReadyToCommutate(conversation);
         //abonent conversation stopped
+        expect(conversation.getState()).andReturn(convState);
+        expect(convState.getId()).andReturn(IvrEndpointConversationState.TALKING);
         pool.releaseEndpoint(endpoint);
         
         replay(context, owner, logger, readyEvent, commutationManager, pool, endpoint, scenario
-                , conversationEvent, conversation, requestListener, disconnectedEvent);
+                , conversationEvent, conversation, requestListener, disconnectedEvent, convState);
         
         AbonentCommutationManagerImpl manager = new AbonentCommutationManagerImpl(abonentNumber, 
                 queueId, priority, owner, context, pool, scenario, inviteTimeout, waitTimeout);
@@ -104,7 +107,7 @@ public class AbonentCommutationManagerImplTest {
         listener.conversationStopped(null);
         
         verify(context, owner, logger, readyEvent, commutationManager, pool, endpoint, scenario
-                , conversationEvent, conversation, requestListener, disconnectedEvent);
+                , conversationEvent, conversation, requestListener, disconnectedEvent, convState);
     }
 
     public static EndpointRequest checkEndpointPoolRequest(final Node owner, 
@@ -132,6 +135,7 @@ public class AbonentCommutationManagerImplTest {
             public boolean matches(Object argument) {
                 listener = (IvrEndpointConversationListener) argument;
                 listener.listenerAdded(event);
+                listener.conversationStarted(null);
                 return true;
             }
             public void appendTo(StringBuffer buffer) { }

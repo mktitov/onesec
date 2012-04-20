@@ -105,6 +105,12 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
         }
     }
 
+    public void removeRequestWrapperListener(RequestControllerListener listener) {
+        synchronized (listeners) {
+            listeners.remove(listener);
+        }
+    }
+
     public boolean isValid() {
         return valid.get() && !request.isCanceled();
     }

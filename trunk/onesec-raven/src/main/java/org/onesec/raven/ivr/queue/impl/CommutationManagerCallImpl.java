@@ -108,11 +108,14 @@ public class  CommutationManagerCallImpl
                     }
                     nextState = State.INVALID;
                     break;
-                case INVITING: /*getRequest().fireOperatorNumberQueueEvent(getOperatorNumber());*/ break;
+                case INVITING: /*getRequest().fireOperatorNumberQueueEvent(getOperatorNumber());*/ 
+                    this.getRequest().addRequestWrapperListener(this);
+                    break;
                 case OPERATOR_READY: 
                     if (isLogLevelEnabled(LogLevel.DEBUG))
                         logger.debug(logMess("Number (%s) ready to commutate", getOperatorNumber()));
                     addToLog("op. number (%s) ready to commutate", getOperatorNumber());
+//                    this.getRequest().addRequestWrapperListener(this);
                     if (!getRequest().fireReadyToCommutateQueueEvent(this)) 
                         nextState = State.INVALID;
                     break;
@@ -133,6 +136,7 @@ public class  CommutationManagerCallImpl
                     nextState = State.INVALID;
                     break;
                 case INVALID: 
+                    getRequest().removeRequestWrapperListener(this);
                     boolean success = ObjectUtils.in(state.get(), State.HANDLED, State.OPERATOR_READY)
                                         || canceled.get();
                     if (!success) {
@@ -222,7 +226,6 @@ public class  CommutationManagerCallImpl
 
     public void commutate() {
         try {
-            getRequest().addRequestWrapperListener(this);
             if (manager.getRequest().isValid() && !manager.getRequest().isHandlingByOperator())
                 manager.getEndpointPool().requestEndpoint(this);
             else
