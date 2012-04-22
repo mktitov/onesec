@@ -16,6 +16,7 @@
 package org.onesec.raven.sms;
 
 import java.util.Collection;
+import org.onesec.raven.sms.queue.ShortTextMessage;
 import org.raven.ds.DataConsumer;
 import org.raven.ds.DataContext;
 import org.raven.ds.DataPipe;
@@ -42,5 +43,9 @@ public class SmsTranseiverNode extends BaseNode implements DataPipe {
 
     public Collection<NodeAttribute> generateAttributes() {
         return null;
+    }
+    
+    public void messageHandled(ShortTextMessage message, boolean success) {
+        
     }
 }

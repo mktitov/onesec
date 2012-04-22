@@ -4,16 +4,14 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.concurrent.LinkedBlockingQueue;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.onesec.raven.sms.SmCoder;
-import com.logica.smpp.pdu.SubmitSM;
+import org.raven.tree.impl.LoggerHelper;
 
 public class OutQueue {
 
-    private static Logger log = LoggerFactory.getLogger(OutQueue.class);
+//    private static Logger log = LoggerFactory.getLogger(OutQueue.class);
     public int mesSequence = 0;
-    private Integer mesCount = 0;
     private int maxMesCount = 100;
     /**
      * Максимальное время нахождения сообщения в очереди (мс).
@@ -46,9 +44,13 @@ public class OutQueue {
     private HashMap<Integer, MessageUnit> sended = new HashMap<Integer, MessageUnit>();
     private HashSet<String> blockedNums = new HashSet<String>();
     private SmCoder coder;
+    
+    private final AtomicInteger mesCount = new AtomicInteger(0);
+    private final LoggerHelper logger;
 
-    public OutQueue(SmCoder c) {
-        coder = c;
+    public OutQueue(SmCoder c, LoggerHelper logger) {
+        this.coder = c;
+        this.logger = logger;
     }
 
     //public static MessageUnit[] noack
@@ -57,22 +59,17 @@ public class OutQueue {
     }
 
     public boolean addMessage(ShortTextMessage sm) {
-        SubmitSM[] ssm = coder.encode(sm);
-        if (ssm == null || ssm.length == 0) {
+        MessageUnit[] units = sm.getUnits(coder);
+        if (units == null || units.length == 0) 
             return false;
-        }
-        int mesId;
         synchronized (mesCount) {
-            if (mesCount + 1 > maxMesCount) {
+            if (mesCount.get() + 1 > maxMesCount) 
                 return false;
-            }
-            mesId = mesSequence++;
-            for (int i = 0; i < ssm.length; i++) {
-                queue.offer(new MessageUnit(ssm[i], mesId, ssm.length, i));
-            }
-            mesCount++;
+            for (int i = 0; i < units.length; i++) 
+                queue.offer(units[i]);
+            mesCount.incrementAndGet();
         }
-        log.info("addMessage text:'{}' id:{} segments:{}", new Object[]{sm.getMessage(), mesId, ssm.length});
+        logger.debug("Message ({}) queued", sm.getId());
         return true;
     }
 
@@ -124,9 +121,7 @@ public class OutQueue {
     }
 
     public void messageSended(MessageUnit u, boolean ok) {
-        synchronized (mesCount) {
-            mesCount--;
-        }
+        mesCount.decrementAndGet();
     }
 
     public MessageUnit getNext() {
@@ -235,9 +230,8 @@ public class OutQueue {
     }
 
     public void setFactorQF(int factor) {
-        if (factor < 0) {
+        if (factor < 0) 
             factor = 0;
-        }
         factorQF = factor;
     }
 
@@ -246,9 +240,8 @@ public class OutQueue {
     }
 
     public void setFactorTH(int factor) {
-        if (factor < 0) {
+        if (factor < 0) 
             factor = 0;
-        }
         factorTH = factor;
     }
 

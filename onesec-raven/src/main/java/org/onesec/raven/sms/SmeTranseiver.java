@@ -21,6 +21,7 @@ import com.logica.smpp.pdu.PDUException;
 import com.logica.smpp.pdu.SubmitSM;
 import com.logica.smpp.util.NotEnoughDataInByteBufferException;
 import com.logica.smpp.util.TerminatingZeroNotFoundException;
+import org.raven.tree.impl.LoggerHelper;
 
 /**
  * @author psn
@@ -95,7 +96,7 @@ public class SmeTranseiver extends Thread implements ISmeConfig {
     {
         setSrcAddr(new Address((byte) srcTon, (byte) srcNpi, fromAddr));
         smFactory = new SMTextFactory(this);
-        queue = new OutQueue(smFactory);
+//        queue = new OutQueue(smFactory, new LoggerHelper(null, fromAddr));
         SmeInit();
     }
 

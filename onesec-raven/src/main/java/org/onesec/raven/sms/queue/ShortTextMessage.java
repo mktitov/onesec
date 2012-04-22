@@ -1,9 +1,11 @@
 package org.onesec.raven.sms.queue;
 
 import com.logica.smpp.pdu.SubmitSM;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.onesec.raven.sms.SmCoder;
 import org.onesec.raven.sms.SmsTranseiverNode;
+import org.raven.tree.impl.LoggerHelper;
 
 public class ShortTextMessage {
 
@@ -11,29 +13,53 @@ public class ShortTextMessage {
     private final String message;
     private final Object tag;
     private final SmsTranseiverNode transeiver;
+    private final long id;
+    private final LoggerHelper logger;
     
-    private int unitsCount;
+    private final AtomicInteger unitsCount = new AtomicInteger(0);
+    private final AtomicBoolean success = new AtomicBoolean(true);
 
-    public ShortTextMessage(String dstAddr, String mes, Object tag, SmsTranseiverNode transeiver) {
+    public ShortTextMessage(String dstAddr, String mes, Object tag, SmsTranseiverNode transeiver, 
+            long id, LoggerHelper logger) 
+    {
         this.dst = dstAddr;
         this.message = mes;
         this.tag = tag;
         this.transeiver = transeiver;
+        this.id = id;
+        this.logger = logger;
     }
     
-    public MessageUnit[] getUnits(SmCoder coder, AtomicInteger counter) {
+    public MessageUnit[] getUnits(SmCoder coder) {
         SubmitSM[] ssm = coder.encode(this);
-        if (ssm == null || ssm.length == 0) 
+        if (ssm == null || ssm.length == 0) {
+            transeiver.messageHandled(this, false);
             return null;
+        }
         MessageUnit[] units = new MessageUnit[ssm.length];
-        unitsCount = ssm.length;
-        for (int i=0; i<unitsCount; ++i)
-            units[i] = new MessageUnit(ssm[i], counter.incrementAndGet(), unitsCount, i);
+        unitsCount.set(ssm.length);
+        for (int i=0; i<ssm.length; ++i)
+            units[i] = new MessageUnit(ssm[i], this, i==ssm.length-1, new LoggerHelper(logger, "["+i+"] "));
         return units;
+    }
+    
+    void unitHandled(boolean success) {
+        int count = unitsCount.decrementAndGet();
+        boolean stat = this.success.compareAndSet(true, success);
+        if (count<=0)
+            transeiver.messageHandled(this, stat);
+    }
+
+    public long getId() {
+        return id;
+    }
+
+    public Object getTag() {
+        return tag;
     }
 
     public int getUnitsCount() {
-        return unitsCount;
+        return unitsCount.get();
     }
 
     public String getDst() {
