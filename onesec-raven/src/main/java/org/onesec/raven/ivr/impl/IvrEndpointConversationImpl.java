@@ -596,12 +596,13 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         try {
             Connection[] cons = call.getConnections();
             MediaTerminalConnection termCon = null;
-            for (Connection con: cons)
-                if (terminalAddress.equals(con.getAddress().getName())) {
-                    TerminalConnection[] termCons = con.getTerminalConnections();
-                    if (termCons!=null && termCons.length>0)
-                        termCon = (MediaTerminalConnection) termCons[0];
-                }
+            if (cons!=null)
+                for (Connection con: cons)
+                    if (terminalAddress.equals(con.getAddress().getName())) {
+                        TerminalConnection[] termCons = con.getTerminalConnections();
+                        if (termCons!=null && termCons.length>0)
+                            termCon = (MediaTerminalConnection) termCons[0];
+                    }
             if (termCon==null)
                 throw new Exception("Not found terminal connection");
             termCon.generateDtmf(digits);
