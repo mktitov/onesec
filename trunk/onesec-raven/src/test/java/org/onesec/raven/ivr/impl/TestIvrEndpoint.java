@@ -21,11 +21,9 @@ import java.util.Map;
 import org.onesec.raven.ivr.AudioStream;
 import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.CompletionCode;
-import org.onesec.raven.ivr.ConversationCompletionCallback;
 import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.IvrEndpoint;
 import org.onesec.raven.ivr.IvrEndpointConversationListener;
-import org.onesec.raven.ivr.IvrEndpointException;
 import org.onesec.raven.ivr.IvrEndpointState;
 import org.onesec.raven.ivr.RtpAddress;
 import org.onesec.raven.ivr.RtpStreamManager;
@@ -88,6 +86,10 @@ public class TestIvrEndpoint extends BaseNode implements IvrEndpoint
 
     public void transfer(String address, boolean monitorTransfer, long callStartTimeout, long callEndTimeout)
     {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public int getActiveCallsCount() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

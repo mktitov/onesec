@@ -39,4 +39,8 @@ public interface IvrEndpoint extends IvrTerminal, Node
      * Removes conversation listener
      */
     public void removeConversationListener(IvrEndpointConversationListener listener);
+    /**
+     * Returns active calls count for the terminal
+     */
+    public int getActiveCallsCount();
 }
