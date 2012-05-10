@@ -583,8 +583,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                                     ++restartedEndpoints;
                             }
                         }
-                    if (restartedEndpoints>0)
-                    {
+                    if (restartedEndpoints>0) {
                         //giving some time for terminals to be IN_SERVICE
                         TimeUnit.SECONDS.sleep(5);
                         endpointReleased.signal();
@@ -594,7 +593,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                 } finally {
                     lock.writeLock().unlock();
                 }
-            }else if (isLogLevelEnabled(LogLevel.WARN))
+            } else if (isLogLevelEnabled(LogLevel.WARN))
                 warn("Error executing watchdog task. Timeout acquiring read lock");
 
         } catch (InterruptedException ex) {
