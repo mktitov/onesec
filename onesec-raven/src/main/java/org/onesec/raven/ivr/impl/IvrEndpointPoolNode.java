@@ -42,6 +42,7 @@ import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
 import org.raven.tree.impl.ViewableObjectImpl;
 import org.raven.util.LoadAverageStatistic;
+import org.raven.util.NodeUtils;
 import org.weda.annotations.constraints.NotNull;
 import org.weda.internal.annotations.Message;
 
@@ -565,32 +566,30 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                 try {
                     loadAverage.addDuration(0);
                     Collection<Node> childs = getSortedChildrens();
-                    if (childs!=null) {
-                        int restartedEndpoints = 0;
-                        for (Node child: childs)
-                            if (child instanceof IvrEndpoint && !busyEndpoints.containsKey(child.getId()))
+                    Collection<IvrEndpoint> endpoints = NodeUtils.getChildsOfType(this, IvrEndpoint.class, false);
+                    int restartedEndpoints = 0;
+                    for (IvrEndpoint endpoint: endpoints) 
+                        if (!busyEndpoints.containsKey(endpoint.getId())) {
+                            int state = endpoint.getEndpointState().getId();
+                            if (   Status.INITIALIZED==endpoint.getStatus()
+                                || (   Status.STARTED==endpoint.getStatus()
+                                    && (state!=IvrEndpointState.IN_SERVICE || endpoint.getActiveCallsCount()>0)))
                             {
-                                IvrEndpoint endpoint = (IvrEndpoint) child;
-                                if (   Status.INITIALIZED==child.getStatus()
-                                    || (   Status.STARTED==child.getStatus()
-                                        && endpoint.getEndpointState().getId()!=IvrEndpointState.IN_SERVICE))
-                                {
-                                    if (isLogLevelEnabled(LogLevel.DEBUG))
-                                        debug("Watchdog task. Restarting endpoint ({})", child.getName());
-                                    if (Status.STARTED==child.getStatus())
-                                        child.stop();
-                                    if (child.start())
-                                        ++restartedEndpoints;
-                                }
+                                if (isLogLevelEnabled(LogLevel.DEBUG))
+                                    debug("Watchdog task. Restarting endpoint ({})", endpoint.getName());
+                                if (Status.STARTED==endpoint.getStatus())
+                                    endpoint.stop();
+                                if (endpoint.start())
+                                    ++restartedEndpoints;
                             }
-                        if (restartedEndpoints>0)
-                        {
-                            //giving some time for terminals to be IN_SERVICE
-                            TimeUnit.SECONDS.sleep(5);
-                            endpointReleased.signal();
-                            if (isLogLevelEnabled(LogLevel.INFO))
-                                info("Watchdog task. Successfully restarted ({}) endpoints", restartedEndpoints);
                         }
+                    if (restartedEndpoints>0)
+                    {
+                        //giving some time for terminals to be IN_SERVICE
+                        TimeUnit.SECONDS.sleep(5);
+                        endpointReleased.signal();
+                        if (isLogLevelEnabled(LogLevel.INFO))
+                            info("Watchdog task. Successfully restarted ({}) endpoints", restartedEndpoints);
                     }
                 } finally {
                     lock.writeLock().unlock();

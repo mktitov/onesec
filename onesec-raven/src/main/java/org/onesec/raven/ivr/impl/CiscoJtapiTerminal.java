@@ -228,6 +228,15 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
             lock.writeLock().unlock();
         }
     }
+    
+    public int getActiveCallsCount() {
+        lock.readLock().lock();
+        try {
+            return calls.size();
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
 
     public List<ViewableObject> getViewableObjects() throws Exception {
         ViewableObject obj = null;
