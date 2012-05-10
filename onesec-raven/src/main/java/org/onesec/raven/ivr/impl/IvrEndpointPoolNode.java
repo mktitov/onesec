@@ -565,7 +565,6 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
             if (lock.writeLock().tryLock(500, TimeUnit.MILLISECONDS)) {
                 try {
                     loadAverage.addDuration(0);
-                    Collection<Node> childs = getSortedChildrens();
                     Collection<IvrEndpoint> endpoints = NodeUtils.getChildsOfType(this, IvrEndpoint.class, false);
                     int restartedEndpoints = 0;
                     for (IvrEndpoint endpoint: endpoints) 
@@ -595,7 +594,6 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                 }
             } else if (isLogLevelEnabled(LogLevel.WARN))
                 warn("Error executing watchdog task. Timeout acquiring read lock");
-
         } catch (InterruptedException ex) {
             if (isLogLevelEnabled(LogLevel.WARN))
                 warn("Wait for read lock was interrupted", ex);
