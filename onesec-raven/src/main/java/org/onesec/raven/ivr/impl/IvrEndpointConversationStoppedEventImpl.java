@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.impl;
 
+import javax.telephony.Call;
 import org.onesec.raven.ivr.CompletionCode;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.IvrEndpointConversationStoppedEvent;
@@ -40,4 +41,8 @@ public class IvrEndpointConversationStoppedEventImpl
     public CompletionCode getCompletionCode() {
         return completionCode;
     }
+
+//    public Call getCall() {
+//        return call;
+//    }
 }

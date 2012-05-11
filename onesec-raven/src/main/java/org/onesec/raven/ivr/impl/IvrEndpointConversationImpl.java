@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -571,6 +572,12 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                         else if (owner.getLogger().isDebugEnabled())
                             owner.getLogger().debug(callLog("Can't disconnect address not IN_SERVICE"));
                     }
+                long ts = System.currentTimeMillis();
+                while (call.getState()==Call.ACTIVE) {
+                    if (ts+5000<System.currentTimeMillis())
+                        throw new Exception("Timeout while waiting for call drop");
+                    TimeUnit.MILLISECONDS.sleep(10);
+                }
             }
         } catch (Throwable e) {
             if (owner.isLogLevelEnabled(LogLevel.WARN))

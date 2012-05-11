@@ -17,6 +17,8 @@
 
 package org.onesec.raven.ivr;
 
+import javax.telephony.Call;
+
 /**
  *
  * @author Mikhail Titov
@@ -27,4 +29,8 @@ public interface IvrEndpointConversationStoppedEvent extends IvrEndpointConversa
      * Returns the completion code of stopped conversation
      */
     public CompletionCode getCompletionCode();
+//    /**
+//     * Returns the call associated with conversation
+//     */
+//    public Call getCall();
 }

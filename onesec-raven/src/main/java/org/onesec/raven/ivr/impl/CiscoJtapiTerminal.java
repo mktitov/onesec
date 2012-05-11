@@ -213,14 +213,12 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                 else if (maxCallDur>0)
                     executor.execute(maxCallDur*1000, new MaxCallDurationHandler(conv, call));
             } catch (Throwable e) {
-                if (isLogLevelEnabled(LogLevel.WARN)) {
+                if (isLogLevelEnabled(LogLevel.WARN)) 
                     logger.warn(String.format("Problem with inviting abonent with number (%s)", opponentNum), e);
-                    IvrEndpointConversationStoppedEvent ev = new IvrEndpointConversationStoppedEventImpl(
-             
-                            null, CompletionCode.TERMINAL_NOT_READY);
-                    listener.conversationStopped(ev);
-                    conversationStopped(ev);
-                }
+                IvrEndpointConversationStoppedEvent ev = new IvrEndpointConversationStoppedEventImpl(
+                        null, CompletionCode.TERMINAL_NOT_READY);
+                listener.conversationStopped(ev);
+                conversationStopped(ev);
                 if (call!=null)
                     stopConversation(call, CompletionCode.OPPONENT_UNKNOWN_ERROR);
             }
@@ -721,6 +719,8 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
     }
 
     public void conversationStopped(final IvrEndpointConversationStoppedEvent event) {
+//        if (event.getCompletionCode()==CompletionCode.COMPLETED_BY_ENDPOINT)
+//            getAndRemoveConvHolder(event.getCall());
         fireConversationEvent(new MethodCaller() {
             @Override public void callMethod(IvrEndpointConversationListener listener) {
                 listener.conversationStopped(event);
