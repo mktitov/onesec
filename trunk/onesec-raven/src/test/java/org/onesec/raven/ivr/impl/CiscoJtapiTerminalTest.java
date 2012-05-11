@@ -168,12 +168,12 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
 
     //В данном тесте система позвонит, на указанный адрес. Необходимо взять трубку. Должны услышать:
     //  Пароли не совпадают
-//    @Test(timeout=20000)
+    @Test(timeout=50000)
     public void inviteTest() throws Exception {
         waitForProvider();
         createSimpleScenario();
 
-        IvrTerminal term = trainTerminal("88014", scenario, true, true);
+        IvrTerminal term = trainTerminal("631799", scenario, true, true);
         IvrEndpointConversationListener listener = trainListener();
         replay(term, listener);
 
@@ -347,7 +347,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
     
     //В данном тесте система позвонит, на указанный адрес. Необходимо взять трубку. Должны услышать:
     //  Пароли не совпадают + DTMF signals
-    @Test(timeout=50000)
+//    @Test(timeout=50000)
     public void sendDtmfTest() throws Exception {
         waitForProvider();
         createSimpleScenario();

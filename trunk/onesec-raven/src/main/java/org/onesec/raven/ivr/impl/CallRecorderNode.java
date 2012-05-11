@@ -209,6 +209,8 @@ public class CallRecorderNode extends BaseNode
 
     public void bridgeReactivated(IvrConversationsBridge bridge) {
         final Recorder recorder = recorders.get(bridge);
+        if (recorder==null)
+            return;
         try {
             executor.execute(new AbstractTask(this, logMess(bridge, "Handling stream substitution")) {
                 @Override public void doRun() throws Exception {
