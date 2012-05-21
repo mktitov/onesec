@@ -46,7 +46,7 @@ public class RtpStreamManagerNodeTest extends OnesecRavenTestCase
         tree.getRootNode().addAndSaveChildren(manager);
         manager.setMaxStreamCount(10);
 
-        address1 = createAddress("localhost", 3000);
+        address1 = createAddress("localhost", 3000, 3004);
     }
 
     @Test()
@@ -80,6 +80,15 @@ public class RtpStreamManagerNodeTest extends OnesecRavenTestCase
         stream2 = createStream(addr, 3002);
         stream1.release();
         stream1 = createStream(addr, 3000);
+        
+        //full port scan test
+        stream2.release();
+        stream1.release();
+        stream1 = createStream(addr, 3000);
+        stream2 = createStream(addr, 3002);
+        RtpStream stream3 = createStream(addr, 3004);
+        stream2.release();
+        stream2 = createStream(addr, 3002);
     }
 
     @Test
@@ -87,7 +96,7 @@ public class RtpStreamManagerNodeTest extends OnesecRavenTestCase
     {
         InetAddress localhost = InetAddress.getByName("localhost");
         InetAddress second = InetAddress.getByName("192.168.0.20");
-        address2 = createAddress("192.168.0.20", 4000);
+        address2 = createAddress("192.168.0.20", 4000, 4010);
         assertTrue(manager.start());
 
         assertEquals(0, manager.getStreams().size());
@@ -133,8 +142,8 @@ public class RtpStreamManagerNodeTest extends OnesecRavenTestCase
     }
     
     @Test()
-    public void busyPortTest() throws Exception
-    {
+    public void busyPortTest() throws Exception {
+        address1.setMaxPortNumber(3006);
         assertTrue(manager.start());
         InetAddress addr = InetAddress.getByName("localhost");
         DatagramSocket socket = new DatagramSocket(3000, addr);
@@ -163,12 +172,12 @@ public class RtpStreamManagerNodeTest extends OnesecRavenTestCase
         return iStream;
     }
 
-    private RtpAddressNode createAddress(String ip, int startingPort)
-    {
+    private RtpAddressNode createAddress(String ip, int startingPort, int maxPortNumber) {
         RtpAddressNode addr = new RtpAddressNode();
         addr.setName(ip);
         manager.addAndSaveChildren(addr);
         addr.setStartingPort(startingPort);
+        addr.setMaxPortNumber(maxPortNumber);
         assertTrue(addr.start());
 
         return addr;

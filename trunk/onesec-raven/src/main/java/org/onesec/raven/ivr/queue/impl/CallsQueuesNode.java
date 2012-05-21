@@ -17,32 +17,23 @@
 
 package org.onesec.raven.ivr.queue.impl;
 
-import org.raven.tree.Node;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
-import org.onesec.raven.ivr.queue.CallQueueException;
-import org.onesec.raven.ivr.queue.CallQueueRequest;
-import org.onesec.raven.ivr.queue.CallQueueRequestController;
-import org.onesec.raven.ivr.queue.CallsCommutationManager;
-import org.onesec.raven.ivr.queue.CallsQueue;
-import org.onesec.raven.ivr.queue.CallsQueueOperator;
+import org.onesec.raven.ivr.queue.*;
+import static org.onesec.raven.ivr.queue.impl.CallQueueCdrRecordSchemaNode.*;
 import org.raven.RavenUtils;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
-import org.raven.ds.DataConsumer;
-import org.raven.ds.DataContext;
-import org.raven.ds.DataPipe;
-import org.raven.ds.DataSource;
-import org.raven.ds.RecordSchemaField;
-import org.raven.ds.RecordSchemaFieldType;
+import org.raven.ds.*;
 import org.raven.ds.impl.RecordSchemaNode;
 import org.raven.ds.impl.RecordSchemaValueTypeHandlerFactory;
 import org.raven.log.LogLevel;
+import org.raven.tree.Node;
+import org.raven.tree.Node.Status;
 import org.raven.tree.NodeAttribute;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
-import static org.onesec.raven.ivr.queue.impl.CallQueueCdrRecordSchemaNode.*;
 import org.raven.util.NodeUtils;
 
 /**
@@ -63,6 +54,7 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
     private CallsQueueOperatorsNode operatorsNode;
     private CallsQueuesContainerNode queuesNode;
     private CallsQueueTransferOperatorNode transferOperator;
+    private CallsQueuesAuthenticatorNode authenticator;
 
     @Override
     protected void doStart() throws Exception
@@ -75,6 +67,12 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
     private void initNodes()
     {
         requestIdSeq = new AtomicLong();
+        authenticator = (CallsQueuesAuthenticatorNode) getChildren(CallsQueuesAuthenticatorNode.NAME);
+        if (authenticator==null) {
+            authenticator = new CallsQueuesAuthenticatorNode();
+            addAndSaveChildren(authenticator);
+            authenticator.start();
+        }
         operatorsNode = (CallsQueueOperatorsNode) getChildren(CallsQueueOperatorsNode.NAME);
         if (operatorsNode==null){
             operatorsNode = new CallsQueueOperatorsNode();
@@ -141,6 +139,10 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
 
     public CallsQueueOperatorsNode getOperatorsNode() {
         return operatorsNode;
+    }
+
+    public CallsQueuesAuthenticatorNode getAuthenticator() {
+        return authenticator;
     }
 
     public CallsQueuesContainerNode getQueuesNode() {
