@@ -310,14 +310,13 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
                 int portNumber = 0;
 
                 Map<InetAddress, RtpAddressNode> avalAddresses = getAvailableAddresses();
-                for (Map.Entry<InetAddress, RtpAddressNode> addr: avalAddresses.entrySet())
-                {
-                    if (!streams.containsKey(addr.getKey()))
-                    {
+                for (Map.Entry<InetAddress, RtpAddressNode> addr: avalAddresses.entrySet()) {
+                    if (!streams.containsKey(addr.getKey())) {
                         address = addr.getKey();
                         portStreams = new TreeMap<Integer, RtpStream>();
 //                        portNumber = addr.getValue().getStartingPort();
-                        portNumber = getPortNumber(address, addr.getValue().getStartingPort(), portStreams);
+                        portNumber = getPortNumber(address, addr.getValue().getStartingPort()
+                                , addr.getValue().getMaxPortNumber(), portStreams);
                         streams.put(addr.getKey(), portStreams);
                         break;
                     }
@@ -325,18 +324,12 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
 
                 if (portStreams==null)
                     for (Map.Entry<InetAddress, NavigableMap<Integer, RtpStream>> streamEntry: streams.entrySet())
-                        if (portStreams==null || streamEntry.getValue().size()<portStreams.size())
-                        {
+                        if (portStreams==null || streamEntry.getValue().size()<portStreams.size()) {
                             portStreams = streamEntry.getValue();
                             address = streamEntry.getKey();
                             int startingPort = avalAddresses.get(streamEntry.getKey()).getStartingPort();
-                            portNumber = getPortNumber(address, startingPort, portStreams);
-//                            if (portStreams.size()==0)
-//                                portNumber = startingPort;
-//                            else if (portStreams.firstKey()>startingPort)
-//                                portNumber = portStreams.firstKey()-2;
-//                            else
-//                                portNumber = portStreams.lastKey()+2;
+                            int maxPortNumber = avalAddresses.get(streamEntry.getKey()).getMaxPortNumber();
+                            portNumber = getPortNumber(address, startingPort, maxPortNumber, portStreams);
                         }
 
                 if (!reserve) {
@@ -359,14 +352,10 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
 
                     return rtpAddress;
                 }
-            }
-            finally
-            {
+            } finally {
                 streamsLock.writeLock().unlock();
             }
-        }
-        catch (Exception e)
-        {
+        } catch (Exception e) {
             rejectedStreamCreations.incrementAndGet();
             if (isLogLevelEnabled(LogLevel.ERROR))
                 error(
@@ -378,7 +367,9 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
         }
     }
     
-    private int getPortNumber(InetAddress addr, int startingPort, NavigableMap<Integer, RtpStream> portStreams) {
+    private int getPortNumber(InetAddress addr, int startingPort, int maxPortNumber
+            , NavigableMap<Integer, RtpStream> portStreams) throws Exception 
+    {
         int port = portStreams.isEmpty()? startingPort : portStreams.firstKey()-2;
         while (startingPort<=port)
             if (checkPort(addr, port)) 
@@ -386,9 +377,18 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
             else
                 port-=2;
         port = portStreams.isEmpty()? startingPort+2 : portStreams.lastKey()+2;
-        while (!checkPort(addr, port))
-            port+=2;
-        return port;
+        while (maxPortNumber>=port)
+            if (checkPort(addr, port))
+                return port;
+            else
+                port+=2;
+        //fullscan
+        int fromPort = portStreams.isEmpty()? startingPort : portStreams.firstKey()+2;
+        int toPort = portStreams.isEmpty()? maxPortNumber : portStreams.lastKey()-2;
+        for (port = fromPort; port<=toPort; port+=2) 
+            if (!portStreams.containsKey(port) && checkPort(addr, port))
+                return port;
+        throw new Exception("No free port");
     }
     
     private boolean checkPort(InetAddress addr, int port) {

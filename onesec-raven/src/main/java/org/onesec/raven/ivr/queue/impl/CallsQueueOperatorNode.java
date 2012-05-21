@@ -38,6 +38,10 @@ import org.weda.annotations.constraints.NotNull;
 public class CallsQueueOperatorNode extends AbstractOperatorNode {
     @NotNull @Parameter
     private String phoneNumbers;
+    @Parameter
+    private String operatorId;
+    @Parameter
+    private String operatorDesc;
 
     private AtomicBoolean busy;
     private AtomicReference<CallsCommutationManager> commutationManager;
@@ -65,6 +69,22 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
     @Parameter(readOnly=true)
     public String getProcessingRequest(){
         return request.get();
+    }
+
+    public String getOperatorDesc() {
+        return operatorDesc;
+    }
+
+    public void setOperatorDesc(String operatorDesc) {
+        this.operatorDesc = operatorDesc;
+    }
+
+    public String getOperatorId() {
+        return operatorId;
+    }
+
+    public void setOperatorId(String operatorId) {
+        this.operatorId = operatorId;
     }
 
     public String getPhoneNumbers() {

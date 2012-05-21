@@ -74,6 +74,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
     @Before
     public void prepare() {
         endpoints = new ArrayList<Node>();
+        
         ds = new PushDataSource();
         ds.setName("ds");
         tree.getRootNode().addAndSaveChildren(ds);
@@ -103,9 +104,8 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         assertTrue(queues.start());
     }
 
-//    @Test
-    public void initNodesTest()
-    {
+    @Test
+    public void initNodesTest() {
         assertTrue(queues.start());
         
         Node operatorsNode = queues.getChildren(CallsQueueOperatorsNode.NAME);
@@ -122,6 +122,10 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         assertNotNull(queuesNode);
         assertTrue(queuesNode instanceof CallsQueuesContainerNode);
         assertStarted(queuesNode);
+        
+        Node authenticator = queues.getChildren(CallsQueuesAuthenticatorNode.NAME);
+        assertNotNull(authenticator);
+        assertTrue(authenticator instanceof CallsQueuesAuthenticatorNode);
     }
 
 //    @Test
@@ -256,7 +260,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         verify(req, context);
     }
 
-    @Test
+//    @Test
     public void realTest() throws Exception
     {
         prepareRealTest();

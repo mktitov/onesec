@@ -89,7 +89,7 @@ public class TranscoderDataSource extends PushBufferDataSource {
                 streams[0].init(codecChain, outputFormat);
             } catch (CodecManagerException ex) {
                 if (owner.isLogLevelEnabled(LogLevel.ERROR))
-                    owner.getLogger().error(logMess("Transcoder initializing error"));
+                    owner.getLogger().error(logMess("Transcoder initializing error"), ex);
                 throw new IOException(ex);
             }
         }

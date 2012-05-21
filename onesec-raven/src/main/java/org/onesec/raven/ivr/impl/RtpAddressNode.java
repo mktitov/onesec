@@ -31,14 +31,23 @@ public class RtpAddressNode extends BaseNode
 {
     @NotNull @Parameter(defaultValue="16384")
     private Integer startingPort;
+    
+    @NotNull @Parameter(defaultValue="32768")
+    private Integer maxPortNumber;
 
-    public Integer getStartingPort()
-    {
+    public Integer getStartingPort() {
         return startingPort;
     }
 
-    public void setStartingPort(Integer startingPort)
-    {
+    public void setStartingPort(Integer startingPort) {
         this.startingPort = startingPort;
+    }
+
+    public Integer getMaxPortNumber() {
+        return maxPortNumber;
+    }
+
+    public void setMaxPortNumber(Integer maxPortNumber) {
+        this.maxPortNumber = maxPortNumber;
     }
 }
