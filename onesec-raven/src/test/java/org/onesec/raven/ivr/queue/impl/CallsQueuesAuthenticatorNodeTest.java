@@ -82,8 +82,8 @@ public class CallsQueuesAuthenticatorNodeTest extends OnesecRavenTestCase {
         
         OperatorDesc desc = authenticator.authenticate("000", "123");
         assertNotNull(desc);
-        assertEquals("Pupkin", desc.getOperatorDesc());
-        assertEquals("123", desc.getOperatorId());
+        assertEquals("Pupkin", desc.getDesc());
+        assertEquals("123", desc.getId());
 
         assertEquals("Pupkin", oper.getOperatorDesc());
         assertEquals("123", oper.getOperatorId());

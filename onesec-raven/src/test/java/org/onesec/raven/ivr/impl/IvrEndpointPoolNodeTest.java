@@ -86,7 +86,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         executor.stop();
     }
     
-//    @Test
+    @Test
     public void test() {
         System.out.println("=>"+(99999/1000));
     }
@@ -149,7 +149,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         verify(req, req2);
     }
 
-    @Test(timeout=25000)
+//    @Test(timeout=25000)
     public void asyncTest() throws Exception {
         createEndpoint("88014");
 
@@ -314,18 +314,6 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         return null;
     }
 
-
-    private void waitForProvider() throws Exception
-    {
-        ProviderRegistry providerRegistry = registry.getService(ProviderRegistry.class);
-        assertNotNull(providerRegistry);
-        Thread.sleep(100);
-        ProviderController provider = providerRegistry.getProviderControllers().iterator().next();
-        assertNotNull(provider);
-        StateWaitResult res = provider.getState().waitForState(
-                new int[]{ProviderControllerState.IN_SERVICE}, 10000);
-        assertFalse(res.isWaitInterrupted());
-    }
 
     private TestIvrEndpoint createEndpoint(IvrEndpointPoolNode pool, String number)
     {

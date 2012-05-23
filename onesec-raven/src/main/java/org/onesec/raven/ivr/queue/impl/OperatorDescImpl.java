@@ -29,15 +29,20 @@ public class OperatorDescImpl implements OperatorDesc {
         this.operatorId = operatorId;
     }
 
-    public String getOperatorDesc() {
+    public String getDesc() {
         return operatorDesc;
     }
 
-    public void setOperatorDesc(String operatorDesc) {
+    public void setDesc(String operatorDesc) {
         this.operatorDesc = operatorDesc;
     }
 
-    public String getOperatorId() {
+    public String getId() {
         return operatorId;
+    }
+
+    @Override
+    public String toString() {
+        return "Operator: id - ("+operatorId+"); desc - ("+operatorDesc+")";
     }
 }

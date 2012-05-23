@@ -17,6 +17,8 @@ package org.onesec.raven.ivr.queue.impl;
 
 import java.util.Collection;
 import java.util.Map;
+import javax.script.Bindings;
+import javax.script.SimpleBindings;
 import org.onesec.raven.ivr.queue.CallsQueuesAuthenticator;
 import org.onesec.raven.ivr.queue.OperatorDesc;
 import org.raven.annotations.NodeClass;
@@ -25,6 +27,9 @@ import org.raven.ds.DataConsumer;
 import org.raven.ds.DataContext;
 import org.raven.ds.DataSource;
 import org.raven.ds.impl.DataContextImpl;
+import org.raven.expr.BindingSupport;
+import org.raven.expr.impl.BindingSupportImpl;
+import org.raven.log.LogLevel;
 import org.raven.tree.NodeAttribute;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.InvisibleNode;
@@ -40,11 +45,14 @@ public class CallsQueuesAuthenticatorNode extends BaseNode implements DataConsum
     
     public final static String NAME = "Authenticator";
     public final static String OPERATOR_DESC_FIELD = "operatorDesc";
+    public final static String OPERATOR_NUMBER_BINDING = "operatorNumber";
+    public final static String OPERATOR_CODE_BINDING = "operatorCode";
     
     @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
     private DataSource dataSource;
     
     private ThreadLocal<AuthInfo> dataStore;
+    private BindingSupport bindingSupport;
 
     public CallsQueuesAuthenticatorNode() {
         super(NAME);
@@ -54,6 +62,7 @@ public class CallsQueuesAuthenticatorNode extends BaseNode implements DataConsum
     protected void initFields() {
         super.initFields();
         dataStore = new ThreadLocal<AuthInfo>();
+        bindingSupport = new BindingSupportImpl();
     }
 
     public void setData(DataSource dataSource, Object data, DataContext context) {
@@ -63,7 +72,7 @@ public class CallsQueuesAuthenticatorNode extends BaseNode implements DataConsum
         Map<String, String> map = converter.convert(Map.class, data, null);
         AuthInfo authInfo = dataStore.get();
         authInfo.authenticated = true;
-        dataStore.get().operatorDesc.setOperatorDesc(map.get(OPERATOR_DESC_FIELD));
+        dataStore.get().operatorDesc.setDesc(map.get(OPERATOR_DESC_FIELD));
     }
 
     public Object refereshData(Collection<NodeAttribute> sessionAttributes) {
@@ -71,19 +80,40 @@ public class CallsQueuesAuthenticatorNode extends BaseNode implements DataConsum
     }
 
     public OperatorDesc authenticate(String operatorNumber, String operatorCode) {
+        if (!Status.STARTED.equals(getStatus()))
+            return null;
         CallsQueuesNode manager = (CallsQueuesNode) getParent();
         CallsQueueOperatorNode operator = manager.getOperatorByPhoneNumber(operatorNumber);
-        if (operator==null)
+        if (operator==null) {
+            if (isLogLevelEnabled(LogLevel.WARN))
+                getLogger().warn("Not found operator with number ({})", operatorNumber);
             return null;
-        dataStore.set(new AuthInfo(new OperatorDescImpl(operatorCode)));
-        dataSource.getDataImmediate(this, new DataContextImpl());
-        AuthInfo authInfo = dataStore.get();
-        if (authInfo.authenticated) {
-            operator.setOperatorDesc(authInfo.operatorDesc.getOperatorDesc());
-            operator.setOperatorId(authInfo.operatorDesc.getOperatorId());
-            return authInfo.operatorDesc;
-        } else
-            return null;
+        }
+        try {
+            dataStore.set(new AuthInfo(new OperatorDescImpl(operatorCode)));
+            Bindings bindings = new SimpleBindings();
+            bindings.put(OPERATOR_CODE_BINDING, operatorCode);
+            bindings.put(OPERATOR_NUMBER_BINDING, operatorNumber);
+            DataContextImpl dataContext = new DataContextImpl();
+            dataContext.getParameters().putAll(bindings);
+            bindingSupport.putAll(bindings);
+            dataSource.getDataImmediate(this, dataContext);
+            AuthInfo authInfo = dataStore.get();
+            if (authInfo.authenticated) {
+                operator.setOperatorDesc(authInfo.operatorDesc.getDesc());
+                operator.setOperatorId(authInfo.operatorDesc.getId());
+                return authInfo.operatorDesc;
+            } else
+                return null;
+        } finally {
+            bindingSupport.reset();
+        }
+    }
+
+    @Override
+    public void formExpressionBindings(Bindings bindings) {
+        super.formExpressionBindings(bindings);
+        bindingSupport.addTo(bindings);
     }
     
     public DataSource getDataSource() {
