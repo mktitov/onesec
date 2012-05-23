@@ -262,13 +262,12 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                             _auxiliaryPool.requestEndpoint(ri.request);
                         }
                     } else {
-                        if (!sendResponse(ri)) {
+                        if (!sendResponse(ri)) 
                             try {
                                 ri.request.processRequest(null);
                             } finally {
                                 releaseEndpoint(ri.endpoint, 0);
                             }
-                        }
                     }
                 }
             }finally{
@@ -429,39 +428,30 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         if (isLogLevelEnabled(LogLevel.DEBUG))
             debug(String.format("Realesing endpoint (%s) to the pool", endpoint.getName()));
         lock.writeLock().lock();
-        try
-        {
+        try {
             loadAverage.addDuration(duration);
             busyEndpoints.remove(endpoint.getId());
             endpointReleased.signal();
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 debug(String.format("Endpoint (%s) successfully realesed to the pool"
                         , endpoint.getName()));
-        }
-        finally
-        {
+        } finally {
             lock.writeLock().unlock();
         }
     }
 
-    private void getAndLockFreeEndpoint(RequestInfo requestInfo) throws InterruptedException
-    {
-        Collection<Node> childs = getChildrens();
-        if (childs != null && !childs.isEmpty())
-        {
-            for (Node child : childs) {
-                if (   child instanceof IvrEndpoint
-                    && Status.STARTED.equals(child.getStatus())
-                    && !busyEndpoints.containsKey(child.getId())
-                    && ((IvrEndpoint) child).getEndpointState().getId() == IvrEndpointState.IN_SERVICE)
-                {
-                    busyEndpoints.put(child.getId(), requestInfo);
-                    requestInfo.terminalUsageTime = System.currentTimeMillis();
-                    requestInfo.endpoint = (IvrEndpoint) child;
-                    Long counter = usageCounters.get(child.getId());
-                    usageCounters.put(child.getId(), counter == null ? 1 : counter + 1);
-                    return;
-                }
+    private void getAndLockFreeEndpoint(RequestInfo requestInfo) throws InterruptedException {
+        for (IvrEndpoint endpoint : NodeUtils.getChildsOfType(this, IvrEndpoint.class)) {
+            if (   endpoint.getActiveCallsCount()==0
+                && !busyEndpoints.containsKey(endpoint.getId())
+                && ((IvrEndpoint)endpoint).getEndpointState().getId() == IvrEndpointState.IN_SERVICE)
+            {
+                busyEndpoints.put(endpoint.getId(), requestInfo);
+                requestInfo.terminalUsageTime = System.currentTimeMillis();
+                requestInfo.endpoint = (IvrEndpoint) endpoint;
+                Long counter = usageCounters.get(endpoint.getId());
+                usageCounters.put(endpoint.getId(), counter == null ? 1 : counter + 1);
+                return;
             }
         }
     }
@@ -628,32 +618,23 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
             debug("Searching for free endpoint for request from ("+ri.getTaskNode().getPath()+")");
         statusMessage.set("Looking up for endpoint for request from ("+ri.getTaskNode().getPath()+")");
 
-        if (lock.writeLock().tryLock(1, TimeUnit.SECONDS))
-        {
-            try
-            {
-                getAndLockFreeEndpoint(ri);
-                if (ri.endpoint==null && auxiliaryPool==null)
-                {
-                    long timeout = ri.request.getWaitTimeout()-(System.currentTimeMillis()-ri.startTime);
-                    if (timeout>0)
-                    {
-                        if (endpointReleased.await(timeout, TimeUnit.MILLISECONDS))
-                            getAndLockFreeEndpoint(ri);
-                    }
-                }
-                if (isLogLevelEnabled(LogLevel.DEBUG))
-                {
-                    if (ri.endpoint==null)
-                        debug("No free endpoint found in the pool");
-                    else
-                        debug("Found free endpoint ("+ri.endpoint.getName()+")");
+        if (lock.writeLock().tryLock(1, TimeUnit.SECONDS)) try {
+            getAndLockFreeEndpoint(ri);
+            if (ri.endpoint==null && auxiliaryPool==null) {
+                long timeout = ri.request.getWaitTimeout()-(System.currentTimeMillis()-ri.startTime);
+                if (timeout>0) {
+                    if (endpointReleased.await(timeout, TimeUnit.MILLISECONDS))
+                        getAndLockFreeEndpoint(ri);
                 }
             }
-            finally
-            {
-                lock.writeLock().unlock();
+            if (isLogLevelEnabled(LogLevel.DEBUG)) {
+                if (ri.endpoint==null)
+                    debug("No free endpoint found in the pool");
+                else
+                    debug("Found free endpoint ("+ri.endpoint.getName()+")");
             }
+        } finally {
+            lock.writeLock().unlock();
         }
     }
 

@@ -20,7 +20,7 @@ package org.onesec.raven.ivr.queue;
  * @author Mikhail TItov
  */
 public interface OperatorDesc {
-    String getOperatorDesc();
-    void setOperatorDesc(String operatorDesc);
-    String getOperatorId();
+    String getDesc();
+    void setDesc(String operatorDesc);
+    String getId();
 }

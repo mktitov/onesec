@@ -90,7 +90,7 @@ public class TestIvrEndpoint extends BaseNode implements IvrEndpoint
     }
 
     public int getActiveCallsCount() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return 0;
     }
 
     public String getObjectName() {
