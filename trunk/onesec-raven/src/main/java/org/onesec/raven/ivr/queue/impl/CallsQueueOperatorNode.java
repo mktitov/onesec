@@ -100,6 +100,8 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
             , IvrConversationScenario conversationScenario, AudioFile greeting
             , String operatorPhoneNumbers)
     {
+        if (getCallsQueues().getUseOnlyRegisteredOperators()==true && getOperatorId()==null)
+            return false;
         if (!busy.compareAndSet(false, true)) {
             onBusyRequests.incrementAndGet();
             return false;

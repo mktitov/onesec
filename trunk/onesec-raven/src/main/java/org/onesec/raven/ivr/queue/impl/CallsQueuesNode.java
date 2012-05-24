@@ -35,6 +35,7 @@ import org.raven.tree.NodeAttribute;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
 import org.raven.util.NodeUtils;
+import org.weda.annotations.constraints.NotNull;
 
 /**
  *
@@ -48,13 +49,16 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
     
     @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
     private DataSource dataSource;
+    
+    @NotNull @Parameter(defaultValue="false")
+    private Boolean useOnlyRegisteredOperators;
 
     private AtomicLong requestIdSeq;
     private RecordSchemaNode _cdrRecordSchema;
     private CallsQueueOperatorsNode operatorsNode;
     private CallsQueuesContainerNode queuesNode;
     private CallsQueueTransferOperatorNode transferOperator;
-    private CallsQueuesAuthenticatorNode authenticator;
+    private OperatorRegistratorNode operatorRegistrator;
 
     @Override
     protected void doStart() throws Exception
@@ -67,11 +71,11 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
     private void initNodes()
     {
         requestIdSeq = new AtomicLong();
-        authenticator = (CallsQueuesAuthenticatorNode) getChildren(CallsQueuesAuthenticatorNode.NAME);
-        if (authenticator==null) {
-            authenticator = new CallsQueuesAuthenticatorNode();
-            addAndSaveChildren(authenticator);
-            authenticator.start();
+        operatorRegistrator = (OperatorRegistratorNode) getChildren(OperatorRegistratorNode.NAME);
+        if (operatorRegistrator==null) {
+            operatorRegistrator = new OperatorRegistratorNode();
+            addAndSaveChildren(operatorRegistrator);
+            operatorRegistrator.start();
         }
         operatorsNode = (CallsQueueOperatorsNode) getChildren(CallsQueueOperatorsNode.NAME);
         if (operatorsNode==null){
@@ -141,8 +145,8 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
         return operatorsNode;
     }
 
-    public CallsQueuesAuthenticatorNode getAuthenticator() {
-        return authenticator;
+    public OperatorRegistratorNode getOperatorRegistrator() {
+        return operatorRegistrator;
     }
 
     public CallsQueuesContainerNode getQueuesNode() {
@@ -236,6 +240,14 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
             throw new Exception(String.format(
                     "Invalid type for column (%s). Expected (%s) but was (%s)"
                     , fieldName, type.toString(), field.getFieldType().toString()));        
+    }
+
+    public Boolean getUseOnlyRegisteredOperators() {
+        return useOnlyRegisteredOperators;
+    }
+
+    public void setUseOnlyRegisteredOperators(Boolean useOnlyRegisteredOperators) {
+        this.useOnlyRegisteredOperators = useOnlyRegisteredOperators;
     }
 
     public DataSource getDataSource() {
