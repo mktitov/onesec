@@ -27,10 +27,10 @@ import org.raven.test.PushOnDemandDataSource;
  *
  * @author Mikhail Titov
  */
-public class CallsQueuesAuthenticatorNodeTest extends OnesecRavenTestCase {
+public class OperatorRegistratorNodeTest extends OnesecRavenTestCase {
     private CallsQueuesNode queues;
     private PushOnDemandDataSource ds;
-    private CallsQueuesAuthenticatorNode authenticator;
+    private OperatorRegistratorNode authenticator;
     private CallsQueueOperatorNode oper;
     
     @Before
@@ -44,7 +44,7 @@ public class CallsQueuesAuthenticatorNodeTest extends OnesecRavenTestCase {
         queues.setName("queues");
         tree.getRootNode().addAndSaveChildren(queues);
         assertTrue(queues.start());
-        authenticator = queues.getAuthenticator();
+        authenticator = queues.getOperatorRegistrator();
         authenticator.setDataSource(ds);
         assertTrue(authenticator.start());
         
@@ -76,11 +76,11 @@ public class CallsQueuesAuthenticatorNodeTest extends OnesecRavenTestCase {
     @Test
     public void successAuthTest() {
         HashMap map = new HashMap();
-        map.put(CallsQueuesAuthenticatorNode.OPERATOR_DESC_FIELD, "Pupkin");
+        map.put(OperatorRegistratorNode.OPERATOR_DESC_FIELD, "Pupkin");
         ds.addDataPortion(map);
         ds.addDataPortion(null);
         
-        OperatorDesc desc = authenticator.authenticate("000", "123");
+        OperatorDesc desc = authenticator.register("000", "123");
         assertNotNull(desc);
         assertEquals("Pupkin", desc.getDesc());
         assertEquals("123", desc.getId());
@@ -90,20 +90,28 @@ public class CallsQueuesAuthenticatorNodeTest extends OnesecRavenTestCase {
     }
     
     @Test
+    public void unbindOperatorTest() {
+        successAuthTest();
+        authenticator.unregister("000");
+        assertNull(oper.getOperatorDesc());
+        assertNull(oper.getOperatorId());
+    }
+    
+    @Test
     public void failAuthTest_invalidOperator() {
         HashMap map = new HashMap();
-        map.put(CallsQueuesAuthenticatorNode.OPERATOR_DESC_FIELD, "Pupkin");
+        map.put(OperatorRegistratorNode.OPERATOR_DESC_FIELD, "Pupkin");
         ds.addDataPortion(map);
         ds.addDataPortion(null);
         
-        assertNull(authenticator.authenticate("0000", "123"));
+        assertNull(authenticator.register("0000", "123"));
     }
     
     @Test 
     public void failAuthTest() {
-        assertNull(authenticator.authenticate("000", "123"));
+        assertNull(authenticator.register("000", "123"));
         
         ds.addDataPortion(null);
-        assertNull(authenticator.authenticate("000", "123"));
+        assertNull(authenticator.register("000", "123"));
     }
 }

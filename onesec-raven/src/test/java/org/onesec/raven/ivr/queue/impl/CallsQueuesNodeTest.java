@@ -123,9 +123,9 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         assertTrue(queuesNode instanceof CallsQueuesContainerNode);
         assertStarted(queuesNode);
         
-        Node authenticator = queues.getChildren(CallsQueuesAuthenticatorNode.NAME);
+        Node authenticator = queues.getChildren(OperatorRegistratorNode.NAME);
         assertNotNull(authenticator);
-        assertTrue(authenticator instanceof CallsQueuesAuthenticatorNode);
+        assertTrue(authenticator instanceof OperatorRegistratorNode);
     }
 
 //    @Test

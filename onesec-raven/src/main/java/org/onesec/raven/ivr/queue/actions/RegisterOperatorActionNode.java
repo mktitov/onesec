@@ -23,7 +23,7 @@ import org.apache.commons.lang.StringUtils;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.onesec.raven.ivr.queue.OperatorDesc;
-import org.onesec.raven.ivr.queue.impl.CallsQueuesAuthenticatorNode;
+import org.onesec.raven.ivr.queue.impl.OperatorRegistratorNode;
 import org.onesec.raven.ivr.queue.impl.CallsQueuesNode;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
@@ -39,7 +39,7 @@ import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
  * @author Mikhail Titov
  */
 @NodeClass(parentNode=IvrConversationScenarioNode.class, importChildTypesFromParent=true)
-public class AuthenticateOperatorActionNode extends BaseNode {
+public class RegisterOperatorActionNode extends BaseNode {
     
     public final static String OPERATOR_BINDING = "operator";
     
@@ -60,10 +60,10 @@ public class AuthenticateOperatorActionNode extends BaseNode {
         List<String> dtmfs = (List<String>) bindings.get(IvrEndpointConversation.DTMFS_BINDING);
         String operatorCode = StringUtils.join(dtmfs, "");
         String operatorNumber = (String) bindings.get(IvrEndpointConversation.NUMBER_BINDING);
-        CallsQueuesAuthenticatorNode auth = callsQueues.getAuthenticator();
+        OperatorRegistratorNode auth = callsQueues.getOperatorRegistrator();
         OperatorDesc operator;
         if (   operatorCode==null || operatorCode.isEmpty()
-            || (operator = auth.authenticate(operatorNumber, operatorCode))==null)
+            || (operator = auth.register(operatorNumber, operatorCode))==null)
         {
             if (isLogLevelEnabled(LogLevel.WARN))
                 getLogger().warn("Invalid authentication code {} for operator number {}"

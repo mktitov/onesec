@@ -45,7 +45,7 @@ import org.raven.test.PushOnDemandDataSourceListener;
 public class AuthenticateOperatorActionNodeTest extends OnesecRavenTestCase {
     private CallsQueuesNode callQueues;
     private PushOnDemandDataSource ds;
-    private AuthenticateOperatorActionNode action;
+    private RegisterOperatorActionNode action;
     private BindingSourceNode parent;
     
     @Before
@@ -84,15 +84,15 @@ public class AuthenticateOperatorActionNodeTest extends OnesecRavenTestCase {
         tree.getRootNode().addAndSaveChildren(ds);
         assertTrue(ds.start());
         
-        callQueues.getAuthenticator().setDataSource(ds);
-        assertTrue(callQueues.getAuthenticator().start());
+        callQueues.getOperatorRegistrator().setDataSource(ds);
+        assertTrue(callQueues.getOperatorRegistrator().start());
         
         parent = new BindingSourceNode();
         parent.setName("parent");
         tree.getRootNode().addAndSaveChildren(parent);
         assertTrue(parent.start());
         
-        action = new AuthenticateOperatorActionNode();
+        action = new RegisterOperatorActionNode();
         action.setName("authenticate operator action");
         parent.addAndSaveChildren(action);
         action.setCallsQueues(callQueues);
@@ -134,23 +134,23 @@ public class AuthenticateOperatorActionNodeTest extends OnesecRavenTestCase {
         Bindings bindings2 = control.createMock(Bindings.class);
         
         expect(state.getBindings()).andReturn(bindings);
-        expect(bindings.containsKey(AuthenticateOperatorActionNode.OPERATOR_BINDING)).andReturn(false);
+        expect(bindings.containsKey(RegisterOperatorActionNode.OPERATOR_BINDING)).andReturn(false);
         listener.onGatherDataForConsumer(isA(DataConsumer.class), checkDataContext());
-        state.setBinding(eq(AuthenticateOperatorActionNode.OPERATOR_BINDING), checkOperator()
+        state.setBinding(eq(RegisterOperatorActionNode.OPERATOR_BINDING), checkOperator()
                 , eq(BindingScope.POINT));
         //test formExpressionBindings
         bindings2.putAll(anyObject(Map.class));
         expect(bindings2.get(CONVERSATION_STATE_BINDING)).andReturn(state);
         expect(state.getBindings()).andReturn(bindings);
-        expect(bindings.containsKey(AuthenticateOperatorActionNode.OPERATOR_BINDING)).andReturn(true);
+        expect(bindings.containsKey(RegisterOperatorActionNode.OPERATOR_BINDING)).andReturn(true);
         expect(state.getBindings()).andReturn(bindings);
-        expect(bindings.get(AuthenticateOperatorActionNode.OPERATOR_BINDING)).andReturn("oper");
-        expect(bindings2.put(AuthenticateOperatorActionNode.OPERATOR_BINDING, "oper")).andReturn(null);
+        expect(bindings.get(RegisterOperatorActionNode.OPERATOR_BINDING)).andReturn("oper");
+        expect(bindings2.put(RegisterOperatorActionNode.OPERATOR_BINDING, "oper")).andReturn(null);
         control.replay();
         
         parent.addBinding(CONVERSATION_STATE_BINDING, state);
         Map map = new HashMap();
-        map.put(CallsQueuesAuthenticatorNode.OPERATOR_DESC_FIELD, "Pupkin");
+        map.put(OperatorRegistratorNode.OPERATOR_DESC_FIELD, "Pupkin");
         ds.addDataPortion(map);
         ds.setListener(listener);
         assertNull(action.getEffectiveChildrens());
@@ -166,8 +166,8 @@ public class AuthenticateOperatorActionNodeTest extends OnesecRavenTestCase {
                 assertNotNull(o);
                 assertTrue(o instanceof DataContext);
                 DataContext dataContext = (DataContext) o;
-                assertEquals("0000", dataContext.getAt(CallsQueuesAuthenticatorNode.OPERATOR_NUMBER_BINDING));
-                assertEquals("123", dataContext.getAt(CallsQueuesAuthenticatorNode.OPERATOR_CODE_BINDING));
+                assertEquals("0000", dataContext.getAt(OperatorRegistratorNode.OPERATOR_NUMBER_BINDING));
+                assertEquals("123", dataContext.getAt(OperatorRegistratorNode.OPERATOR_CODE_BINDING));
                 return true;
             }
             public void appendTo(StringBuffer sb) {

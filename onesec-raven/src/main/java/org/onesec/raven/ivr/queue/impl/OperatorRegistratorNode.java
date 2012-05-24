@@ -19,7 +19,7 @@ import java.util.Collection;
 import java.util.Map;
 import javax.script.Bindings;
 import javax.script.SimpleBindings;
-import org.onesec.raven.ivr.queue.CallsQueuesAuthenticator;
+import org.onesec.raven.ivr.queue.OperatorRegistrator;
 import org.onesec.raven.ivr.queue.OperatorDesc;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
@@ -41,9 +41,9 @@ import org.weda.annotations.constraints.NotNull;
  * @author Mikhail Titov
  */
 @NodeClass(parentNode=InvisibleNode.class)
-public class CallsQueuesAuthenticatorNode extends BaseNode implements DataConsumer, CallsQueuesAuthenticator {
+public class OperatorRegistratorNode extends BaseNode implements DataConsumer, OperatorRegistrator {
     
-    public final static String NAME = "Authenticator";
+    public final static String NAME = "Operator registrator";
     public final static String OPERATOR_DESC_FIELD = "operatorDesc";
     public final static String OPERATOR_NUMBER_BINDING = "operatorNumber";
     public final static String OPERATOR_CODE_BINDING = "operatorCode";
@@ -54,7 +54,7 @@ public class CallsQueuesAuthenticatorNode extends BaseNode implements DataConsum
     private ThreadLocal<AuthInfo> dataStore;
     private BindingSupport bindingSupport;
 
-    public CallsQueuesAuthenticatorNode() {
+    public OperatorRegistratorNode() {
         super(NAME);
     }
 
@@ -79,7 +79,7 @@ public class CallsQueuesAuthenticatorNode extends BaseNode implements DataConsum
         throw new UnsupportedOperationException("Not supported by this consumer");
     }
 
-    public OperatorDesc authenticate(String operatorNumber, String operatorCode) {
+    public OperatorDesc register(String operatorNumber, String operatorCode) {
         if (!Status.STARTED.equals(getStatus()))
             return null;
         CallsQueuesNode manager = (CallsQueuesNode) getParent();
@@ -108,6 +108,20 @@ public class CallsQueuesAuthenticatorNode extends BaseNode implements DataConsum
         } finally {
             bindingSupport.reset();
         }
+    }
+
+    public void unregister(String operatorNumber) {
+        if (!Status.STARTED.equals(getStatus()))
+            return;
+        CallsQueuesNode manager = (CallsQueuesNode) getParent();
+        CallsQueueOperatorNode operator = manager.getOperatorByPhoneNumber(operatorNumber);
+        if (operator==null) {
+            if (isLogLevelEnabled(LogLevel.WARN))
+                getLogger().warn("Not found operator with number ({})", operatorNumber);
+            return;
+        }
+        operator.setOperatorDesc(null);
+        operator.setOperatorId(null);
     }
 
     @Override

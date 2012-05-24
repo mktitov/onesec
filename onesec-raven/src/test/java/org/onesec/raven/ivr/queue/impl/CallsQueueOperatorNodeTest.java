@@ -70,10 +70,15 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
         executor.setCorePoolSize(10);
         executor.setMaximumPoolSize(10);
         assertTrue(executor.start());
+        
+        CallsQueuesNode callsQueues = new CallsQueuesNode();
+        callsQueues.setName("calls queues");
+        tree.getRootNode().addAndSaveChildren(callsQueues);
+        assertTrue(callsQueues.start());
 
         operator = new CallsQueueOperatorNode();
         operator.setName("operator");
-        tree.getRootNode().addAndSaveChildren(operator);
+        callsQueues.getOperatorsNode().addAndSaveChildren(operator);
         operator.setConversationsBridgeManager(bridgeManager);
         operator.setEndpointPool(endpointPool);
         operator.setPhoneNumbers("88024");

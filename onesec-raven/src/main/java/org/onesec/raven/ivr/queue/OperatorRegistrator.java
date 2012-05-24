@@ -19,12 +19,17 @@ package org.onesec.raven.ivr.queue;
  *
  * @author Mikhail Titov
  */
-public interface CallsQueuesAuthenticator {
+public interface OperatorRegistrator {
     /**
      * Authenticate operator. 
      * @param operatorNumber the operator's phone number
      * @param operatorCode the operator's code
      * @return Returns user description on success authorization or null
      */
-    public OperatorDesc authenticate(String operatorNumber, String operatorCode);
+    public OperatorDesc register(String operatorNumber, String operatorCode);
+    /**
+     * Unbinds operator from phone
+     * @param operatorNumber the phone number
+     */
+    public void unregister(String operatorNumber);
 }
