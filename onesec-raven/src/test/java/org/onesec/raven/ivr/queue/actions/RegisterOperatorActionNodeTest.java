@@ -42,7 +42,7 @@ import org.raven.test.PushOnDemandDataSourceListener;
  *
  * @author Mikhail Titov
  */
-public class AuthenticateOperatorActionNodeTest extends OnesecRavenTestCase {
+public class RegisterOperatorActionNodeTest extends OnesecRavenTestCase {
     private CallsQueuesNode callQueues;
     private PushOnDemandDataSource ds;
     private RegisterOperatorActionNode action;
