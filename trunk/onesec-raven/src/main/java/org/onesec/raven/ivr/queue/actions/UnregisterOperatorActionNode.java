@@ -39,14 +39,19 @@ public class UnregisterOperatorActionNode extends BaseNode {
     private CallsQueuesNode callsQueues;
 
     @Override
+    public boolean isConditionalNode() {
+        return true;
+    }
+
+    @Override
     public Collection<Node> getEffectiveChildrens() {
-        if (!Status.STARTED.equals(getStatus()))
-            return null;
-        Bindings bindings = new SimpleBindings();
-        formExpressionBindings(bindings);
-        callsQueues.getOperatorRegistrator().unregister(
-                (String)bindings.get(IvrEndpointConversation.NUMBER_BINDING));
-        return super.getEffectiveChildrens();
+        if (Status.STARTED.equals(getStatus())) {
+            Bindings bindings = new SimpleBindings();
+            formExpressionBindings(bindings);
+            callsQueues.getOperatorRegistrator().unregister(
+                    (String)bindings.get(IvrEndpointConversation.NUMBER_BINDING));
+        }
+        return null;
     }
 
     public CallsQueuesNode getCallsQueues() {
