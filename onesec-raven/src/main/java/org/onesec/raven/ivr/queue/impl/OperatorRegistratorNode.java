@@ -30,10 +30,12 @@ import org.raven.ds.impl.DataContextImpl;
 import org.raven.expr.BindingSupport;
 import org.raven.expr.impl.BindingSupportImpl;
 import org.raven.log.LogLevel;
+import org.raven.tree.Node;
 import org.raven.tree.NodeAttribute;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.InvisibleNode;
 import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
+import org.raven.util.NodeUtils;
 import org.weda.annotations.constraints.NotNull;
 
 /**
@@ -72,7 +74,7 @@ public class OperatorRegistratorNode extends BaseNode implements DataConsumer, O
         Map<String, String> map = converter.convert(Map.class, data, null);
         AuthInfo authInfo = dataStore.get();
         authInfo.authenticated = true;
-        dataStore.get().operatorDesc.setDesc(map.get(OPERATOR_DESC_FIELD));
+        authInfo.operatorDesc.setDesc(map.get(OPERATOR_DESC_FIELD));
     }
 
     public Object refereshData(Collection<NodeAttribute> sessionAttributes) {
@@ -82,7 +84,7 @@ public class OperatorRegistratorNode extends BaseNode implements DataConsumer, O
     public OperatorDesc register(String operatorNumber, String operatorCode) {
         if (!Status.STARTED.equals(getStatus()))
             return null;
-        CallsQueuesNode manager = (CallsQueuesNode) getParent();
+        CallsQueuesNode manager = getCallsQueues();
         CallsQueueOperatorNode operator = manager.getOperatorByPhoneNumber(operatorNumber);
         if (operator==null) {
             if (isLogLevelEnabled(LogLevel.WARN))
@@ -90,7 +92,7 @@ public class OperatorRegistratorNode extends BaseNode implements DataConsumer, O
             return null;
         }
         try {
-            dataStore.set(new AuthInfo(new OperatorDescImpl(operatorCode)));
+            dataStore.set(new AuthInfo(operator, new OperatorDescImpl(operatorCode)));
             Bindings bindings = new SimpleBindings();
             bindings.put(OPERATOR_CODE_BINDING, operatorCode);
             bindings.put(OPERATOR_NUMBER_BINDING, operatorNumber);
@@ -102,6 +104,14 @@ public class OperatorRegistratorNode extends BaseNode implements DataConsumer, O
             if (authInfo.authenticated) {
                 operator.setOperatorDesc(authInfo.operatorDesc.getDesc());
                 operator.setOperatorId(authInfo.operatorDesc.getId());
+                for (CallsQueueOperatorNode oper: NodeUtils.getChildsOfType(getCallsQueues()
+                        .getOperatorsNode(), CallsQueueOperatorNode.class, false)
+                ) {
+                    if (oper!=operator && operatorCode.equals(oper.getOperatorId())) {
+                        oper.setOperatorId(null);
+                        oper.setOperatorDesc(null);
+                    }
+                }
                 return authInfo.operatorDesc;
             } else
                 return null;
@@ -109,7 +119,7 @@ public class OperatorRegistratorNode extends BaseNode implements DataConsumer, O
             bindingSupport.reset();
         }
     }
-
+    
     public void unregister(String operatorNumber) {
         if (!Status.STARTED.equals(getStatus()))
             return;
@@ -122,6 +132,10 @@ public class OperatorRegistratorNode extends BaseNode implements DataConsumer, O
         }
         operator.setOperatorDesc(null);
         operator.setOperatorId(null);
+    }
+    
+    private CallsQueuesNode getCallsQueues() {
+        return (CallsQueuesNode) getParent();
     }
 
     @Override
@@ -140,9 +154,11 @@ public class OperatorRegistratorNode extends BaseNode implements DataConsumer, O
     
     private class AuthInfo {
         boolean authenticated = false;
+        final CallsQueueOperatorNode operatorNode;
         final OperatorDesc operatorDesc;
 
-        public AuthInfo(OperatorDesc operatorDesc) {
+        public AuthInfo(CallsQueueOperatorNode operatorNode, OperatorDesc operatorDesc) {
+            this.operatorNode = operatorNode;
             this.operatorDesc = operatorDesc;
         }
     }
