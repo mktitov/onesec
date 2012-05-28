@@ -105,7 +105,8 @@ public class CallsCommutationManagerImpl implements CallsCommutationManager {
             operator.getLogger().debug(req.logMess(
                     "Transfering call from (%s) to other operator", operator.getName()));
         operator = operator.callTransferedFromOperator(phoneNumber, this);
-        req.fireCallTransfered(operator.getName(), phoneNumber);
+        req.fireCallTransfered(operator.getName(), phoneNumber, operator.getPersonId()
+                , operator.getPersonDesc());
         if (operator.isLogLevelEnabled(LogLevel.DEBUG))
             operator.getLogger().debug(req.logMess(
                     "Call successfully transfered to the (%s) operator", operator.getName()));

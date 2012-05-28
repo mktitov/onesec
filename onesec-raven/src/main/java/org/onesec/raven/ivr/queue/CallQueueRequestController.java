@@ -75,7 +75,7 @@ public interface CallQueueRequestController extends CallQueueRequest
     /**
      * Fires when request assigned to operator
      */
-    public void fireOperatorQueueEvent(String operatorId);
+    public void fireOperatorQueueEvent(String operatorId, String personId, String personDesc);
     /**
      * Fires when queue tries to call to operator using number passed in the parameter
      */
@@ -87,7 +87,7 @@ public interface CallQueueRequestController extends CallQueueRequest
     /**
      * Fires when call were transfered to other operator
      */
-    public void fireCallTransfered(String operatorId, String operatorNumber);
+    public void fireCallTransfered(String operatorId, String operatorNumber, String personId, String personDesc);
     /**
      * Returns the wrapped request
      */

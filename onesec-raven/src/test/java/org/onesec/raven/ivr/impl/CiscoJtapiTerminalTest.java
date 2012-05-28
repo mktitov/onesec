@@ -49,6 +49,7 @@ import org.raven.log.LogLevel;
 import org.raven.sched.impl.ExecutorServiceNode;
 import org.raven.tree.impl.ContainerNode;
 import static org.easymock.EasyMock.*;
+import org.onesec.raven.ivr.SendMessageDirection;
 
 /**
  * @author Mikhail Titov
@@ -86,23 +87,26 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         ProviderNode provider = new ProviderNode();
         provider.setName("631609 provider");
         callOperator.getProvidersNode().addAndSaveChildren(provider);
-        provider.setFromNumber(631609);
+        provider.setFromNumber(88000);
         provider.setToNumber(631799);
         provider.setHost("10.0.137.125");
         provider.setPassword(privateProperties.getProperty("ccm_dialer_proxy_kom"));
         provider.setUser("ccm_dialer_proxy_kom");
         assertTrue(provider.start());
         
-//        ProviderNode provider = new ProviderNode();
+//        provider = new ProviderNode();
 //        provider.setName("88013 provider");
 //        callOperator.getProvidersNode().addAndSaveChildren(provider);
 //        provider.setFromNumber(88013);
 //        provider.setToNumber(88049);
 ////        provider.setFromNumber(68050);
 ////        provider.setToNumber(68050);
-//        provider.setHost("10.16.15.1");
-//        provider.setPassword("cti_user1");
-//        provider.setUser("cti_user1");
+////        provider.setHost("10.16.15.1");
+//        provider.setHost("10.0.137.125");
+////        provider.setPassword("cti_user1");
+////        provider.setUser("cti_user1");
+//        provider.setPassword(privateProperties.getProperty("ccm_dialer_proxy_kom"));
+//        provider.setUser("ccm_dialer_proxy_kom");
 //        assertTrue(provider.start());
 
         executor = new ExecutorServiceNode();
@@ -168,7 +172,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
 
     //В данном тесте система позвонит, на указанный адрес. Необходимо взять трубку. Должны услышать:
     //  Пароли не совпадают
-    @Test(timeout=50000)
+//    @Test(timeout=50000)
     public void inviteTest() throws Exception {
         waitForProvider();
         createSimpleScenario();
@@ -365,8 +369,29 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         
         verify(term, listener);
     }
+
     
-    
+    //В данном тесте система позвонит, на указанный адрес. Необходимо взять трубку. Должны услышать:
+    //  Пароли не совпадают + на экране высветиться сообщение "Пупкин И.П."
+    @Test(timeout=70000)
+    public void sendMessageTest() throws Exception {
+        waitForProvider();
+        createSimpleScenario();
+
+        IvrTerminal term = trainTerminal("631799", scenario, true, true);
+        IvrEndpointConversationListener listener = trainListenerForSendMessage();
+        replay(term, listener);
+
+        endpoint = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, term);
+        startEndpoint(endpoint);
+        endpoint.invite("88024", 0, 0, listener, scenario, null);
+//        endpoint.invite("88027", 0, 0, listener, scenario, null);
+        waitForConversationStop();
+        stopEndpoint(endpoint);
+        
+        verify(term, listener);
+        
+    }
 
     private void startEndpoint(CiscoJtapiTerminal endpoint) throws Exception {
         IvrTerminalState state = endpoint.getState();
@@ -436,6 +461,16 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         listener.outgoingRtpStarted(isA(IvrOutgoingRtpStartedEvent.class));
         return listener;
     }
+    
+    private IvrEndpointConversationListener trainListenerForSendMessage() {
+        IvrEndpointConversationListener listener = createMock(IvrEndpointConversationListener.class);
+        listener.conversationStarted(sendMessage("Пупкин И.П."));
+        listener.conversationStopped(handleConversationStopped());
+        listener.listenerAdded(isA(IvrEndpointConversationEvent.class));
+        listener.incomingRtpStarted(isA(IvrIncomingRtpStartedEvent.class));
+        listener.outgoingRtpStarted(isA(IvrOutgoingRtpStartedEvent.class));
+        return listener;
+    }
 
     private IvrEndpointConversationListener trainListener2() {
         IvrEndpointConversationListener listener = createMock(IvrEndpointConversationListener.class);
@@ -483,7 +518,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         ProviderController provider = providerRegistry.getProviderControllers().iterator().next();
         assertNotNull(provider);
         StateWaitResult res = provider.getState().waitForState(
-                new int[]{ProviderControllerState.IN_SERVICE}, 40000);
+                new int[]{ProviderControllerState.IN_SERVICE}, 70000);
         assertFalse(res.isWaitInterrupted());
     }
 
@@ -540,6 +575,19 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
             public boolean matches(Object o) {
                 IvrEndpointConversationEvent event = (IvrEndpointConversationEvent) o;
                 event.getConversation().sendDTMF(digits);
+                return true;
+            }
+            public void appendTo(StringBuffer sb) {
+            }
+        });
+        return null;
+    }
+    
+    public static IvrEndpointConversationEvent sendMessage(final String message) {
+        reportMatcher(new IArgumentMatcher() {
+            public boolean matches(Object o) {
+                IvrEndpointConversationEvent event = (IvrEndpointConversationEvent) o;
+                event.getConversation().sendMessage(message, "windows-1251", SendMessageDirection.CALLED_PARTY);
                 return true;
             }
             public void appendTo(StringBuffer sb) {

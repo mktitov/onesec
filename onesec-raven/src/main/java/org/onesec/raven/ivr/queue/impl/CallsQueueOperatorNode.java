@@ -39,9 +39,9 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
     @NotNull @Parameter
     private String phoneNumbers;
     @Parameter
-    private String operatorId;
+    private String personId;
     @Parameter
-    private String operatorDesc;
+    private String personDesc;
 
     private AtomicBoolean busy;
     private AtomicReference<CallsCommutationManager> commutationManager;
@@ -72,19 +72,19 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
     }
 
     public String getOperatorDesc() {
-        return operatorDesc;
+        return personDesc;
     }
 
-    public void setOperatorDesc(String operatorDesc) {
-        this.operatorDesc = operatorDesc;
+    public void setPersonDesc(String personDesc) {
+        this.personDesc = personDesc;
     }
 
     public String getOperatorId() {
-        return operatorId;
+        return personId;
     }
 
-    public void setOperatorId(String operatorId) {
-        this.operatorId = operatorId;
+    public void setPersonId(String personId) {
+        this.personId = personId;
     }
 
     public String getPhoneNumbers() {
@@ -93,6 +93,16 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
 
     public void setPhoneNumbers(String phoneNumbers) {
         this.phoneNumbers = phoneNumbers;
+    }
+
+    @Override
+    public String getPersonDesc() {
+        return getOperatorDesc();
+    }
+
+    @Override
+    public String getPersonId() {
+        return getOperatorId();
     }
 
     @Override

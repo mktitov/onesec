@@ -121,7 +121,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
         
         request.addToLog("handling by operator (operator)");
         request.fireOperatorGreetingQueueEvent(audioFile);
-        request.fireOperatorQueueEvent(operator.getName());
+        request.fireOperatorQueueEvent(operator.getName(), null, null);
 //        request.addRequestWrapperListener(isA(RequestControllerListener.class));
         request.removeRequestWrapperListener(isA(RequestControllerListener.class));
         expect(request.isValid()).andReturn(Boolean.TRUE);
@@ -151,7 +151,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
         IvrEndpointState endpointState = createMock(IvrEndpointState.class);
         StateWaitResult stateWaitResult = createMock(StateWaitResult.class);
 
-        request.fireOperatorQueueEvent(operator.getName());
+        request.fireOperatorQueueEvent(operator.getName(), null, null);
         request.fireOperatorGreetingQueueEvent(audioFile);
 //        request.fireOperatorNumberQueueEvent("88024");
         request.addToLog("handling by operator (operator)");
@@ -202,7 +202,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
                 new AtomicReference<IvrEndpointConversationListener>();
 
         //INIT STEP
-        request.fireOperatorQueueEvent(operator.getName());
+        request.fireOperatorQueueEvent(operator.getName(), null, null);
         request.fireOperatorGreetingQueueEvent(audioFile);
         request.addToLog("handling by operator (operator)");
         expect(request.isValid()).andReturn(Boolean.TRUE).anyTimes();

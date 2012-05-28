@@ -27,9 +27,9 @@ public class CallTransferedQueueEventImpl extends OperatorQueueEventImpl impleme
     private final String operatorNumber;
 
     public CallTransferedQueueEventImpl(CallsQueue callsQueue, long requestId, String operatorId
-            , String operatorNumber) 
+            , String operatorNumber, String personId, String personDesc) 
     {
-        super(callsQueue, requestId, operatorId);
+        super(callsQueue, requestId, operatorId, personId, personDesc);
         this.operatorNumber = operatorNumber;
     }
 

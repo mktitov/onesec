@@ -37,6 +37,8 @@ public class CallQueueCdrRecordSchemaNode extends RecordSchemaNode
     public final static String CALLING_NUMBER = "callingNumber";
     public final static String OPERATOR_ID = "operatorId";
     public final static String OPERATOR_NUMBER = "operatorNumber";
+    public final static String OPERATOR_PERSON_ID = "operatorPersonId";
+    public final static String OPERATOR_PERSON_DESC = "operatorPersonDesc";
     public final static String TRANSFERED = "transfered";
     public final static String LOG = "log";
     public final static String QUEUED_TIME = "queuedTime";
@@ -59,6 +61,8 @@ public class CallQueueCdrRecordSchemaNode extends RecordSchemaNode
     @Message private static String callingNumberDisplayName;
     @Message private static String operatorIdDisplayName;
     @Message private static String operatorNumberDisplayName;
+    @Message private static String operatorPersonIdDisplayName;
+    @Message private static String operatorPersonDescDisplayName;
     @Message private static String transferedDisplayName;
     @Message private static String logDisplayName;
     @Message private static String queuedTimeDisplayName;
@@ -81,11 +85,9 @@ public class CallQueueCdrRecordSchemaNode extends RecordSchemaNode
         generateFields();
     }
 
-    private void generateFields()
-    {
+    private void generateFields() {
         Node node = getRecordExtensionsNode().getChildren(DATABASE_TABLE_EXTENSION_NAME);
-        if (node==null)
-        {
+        if (node==null) {
             DatabaseRecordExtension dbExtension = new DatabaseRecordExtension();
             dbExtension.setName(DATABASE_TABLE_EXTENSION_NAME);
             getRecordExtensionsNode().addAndSaveChildren(dbExtension);
@@ -99,6 +101,8 @@ public class CallQueueCdrRecordSchemaNode extends RecordSchemaNode
         createField(CALLING_NUMBER, callingNumberDisplayName, RecordSchemaFieldType.STRING);
         createField(OPERATOR_ID, operatorIdDisplayName, RecordSchemaFieldType.STRING);
         createField(OPERATOR_NUMBER, operatorNumberDisplayName, RecordSchemaFieldType.STRING);
+        createField(OPERATOR_PERSON_ID, operatorPersonIdDisplayName, RecordSchemaFieldType.STRING);
+        createField(OPERATOR_PERSON_DESC, operatorPersonDescDisplayName, RecordSchemaFieldType.STRING);
         createField(TRANSFERED, transferedDisplayName, RecordSchemaFieldType.STRING);
         createField(LOG, logDisplayName, RecordSchemaFieldType.STRING);
         createField(QUEUED_TIME, queuedTimeDisplayName, RecordSchemaFieldType.TIMESTAMP);
@@ -114,8 +118,7 @@ public class CallQueueCdrRecordSchemaNode extends RecordSchemaNode
                 , RecordSchemaFieldType.INTEGER);
     }
 
-    protected void createField(String name, String displayName, RecordSchemaFieldType fieldType)
-    {
+    protected void createField(String name, String displayName, RecordSchemaFieldType fieldType) {
         if (getChildren(name)!=null)
             return;
         String format = RecordSchemaFieldType.TIMESTAMP.equals(fieldType)? datePattern : null;

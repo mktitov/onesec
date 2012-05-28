@@ -55,6 +55,16 @@ public class CallsQueueVirtualOperatorNode extends AbstractOperatorNode {
         }
     }
 
+    @Override
+    public String getPersonDesc() {
+        return null;
+    }
+
+    @Override
+    public String getPersonId() {
+        return null;
+    }
+
     public CallsQueueOperator callTransferedFromOperator(String phoneNumber
             , CallsCommutationManager commutationManager) 
     {
