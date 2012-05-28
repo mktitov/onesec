@@ -27,11 +27,24 @@ import org.onesec.raven.ivr.queue.event.OperatorQueueEvent;
 public class OperatorQueueEventImpl extends CallQueueEventImpl implements OperatorQueueEvent
 {
     private final String operatorId;
+    private final String personId;
+    private final String personDesc;
 
-    public OperatorQueueEventImpl(CallsQueue callsQueue, long requestId, String operatorId)
+    public OperatorQueueEventImpl(CallsQueue callsQueue, long requestId, String operatorId
+            , String personId, String personDesc)
     {
         super(callsQueue, requestId);
         this.operatorId = operatorId;
+        this.personId = personId;
+        this.personDesc = personDesc;
+    }
+
+    public String getPersonId() {
+        return personId;
+    }
+
+    public String getPersonDesc() {
+        return personDesc;
     }
 
     public String getOperatorId() {

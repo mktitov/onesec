@@ -66,4 +66,6 @@ public interface CallsQueueOperator extends Node {
      */
     public void requestProcessed(CallsCommutationManager commutationManager, boolean callHandled);
     public void incOnNoFreeEndpointsRequests();
+    public String getPersonId();
+    public String getPersonDesc();
 }

@@ -24,4 +24,6 @@ package org.onesec.raven.ivr.queue.event;
 public interface OperatorQueueEvent extends CallQueueEvent
 {
     public String getOperatorId();
+    public String getPersonId();
+    public String getPersonDesc();
 }

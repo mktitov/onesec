@@ -293,10 +293,14 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
                     CallTransferedQueueEvent transferEvent = (CallTransferedQueueEvent) event;
                     cdr.setValue(OPERATOR_ID, transferEvent.getOperatorId());
                     cdr.setValue(OPERATOR_NUMBER, transferEvent.getOperatorNumber());
+                    cdr.setValue(OPERATOR_PERSON_ID, transferEvent.getPersonId());
+                    cdr.setValue(OPERATOR_PERSON_DESC, transferEvent.getPersonDesc());
                     addToLog(String.format("transfered to op. (%s) number (%s)"
                             , transferEvent.getOperatorId(), transferEvent.getOperatorNumber()));
                 } else if (event instanceof OperatorQueueEvent) {
                     cdr.setValue(OPERATOR_ID, ((OperatorQueueEvent)event).getOperatorId());
+                    cdr.setValue(OPERATOR_PERSON_ID, ((OperatorQueueEvent)event).getPersonId());
+                    cdr.setValue(OPERATOR_PERSON_DESC, ((OperatorQueueEvent)event).getPersonDesc());
                 } else if (event instanceof OperatorNumberQueueEvent) {
                     cdr.setValue(OPERATOR_NUMBER, ((OperatorNumberQueueEvent)event).getOperatorNumber());
                 }
@@ -361,16 +365,19 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
         callQueueChangeEvent(new CommutatedQueueEventImpl(queue, requestId));
     }
 
-    public void fireOperatorQueueEvent(String operatorId) {
-        callQueueChangeEvent(new OperatorQueueEventImpl(queue, requestId, operatorId));
+    public void fireOperatorQueueEvent(String operatorId, String personId, String personDesc) {
+        callQueueChangeEvent(new OperatorQueueEventImpl(queue, requestId, operatorId, personId, personDesc));
     }
 
     private void fireOperatorNumberQueueEvent(String operatorNumber) {
         callQueueChangeEvent(new OperatorNumberQueueEventImpl(queue, requestId, operatorNumber));
     }
 
-    public void fireCallTransfered(String operatorId, String operatorNumber) {
-        callQueueChangeEvent(new CallTransferedQueueEventImpl(queue, requestId, operatorId, operatorNumber));
+    public void fireCallTransfered(String operatorId, String operatorNumber, String personId
+            , String personDesc) 
+    {
+        callQueueChangeEvent(new CallTransferedQueueEventImpl(
+                queue, requestId, operatorId, operatorNumber, personId, personDesc));
     }
 
     public void fireOperatorGreetingQueueEvent(AudioFile greeting) {

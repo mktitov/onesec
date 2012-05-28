@@ -102,14 +102,14 @@ public class OperatorRegistratorNode extends BaseNode implements DataConsumer, O
             dataSource.getDataImmediate(this, dataContext);
             AuthInfo authInfo = dataStore.get();
             if (authInfo.authenticated) {
-                operator.setOperatorDesc(authInfo.operatorDesc.getDesc());
-                operator.setOperatorId(authInfo.operatorDesc.getId());
+                operator.setPersonDesc(authInfo.operatorDesc.getDesc());
+                operator.setPersonId(authInfo.operatorDesc.getId());
                 for (CallsQueueOperatorNode oper: NodeUtils.getChildsOfType(getCallsQueues()
                         .getOperatorsNode(), CallsQueueOperatorNode.class, false)
                 ) {
                     if (oper!=operator && operatorCode.equals(oper.getOperatorId())) {
-                        oper.setOperatorId(null);
-                        oper.setOperatorDesc(null);
+                        oper.setPersonId(null);
+                        oper.setPersonDesc(null);
                     }
                 }
                 return authInfo.operatorDesc;
@@ -130,8 +130,8 @@ public class OperatorRegistratorNode extends BaseNode implements DataConsumer, O
                 getLogger().warn("Not found operator with number ({})", operatorNumber);
             return;
         }
-        operator.setOperatorDesc(null);
-        operator.setOperatorId(null);
+        operator.setPersonDesc(null);
+        operator.setPersonId(null);
     }
     
     private CallsQueuesNode getCallsQueues() {

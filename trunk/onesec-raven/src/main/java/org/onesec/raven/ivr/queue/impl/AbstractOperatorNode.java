@@ -148,7 +148,7 @@ public abstract class AbstractOperatorNode extends BaseNode implements CallsQueu
             , String phoneNumbers, IvrConversationScenario conversationScenario, AudioFile greeting)
         throws Exception
     {
-        request.fireOperatorQueueEvent(getName());
+        request.fireOperatorQueueEvent(getName(), getPersonId(), getPersonDesc());
         request.fireOperatorGreetingQueueEvent(greeting!=null? greeting:this.greeting);
         String[] numbers = RavenUtils.split(phoneNumbers, ",");
         if (numbers==null || numbers.length==0) 
@@ -172,6 +172,8 @@ public abstract class AbstractOperatorNode extends BaseNode implements CallsQueu
         doRequestProcessed(commutationManager, callHandled);
     }
 
+    public abstract String getPersonId();
+    public abstract String getPersonDesc();
     protected abstract void doRequestProcessed(CallsCommutationManager commutationManager, boolean callHandled);
 
     

@@ -749,7 +749,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         private final String encoding;
 
         public SendTerminalObserver(String message, String encoding) {
-            this.message = String.format("<CiscoIPPhoneText><Text>%s</Text></CiscoIPPhoneText>", message);
+//            this.message = String.format("<CiscoIPPhoneText><Text>%s</Text></CiscoIPPhoneText>", message);
+            this.message = String.format("<CiscoIPPhoneStatus><Text>%s</Text></CiscoIPPhoneStatus>", message);
             this.encoding = encoding;
         }
 
