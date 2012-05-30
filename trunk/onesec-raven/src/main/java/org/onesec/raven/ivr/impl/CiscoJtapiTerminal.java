@@ -189,12 +189,12 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
     }
 
     public void invite(String opponentNum, int inviteTimeout, int maxCallDur
-            , IvrEndpointConversationListener listener
+            , final IvrEndpointConversationListener listener
             , IvrConversationScenario scenario, Map<String, Object> bindings)
     {
-        lock.writeLock().lock();
+        Call call = null;
         try {
-            Call call = null;
+            lock.writeLock().lock();
             try {
                 if (state.getId()!=IvrTerminalState.IN_SERVICE)
                     throw new Exception("Can't invite oppenent to conversation. Terminal not ready");
@@ -212,18 +212,22 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                     executor.execute(inviteTimeout*1000, new InviteTimeoutHandler(conv, call, maxCallDur));
                 else if (maxCallDur>0)
                     executor.execute(maxCallDur*1000, new MaxCallDurationHandler(conv, call));
-            } catch (Throwable e) {
-                if (isLogLevelEnabled(LogLevel.WARN)) 
-                    logger.warn(String.format("Problem with inviting abonent with number (%s)", opponentNum), e);
-                IvrEndpointConversationStoppedEvent ev = new IvrEndpointConversationStoppedEventImpl(
-                        null, CompletionCode.TERMINAL_NOT_READY);
-                listener.conversationStopped(ev);
-                conversationStopped(ev);
-                if (call!=null)
-                    stopConversation(call, CompletionCode.OPPONENT_UNKNOWN_ERROR);
+            } finally {
+                lock.writeLock().unlock();
             }
-        } finally {
-            lock.writeLock().unlock();
+        } catch (Throwable e) {
+            if (isLogLevelEnabled(LogLevel.WARN)) 
+                logger.warn(String.format("Problem with inviting abonent with number (%s)", opponentNum), e);
+            final IvrEndpointConversationStoppedEvent ev = new IvrEndpointConversationStoppedEventImpl(
+                    null, CompletionCode.TERMINAL_NOT_READY);
+            if (call!=null)
+                stopConversation(call, CompletionCode.OPPONENT_UNKNOWN_ERROR);
+            executor.executeQuietly(new AbstractTask(term, "Propagating conversation stop event") {
+                @Override public void doRun() throws Exception {
+                    listener.conversationStopped(ev);
+                }
+            });
+            conversationStopped(ev);
         }
     }
     
