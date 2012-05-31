@@ -40,11 +40,11 @@ public class OutQueue {
      */
     private int factorTH = 0;
     private int maxAttempts = 5;
-    private LinkedBlockingQueue<MessageUnit> queue = new LinkedBlockingQueue<MessageUnit>();
-    private HashMap<Integer, MessageUnit> sended = new HashMap<Integer, MessageUnit>();
-    private HashSet<String> blockedNums = new HashSet<String>();
-    private SmCoder coder;
     
+    private final HashMap<Integer, MessageUnit> sended = new HashMap<Integer, MessageUnit>();
+    private final HashSet<String> blockedNums = new HashSet<String>();
+    private final LinkedBlockingQueue<MessageUnit> queue = new LinkedBlockingQueue<MessageUnit>();
+    private final SmCoder coder;
     private final AtomicInteger mesCount = new AtomicInteger(0);
     private final LoggerHelper logger;
 
@@ -132,10 +132,10 @@ public class OutQueue {
         while (it.hasNext()) {
             noPrev = false;
             MessageUnit m = it.next();
-
             synchronized (m) {
                 boolean a = t - m.getFd() > mesLifeTime;
-                boolean b = prev != null && prev.getMessageId() == m.getMessageId() && prev.getStatus() == MessageUnit.FATAL;
+                boolean b = prev!=null && prev.getMessageId()==m.getMessageId() 
+                            && prev.getStatus()==MessageUnit.FATAL;
                 if (a || b) {
                     if (m.getStatus() == MessageUnit.WAIT) 
                         blockedNums.remove(m.getDst());

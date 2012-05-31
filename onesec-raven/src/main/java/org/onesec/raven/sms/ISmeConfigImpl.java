@@ -16,60 +16,59 @@
 package org.onesec.raven.sms;
 
 import com.logica.smpp.pdu.Address;
-import java.util.Collection;
-import org.onesec.raven.sms.queue.ShortTextMessage;
-import org.raven.ds.DataConsumer;
-import org.raven.ds.DataContext;
-import org.raven.ds.DataPipe;
-import org.raven.ds.DataSource;
-import org.raven.tree.NodeAttribute;
-import org.raven.tree.impl.BaseNode;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class SmsTranseiverNode extends BaseNode implements DataPipe, ISmeConfig {
-    
-    private final
-
-    public void setData(DataSource dataSource, Object data, DataContext context) {
-    }
-
-    public Object refereshData(Collection<NodeAttribute> sessionAttributes) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    public boolean getDataImmediate(DataConsumer dataConsumer, DataContext context) {
-        return true;
-    }
-
-    public Collection<NodeAttribute> generateAttributes() {
-        return null;
-    }
-    
-    public void messageHandled(ShortTextMessage message, boolean success) {
-        
-    }
+public class ISmeConfigImpl implements ISmeConfig {
+    private int bindMode = 3;
+    private String bindAddr;
+    private int bindPort = 5016;
+    private int bindTon = 5;
+    private int bindNpi = 0;
+    private String addrRange = ""; //Raven
+    private String fromAddr = "";
+    private boolean async = true;
 
     public int getBindMode() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return bindMode;
+    }
+
+    public void setBindMode(int bindMode) {
+        this.bindMode = bindMode;
     }
 
     public String getBindAddr() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return bindAddr;
+    }
+
+    public void setBindAddr(String bindAddr) {
+        this.bindAddr = bindAddr;
     }
 
     public int getBindPort() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return bindPort;
+    }
+
+    public void setBindPort(int bindPort) {
+        this.bindPort = bindPort;
     }
 
     public int getBindTon() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return bindTon;
+    }
+
+    public void setBindTon(int bindTon) {
+        this.bindTon = bindTon;
     }
 
     public int getBindNpi() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return bindNpi;
+    }
+
+    public void setBindNpi(int bindNpi) {
+        this.bindNpi = bindNpi;
     }
 
     public String getAddrRange() {
@@ -211,4 +210,5 @@ public class SmsTranseiverNode extends BaseNode implements DataPipe, ISmeConfig 
     public int getMaxUnconfirmed() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
+    
 }
