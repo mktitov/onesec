@@ -237,18 +237,21 @@ public class SmeTranseiver extends Thread implements ISmeConfig {
                 }
             }
 
-            if (isStopFlag() == true) 
+            if (isStopFlag() == true) {
                 break;
+            }
 
             long tm = System.currentTimeMillis();
 
-            if (!checkBind(tm)) 
+            if (!checkBind(tm)) {
                 continue;
+            }
 
             receiveAll();
 
-            if (isStopFlag() == true) 
+            if (isStopFlag() == true) {
                 break;
+            }
 
             if (sme.isNeedUnbind() == true) {
                 sme.unbind();
@@ -292,16 +295,19 @@ public class SmeTranseiver extends Thread implements ISmeConfig {
             try {
                 int snd = 0;
                 for (int k = 0; queue.howManyUnconfirmed() <= maxUnconfirmed; k++) {
-                    if (isStopFlag()) 
+                    if (isStopFlag()) {
                         break;
+                    }
                     MessageUnit mu = queue.getNext();
-                    if (mu == null) 
+                    if (mu == null) {
                         break;
+                    }
                     log.info("new PDU for submit found:");
                     sm = mu.getPdu();
                     sm.assignSequenceNumber(true);
-                    if (log.isInfoEnabled()) 
+                    if (log.isInfoEnabled()) {
                         log.info("SubmitSM: {}", sm.debugString());
+                    }
                     sme.submit254(sm);
                     queue.sended(mu);
                     sendfl = 1;
