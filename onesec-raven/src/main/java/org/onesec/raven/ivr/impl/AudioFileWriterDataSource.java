@@ -77,16 +77,16 @@ public class AudioFileWriterDataSource {
         dataSource.disconnect();
     }
     
-    private void createFile() {
-        try {
-            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                owner.getLogger().debug(logMess("Creating file (%s)", file));
-            out = new RandomAccessFile(file, "rw");
-        } catch (FileNotFoundException e) {
-            out = null;
-            dataSource.getStreams()[0].setTransferHandler(null);
-        }
-    }
+//    private void createFile() {
+//        try {
+//            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+//                owner.getLogger().debug(logMess("Creating file (%s)", file));
+//            out = new RandomAccessFile(file, "rw");
+//        } catch (FileNotFoundException e) {
+//            out = null;
+//            dataSource.getStreams()[0].setTransferHandler(null);
+//        }
+//    }
     
     private void closeFile() {
         if (!fileClosed.compareAndSet(false, true))
@@ -154,6 +154,8 @@ public class AudioFileWriterDataSource {
         
 
         public MuxTransferHandler() throws FileNotFoundException {
+            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                owner.getLogger().debug(logMess("Creating file (%s)", file));
             out = new RandomAccessFile(file, "rw");
         }
 
@@ -206,7 +208,7 @@ public class AudioFileWriterDataSource {
                     return;
                 if (firstBuffer) {
                     initMux(buffer);
-                    createFile();
+//                    createFile();
                     firstBuffer = false;
                 }
                 while (!muxClosed.get() && mux.process(buffer, 0) > 1) ;
