@@ -252,11 +252,14 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             this.maxSendAheadPacketsCount = maxSendAheadPacketsCount;
             this.codec = codec;
             outRtp = streamManager.getOutgoingRtpStream(owner);
-            outRtp.setLogPrefix(callId+" : ");
-            outRtpStatus = RtpStatus.CREATED;
-            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                owner.getLogger().debug(callLog("Outgoing RTP successfully created"));
-            checkState();
+            if (outRtp!=null) {
+                outRtp.setLogPrefix(callId+" : ");
+                outRtpStatus = RtpStatus.CREATED;
+                if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                    owner.getLogger().debug(callLog("Outgoing RTP successfully created"));
+                checkState();
+            } else
+                throw new IvrEndpointConversationException("Error creating outgoing rtp stream");
         } finally {
             lock.writeLock().unlock();
         }

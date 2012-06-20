@@ -31,7 +31,7 @@ import org.raven.tree.impl.BaseNode;
  */
 public class SmsTranseiverNode extends BaseNode implements DataPipe, ISmeConfig {
     
-    private final
+//    private final
 
     public void setData(DataSource dataSource, Object data, DataContext context) {
     }
