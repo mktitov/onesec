@@ -30,7 +30,7 @@ import org.raven.test.PushOnDemandDataSource;
 public class OperatorRegistratorNodeTest extends OnesecRavenTestCase {
     private CallsQueuesNode queues;
     private PushOnDemandDataSource ds;
-    private OperatorRegistratorNode authenticator;
+    private OperatorRegistratorNode registrator;
     private CallsQueueOperatorNode oper;
     
     @Before
@@ -44,9 +44,9 @@ public class OperatorRegistratorNodeTest extends OnesecRavenTestCase {
         queues.setName("queues");
         tree.getRootNode().addAndSaveChildren(queues);
         assertTrue(queues.start());
-        authenticator = queues.getOperatorRegistrator();
-        authenticator.setDataSource(ds);
-        assertTrue(authenticator.start());
+        registrator = queues.getOperatorRegistrator();
+        registrator.setDataSource(ds);
+        assertTrue(registrator.start());
         
         TestEndpointPool pool = new TestEndpointPool();
         pool.setName("pool");
@@ -72,6 +72,22 @@ public class OperatorRegistratorNodeTest extends OnesecRavenTestCase {
         oper.setConversationsBridgeManager(bridgeManager);
         assertTrue(oper.start());
     }
+    
+    @Test
+    public void currentOperatorTest() {
+        assertNull(registrator.getCurrentOperator("000"));
+        assertNull(registrator.getCurrentOperator("0"));
+        
+        oper.setPersonDesc("Operator");
+        oper.setPersonId("operator id");
+        OperatorDesc desc = registrator.getCurrentOperator("000");
+        assertNotNull(desc);
+        assertEquals("Operator", desc.getDesc());
+        assertEquals("operator id", desc.getId());
+        
+        registrator.stop();
+        assertNull(registrator.getCurrentOperator("000"));
+    }
 
     @Test
     public void successAuthTest() {
@@ -80,7 +96,7 @@ public class OperatorRegistratorNodeTest extends OnesecRavenTestCase {
         ds.addDataPortion(map);
         ds.addDataPortion(null);
         
-        OperatorDesc desc = authenticator.register("000", "123");
+        OperatorDesc desc = registrator.register("000", "123");
         assertNotNull(desc);
         assertEquals("Pupkin", desc.getDesc());
         assertEquals("123", desc.getId());
@@ -92,7 +108,7 @@ public class OperatorRegistratorNodeTest extends OnesecRavenTestCase {
     @Test
     public void unbindOperatorTest() {
         successAuthTest();
-        authenticator.unregister("000");
+        registrator.unregister("000");
         assertNull(oper.getOperatorDesc());
         assertNull(oper.getOperatorId());
     }
@@ -104,14 +120,14 @@ public class OperatorRegistratorNodeTest extends OnesecRavenTestCase {
         ds.addDataPortion(map);
         ds.addDataPortion(null);
         
-        assertNull(authenticator.register("0000", "123"));
+        assertNull(registrator.register("0000", "123"));
     }
     
     @Test 
     public void failAuthTest() {
-        assertNull(authenticator.register("000", "123"));
+        assertNull(registrator.register("000", "123"));
         
         ds.addDataPortion(null);
-        assertNull(authenticator.register("000", "123"));
+        assertNull(registrator.register("000", "123"));
     }
 }
