@@ -21,6 +21,10 @@ package org.onesec.raven.ivr.queue;
  */
 public interface OperatorRegistrator {
     /**
+     * Returns the information about current registered operator or null
+     */
+    public OperatorDesc getCurrentOperator(String operatorNumber);
+    /**
      * Authenticate operator. 
      * @param operatorNumber the operator's phone number
      * @param operatorCode the operator's code

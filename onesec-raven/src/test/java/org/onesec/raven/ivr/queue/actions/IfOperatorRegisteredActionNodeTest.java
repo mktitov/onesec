@@ -15,37 +15,38 @@
  */
 package org.onesec.raven.ivr.queue.actions;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import javax.script.Bindings;
-import org.junit.*;
-import org.onesec.raven.BindingSourceNode;
-import org.onesec.raven.OnesecRavenTestCase;
-import org.onesec.raven.ivr.queue.impl.CallsQueuesNode;
-import org.raven.test.PushOnDemandDataSource;
-import static org.onesec.raven.ivr.IvrEndpointConversation.*;
 import static org.easymock.EasyMock.*;
 import org.easymock.IArgumentMatcher;
 import org.easymock.IMocksControl;
+import org.junit.Before;
+import org.junit.Test;
+import org.onesec.raven.BindingSourceNode;
+import org.onesec.raven.OnesecRavenTestCase;
+import static org.onesec.raven.ivr.IvrEndpointConversation.CONVERSATION_STATE_BINDING;
+import static org.onesec.raven.ivr.IvrEndpointConversation.NUMBER_BINDING;
 import org.onesec.raven.ivr.queue.OperatorDesc;
-import org.onesec.raven.ivr.queue.impl.*;
+import org.onesec.raven.ivr.queue.impl.CallsQueueOperatorNode;
+import org.onesec.raven.ivr.queue.impl.CallsQueuesNode;
+import org.onesec.raven.ivr.queue.impl.TestConversationsBridgeManager;
+import org.onesec.raven.ivr.queue.impl.TestEndpointPool;
+import org.raven.BindingNames;
 import org.raven.conv.BindingScope;
 import org.raven.conv.ConversationScenarioState;
-import org.raven.ds.DataConsumer;
-import org.raven.ds.DataContext;
 import org.raven.sched.impl.ExecutorServiceNode;
-import org.raven.test.PushOnDemandDataSourceListener;
+import org.raven.test.PushOnDemandDataSource;
+import org.raven.tree.impl.BaseNode;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class RegisterOperatorActionNodeTest extends OnesecRavenTestCase {
+public class IfOperatorRegisteredActionNodeTest extends OnesecRavenTestCase implements BindingNames {
     private CallsQueuesNode callQueues;
     private PushOnDemandDataSource ds;
-    private RegisterOperatorActionNode action;
+    private CallsQueueOperatorNode oper;
+    private IfOperatorRegisteredActionNode action;
     private BindingSourceNode parent;
     
     @Before
@@ -70,7 +71,7 @@ public class RegisterOperatorActionNodeTest extends OnesecRavenTestCase {
         tree.getRootNode().addAndSaveChildren(bridgeManager);
         assertTrue(bridgeManager.start());
         
-        CallsQueueOperatorNode oper = new CallsQueueOperatorNode();
+        oper = new CallsQueueOperatorNode();
         oper.setName("oper");
         callQueues.getOperatorsNode().addAndSaveChildren(oper);
         oper.setPhoneNumbers("0000");        
@@ -92,88 +93,79 @@ public class RegisterOperatorActionNodeTest extends OnesecRavenTestCase {
         tree.getRootNode().addAndSaveChildren(parent);
         assertTrue(parent.start());
         
-        action = new RegisterOperatorActionNode();
-        action.setName("authenticate operator action");
+        action = new IfOperatorRegisteredActionNode();
+        action.setName("if perator registered");
         parent.addAndSaveChildren(action);
         action.setCallsQueues(callQueues);
         assertTrue(action.start());
+        
+        BaseNode child = new BaseNode("child");
+        action.addAndSaveChildren(child);
+        assertTrue(child.start());
     }
     
-    @Test 
-    public void unauthorized_nullDtmfs_Test() {
-        assertNull(action.getEffectiveChildrens());
-    }
     
-    @Test 
-    public void unauthorized_emptyDtmfs_Test() {
-        parent.addBinding(DTMFS_BINDING, Collections.EMPTY_LIST);
-        assertNull(action.getEffectiveChildrens());
-    }
-    
-    @Test 
-    public void unauthorized_byAuthenticator_Test() {
-        parent.addBinding(DTMFS_BINDING, Arrays.asList("1","2","3"));
-        parent.addBinding(NUMBER_BINDING, "0000");
-        PushOnDemandDataSourceListener listener = createMock(PushOnDemandDataSourceListener.class);
-        listener.onGatherDataForConsumer(isA(DataConsumer.class), checkDataContext());
-        replay(listener);
-        ds.setListener(listener);
-        assertNull(action.getEffectiveChildrens());
-        verify(listener);
-    }
-    
-    @Test 
-    public void successAuth_Test() {
-        parent.addBinding(DTMFS_BINDING, Arrays.asList("1","2","3"));
+    @Test
+    public void unsuccessTest() {
         parent.addBinding(NUMBER_BINDING, "0000");
         
         IMocksControl control = createStrictControl();
-        PushOnDemandDataSourceListener listener = control.createMock(PushOnDemandDataSourceListener.class);
         ConversationScenarioState state = control.createMock(ConversationScenarioState.class);
-        Bindings bindings = control.createMock(Bindings.class);
+        Bindings stateBindings = control.createMock(Bindings.class);
         Bindings bindings2 = control.createMock(Bindings.class);
         
-        expect(state.getBindings()).andReturn(bindings);
-        expect(bindings.containsKey(RegisterOperatorActionNode.OPERATOR_BINDING)).andReturn(false);
-        listener.onGatherDataForConsumer(isA(DataConsumer.class), checkDataContext());
-        state.setBinding(eq(RegisterOperatorActionNode.OPERATOR_BINDING), checkOperator()
-                , eq(BindingScope.CONVERSATION));
+        expect(state.getBindings()).andReturn(stateBindings);
+        expect(stateBindings.containsKey(RegisterOperatorActionNode.OPERATOR_BINDING)).andReturn(false);
+        state.setBinding(eq(RegisterOperatorActionNode.OPERATOR_BINDING), isNull(), eq(BindingScope.CONVERSATION));
         //test formExpressionBindings
         bindings2.putAll(anyObject(Map.class));
         expect(bindings2.get(CONVERSATION_STATE_BINDING)).andReturn(state);
-        expect(state.getBindings()).andReturn(bindings);
-        expect(bindings.containsKey(RegisterOperatorActionNode.OPERATOR_BINDING)).andReturn(true);
-        expect(state.getBindings()).andReturn(bindings);
-        expect(bindings.get(RegisterOperatorActionNode.OPERATOR_BINDING)).andReturn("oper");
-        expect(bindings2.put(RegisterOperatorActionNode.OPERATOR_BINDING, "oper")).andReturn(null);
+        expect(state.getBindings()).andReturn(stateBindings);
+        expect(stateBindings.containsKey(RegisterOperatorActionNode.OPERATOR_BINDING)).andReturn(false);
+//        expect(state.getBindings()).andReturn(stateBindings);
+//        expect(stateBindings.get(RegisterOperatorActionNode.OPERATOR_BINDING)).andReturn("oper");
+//        expect(bindings2.put(RegisterOperatorActionNode.OPERATOR_BINDING, "oper")).andReturn(null);
         control.replay();
         
         parent.addBinding(CONVERSATION_STATE_BINDING, state);
-        Map map = new HashMap();
-        map.put(OperatorRegistratorNode.OPERATOR_DESC_FIELD, "Pupkin");
-        ds.addDataPortion(map);
-        ds.setListener(listener);
         assertNull(action.getEffectiveChildrens());
         //test formExpressionBindings
         action.formExpressionBindings(bindings2);
         
         control.verify();
+        
     }
     
-    public static DataContext checkDataContext() {
-        reportMatcher(new IArgumentMatcher() {
-            public boolean matches(Object o) {
-                assertNotNull(o);
-                assertTrue(o instanceof DataContext);
-                DataContext dataContext = (DataContext) o;
-                assertEquals("0000", dataContext.getAt(OperatorRegistratorNode.OPERATOR_NUMBER_BINDING));
-                assertEquals("123", dataContext.getAt(OperatorRegistratorNode.OPERATOR_CODE_BINDING));
-                return true;
-            }
-            public void appendTo(StringBuffer sb) {
-            }
-        });
-        return null;
+    @Test
+    public void successTest() {
+        parent.addBinding(NUMBER_BINDING, "0000");
+        oper.setPersonDesc("Person desc");
+        oper.setPersonId("Person id");
+        
+        IMocksControl control = createStrictControl();
+        ConversationScenarioState state = control.createMock(ConversationScenarioState.class);
+        Bindings stateBindings = control.createMock("stateBindings", Bindings.class);
+        Bindings bindings2 = control.createMock("nodeBindigns", Bindings.class);
+        
+        expect(state.getBindings()).andReturn(stateBindings);
+        expect(stateBindings.containsKey(RegisterOperatorActionNode.OPERATOR_BINDING)).andReturn(false);
+        state.setBinding(eq(RegisterOperatorActionNode.OPERATOR_BINDING), checkOperator(), eq(BindingScope.CONVERSATION));
+        //test formExpressionBindings
+        bindings2.putAll(anyObject(Map.class));
+        expect(bindings2.get(CONVERSATION_STATE_BINDING)).andReturn(state);
+        expect(state.getBindings()).andReturn(stateBindings);
+        expect(stateBindings.containsKey(RegisterOperatorActionNode.OPERATOR_BINDING)).andReturn(true);
+        expect(state.getBindings()).andReturn(stateBindings);
+        expect(stateBindings.get(RegisterOperatorActionNode.OPERATOR_BINDING)).andReturn("oper");
+        expect(bindings2.put(RegisterOperatorActionNode.OPERATOR_BINDING, "oper")).andReturn(null);
+        control.replay();
+        
+        parent.addBinding(CONVERSATION_STATE_BINDING, state);
+        assertNotNull(action.getEffectiveChildrens());
+        //test formExpressionBindings
+        action.formExpressionBindings(bindings2);
+        
+        control.verify();
     }
     
     public static OperatorDesc checkOperator() {
@@ -181,8 +173,8 @@ public class RegisterOperatorActionNodeTest extends OnesecRavenTestCase {
             public boolean matches(Object o) {
                 assertTrue(o instanceof OperatorDesc);
                 OperatorDesc oper = (OperatorDesc) o;
-                assertEquals("123", oper.getId());
-                assertEquals("Pupkin", oper.getDesc());
+                assertEquals("Person id", oper.getId());
+                assertEquals("Person desc", oper.getDesc());
                 return true;
             }
             public void appendTo(StringBuffer sb) {

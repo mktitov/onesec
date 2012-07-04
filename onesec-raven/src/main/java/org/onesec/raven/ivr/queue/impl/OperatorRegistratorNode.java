@@ -30,7 +30,6 @@ import org.raven.ds.impl.DataContextImpl;
 import org.raven.expr.BindingSupport;
 import org.raven.expr.impl.BindingSupportImpl;
 import org.raven.log.LogLevel;
-import org.raven.tree.Node;
 import org.raven.tree.NodeAttribute;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.InvisibleNode;
@@ -79,6 +78,22 @@ public class OperatorRegistratorNode extends BaseNode implements DataConsumer, O
 
     public Object refereshData(Collection<NodeAttribute> sessionAttributes) {
         throw new UnsupportedOperationException("Not supported by this consumer");
+    }
+
+    public OperatorDesc getCurrentOperator(String operatorNumber) {
+        if (!Status.STARTED.equals(getStatus()))
+            return null;
+        CallsQueuesNode manager = getCallsQueues();
+        CallsQueueOperatorNode operator = manager.getOperatorByPhoneNumber(operatorNumber);
+        if (operator==null) {
+            if (isLogLevelEnabled(LogLevel.WARN))
+                getLogger().warn("Not found operator with number ({})", operatorNumber);
+            return null;
+        }
+        if (operator.getPersonId()!=null)
+            return new OperatorDescImpl(operator.getPersonId(), operator.getPersonDesc());
+        else
+            return null;
     }
 
     public OperatorDesc register(String operatorNumber, String operatorCode) {

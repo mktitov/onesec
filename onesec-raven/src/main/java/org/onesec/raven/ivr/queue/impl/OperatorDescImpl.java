@@ -29,6 +29,11 @@ public class OperatorDescImpl implements OperatorDesc {
         this.operatorId = operatorId;
     }
 
+    public OperatorDescImpl(String operatorId, String operatorDesc) {
+        this(operatorId);
+        this.operatorDesc = operatorDesc;
+    }
+
     public String getDesc() {
         return operatorDesc;
     }

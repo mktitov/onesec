@@ -19,12 +19,14 @@ package org.onesec.raven.ivr.actions;
 
 import java.util.List;
 import java.util.Map;
+import javax.script.SimpleBindings;
 import org.onesec.raven.ivr.IvrAction;
 import org.onesec.raven.ivr.IvrActionNode;
 import org.onesec.raven.ivr.impl.AudioFileNode;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
+import org.raven.conv.ConversationScenario;
 import org.raven.tree.NodeAttribute;
 import org.raven.tree.Viewable;
 import org.raven.tree.ViewableObject;
@@ -41,6 +43,9 @@ public class PlayAudioActionNode extends BaseNode implements IvrActionNode, View
 {
     @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
     private AudioFileNode audioFile;
+    
+    @Parameter
+    private Integer playAtRepetition;
 
     public AudioFileNode getAudioFile()
     {
@@ -52,9 +57,16 @@ public class PlayAudioActionNode extends BaseNode implements IvrActionNode, View
         this.audioFile = audioFile;
     }
 
-    public IvrAction createAction()
-    {
-        return new PlayAudioAction(audioFile);
+    public IvrAction createAction() {
+        Integer _playAtRepetition = playAtRepetition;
+        if (_playAtRepetition==null)
+            return new PlayAudioAction(audioFile);
+        else {
+            SimpleBindings bindings = new SimpleBindings();
+            formExpressionBindings(bindings);
+            int repetitionCount = ((Number) bindings.get(ConversationScenario.REPEITION_COUNT_PARAM)).intValue();
+            return repetitionCount-1==_playAtRepetition? new PlayAudioAction(audioFile) : null;
+        }
     }
 
     public Map<String, NodeAttribute> getRefreshAttributes() throws Exception
@@ -76,4 +88,13 @@ public class PlayAudioActionNode extends BaseNode implements IvrActionNode, View
     {
         return true;
     }
+
+    public Integer getPlayAtRepetition() {
+        return playAtRepetition;
+    }
+
+    public void setPlayAtRepetition(Integer playAtRepetition) {
+        this.playAtRepetition = playAtRepetition;
+    }
+    
 }
