@@ -18,7 +18,10 @@
 package org.onesec.raven.ivr.queue.impl;
 
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.queue.CallQueueRequestController;
@@ -42,10 +45,15 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
     private String personId;
     @Parameter
     private String personDesc;
+    @Parameter
+    private Integer timeoutAfterSuccessProcess;
 
     private AtomicBoolean busy;
     private AtomicReference<CallsCommutationManager> commutationManager;
     private AtomicReference<String> request;
+    private AtomicLong timeoutEndTime;
+    
+    private Lock busyLock;
 
     @Override
     protected void initFields() {
@@ -53,12 +61,22 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
         busy = new AtomicBoolean(false);
         request = new AtomicReference<String>();
         commutationManager = new AtomicReference<CallsCommutationManager>();
+        timeoutEndTime = new AtomicLong();
+        busyLock = new ReentrantLock();
     }
 
     @Override
     protected void doStart() throws Exception {
         busy.set(false);
         super.doStart();
+    }
+
+    public Integer getTimeoutAfterSuccessProcess() {
+        return timeoutAfterSuccessProcess;
+    }
+
+    public void setTimeoutAfterSuccessProcess(Integer timeoutAfterSuccessProcess) {
+        this.timeoutAfterSuccessProcess = timeoutAfterSuccessProcess;
     }
     
     @Parameter(readOnly=true)
@@ -112,11 +130,12 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
     {
         if (getCallsQueues().getUseOnlyRegisteredOperators()==true && getOperatorId()==null)
             return false;
-        if (!busy.compareAndSet(false, true)) {
+        if (timeoutEndTime.get()>=System.currentTimeMillis() || !busy.compareAndSet(false, true) ) {
             onBusyRequests.incrementAndGet();
             return false;
         }
         try {
+            timeoutEndTime.set(0);
             this.request.set(request.toString());
             String _nums = operatorPhoneNumbers==null||operatorPhoneNumbers.trim().length()==0?
                     phoneNumbers : operatorPhoneNumbers;
@@ -134,11 +153,16 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
     @Override
     protected void doRequestProcessed(CallsCommutationManager manager, boolean callHandled) {
         if (commutationManager.compareAndSet(manager, null)) {
+            if (callHandled) {
+                Integer timeout = timeoutAfterSuccessProcess;
+                if (timeout!=null)
+                    timeoutEndTime.set(System.currentTimeMillis()+timeout*1000);
+            }
             busy.set(false);
             request.set(null);
         }
     }
-
+    
     public CallsQueueOperator callTransferedFromOperator(String phoneNumber
             , CallsCommutationManager manager) 
     {

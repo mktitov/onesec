@@ -111,6 +111,49 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
 
         verify(request, queue);
     }
+    
+    @Test
+    public void timeoutAfterSuccessProcess() throws Exception {
+        CallQueueRequestController request = createMock(CallQueueRequestController.class);
+        CallsQueue queue = createMock(CallsQueue.class);
+        AudioFile audioFile = createMock(AudioFile.class);
+        IvrEndpointPool pool = createMock(IvrEndpointPool.class);
+        
+        request.addToLog("handling by operator (operator)");
+        expectLastCall().times(2);
+        request.fireOperatorGreetingQueueEvent(audioFile);
+        expectLastCall().times(2);
+        request.fireOperatorQueueEvent(operator.getName(), null, null);
+        expectLastCall().times(2);
+//        request.addRequestWrapperListener(isA(RequestControllerListener.class));
+//        request.removeRequestWrapperListener(isA(RequestControllerListener.class));
+//        expectLastCall().times(2);
+        expect(request.isValid()).andReturn(true).times(2);
+        expect(request.isHandlingByOperator()).andReturn(false).times(2);
+        expect(request.logMess(isA(String.class), isA(String.class))).andReturn("log mess").anyTimes();
+//        request.addToLog("NOT handled by op.(operator)");
+//        expectLastCall().times(2);
+        pool.requestEndpoint(isA(EndpointRequest.class));
+        expectLastCall().times(2);
+//        request.addToLog("no free endpoints in the pool");
+//        queue.queueCall(request);
+
+        replay(request, queue, pool, audioFile);
+
+        assertTrue(operator.start());
+        endpointPool.setEndpointPool(pool);
+        operator.setTimeoutAfterSuccessProcess(1);
+        operator.processRequest(queue, request, scenario, audioFile, null);
+        operator.doRequestProcessed(operator.getCommutationManager(), true);
+        assertFalse(operator.getBusy());
+        assertFalse(operator.processRequest(queue, request, scenario, audioFile, null));
+        Thread.sleep(1100);
+        assertTrue(operator.processRequest(queue, request, scenario, audioFile, null));
+        Thread.sleep(200);
+        
+        verify(request, queue, pool, audioFile);
+        
+    }
 
     @Test
     public void noFreeEndpointInThePoolTest() throws ExecutorServiceException, InterruptedException {
