@@ -20,8 +20,6 @@ package org.onesec.raven.ivr.queue.impl;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.queue.CallQueueRequestController;
@@ -53,8 +51,6 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
     private AtomicReference<String> request;
     private AtomicLong timeoutEndTime;
     
-    private Lock busyLock;
-
     @Override
     protected void initFields() {
         super.initFields();
@@ -62,7 +58,6 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
         request = new AtomicReference<String>();
         commutationManager = new AtomicReference<CallsCommutationManager>();
         timeoutEndTime = new AtomicLong();
-        busyLock = new ReentrantLock();
     }
 
     @Override
