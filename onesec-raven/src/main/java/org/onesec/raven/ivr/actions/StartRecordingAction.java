@@ -49,6 +49,7 @@ import org.weda.internal.annotations.Service;
 public class StartRecordingAction extends AsyncAction {
     public final static String NAME = "Start recording action";
     public final static String RECORDER_BINDING = "CallRecorder";
+    public final static String CONVERSATION_BINDING = "convBindings";
     
     @Service
     private static CodecManager codecManager;
@@ -110,6 +111,7 @@ public class StartRecordingAction extends AsyncAction {
                 throws Exception
         {
             this.context = context!=null? context : new DataContextImpl();
+            this.context.putAt(CONVERSATION_BINDING, conversation.getConversationScenarioState().getBindings());
             this.tempFileManager = actionNode.getTemporaryFileManager();
             this.inRtp = conversation.getIncomingRtpStream();
             this.loggerNode = conversation.getOwner();

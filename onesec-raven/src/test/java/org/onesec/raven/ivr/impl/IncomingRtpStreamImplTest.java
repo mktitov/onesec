@@ -48,11 +48,13 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         Thread.sleep(500);
     }
 
+    @Test
     public void sendOverRtpTest() throws Exception
     {
         OperationState state = sendOverRtp(
-                "src/test/wav/test.wav", Codec.G711_MU_LAW, "10.50.1.85", 1234);
+                "target/test.wav", Codec.G711_MU_LAW, "10.50.1.85", 1234);
         state.join();
+        Thread.sleep(5000);
     }
 
 //    @Test
@@ -93,7 +95,7 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         irtp.release();
     }
 
-    @Test
+//    @Test
     public void oneListenerTest() throws Exception
     {
         IncomingRtpStream irtp = manager.getIncomingRtpStream(manager);
