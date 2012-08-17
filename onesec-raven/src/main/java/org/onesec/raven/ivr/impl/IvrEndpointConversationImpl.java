@@ -604,7 +604,10 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
 
     public void sendDTMF(String digits) {
         try {
-            Connection[] cons = call.getConnections();
+            CiscoCall _call = call;
+            if (_call==null)
+                return;
+            Connection[] cons = _call.getConnections();
             MediaTerminalConnection termCon = null;
             if (cons!=null)
                 for (Connection con: cons)
