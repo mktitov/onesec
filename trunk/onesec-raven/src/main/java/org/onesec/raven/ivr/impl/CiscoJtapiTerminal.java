@@ -208,10 +208,10 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                 conv.addConversationListener(this);
                 ConvHolder holder = new ConvHolder(conv, false);
                 calls.put(call, holder);
+                call.connect(ciscoTerm, termAddress, opponentNum);
             } finally {
                 lock.writeLock().unlock();
             }
-            call.connect(ciscoTerm, termAddress, opponentNum);
             if (inviteTimeout>0) 
                 executor.execute(inviteTimeout*1000, new InviteTimeoutHandler(conv, call, maxCallDur));
             else if (maxCallDur>0)
