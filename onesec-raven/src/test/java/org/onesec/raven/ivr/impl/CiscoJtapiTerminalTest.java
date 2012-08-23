@@ -190,14 +190,35 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         
         verify(term, listener);
     }
+    
+    
+//    @Test(timeout=50000)
+    public void inviteToInvalidAddressTest() throws Exception {
+        waitForProvider();
+        createSimpleScenario();
+
+        IvrTerminal term = trainTerminal("631799", scenario, true, true);
+        IvrEndpointConversationListener listener = trainListener_invalidAddress();
+        replay(term, listener);
+
+        endpoint = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, term);
+        startEndpoint(endpoint);
+        endpoint.invite("08502544955", 0, 0, listener, scenario, null);
+//        endpoint.invite("88027", 0, 0, listener, scenario, null);
+        waitForConversationStop();        
+        stopEndpoint(endpoint);
+        Thread.sleep(100);
+        verify(term, listener);
+    }
 
     //В данном тесте система позвонит на указанный адрес но трубку брать не надо
-    @Test(timeout=50000)
+//    @Test(timeout=50000)
     public void inviteTimeoutTest() throws Exception {
         waitForProvider();
         createSimpleScenario();
 
         IvrTerminal term = trainTerminal("631799", scenario, true, true);
+//        IvrTerminal term = trainTerminal("631799", scenario, true, true);
         IvrEndpointConversationListener listener = trainInviteTimeoutListener();
         replay(term, listener);
 
@@ -373,7 +394,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
     
     //В данном тесте система позвонит, на указанный адрес. Необходимо взять трубку. Должны услышать:
     //  Пароли не совпадают + на экране высветиться сообщение "Пупкин И.П."
-//    @Test(timeout=70000)
+    @Test(timeout=70000)
     public void sendMessageTest() throws Exception {
         waitForProvider();
         createSimpleScenario();
@@ -449,6 +470,13 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         listener.listenerAdded(isA(IvrEndpointConversationEvent.class));
         listener.incomingRtpStarted(isA(IvrIncomingRtpStartedEvent.class));
         listener.outgoingRtpStarted(isA(IvrOutgoingRtpStartedEvent.class));
+        return listener;
+    }
+
+    private IvrEndpointConversationListener trainListener_invalidAddress() {
+        IvrEndpointConversationListener listener = createMock(IvrEndpointConversationListener.class);
+        listener.listenerAdded(isA(IvrEndpointConversationEvent.class));
+        listener.conversationStopped(handleConversationStopped());
         return listener;
     }
 
@@ -561,6 +589,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
     public static IvrEndpointConversationStoppedEvent handleConversationStopped() {
         reportMatcher(new IArgumentMatcher() {
             public boolean matches(Object arg) {
+                System.out.println("  !!!  CONVERSATION STOPPED !!!");
                 convStopped.set(true);
                 return true;
             }

@@ -86,20 +86,20 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
         assertTrue(callOperator.start());
 
         ProviderNode provider = new ProviderNode();
-        provider.setName("88013 provider");
+        provider.setName("631609 provider");
         callOperator.getProvidersNode().addAndSaveChildren(provider);
-        provider.setFromNumber(88013);
-        provider.setToNumber(88024);
-        provider.setHost("10.16.15.1");
-        provider.setPassword("cti_user1");
-        provider.setUser("cti_user1");
+        provider.setFromNumber(88000);
+        provider.setToNumber(631799);
+        provider.setHost("10.0.137.125");
+        provider.setPassword(privateProperties.getProperty("ccm_dialer_proxy_kom"));
+        provider.setUser("ccm_dialer_proxy_kom");
         assertTrue(provider.start());
 
         executor = new ExecutorServiceNode();
         executor.setName("executor");
         tree.getRootNode().addAndSaveChildren(executor);
-        executor.setMaximumPoolSize(15);
-        executor.setCorePoolSize(15);
+        executor.setMaximumPoolSize(50);
+        executor.setCorePoolSize(50);
         assertTrue(executor.start());
 
         scenario = new IvrConversationScenarioNode();
@@ -114,7 +114,8 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
         pool.setLogLevel(LogLevel.TRACE);
 //        assertTrue(pool.start());
 
-        createEndpoint("88013", 1234);
+//        createEndpoint("88013", 1234);
+        createEndpoint("631799", 1234);
 
         schema = new IvrInformerRecordSchemaNode();
         schema.setName("schema");
@@ -236,10 +237,10 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
                 , recs.get(2l).getValue(COMPLETION_CODE_FIELD));
     }
 
-//    @Test(timeout=60000)
+    @Test(timeout=60000)
     public void alreadyInformingTest() throws Exception {
-        assertTrue(pool.start());
         createScenario();
+        assertTrue(pool.start());
         assertTrue(informer.start());
         dataSource.pushData(createRecord(1, "abon1", "88027"));
         dataSource.pushData(createRecord(2, "abon1", "88027"));
@@ -560,7 +561,7 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
         ifNode1.addAndSaveChildren(stopConversationActionNode);
         assertTrue(stopConversationActionNode.start());
         waitForProvider();
-        startEndpoints();
+//        startEndpoints();
     }
 
     private AudioFileNode createAudioFileNode(String nodeName, String filename) throws Exception
@@ -623,7 +624,7 @@ public class AsyncIvrInformerTest extends OnesecRavenTestCase
         ProviderController provider = providerRegistry.getProviderControllers().iterator().next();
         assertNotNull(provider);
         StateWaitResult res = provider.getState().waitForState(
-                new int[]{ProviderControllerState.IN_SERVICE}, 30000);
+                new int[]{ProviderControllerState.IN_SERVICE}, 50000);
         assertFalse(res.isWaitInterrupted());
     }
 

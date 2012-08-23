@@ -590,15 +590,16 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     }
 
     public void sendMessage(String message, String encoding, SendMessageDirection direction) {
+        String address = null;
         try{
-            String address = direction==SendMessageDirection.CALLED_PARTY?
+            address = direction==SendMessageDirection.CALLED_PARTY?
                 getCalledNumber() : getCallingNumber();
             ProviderController controller =  providerRegistry.getProviderController(address);
             CiscoTerminal term = (CiscoTerminal)controller.getProvider().getAddress(address).getTerminals()[0];
             term.addObserver(new SendTerminalObserver(message, encoding));
         } catch (Throwable e){
             if (owner.isLogLevelEnabled(LogLevel.WARN))
-                owner.getLogger().warn(callLog("Can't send message to %s", direction), e);
+                owner.getLogger().warn(callLog("Can't send message to %s (%s)", direction, address), e);
         }
     }
 
@@ -693,17 +694,23 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         return callId;
     }
 
-    private void fireEvent(boolean conversationStartEvent, CompletionCode completionCode)
+    private void fireEvent(final boolean conversationStartEvent, CompletionCode completionCode)
     {
         if (listeners!=null && !listeners.isEmpty()) {
-            IvrEndpointConversationEvent event = conversationStartEvent?
+            final IvrEndpointConversationEvent event = conversationStartEvent?
                 new IvrEndpointConversationEventImpl(this) :
                 new IvrEndpointConversationStoppedEventImpl(this, completionCode);
-            for (IvrEndpointConversationListener listener: listeners)
-                if (conversationStartEvent)
-                    listener.conversationStarted(event);
-                else
-                    listener.conversationStopped((IvrEndpointConversationStoppedEvent)event);
+            String mess = String.format("Sending conversation %s event"
+                    , conversationStartEvent? "started" : "stopped");
+            executor.executeQuietly(new AbstractTask(owner, mess) {
+                @Override public void doRun() throws Exception {
+                    for (IvrEndpointConversationListener listener: listeners)
+                        if (conversationStartEvent)
+                            listener.conversationStarted(event);
+                        else
+                            listener.conversationStopped((IvrEndpointConversationStoppedEvent)event);
+                }
+            });
         }
     }
 

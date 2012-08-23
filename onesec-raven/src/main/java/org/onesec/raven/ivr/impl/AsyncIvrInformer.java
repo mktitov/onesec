@@ -65,6 +65,7 @@ import org.weda.annotations.constraints.NotNull;
 import org.weda.beans.ObjectUtils;
 import org.weda.internal.annotations.Message;
 import static org.onesec.raven.ivr.impl.IvrInformerRecordSchemaNode.*;
+import org.raven.sched.impl.AbstractTask;
 
 /**
  *
