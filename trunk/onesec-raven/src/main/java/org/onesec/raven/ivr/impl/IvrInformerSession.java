@@ -21,6 +21,7 @@ import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.onesec.raven.ivr.*;
 import static org.onesec.raven.ivr.impl.IvrInformerRecordSchemaNode.*;
@@ -39,7 +40,7 @@ import org.weda.services.TypeConverter;
  * @author Mikhail Titov
  */
 //TODO: test class
-public class IvrInformerSession extends ConversationCdrRegistrator implements EndpointRequest {
+public class IvrInformerSession implements EndpointRequest {
     @Service
     private static TypeConverter converter;
 
@@ -54,6 +55,7 @@ public class IvrInformerSession extends ConversationCdrRegistrator implements En
     private final long endpointWaitTimeout;
     private final DataContext dataContext;
     private final int requestPriority;
+    private final AtomicBoolean active = new AtomicBoolean(true);
 
     private AtomicReference<String> statusMessage;
     private ConversationCdr conversationResult;
@@ -157,26 +159,27 @@ public class IvrInformerSession extends ConversationCdrRegistrator implements En
         bindings.put(AsyncIvrInformer.INFORMER_BINDING, this);
         bindings.put(BindingNames.DATA_CONTEXT_BINDING, dataContext);
         rec.setValue(CALL_START_TIME_FIELD, new Timestamp(System.currentTimeMillis()));
-        endpoint.invite(_abonentNumber, inviteTimeout, maxCallDuration, this, scenario, bindings);
+        
+        endpoint.invite(_abonentNumber, inviteTimeout, maxCallDuration, new ConversationListener(), scenario, bindings);
     }
 
-    @Override
-    public void conversationStopped(IvrEndpointConversationStoppedEvent event) {
-        super.conversationStopped(event);
-        try {
-            Record rec = getCurrentRec();
-            boolean groupInformed = handleConversationResult(rec, getCdr());
-            informer.sendRecordToConsumers(rec, dataContext);
-            if (!groupInformed)
-                inform(getNextRec());
-            else 
-                skipRestRec(getNextRec());
-        } catch (Throwable ex) {
-            if (informer.isLogLevelEnabled(LogLevel.ERROR))
-                informer.getLogger().error("Error informing abonent.", ex);
-            closeSession(false);
-        }
-    }
+//    @Override
+//    public void conversationStopped(IvrEndpointConversationStoppedEvent event) {
+//        super.conversationStopped(event);
+//        try {
+//            Record rec = getCurrentRec();
+//            boolean groupInformed = handleConversationResult(rec, getCdr());
+//            informer.sendRecordToConsumers(rec, dataContext);
+//            if (!groupInformed)
+//                inform(getNextRec());
+//            else 
+//                skipRestRec(getNextRec());
+//        } catch (Throwable ex) {
+//            if (informer.isLogLevelEnabled(LogLevel.ERROR))
+//                informer.getLogger().error("Error informing abonent.", ex);
+//            closeSession(false);
+//        }
+//    }
     
     private void skipRestRec(Record rec) {
         if (rec==null || !informer.getInformAllowed()) {
@@ -258,6 +261,8 @@ public class IvrInformerSession extends ConversationCdrRegistrator implements En
     }
    
     private void closeSession(boolean success) {
+        if (!active.compareAndSet(true, false))
+            return;
 //        for (Record rec: records)
 //            informer.sendRecordToConsumers(rec, dataContext);
         informer.incInformedAbonents();
@@ -265,194 +270,28 @@ public class IvrInformerSession extends ConversationCdrRegistrator implements En
 //            informer.incSuccessfullyInformedAbonents();
         informer.removeSession(this);
     }
-
-//    public void conversationCompleted(ConversationCdr conversationResult)
-//    {
-//        this.conversationResult = conversationResult;
-//        informLock.lock();
-//        try
-//        {
-//            abonentInformed.signal();
-//        }
-//        finally
-//        {
-//            informLock.unlock();
-//        }
-//    }
-//
-//    private void skipRecord(Record record) throws RecordException
-//    {
-//        statusMessage.set("Skiping record: "+informer.getRecordInfo(record));
-//        record.setValue(COMPLETION_CODE_FIELD, AsyncIvrInformer.SKIPPED_STATUS);
-//        Timestamp curTs = new Timestamp(System.currentTimeMillis());
-//        record.setValue(CALL_START_TIME_FIELD, curTs);
-//        record.setValue(CALL_END_TIME_FIELD, curTs);
-//    }
-
-//    private void restartEndpoint(IvrEndpoint endpoint, Record rec) throws Exception
-//    {
-//        if (informer.isLogLevelEnabled(LogLevel.DEBUG))
-//            informer.getLogger().debug(String.format(
-//                    "The %s is too long! Restaring endpoint (%s)"
-//                    , rec.getValue(COMPLETION_CODE_FIELD)==null? "call":"invite", endpoint.getPath()));
-//
-//        endpoint.stop();
-//
-//        if (informer.isLogLevelEnabled(LogLevel.DEBUG))
-//            informer.getLogger().debug(String.format("Endpoint (%s) stoped", endpoint.getPath()));
-//        TimeUnit.SECONDS.sleep(5);
-//        endpoint.start();
-//        StateWaitResult res = endpoint.getEndpointState().waitForState(new int[]{IvrEndpointState.IN_SERVICE}, 20000);
-////
-////        long startTime = System.currentTimeMillis();
-////        while (  (   !Status.STARTED.equals(endpoint.getStatus())
-////                  || IvrEndpointState.IN_SERVICE!=endpoint.getEndpointState().getId())
-////               && System.currentTimeMillis()-startTime<20000)
-////        {
-////            Thread.sleep(100);
-////        }
-////        TimeUnit.SECONDS.sleep(10);
-//        if (   Status.STARTED.equals(endpoint.getStatus())
-//            && IvrEndpointState.IN_SERVICE == endpoint.getEndpointState().getId())
-//        {
-//            if (informer.isLogLevelEnabled(LogLevel.DEBUG))
-//                informer.getLogger().debug(String.format(
-//                        "Endpoint (%s) successfully restarted", endpoint.getPath()));
-//        } else if (informer.isLogLevelEnabled(LogLevel.ERROR))
-//            informer.getLogger().error(String.format(
-//                    "Error restarting endpoint (%s)", endpoint.getPath()));
-//    }
-
-//    private void handleConversationResult(Record rec) throws Exception {
-//        String status = null;
-//        if (conversationResult==null)
-//        {
-//            if (rec.getValue(COMPLETION_CODE_FIELD)==null)
-//                rec.setValue(COMPLETION_CODE_FIELD, AsyncIvrInformer.PROCESSING_ERROR_STATUS);
-//        }
-//        else
-//        {
-//            boolean sucProc = false;
-//            switch(conversationResult.getCompletionCode())
-//            {
-//                case COMPLETED_BY_ENDPOINT:
-//                    status = AsyncIvrInformer.COMPLETED_BY_INFORMER_STATUS; sucProc = true; break;
-//                case COMPLETED_BY_OPPONENT:
-//                    status = AsyncIvrInformer.COMPLETED_BY_ABONENT_STATUS; sucProc = true; break;
-//                case OPPONENT_BUSY: status = AsyncIvrInformer.NUMBER_BUSY_STATUS; break;
-//                case OPPONENT_NOT_ANSWERED: status = AsyncIvrInformer.NUMBER_NOT_ANSWERED_STATUS; break;
-//                case OPPONENT_UNKNOWN_ERROR: status = AsyncIvrInformer.PROCESSING_ERROR_STATUS; break;
-//            }
-//            if (sucProc)
-//                informer.incSuccessfullyInformedAbonents();
-//            rec.setValue(COMPLETION_CODE_FIELD, status);
-//            rec.setValue(
-//                    CALL_START_TIME_FIELD, conversationResult.getCallStartTime());
-//            rec.setValue(
-//                    CALL_END_TIME_FIELD, conversationResult.getCallEndTime());
-//            rec.setValue(
-//                    CALL_DURATION_FIELD, conversationResult.getCallDuration());
-//            rec.setValue(
-//                    CONVERSATION_START_TIME_FIELD
-//                    , conversationResult.getConversationStartTime());
-//            rec.setValue(
-//                    CONVERSATION_DURATION_FIELD
-//                    , conversationResult.getConversationDuration());
-//
-//            if (conversationResult.getTransferCompletionCode()!=null)
-//            {
-//                String transferStatus = null;
-//                switch(conversationResult.getTransferCompletionCode())
-//                {
-//                    case ERROR : transferStatus = AsyncIvrInformer.TRANSFER_ERROR_STATUS; break;
-//                    case NORMAL : transferStatus = AsyncIvrInformer.TRANSFER_SUCCESSFULL_STATUS; break;
-//                    case NO_ANSWER :
-//                        transferStatus = AsyncIvrInformer.TRANSFER_DESTINATION_NOT_ANSWER_STATUS;
-//                        break;
-//                }
-//                rec.setValue(TRANSFER_COMPLETION_CODE_FIELD, transferStatus);
-//                rec.setValue(
-//                        TRANSFER_ADDRESS_FIELD, conversationResult.getTransferAddress());
-//                rec.setValue(
-//                        TRANSFER_TIME_FIELD, conversationResult.getTransferTime());
-//                rec.setValue(TRANSFER_CONVERSATION_START_TIME_FIELD
-//                        , conversationResult.getTransferConversationStartTime());
-//                rec.setValue(TRANSFER_CONVERSATION_DURATION_FIELD
-//                        , conversationResult.getTransferConversationDuration());
-//            }
-//        }
-//    }
     
+    private class ConversationListener extends ConversationCdrRegistrator {
+        private final AtomicBoolean active = new AtomicBoolean(true);
 
-//    private void inform(IvrEndpoint endpoint) throws Exception {
-//        boolean groupInformed = false;
-//        for (Record record: records) {
-//            if (!informer.getInformAllowed())
-//                return;
-//            statusMessage.set("Starting inform abonent");
-//            record.setValue(CALL_START_TIME_FIELD, new Timestamp(System.currentTimeMillis()));
-//            currentRecord = record;
-//            Map<String, Object> bindings = new HashMap<String, Object>();
-//            bindings.put(AsyncIvrInformer.RECORD_BINDING, record);
-//            bindings.put(AsyncIvrInformer.INFORMER_BINDING, this);
-//            statusMessage.set("Calling to the abonent");
-//            abonentNumber = converter.convert(String.class, record.getValue(ABONENT_NUMBER_FIELD), null);
-//            abonentNumber = informer.translateNumber(abonentNumber, record);
-//            conversationResult = null;
-//            if (groupInformed)
-//                skipRecord(record);
-//            else
-//            {
-////                endpoint.invite(abonentNumber, scenario, this, bindings);
-//                boolean restartEndpoint = false;
-//                informLock.lock();
-//                try
-//                {
-//                    //разговор может завершиться не начавшись
-//                    if (conversationResult==null)
-//                    {
-//                        long callStartTime = System.currentTimeMillis();
-//                        if (inviteTimeout!=null && inviteTimeout>0)
-//                            if (   !abonentInformed.await(inviteTimeout, TimeUnit.SECONDS)
-//                                && endpoint.getEndpointState().getId()==IvrEndpointState.INVITING)
-//                            {
-//                                restartEndpoint = true;
-//                                record.setValue(COMPLETION_CODE_FIELD
-//                                        , AsyncIvrInformer.NUMBER_NOT_ANSWERED_STATUS);
-//                            }
-//
-//                        if (!restartEndpoint && conversationResult==null)
-//                        {
-//                            if (maxCallDuration!=null)
-//                            {
-//                                long timeout = maxCallDuration - (System.currentTimeMillis()-callStartTime)/1000;
-//                                if (timeout<=0 || !abonentInformed.await(timeout, TimeUnit.SECONDS))
-//                                    restartEndpoint = true;
-//                            }
-//                            else
-//                                abonentInformed.await();
-//                        }
-//                    }
-//                    handleConversationResult(record);
-//                    String completionCode = (String) record.getValue(COMPLETION_CODE_FIELD);
-//                    Long duration = (Long) record.getValue(CONVERSATION_DURATION_FIELD);
-//                    if (ObjectUtils.in(completionCode, AsyncIvrInformer.COMPLETED_BY_INFORMER_STATUS
-//                            , AsyncIvrInformer.COMPLETED_BY_ABONENT_STATUS)
-//                        && duration!=null && duration>0)
-//                    {
-//                        groupInformed = true;
-//                    }
-//                }
-//                finally
-//                {
-//                    informLock.unlock();
-//                }
-//                if (restartEndpoint)
-//                    restartEndpoint(endpoint, record);
-//            }
-//            abonentNumber = null;
-//            informer.sendRecordToConsumers(record, dataContext);
-//        }
-//    }
-
+        @Override
+        public void conversationStopped(IvrEndpointConversationStoppedEvent event) {
+            if (!active.compareAndSet(true, false))
+                return;
+            super.conversationStopped(event);
+            try {
+                Record rec = getCurrentRec();
+                boolean groupInformed = handleConversationResult(rec, getCdr());
+                informer.sendRecordToConsumers(rec, dataContext);
+                if (!groupInformed)
+                    inform(getNextRec());
+                else 
+                    skipRestRec(getNextRec());
+            } catch (Throwable ex) {
+                if (informer.isLogLevelEnabled(LogLevel.ERROR))
+                    informer.getLogger().error("Error informing abonent.", ex);
+                closeSession(false);
+            }
+        }
+    }
 }

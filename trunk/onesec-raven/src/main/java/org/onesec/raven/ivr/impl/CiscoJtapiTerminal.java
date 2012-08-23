@@ -195,26 +195,27 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
         Call call = null;
         try {
             lock.writeLock().lock();
+            IvrEndpointConversationImpl conv = null;
             try {
                 if (state.getId()!=IvrTerminalState.IN_SERVICE)
                     throw new Exception("Can't invite oppenent to conversation. Terminal not ready");
                 if (calls.size()>=maxChannels)
                     throw new Exception("Can't invite oppenent to conversation. Too many opened channels");
                 call = provider.createCall();
-                IvrEndpointConversationImpl conv = new IvrEndpointConversationImpl(term, executor, scenario
+                conv = new IvrEndpointConversationImpl(term, executor, scenario
                         , rtpStreamManager, enableIncomingRtp, address, bindings);
                 conv.addConversationListener(listener);
                 conv.addConversationListener(this);
                 ConvHolder holder = new ConvHolder(conv, false);
                 calls.put(call, holder);
-                call.connect(ciscoTerm, termAddress, opponentNum);
-                if (inviteTimeout>0) 
-                    executor.execute(inviteTimeout*1000, new InviteTimeoutHandler(conv, call, maxCallDur));
-                else if (maxCallDur>0)
-                    executor.execute(maxCallDur*1000, new MaxCallDurationHandler(conv, call));
             } finally {
                 lock.writeLock().unlock();
             }
+            call.connect(ciscoTerm, termAddress, opponentNum);
+            if (inviteTimeout>0) 
+                executor.execute(inviteTimeout*1000, new InviteTimeoutHandler(conv, call, maxCallDur));
+            else if (maxCallDur>0)
+                executor.execute(maxCallDur*1000, new MaxCallDurationHandler(conv, call));
         } catch (Throwable e) {
             if (isLogLevelEnabled(LogLevel.WARN)) 
                 logger.warn(String.format("Problem with inviting abonent with number (%s)", opponentNum), e);
