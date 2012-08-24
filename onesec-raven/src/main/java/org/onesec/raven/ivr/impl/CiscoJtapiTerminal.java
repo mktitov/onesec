@@ -208,7 +208,9 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                 conv.addConversationListener(this);
                 ConvHolder holder = new ConvHolder(conv, false);
                 calls.put(call, holder);
-                call.connect(ciscoTerm, termAddress, opponentNum);
+                call.connect(ciscoTerm, termAddress, opponentNum); //если передвинуть за lock блок 
+                                //перестает работать IvrEndpointConversation.sendMessage
+                                //поскольку IvrEndpointConversation.calledNumber == null
             } finally {
                 lock.writeLock().unlock();
             }
