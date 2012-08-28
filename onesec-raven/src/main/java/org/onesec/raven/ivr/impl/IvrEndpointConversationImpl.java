@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -696,7 +697,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
 
     private void fireEvent(final boolean conversationStartEvent, CompletionCode completionCode)
     {
-        if (listeners!=null && !listeners.isEmpty()) {
+        final List<IvrEndpointConversationListener> _listeners = new ArrayList(listeners);
+        if ( _listeners!=null && ! _listeners.isEmpty()) {
             final IvrEndpointConversationEvent event = conversationStartEvent?
                 new IvrEndpointConversationEventImpl(this) :
                 new IvrEndpointConversationStoppedEventImpl(this, completionCode);
@@ -704,7 +706,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                     , conversationStartEvent? "started" : "stopped");
             executor.executeQuietly(new AbstractTask(owner, mess) {
                 @Override public void doRun() throws Exception {
-                    for (IvrEndpointConversationListener listener: listeners)
+                    for (IvrEndpointConversationListener listener:  _listeners)
                         if (conversationStartEvent)
                             listener.conversationStarted(event);
                         else
