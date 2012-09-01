@@ -35,6 +35,7 @@ import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.ManagedTask;
 import org.raven.sched.TaskRestartPolicy;
+import org.raven.sched.impl.AbstractTask;
 import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
 import org.raven.table.TableImpl;
 import org.raven.tree.Node;
@@ -138,8 +139,7 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask,
                 Collections.sort(queue, requestComparator);
             if (queue.size()>maxQueueSize){
                 CallQueueRequestController rejReq = queue.removeLast();
-                rejReq.addToLog("queue size was exceeded");
-                rejReq.fireRejectedQueueEvent();
+                executor.executeQuietly(new RejectTask(this, rejReq, "queue size was exceeded"));
             }else {
                 request.fireCallQueuedEvent();
                 fireQueueNumberChangedEvents();
@@ -263,8 +263,7 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask,
                                 getLogger().warn(logMess(
                                         request
                                         , "Rejecting request. Not found priority selector"));
-                            request.addToLog("not found priority selector");
-                            request.fireRejectedQueueEvent();
+                            executor.executeQuietly(new RejectTask(this, request, "not found priority selector"));
                         } else {
                             if (isLogLevelEnabled(LogLevel.DEBUG))
                                 getLogger().debug(logMess(
@@ -349,5 +348,22 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask,
     private String logMess(CallQueueRequestController req, String mess, Object... args)
     {
         return req.logMess("CallsQueue. "+mess, args);
+    }
+    
+    private class RejectTask extends AbstractTask {
+        private final String log;
+        private final CallQueueRequestController req;
+
+        public RejectTask(Node taskNode, CallQueueRequestController req, String log) {
+            super(taskNode, "Rejecting request");
+            this.req = req;
+            this.log = log;
+        }
+
+        @Override
+        public void doRun() throws Exception {
+            req.addToLog(log);
+            req.fireRejectedQueueEvent();
+        }
     }
 }
