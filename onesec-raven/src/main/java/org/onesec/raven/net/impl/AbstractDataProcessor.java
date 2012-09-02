@@ -33,20 +33,19 @@ import org.raven.tree.impl.LoggerHelper;
  */
 public abstract class AbstractDataProcessor implements DataProcessor  {
     private final Node owner;
-    private final String name;
     private final LoggerHelper logger;
     private final int bufferSize;
     private final ByteBufferPool byteBufferPool;
     private final AtomicReference<SelectionKey> keyToProcess = new AtomicReference<SelectionKey>();
+//    private final 
     private volatile String statusMessage;
     private final AtomicBoolean stopFlag = new AtomicBoolean(false);
     private volatile boolean processingData = false;
 
-    public AbstractDataProcessor(String name, Node owner, LoggerHelper logger, int bufferSize
+    public AbstractDataProcessor(Node owner, LoggerHelper logger, int bufferSize
             , ByteBufferPool byteBufferPool) 
     {
         this.owner = owner;
-        this.name = name;
         this.logger = logger;
         this.bufferSize = bufferSize;
         this.byteBufferPool = byteBufferPool;
@@ -86,7 +85,12 @@ public abstract class AbstractDataProcessor implements DataProcessor  {
                 if (key!=null) {
 //                    processingData = true;
                     keyToProcess.set(null);
-                    doProcessData(key, buffer);
+                    try {
+                        doProcessData(key, buffer);
+                    } catch (Exception e) {
+                        if (logger.isErrorEnabled())
+                            logger.error("Error processig packet");
+                    }
                 } else {
 //                    processingData = false;
                     synchronized(this) {
@@ -107,5 +111,5 @@ public abstract class AbstractDataProcessor implements DataProcessor  {
         }
     }
     
-    protected abstract void doProcessData(SelectionKey key, ByteBuffer buffer);
+    protected abstract void doProcessData(SelectionKey key, ByteBuffer buffer) throws Exception;
 }

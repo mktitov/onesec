@@ -16,6 +16,7 @@
 package org.onesec.raven.net.impl;
 
 import java.nio.channels.Selector;
+import org.onesec.raven.net.ByteBufferPool;
 import org.onesec.raven.net.PacketProcessor;
 import org.raven.sched.ExecutorService;
 import org.raven.tree.Node;
@@ -25,10 +26,12 @@ import org.raven.tree.impl.LoggerHelper;
  *
  * @author Mikhail Titov
  */
-public class InboundPacketDispatcher extends AbstractPacketDispatcher<PacketProcessor> {
+public class SimplePacketDispatcher extends AbstractPacketDispatcher<PacketProcessor> {
 
-    public InboundPacketDispatcher(ExecutorService executor, int workersCount, Node owner, LoggerHelper logger) {
-        super(executor, workersCount, "Inbound packet dispatcher", owner, logger);
+    public SimplePacketDispatcher(ExecutorService executor, int workersCount, Node owner, LoggerHelper logger
+            , ByteBufferPool byteBufferPool) 
+    {
+        super(executor, workersCount, "Inbound packet dispatcher", owner, logger, byteBufferPool);
     }
 
     @Override
