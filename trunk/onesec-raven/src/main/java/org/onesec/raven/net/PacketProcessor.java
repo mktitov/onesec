@@ -17,6 +17,7 @@ package org.onesec.raven.net;
 
 import java.net.SocketAddress;
 import java.nio.Buffer;
+import java.nio.channels.SocketChannel;
 
 /**
  *
@@ -24,6 +25,11 @@ import java.nio.Buffer;
  */
 public interface PacketProcessor {
     public boolean isValid();
-    public boolean processPacket(Buffer buffer);
+    public boolean processInboundBuffer(Buffer buffer);
+    public void processOutboundBuffer(Buffer buffer, SocketChannel channel);
+    public boolean isNeedInboundProcessing();
+    public boolean isNeedOutboundProcessing();
+    public boolean isServerSideProcessor();
+    public void stopUnexpected(Throwable e);
     public SocketAddress getAddress();
 }
