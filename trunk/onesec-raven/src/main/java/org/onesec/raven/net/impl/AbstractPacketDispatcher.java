@@ -86,12 +86,20 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
         return statusMessage;
     }
 
+    public void stop() {
+        stopFlag.compareAndSet(false, true);
+    }
+
     public void run() {
+        if (logger.isErrorEnabled())
+            logger.error("Initializing");
         final Selector selector = createSelector();
         if (selector==null)
             return;
         try {
             createWorkers();
+            if (logger.isInfoEnabled())
+                logger.info("Successfully started");
             while (!stopFlag.get()) {
                 if (hasPendingProcessors)
                     processPendingProcessors(selector);
@@ -103,6 +111,8 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
         } finally {
             closeWorkers();
             closeSelector(selector);
+            if (logger.isInfoEnabled())
+                logger.info("Stopped");
         }
     }
     
@@ -141,9 +151,13 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
     }
     
     private boolean submitOperationToDataProcessor(SelectionKey key) {
-        for (int i=0; i<dataProcessors.length; ++i)
-            if (runningFlag[i] && dataProcessors[i].processData(key))
-                return true;
+        if (key.isReadable() || 
+            (key.isWritable() && ((PacketProcessor)key.attachment()).hasPacketForOutboundProcessing()))
+        {
+            for (int i=0; i<dataProcessors.length; ++i)
+                if (runningFlag[i] && dataProcessors[i].processData(key))
+                    return true;
+        }
         return false;
     }
     

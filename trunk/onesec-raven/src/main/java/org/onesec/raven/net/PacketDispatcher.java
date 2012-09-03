@@ -21,4 +21,5 @@ package org.onesec.raven.net;
  */
 public interface PacketDispatcher<P extends PacketProcessor> {
     public void addPacketProcessor(P packetProcessor);
+    public void stop();
 }
