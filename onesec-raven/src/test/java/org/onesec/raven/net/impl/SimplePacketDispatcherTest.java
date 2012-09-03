@@ -35,13 +35,15 @@ import org.junit.Test;
 public class SimplePacketDispatcherTest {
     private AtomicBoolean serverReadyToReceive = new AtomicBoolean(false);
     
-    @Test
+//    @Test
     public void selectorTest() throws Exception {
         ServerThread thread = new ServerThread();
         thread.start();
         sendData();
         Thread.sleep(5000);
     }
+    
+//    public void 
     
     private class ServerThread extends Thread {
         private final AtomicBoolean stopFlag = new AtomicBoolean(false);

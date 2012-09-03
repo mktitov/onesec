@@ -26,8 +26,6 @@ import java.util.LinkedList;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.onesec.raven.net.ByteBufferPool;
 import org.onesec.raven.net.DataProcessor;
 import org.onesec.raven.net.PacketDispatcher;
@@ -41,13 +39,14 @@ import org.raven.tree.impl.LoggerHelper;
  *
  * @author Mikhail Titov
  */
-public abstract class AbstractPacketDispatcher<P extends PacketProcessor> implements PacketDispatcher<P>, Task{
+public class AbstractPacketDispatcher<P extends PacketProcessor> 
+        implements PacketDispatcher<P>, Task
+{
     private static int BUFFER_SIZE = 512;
     
     protected final ExecutorService executor;
     protected final Node owner;
     protected final LoggerHelper logger;
-    protected final String name;
     protected final ByteBufferPool byteBufferPool;
     private final DataProcessor[] dataProcessors;
     private final boolean[] runningFlag;
@@ -59,13 +58,12 @@ public abstract class AbstractPacketDispatcher<P extends PacketProcessor> implem
     private volatile boolean hasPendingProcessors = false;
     private boolean hasNotStartedWorkers = false;
 
-    public AbstractPacketDispatcher(ExecutorService executor, int workersCount, String name, Node owner
+    public AbstractPacketDispatcher(ExecutorService executor, int workersCount, Node owner
             , LoggerHelper logger, ByteBufferPool byteBufferPool) 
     {
         this.executor = executor;
         this.logger = logger;
         this.owner = owner;
-        this.name = name;
         this.byteBufferPool = byteBufferPool;
         this.dataProcessors = new DataProcessor[workersCount];
         this.runningFlag = new boolean[workersCount];
@@ -99,12 +97,19 @@ public abstract class AbstractPacketDispatcher<P extends PacketProcessor> implem
                     processPendingProcessors(selector);
                 if (hasNotStartedWorkers)
                     startNotStartedWorkers();
-                
+                removeInvalidPacketProcessors(selector);
+                processSelection(selector);
             }
         } finally {
             closeWorkers();
             closeSelector(selector);
         }
+    }
+    
+    private void removeInvalidPacketProcessors(Selector selector) {
+        for (SelectionKey key: selector.keys())
+            if (!((PacketProcessor)key).isValid())
+                closeKey(key);
     }
     
     private void processSelection(Selector selector) {
@@ -116,13 +121,15 @@ public abstract class AbstractPacketDispatcher<P extends PacketProcessor> implem
                 while(it.hasNext()) {
                     SelectionKey key = it.next();
                     if (key.isAcceptable()) {
-                        
+                        acceptIncomingConnection(selector, key);
                         it.remove();
                     } else if (key.isConnectable()) {
                         ((SocketChannel)key.channel()).finishConnect();
+                        key.interestOps(genOpsForKey(0, (PacketProcessor)key.attachment()));
                         it.remove();
                     } else if (key.isReadable() || key.isWritable()) {
-                        
+                        if (submitOperationToDataProcessor(key))
+                            it.remove();
                     }
                 }
             }
@@ -133,13 +140,20 @@ public abstract class AbstractPacketDispatcher<P extends PacketProcessor> implem
         }
     }
     
+    private boolean submitOperationToDataProcessor(SelectionKey key) {
+        for (int i=0; i<dataProcessors.length; ++i)
+            if (runningFlag[i] && dataProcessors[i].processData(key))
+                return true;
+        return false;
+    }
+    
     private void acceptIncomingConnection(Selector selector, SelectionKey key) {
         PacketProcessor pp = (PacketProcessor) key.attachment();
         try {
             try {
-                SocketChannel socketChannel = ((ServerSocketChannel)key.channel()).accept();
-//                socketChannel.
-            } catch (IOException ex) {
+                SocketChannel socketChannel = ((ServerSocketChannel)key.channel()).accept(); //can return null
+                socketChannel.register(selector, genOpsForKey(0, pp), pp);
+            } catch (Throwable ex) {
                 pp.stopUnexpected(ex);
             }
         } finally {
@@ -236,24 +250,32 @@ public abstract class AbstractPacketDispatcher<P extends PacketProcessor> implem
                 dataProcessor.stop();
     }
     
-    protected abstract void executeOneCycle(Selector selector);
+//    protected abstract void executeOneCycle(Selector selector);
     
     private Selector createSelector() {
         try {
             return Selector.open();
         } catch (IOException ex) {
             if (logger.isErrorEnabled())
-                logger.error("Error creating SELECTOR for {}", name);
+                logger.error("Error creating SELECTOR");
             return null;
         }
     }
     
     private void closeSelector(Selector selector) {
         try {
+            Set<SelectionKey> keys = selector.keys();
+            if (keys!=null) {
+                Exception e  = new Exception("SelectorDispatcher was closed");
+                for (SelectionKey key: keys) {
+                    ((PacketProcessor)key.attachment()).stopUnexpected(e);
+                    closeChannel(key.channel());
+                }
+            }
             selector.close();
         } catch (IOException ex) {
             if (logger.isErrorEnabled())
-                logger.error("Error closing SELECTOR for {}", name);
+                logger.error("Error closing SELECTOR");
         }
     }
 }
