@@ -31,11 +31,6 @@ public class SimplePacketDispatcher extends AbstractPacketDispatcher<PacketProce
     public SimplePacketDispatcher(ExecutorService executor, int workersCount, Node owner, LoggerHelper logger
             , ByteBufferPool byteBufferPool) 
     {
-        super(executor, workersCount, "Inbound packet dispatcher", owner, logger, byteBufferPool);
-    }
-
-    @Override
-    protected void executeOneCycle(Selector selector) {
-        
+        super(executor, workersCount, owner, logger, byteBufferPool);
     }
 }
