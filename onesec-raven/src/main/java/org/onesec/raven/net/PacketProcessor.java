@@ -30,7 +30,11 @@ public interface PacketProcessor {
     public boolean isNeedInboundProcessing();
     public boolean isNeedOutboundProcessing();
     public boolean isServerSideProcessor();
+    public boolean isDatagramProcessor();
     public boolean hasPacketForOutboundProcessing();
     public void stopUnexpected(Throwable e);
     public SocketAddress getAddress();
+    public boolean isProcessing();
+    public boolean changeToProcessing();
+    public void changeToUnprocessing(); 
 }

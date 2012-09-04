@@ -41,7 +41,7 @@ public class DataProcessorImpl extends AbstractDataProcessor {
         buffer.clear();
         if (key.isReadable()) {
             if (channel.read(buffer)>0)
-                packetProcessor.processInboundBuffer(buffer);
+                packetProcessor.processInboundBuffer((ByteBuffer)buffer.flip());
         }
         if (key.isWritable()) {
             buffer.clear();

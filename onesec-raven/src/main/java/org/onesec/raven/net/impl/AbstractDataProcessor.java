@@ -24,6 +24,7 @@ import java.util.logging.Logger;
 import org.onesec.raven.net.ByteBufferHolder;
 import org.onesec.raven.net.ByteBufferPool;
 import org.onesec.raven.net.DataProcessor;
+import org.onesec.raven.net.PacketProcessor;
 import org.raven.tree.Node;
 import org.raven.tree.impl.LoggerHelper;
 
@@ -52,11 +53,15 @@ public abstract class AbstractDataProcessor implements DataProcessor  {
     }
 
     public boolean processData(SelectionKey key) {
-        if (keyToProcess.compareAndSet(null, key)) {
-            synchronized(this) {
-                notify();
-            }
-            return true;
+        PacketProcessor pp = (PacketProcessor) key.attachment();
+        if (pp.changeToProcessing()) {
+            if (keyToProcess.compareAndSet(null, key)) {
+                synchronized(this) {
+                    notify();
+                }
+                return true;
+            } else
+                pp.changeToUnprocessing();
         }
         return false;
     }
@@ -86,10 +91,14 @@ public abstract class AbstractDataProcessor implements DataProcessor  {
 //                    processingData = true;
                     keyToProcess.set(null);
                     try {
-                        doProcessData(key, buffer);
-                    } catch (Exception e) {
-                        if (logger.isErrorEnabled())
-                            logger.error("Error processig packet");
+                        try {
+                            doProcessData(key, buffer);
+                        } catch (Throwable e) {
+                            if (logger.isErrorEnabled())
+                                logger.error("Error processig packet", e);
+                        }
+                    } finally {
+                        ((PacketProcessor)key.attachment()).changeToUnprocessing();
                     }
                 } else {
 //                    processingData = false;
@@ -98,7 +107,7 @@ public abstract class AbstractDataProcessor implements DataProcessor  {
                             wait(5);
                         } catch (InterruptedException ex) {
                             if (logger.isErrorEnabled())
-                                logger.error("{} interrupted");
+                                logger.error("Interrupted");
                             return;
                         }
                     }

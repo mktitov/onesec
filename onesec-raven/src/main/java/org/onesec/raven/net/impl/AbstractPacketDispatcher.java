@@ -16,11 +16,7 @@
 package org.onesec.raven.net.impl;
 
 import java.io.IOException;
-import java.nio.channels.Channel;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.*;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Set;
@@ -73,6 +69,7 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
         pendingProcessorsLock.lock();
         try {
             pendingProcessors.add(packetProcessor);
+            hasPendingProcessors = true;
         } finally {
             pendingProcessorsLock.unlock();
         }
@@ -92,7 +89,7 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
 
     public void run() {
         if (logger.isErrorEnabled())
-            logger.error("Initializing");
+            logger.info("Initializing");
         final Selector selector = createSelector();
         if (selector==null)
             return;
@@ -101,12 +98,17 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
             if (logger.isInfoEnabled())
                 logger.info("Successfully started");
             while (!stopFlag.get()) {
-                if (hasPendingProcessors)
-                    processPendingProcessors(selector);
-                if (hasNotStartedWorkers)
-                    startNotStartedWorkers();
-                removeInvalidPacketProcessors(selector);
-                processSelection(selector);
+                try {
+                    if (hasPendingProcessors)
+                        processPendingProcessors(selector);
+                    if (hasNotStartedWorkers)
+                        startNotStartedWorkers();
+                    removeInvalidPacketProcessors(selector);
+                    processSelection(selector);
+                } catch (Throwable e) {
+                    if (logger.isErrorEnabled())
+                        logger.error("Unexpected error in processing cycle", e);
+                }
             }
         } finally {
             closeWorkers();
@@ -118,7 +120,7 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
     
     private void removeInvalidPacketProcessors(Selector selector) {
         for (SelectionKey key: selector.keys())
-            if (!((PacketProcessor)key).isValid())
+            if (!((PacketProcessor)key.attachment()).isValid())
                 closeKey(key);
     }
     
@@ -151,8 +153,9 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
     }
     
     private boolean submitOperationToDataProcessor(SelectionKey key) {
-        if (key.isReadable() || 
-            (key.isWritable() && ((PacketProcessor)key.attachment()).hasPacketForOutboundProcessing()))
+        PacketProcessor pp = (PacketProcessor) key.attachment();
+        if ( !pp.isProcessing() && 
+             (key.isReadable() || (key.isWritable() && pp.hasPacketForOutboundProcessing())) )
         {
             for (int i=0; i<dataProcessors.length; ++i)
                 if (runningFlag[i] && dataProcessors[i].processData(key))
@@ -165,7 +168,10 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
         PacketProcessor pp = (PacketProcessor) key.attachment();
         try {
             try {
+                if (logger.isDebugEnabled())
+                    logger.debug("Accepting incoming connection");
                 SocketChannel socketChannel = ((ServerSocketChannel)key.channel()).accept(); //can return null
+                socketChannel.configureBlocking(false);
                 socketChannel.register(selector, genOpsForKey(0, pp), pp);
             } catch (Throwable ex) {
                 pp.stopUnexpected(ex);
@@ -179,28 +185,19 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
         if (pendingProcessorsLock.tryLock()) {
             try {
                 for (PacketProcessor pp: pendingProcessors) {
-                    Channel channel = null;
+                    SelectableChannel channel = null;
                     SelectionKey key = null;
-                    try {
-                        if (pp.isServerSideProcessor()) {
-                            ServerSocketChannel serverSocket = ServerSocketChannel.open();
-                            channel = serverSocket;
-                            serverSocket.configureBlocking(false);
-                            serverSocket.socket().bind(pp.getAddress());
-                            serverSocket.register(selector, SelectionKey.OP_ACCEPT, pp);
-                        } else {
-                            SocketChannel socketChannel = SocketChannel.open();
-                            channel = socketChannel;
-                            socketChannel.configureBlocking(false);
-                            key = socketChannel.register(selector, genOpsForKey(SelectionKey.OP_CONNECT, pp), pp);
-                            socketChannel.connect(pp.getAddress());
-                        }
-                    } catch (Throwable e) {
-                        if (key!=null)
-                            key.cancel();
-                        else if (channel!=null)
-                            closeChannel(channel);
-                        pp.stopUnexpected(e);
+                    String protocol = pp.isDatagramProcessor()? "UDP":"TCP";
+                    if (pp.isServerSideProcessor()) {
+                        if (logger.isDebugEnabled())
+                            logger.debug("Registering new server PacketProcessor ({})", protocol);
+                        if (!pp.isDatagramProcessor())
+                            registerServerChannel(selector, pp);
+                    } else {
+                        if (logger.isDebugEnabled())
+                            logger.debug("Registering new client PacketProcessor ({})", protocol);
+                        if (!pp.isDatagramProcessor())
+                            registerClientChannel(selector, pp);
                     }
                 }
                 pendingProcessors.clear();
@@ -209,6 +206,40 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
                 pendingProcessorsLock.unlock();
             }
         } 
+    }
+    
+    private void registerServerChannel(Selector selector, PacketProcessor pp) {
+        SelectionKey key = null; ServerSocketChannel channel = null;
+        try {
+            channel = ServerSocketChannel.open();
+            channel.configureBlocking(false);
+            channel.socket().bind(pp.getAddress());
+            channel.register(selector, SelectionKey.OP_ACCEPT, pp);
+        } catch (Throwable e) {
+            stopPacketProcessorUnexpected(pp, key, channel, e);
+        }
+    }
+    
+    private void registerClientChannel(Selector selector, PacketProcessor pp) {
+        SelectionKey key = null; SocketChannel channel = null;
+        try {
+            SocketChannel socketChannel = SocketChannel.open();
+            socketChannel.configureBlocking(false);
+            key = socketChannel.register(selector, genOpsForKey(SelectionKey.OP_CONNECT, pp), pp);
+            socketChannel.connect(pp.getAddress());
+        } catch (Throwable e) {
+            stopPacketProcessorUnexpected(pp, key, channel, e);
+        }
+    }
+        
+    private void stopPacketProcessorUnexpected(PacketProcessor pp, SelectionKey key
+            , Channel channel, Throwable e) 
+    {
+        if (key!=null)
+            key.cancel();
+        else if (channel!=null)
+            closeChannel(channel);
+        pp.stopUnexpected(e);
     }
     
     private int genOpsForKey(int initialOps, PacketProcessor pp) {
