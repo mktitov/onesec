@@ -84,11 +84,7 @@
             <plugin>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <!--
-                   <systemPropertyVariables>
-                        <log4j.configuration>file:${project.basedir}src/test/resources/log4j.properties</log4j.configuration>
-                    </systemPropertyVariables>
-                    -->
+                    <trimStackTrace>false</trimStackTrace>
                    <redirectTestOutputToFile>false</redirectTestOutputToFile>
                 </configuration>
             </plugin>
