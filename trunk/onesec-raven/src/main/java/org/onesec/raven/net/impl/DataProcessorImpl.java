@@ -15,9 +15,9 @@
  */
 package org.onesec.raven.net.impl;
 
-import java.nio.ByteBuffer;
+import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SelectionKey;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.WritableByteChannel;
 import org.onesec.raven.net.ByteBufferPool;
 import org.onesec.raven.net.PacketProcessor;
 import org.raven.tree.Node;
@@ -35,17 +35,11 @@ public class DataProcessorImpl extends AbstractDataProcessor {
     }
 
     @Override
-    protected void doProcessData(SelectionKey key, ByteBuffer buffer) throws Exception {
+    protected void doProcessData(SelectionKey key) throws Exception {
         final PacketProcessor packetProcessor = (PacketProcessor) key.attachment();
-        final SocketChannel channel = (SocketChannel) key.channel();
-        buffer.clear();
-        if (key.isReadable()) {
-            if (channel.read(buffer)>0)
-                packetProcessor.processInboundBuffer((ByteBuffer)buffer.flip());
-        }
-        if (key.isWritable()) {
-            buffer.clear();
-            packetProcessor.processOutboundBuffer(buffer, channel);
-        }
+        if (key.isReadable()) 
+            packetProcessor.processInboundBuffer((ReadableByteChannel)key.channel());
+        if (key.isWritable()) 
+            packetProcessor.processOutboundBuffer((WritableByteChannel)key.channel());
     }
 }

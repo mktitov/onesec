@@ -56,6 +56,8 @@ public abstract class AbstractDataProcessor implements DataProcessor  {
         PacketProcessor pp = (PacketProcessor) key.attachment();
         if (pp.changeToProcessing()) {
             if (keyToProcess.compareAndSet(null, key)) {
+                if (key.isWritable())
+                    key.interestOps(key.interestOps() ^ SelectionKey.OP_WRITE);
                 synchronized(this) {
                     notify();
                 }
@@ -81,8 +83,8 @@ public abstract class AbstractDataProcessor implements DataProcessor  {
     public void run() {
         if (logger.isInfoEnabled())
             logger.info("Successfully started");
-        final ByteBufferHolder bufferHolder = byteBufferPool.getBuffer(bufferSize);
-        final ByteBuffer buffer = bufferHolder.getBuffer();
+//        final ByteBufferHolder bufferHolder = byteBufferPool.getBuffer(bufferSize);
+//        final ByteBuffer buffer = bufferHolder.getBuffer();
         try {
 //            processingData = false;
             while (!stopFlag.get()) {
@@ -92,7 +94,7 @@ public abstract class AbstractDataProcessor implements DataProcessor  {
                     keyToProcess.set(null);
                     try {
                         try {
-                            doProcessData(key, buffer);
+                            doProcessData(key);
                         } catch (Throwable e) {
                             if (logger.isErrorEnabled())
                                 logger.error("Error processig packet", e);
@@ -114,11 +116,11 @@ public abstract class AbstractDataProcessor implements DataProcessor  {
                 }
             }
         } finally {
-            bufferHolder.release();
+//            bufferHolder.release();
             if (logger.isInfoEnabled())
                 logger.info("Stopped");
         }
     }
     
-    protected abstract void doProcessData(SelectionKey key, ByteBuffer buffer) throws Exception;
+    protected abstract void doProcessData(SelectionKey key) throws Exception;
 }

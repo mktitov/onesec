@@ -35,7 +35,7 @@ import org.junit.Test;
 public class SimplePacketDispatcherTest {
     private AtomicBoolean serverReadyToReceive = new AtomicBoolean(false);
     
-//    @Test
+    @Test
     public void selectorTest() throws Exception {
         ServerThread thread = new ServerThread();
         thread.start();
@@ -66,6 +66,7 @@ public class SimplePacketDispatcherTest {
                     serverReadyToReceive.set(true);
                     System.out.println(">> Server. Registering in the selector");
                     serverSocket.register(selector, SelectionKey.OP_ACCEPT);
+                    ByteBuffer buffer = ByteBuffer.allocate(512);
                     while (!stopFlag.get()) {
                         int selectedCount = selector.select(500);
                         System.out.println(">> Server. Selections count: "+selectedCount);
@@ -81,6 +82,9 @@ public class SimplePacketDispatcherTest {
                                 keys.remove();
                             } else  if (key.isReadable()) {
                                 System.out.println(">> Server. Reading data from socket");
+                                ((SocketChannel)key.channel()).read(buffer);
+                                buffer.clear();
+                                keys.remove();
                             }
                         }
                     }
@@ -99,13 +103,13 @@ public class SimplePacketDispatcherTest {
         System.out.println("Sending data to the server");
         InetAddress addr = Inet4Address.getLocalHost();
         SocketChannel channel = SocketChannel.open(new InetSocketAddress(addr, 1234));
-//        ByteBuffer buffer = ByteBuffer.allocate(4);
-//        buffer.put((byte)1);
-//        buffer.put((byte)2);
-//        buffer.put((byte)3);
-//        buffer.put((byte)4);
-//        buffer.flip();
-//        int count = channel.write(buffer);
-//        System.out.println("Written "+count+" bytes");
+        ByteBuffer buffer = ByteBuffer.allocate(4);
+        buffer.put((byte)1);
+        buffer.put((byte)2);
+        buffer.put((byte)3);
+        buffer.put((byte)4);
+        buffer.flip();
+        int count = channel.write(buffer);
+        System.out.println("Written "+count+" bytes");
     }
 }
