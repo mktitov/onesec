@@ -103,7 +103,7 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
                         processPendingProcessors(selector);
                     if (hasNotStartedWorkers)
                         startNotStartedWorkers();
-                    removeInvalidPacketProcessors(selector);
+                    managerPacketProcessors(selector);
                     processSelection(selector);
                 } catch (Throwable e) {
                     if (logger.isErrorEnabled())
@@ -118,10 +118,14 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
         }
     }
     
-    private void removeInvalidPacketProcessors(Selector selector) {
-        for (SelectionKey key: selector.keys())
-            if (!((PacketProcessor)key.attachment()).isValid())
+    private void managerPacketProcessors(Selector selector) {
+        for (SelectionKey key: selector.keys()) {
+            PacketProcessor pp = (PacketProcessor) key.attachment();
+            if (!pp.isValid())
                 closeKey(key);
+            else if (pp.isNeedOutboundProcessing() && !pp.isProcessing() && pp.hasPacketForOutboundProcessing())
+                key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+        }
     }
     
     private void processSelection(Selector selector) {
