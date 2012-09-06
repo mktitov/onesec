@@ -18,6 +18,7 @@ package org.onesec.raven.net.impl;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.DatagramChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
@@ -73,12 +74,17 @@ public abstract class AbstractPacketProcessor implements PacketProcessor {
 
     public void processInboundBuffer(ReadableByteChannel channel) {
         try {
-            int res = channel.read(inBuffer);
-            
-            if (res==-1) 
-                doProcessInboundBuffer(null);
-            else if (res>0)
-                doProcessInboundBuffer(inBuffer);
+            if (datagramProcessor) {
+                SocketAddress addr = ((DatagramChannel)channel).receive(inBuffer);
+                if (addr!=null)
+                    doProcessInboundBuffer(inBuffer);
+            } else {
+                int res = channel.read(inBuffer);
+                if (res==-1) 
+                    doProcessInboundBuffer(null);
+                else if (res>0)
+                    doProcessInboundBuffer(inBuffer);
+            }
         } catch (Exception ex) {
             if (logger.isDebugEnabled())
                 logger.debug("Channel closed: "+desc);
