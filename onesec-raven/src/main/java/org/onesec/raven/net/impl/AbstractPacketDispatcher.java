@@ -131,8 +131,8 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
                 {
                     if (pp.isNeedOutboundProcessing() && pp.hasPacketForOutboundProcessing())
                         key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-                    if (pp.isNeedInboundProcessing())
-                        key.interestOps(key.interestOps() | SelectionKey.OP_READ);
+//                    if (pp.isNeedInboundProcessing())
+//                        key.interestOps(key.interestOps() | SelectionKey.OP_READ);
                 }
         }
     }
@@ -230,7 +230,7 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
             channel = DatagramChannel.open();
             channel.configureBlocking(false);
             channel.connect(pp.getAddress());
-            key = channel.register(selector, 0, pp);
+            key = channel.register(selector, genOpsForKey(0, pp), pp);
         } catch (Throwable e) {
             stopPacketProcessorUnexpected(pp, key, channel, e);
         }
@@ -242,7 +242,7 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
             channel = DatagramChannel.open();
             channel.configureBlocking(false);
             channel.socket().bind(pp.getAddress());
-            key = channel.register(selector, 0, pp);
+            key = channel.register(selector, genOpsForKey(0, pp), pp);
         } catch (Throwable e) {
             stopPacketProcessorUnexpected(pp, key, channel, e);
         }
@@ -284,8 +284,8 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
     
     private int genOpsForKey(int initialOps, PacketProcessor pp) {
         return initialOps 
-                | (pp.isNeedInboundProcessing()?SelectionKey.OP_READ:0)
-                | (pp.isNeedOutboundProcessing()?SelectionKey.OP_WRITE:0);
+                | (pp.isNeedInboundProcessing()?SelectionKey.OP_READ:0);
+//                | (pp.isNeedOutboundProcessing()?SelectionKey.OP_WRITE:0);
     }
     
     private void closeKey(SelectionKey key) {
