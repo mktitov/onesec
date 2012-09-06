@@ -44,6 +44,7 @@ import org.slf4j.LoggerFactory;
  */
 public class AbstractPacketDispatcherTest extends Assert {
     private final static Logger classLogger = LoggerFactory.getLogger("org.onesec.T");
+    private final static int DATA_LEN = 20;
     
     private final static AtomicInteger stoppedThreadsCount = new AtomicInteger();
     private ByteBufferPoolImpl bufferPool;
@@ -73,7 +74,7 @@ public class AbstractPacketDispatcherTest extends Assert {
     }
     
     @Test
-    public void readWriteTest() throws Exception {
+    public void separateProcessorsForReadWriteUDPTest() throws Exception {
         ExecutorService executor = trainExecutor(control, 1, 2);
         control.replay();
         
@@ -88,6 +89,7 @@ public class AbstractPacketDispatcherTest extends Assert {
         Thread.sleep(5000);
         
         dispatcher.stop();
+        assertTrue(reader.validSeq);
 //        assertEquals(5, reader.data.size());
     }
     
@@ -117,6 +119,8 @@ public class AbstractPacketDispatcherTest extends Assert {
     }
     
     private class ReadPacketProcessor extends AbstractPacketProcessor {
+        private boolean validSeq = true;
+        private byte prevVal = 0;
 
         public ReadPacketProcessor(SocketAddress address, LoggerHelper logger, ByteBufferPool bufferPool, boolean datagram) {
             super(address, true, false, true, datagram, "Reader", new LoggerHelper(logger, "Reader. "), bufferPool, 1);
@@ -130,13 +134,24 @@ public class AbstractPacketDispatcherTest extends Assert {
         protected void doProcessInboundBuffer(ByteBuffer buffer) throws Exception {
             if (buffer==null) {
                 logger.debug("Received end of channel");
+                if (prevVal!=DATA_LEN)
+                    validSeq = false;
                 stop();
             } else {
-                if (buffer.remaining()==0)
-                    buffer.flip();
+                buffer.flip();
                 logger.debug("Processing read operation");
-                if (buffer.remaining()>0)
-                    logger.debug("Received byte: "+buffer.get());
+                if (buffer.remaining()>0) {
+                    byte val = buffer.get();
+                    logger.debug("Received byte: "+val);
+                    if (val != prevVal + 1) {
+                        validSeq = false;
+//                        stopUnexpected(new Exception(String.format(
+//                                "Invalid val. Expected %s but received %s", prevVal+1, val)));
+                    } else
+                        prevVal = val;
+                    if (val==DATA_LEN)
+                        stop();
+                }
                 buffer.clear();
             }
         }
@@ -151,11 +166,13 @@ public class AbstractPacketDispatcherTest extends Assert {
     }
     
     private class WritePacketProcessor extends AbstractPacketProcessor {
-        private final List<Integer> data = Arrays.asList(1,2,3,4,5);
+        private final int[] data = new int[DATA_LEN];
         private volatile int pos = 0;
 
         public WritePacketProcessor(SocketAddress address, LoggerHelper logger, ByteBufferPool bufferPool, boolean datagram) {
             super(address, false, true, false, datagram, "Writer", new LoggerHelper(logger, "Writer. "), bufferPool, 1);
+            for (int i=0; i<data.length; ++i)
+                data[i] = i+1;
         }
 
         @Override
@@ -168,21 +185,21 @@ public class AbstractPacketDispatcherTest extends Assert {
         }
 
         public void processOutboundBuffer(WritableByteChannel channel) {
-            logger.debug("Writing byte to the channel: "+data.get(pos).byteValue());
+            logger.debug("Writing byte to the channel: "+data[pos]);
             outBuffer.clear();
-            outBuffer.put(data.get(pos++).byteValue());
+            outBuffer.put((byte)data[pos++]);
             outBuffer.flip();
             try {
                 channel.write(outBuffer);
             } catch (IOException ex) {
                 logger.error("Error write data", ex);
             }
-            if (pos==5)
+            if (pos==data.length)
                 stop();
         }
 
         public boolean hasPacketForOutboundProcessing() {
-            return pos<5;
+            return pos<data.length;
         }
     }
 }

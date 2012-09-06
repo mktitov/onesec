@@ -15,13 +15,9 @@
  */
 package org.onesec.raven.net.impl;
 
-import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import org.onesec.raven.net.ByteBufferHolder;
 import org.onesec.raven.net.ByteBufferPool;
 import org.onesec.raven.net.DataProcessor;
 import org.onesec.raven.net.PacketProcessor;
@@ -56,9 +52,9 @@ public abstract class AbstractDataProcessor implements DataProcessor  {
         PacketProcessor pp = (PacketProcessor) key.attachment();
         if (pp.changeToProcessing()) {
             if (keyToProcess.compareAndSet(null, key)) {
-                key.interestOps(0);
-//                if (key.isWritable())
-//                    key.interestOps(key.interestOps() ^ SelectionKey.OP_WRITE);
+//                key.interestOps(0);
+                if (key.isWritable())
+                    key.interestOps(key.interestOps() ^ SelectionKey.OP_WRITE);
                 synchronized(this) {
                     notify();
                 }
