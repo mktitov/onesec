@@ -15,9 +15,13 @@
  */
 package org.onesec.raven.net.impl;
 
+import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.ReadableByteChannel;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.onesec.raven.net.ByteBufferHolder;
 import org.onesec.raven.net.ByteBufferPool;
 import org.onesec.raven.net.PacketProcessor;
@@ -55,7 +59,7 @@ public abstract class AbstractPacketProcessor implements PacketProcessor {
         this.needOutboundProcessing = needOutboundProcessing;
         this.serverSideProcessor = serverSideProcessor;
         this.datagramProcessor = datagramProcessor;
-        this.desc = desc+" ("+address.toString()+")";
+        this.desc = desc+" /"+address.toString()+(datagramProcessor?" (UDP)":" (TCP)")+"/";
         this.logger = logger;
         this.inBufferHolder = needInboundProcessing? bufferPool.getBuffer(bufferSize) : null;
         this.inBuffer = needInboundProcessing? inBufferHolder.getBuffer() : null;
@@ -66,6 +70,22 @@ public abstract class AbstractPacketProcessor implements PacketProcessor {
     public boolean isValid() {
         return validFlag.get();
     }
+
+    public void processInboundBuffer(ReadableByteChannel channel) {
+        try {
+            int res = channel.read(inBuffer);
+            
+            if (res==-1) 
+                doProcessInboundBuffer(null);
+            else if (res>0)
+                doProcessInboundBuffer(inBuffer);
+        } catch (Exception ex) {
+            if (logger.isDebugEnabled())
+                logger.debug("Channel closed: "+desc);
+        }
+    }
+    
+    protected abstract void doProcessInboundBuffer(ByteBuffer buffer) throws Exception;
 
     public boolean isNeedInboundProcessing() {
         return needInboundProcessing;
@@ -84,12 +104,15 @@ public abstract class AbstractPacketProcessor implements PacketProcessor {
     }
 
     public void stopUnexpected(Throwable e) {
-        if (!validFlag.compareAndSet(true, false))
-            return;
-        if (logger.isErrorEnabled())
-            logger.error("Unexpected processing stop", e);
-        releaseResources();
-        doStopUnexpected(e);
+        try {
+            if (!validFlag.compareAndSet(true, false))
+                return;
+            if (logger.isErrorEnabled())
+                logger.error("Unexpected processing stop", e);
+            doStopUnexpected(e);
+        } finally {
+            releaseResources();
+        }
     }
 
     public void stop() {

@@ -20,13 +20,10 @@ import java.net.Inet4Address;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.SocketChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.logging.Level;
 import static org.easymock.EasyMock.*;
 import org.easymock.IArgumentMatcher;
 import org.easymock.IMocksControl;
@@ -84,8 +81,8 @@ public class AbstractPacketDispatcherTest extends Assert {
                 executor, 2, null, new LoggerHelper(logger, "Dispatcher. "), bufferPool);
         executor.execute(dispatcher);
         SocketAddress addr = new InetSocketAddress(Inet4Address.getLocalHost(), 1234);
-        ReadPacketProcessor reader = new ReadPacketProcessor(addr, logger, bufferPool);
-        WritePacketProcessor writer = new WritePacketProcessor(addr, logger, bufferPool);
+        ReadPacketProcessor reader = new ReadPacketProcessor(addr, logger, bufferPool, true);
+        WritePacketProcessor writer = new WritePacketProcessor(addr, logger, bufferPool, true);
         dispatcher.addPacketProcessor(reader);
         dispatcher.addPacketProcessor(writer);
         Thread.sleep(5000);
@@ -121,28 +118,26 @@ public class AbstractPacketDispatcherTest extends Assert {
     
     private class ReadPacketProcessor extends AbstractPacketProcessor {
 
-        public ReadPacketProcessor(SocketAddress address, LoggerHelper logger, ByteBufferPool bufferPool) {
-            super(address, true, false, true, false, "Reader", new LoggerHelper(logger, "Reader. "), bufferPool, 1);
+        public ReadPacketProcessor(SocketAddress address, LoggerHelper logger, ByteBufferPool bufferPool, boolean datagram) {
+            super(address, true, false, true, datagram, "Reader", new LoggerHelper(logger, "Reader. "), bufferPool, 1);
         }
 
         @Override
         protected void doStopUnexpected(Throwable e) {
         }
 
-        public boolean processInboundBuffer(ByteBuffer buffer) {
-            return true;
-        }
-
-        public void processInboundBuffer(ReadableByteChannel channel) {
-            logger.debug("Processing read operation");
-            try {
-                inBuffer.clear();
-                if (channel.read(inBuffer)==1) {
-                    inBuffer.flip();
-                    logger.debug("Received byte: "+inBuffer.get());
-                }
-            } catch (IOException ex) {
-                logger.error("Error reading from channel", ex);
+        @Override
+        protected void doProcessInboundBuffer(ByteBuffer buffer) throws Exception {
+            if (buffer==null) {
+                logger.debug("Received end of channel");
+                stop();
+            } else {
+                if (buffer.remaining()==0)
+                    buffer.flip();
+                logger.debug("Processing read operation");
+                if (buffer.remaining()>0)
+                    logger.debug("Received byte: "+buffer.get());
+                buffer.clear();
             }
         }
 
@@ -159,15 +154,16 @@ public class AbstractPacketDispatcherTest extends Assert {
         private final List<Integer> data = Arrays.asList(1,2,3,4,5);
         private volatile int pos = 0;
 
-        public WritePacketProcessor(SocketAddress address, LoggerHelper logger, ByteBufferPool bufferPool) {
-            super(address, false, true, false, false, "Writer", new LoggerHelper(logger, "Writer. "), bufferPool, 1);
+        public WritePacketProcessor(SocketAddress address, LoggerHelper logger, ByteBufferPool bufferPool, boolean datagram) {
+            super(address, false, true, false, datagram, "Writer", new LoggerHelper(logger, "Writer. "), bufferPool, 1);
         }
 
         @Override
         protected void doStopUnexpected(Throwable e) {
         }
 
-        public void processInboundBuffer(ReadableByteChannel channel) {
+        @Override
+        protected void doProcessInboundBuffer(ByteBuffer buffer) throws Exception {
             throw new UnsupportedOperationException("Not supported yet.");
         }
 
@@ -182,12 +178,11 @@ public class AbstractPacketDispatcherTest extends Assert {
                 logger.error("Error write data", ex);
             }
             if (pos==5)
-                validFlag.set(false);
+                stop();
         }
 
         public boolean hasPacketForOutboundProcessing() {
             return pos<5;
         }
-        
     }
 }

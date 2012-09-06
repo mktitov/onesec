@@ -81,8 +81,17 @@ public class SimplePacketDispatcherTest {
                                 key.channel().close();
                                 keys.remove();
                             } else  if (key.isReadable()) {
-                                System.out.println(">> Server. Reading data from socket");
-                                ((SocketChannel)key.channel()).read(buffer);
+                                SocketChannel channel = (SocketChannel) key.channel();
+                                System.out.println(">> Server. Reading data from socket. "
+                                        + channel.isConnected()+" "+channel.isOpen()
+                                        + " " + channel.socket().isInputShutdown()
+                                        + " " + channel.socket().isOutputShutdown()
+                                        + " " + channel.socket().isBound()
+                                        + " " + channel.socket().isClosed()
+                                        + " " + channel.socket().isConnected()
+                                        );
+                                int count = channel.read(buffer);
+                                System.out.println("Channel return: "+count);
                                 buffer.clear();
                                 keys.remove();
                             }
@@ -111,5 +120,6 @@ public class SimplePacketDispatcherTest {
         buffer.flip();
         int count = channel.write(buffer);
         System.out.println("Written "+count+" bytes");
+        channel.close();
     }
 }
