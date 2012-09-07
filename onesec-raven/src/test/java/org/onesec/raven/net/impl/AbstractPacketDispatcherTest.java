@@ -123,7 +123,7 @@ public class AbstractPacketDispatcherTest extends Assert {
         private byte prevVal = 0;
 
         public ReadPacketProcessor(SocketAddress address, LoggerHelper logger, ByteBufferPool bufferPool, boolean datagram) {
-            super(address, true, false, true, datagram, "Reader", new LoggerHelper(logger, "Reader. "), bufferPool, 1);
+            super(address, true, false, true, datagram, "Reader", new LoggerHelper(logger, "Reader. "), bufferPool, 512);
         }
 
         @Override
@@ -140,7 +140,7 @@ public class AbstractPacketDispatcherTest extends Assert {
             } else {
                 buffer.flip();
                 logger.debug("Processing read operation");
-                if (buffer.remaining()>0) {
+                while (buffer.remaining()>0) {
                     byte val = buffer.get();
                     logger.debug("Received byte: "+val);
                     if (val != prevVal + 1) {
@@ -149,8 +149,10 @@ public class AbstractPacketDispatcherTest extends Assert {
 //                                "Invalid val. Expected %s but received %s", prevVal+1, val)));
                     } else
                         prevVal = val;
-                    if (val==DATA_LEN)
+                    if (val==DATA_LEN) {
                         stop();
+                        break;
+                    }
                 }
                 buffer.clear();
             }
@@ -191,7 +193,7 @@ public class AbstractPacketDispatcherTest extends Assert {
             outBuffer.flip();
             try {
                 channel.write(outBuffer);
-            } catch (IOException ex) {
+            } catch (Exception ex) {
                 logger.error("Error write data", ex);
             }
             if (pos==data.length)
