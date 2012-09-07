@@ -229,6 +229,7 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
         try {
             channel = DatagramChannel.open();
             channel.configureBlocking(false);
+            channel.socket().setTrafficClass(22);
             channel.connect(pp.getAddress());
             key = channel.register(selector, genOpsForKey(0, pp), pp);
         } catch (Throwable e) {
