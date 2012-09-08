@@ -52,9 +52,9 @@ public abstract class AbstractDataProcessor implements DataProcessor  {
         PacketProcessor pp = (PacketProcessor) key.attachment();
         if (pp.changeToProcessing()) {
             if (keyToProcess.compareAndSet(null, key)) {
-//                key.interestOps(0);
-                if (key.isWritable())
-                    key.interestOps(key.interestOps() ^ SelectionKey.OP_WRITE);
+                key.interestOps(0);
+//                if (key.isWritable())
+//                    key.interestOps(key.interestOps() ^ SelectionKey.OP_WRITE);
                 synchronized(this) {
                     notify();
                 }
