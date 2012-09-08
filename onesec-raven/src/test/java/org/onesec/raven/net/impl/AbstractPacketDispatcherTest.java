@@ -15,14 +15,13 @@
  */
 package org.onesec.raven.net.impl;
 
-import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
-import java.util.Arrays;
-import java.util.List;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.concurrent.atomic.AtomicInteger;
 import static org.easymock.EasyMock.*;
 import org.easymock.IArgumentMatcher;
@@ -44,7 +43,8 @@ import org.slf4j.LoggerFactory;
  */
 public class AbstractPacketDispatcherTest extends Assert {
     private final static Logger classLogger = LoggerFactory.getLogger("org.onesec.T");
-    private final static int DATA_LEN = 20;
+    private final static int DATA_LEN = 127;
+    private final static int DATA_LEN2 = 100;
     
     private final static AtomicInteger stoppedThreadsCount = new AtomicInteger();
     private ByteBufferPoolImpl bufferPool;
@@ -73,7 +73,7 @@ public class AbstractPacketDispatcherTest extends Assert {
         assertEquals(3, stoppedThreadsCount.get());
     }
     
-    @Test
+//    @Test
     public void separateProcessorsForReadWriteUDPTest() throws Exception {
         ExecutorService executor = trainExecutor(control, 1, 2);
         control.replay();
@@ -90,6 +90,46 @@ public class AbstractPacketDispatcherTest extends Assert {
         
         dispatcher.stop();
         assertTrue(reader.validSeq);
+//        assertEquals(5, reader.data.size());
+    }
+    
+//    @Test
+    public void separateProcessorsForReadWriteTCPTest() throws Exception {
+        ExecutorService executor = trainExecutor(control, 1, 2);
+        control.replay();
+        
+        AbstractPacketDispatcher dispatcher = new AbstractPacketDispatcher(
+                executor, 2, null, new LoggerHelper(logger, "Dispatcher. "), bufferPool);
+        executor.execute(dispatcher);
+        SocketAddress addr = new InetSocketAddress(Inet4Address.getLocalHost(), 1234);
+        ReadPacketProcessor reader = new ReadPacketProcessor(addr, logger, bufferPool, false);
+        WritePacketProcessor writer = new WritePacketProcessor(addr, logger, bufferPool, false);
+        dispatcher.addPacketProcessor(reader);
+        dispatcher.addPacketProcessor(writer);
+        Thread.sleep(5000);
+        
+        dispatcher.stop();
+        assertTrue(reader.validSeq);
+//        assertEquals(5, reader.data.size());
+    }
+    
+    @Test
+    public void twoWayProcessorsTCPTest() throws Exception {
+        ExecutorService executor = trainExecutor(control, 1, 2);
+        control.replay();
+        
+        AbstractPacketDispatcher dispatcher = new AbstractPacketDispatcher(
+                executor, 2, null, new LoggerHelper(logger, "Dispatcher. "), bufferPool);
+        executor.execute(dispatcher);
+        SocketAddress addr = new InetSocketAddress(Inet4Address.getLocalHost(), 1234);
+        ServerTwoWayPacketProcessor server = new ServerTwoWayPacketProcessor(addr, false, logger);
+        ClientTwoWayPacketProcessor client = new ClientTwoWayPacketProcessor(addr, false, logger);
+        dispatcher.addPacketProcessor(server);
+        dispatcher.addPacketProcessor(client);
+        Thread.sleep(5000);
+        
+        dispatcher.stop();
+        assertTrue(client.valid);
 //        assertEquals(5, reader.data.size());
     }
     
@@ -131,38 +171,35 @@ public class AbstractPacketDispatcherTest extends Assert {
         }
 
         @Override
-        protected void doProcessInboundBuffer(ByteBuffer buffer) throws Exception {
+        protected ProcessResult doProcessInboundBuffer(ByteBuffer buffer) throws Exception {
             if (buffer==null) {
                 logger.debug("Received end of channel");
                 if (prevVal!=DATA_LEN)
                     validSeq = false;
-                stop();
-            } else {
-                buffer.flip();
-                logger.debug("Processing read operation");
-                while (buffer.remaining()>0) {
-                    byte val = buffer.get();
-                    logger.debug("Received byte: "+val);
-                    if (val != prevVal + 1) {
-                        validSeq = false;
-//                        stopUnexpected(new Exception(String.format(
-//                                "Invalid val. Expected %s but received %s", prevVal+1, val)));
-                    } else
-                        prevVal = val;
-                    if (val==DATA_LEN) {
-                        stop();
-                        break;
-                    }
-                }
-                buffer.clear();
+                return ProcessResult.STOP;
+            } 
+            logger.debug("Processing read operation");
+            while (buffer.remaining()>0) {
+                byte val = buffer.get();
+                logger.debug("Received byte: "+val);
+                if (val != prevVal + 1) 
+                    validSeq = false;
+                else
+                    prevVal = val;
+                if (val==DATA_LEN) 
+                    return ProcessResult.STOP;
             }
+            buffer.clear();
+            return ProcessResult.CONT;
         }
 
-        public void processOutboundBuffer(WritableByteChannel channel) {
+        @Override
+        protected ProcessResult doProcessOutboundBuffer(ByteBuffer buffer) throws Exception {
             throw new UnsupportedOperationException("Not supported yet.");
         }
- 
-        public boolean hasPacketForOutboundProcessing() {
+
+        @Override
+        protected boolean containsPacketsForOutboundProcessing() {
             throw new UnsupportedOperationException("Not supported yet.");
         }
     }
@@ -182,26 +219,115 @@ public class AbstractPacketDispatcherTest extends Assert {
         }
 
         @Override
-        protected void doProcessInboundBuffer(ByteBuffer buffer) throws Exception {
+        protected ProcessResult doProcessInboundBuffer(ByteBuffer buffer) throws Exception {
             throw new UnsupportedOperationException("Not supported yet.");
         }
 
-        public void processOutboundBuffer(WritableByteChannel channel) {
+        @Override
+        protected ProcessResult doProcessOutboundBuffer(ByteBuffer buffer) throws Exception {
             logger.debug("Writing byte to the channel: "+data[pos]);
-            outBuffer.clear();
-            outBuffer.put((byte)data[pos++]);
-            outBuffer.flip();
-            try {
-                channel.write(outBuffer);
-            } catch (Exception ex) {
-                logger.error("Error write data", ex);
-            }
-            if (pos==data.length)
-                stop();
+            buffer.clear();
+            buffer.put((byte)data[pos++]);
+            return pos==data.length? ProcessResult.STOP : ProcessResult.CONT;
         }
 
-        public boolean hasPacketForOutboundProcessing() {
+        @Override
+        protected boolean containsPacketsForOutboundProcessing() {
             return pos<data.length;
         }
+    }
+    
+    private class ServerTwoWayPacketProcessor extends AbstractPacketProcessor {
+        private final Queue<Integer> packetsToSend = new LinkedList<Integer>();
+
+        public ServerTwoWayPacketProcessor(SocketAddress address, boolean datagramProcessor, LoggerHelper logger) 
+        {
+            super(address, true, true, true, datagramProcessor, "Server", new LoggerHelper(logger, "Server. ")
+                    , bufferPool, 512);
+        }
+        
+        @Override
+        protected ProcessResult doProcessInboundBuffer(ByteBuffer buffer) throws Exception {
+            if (buffer==null) 
+                return ProcessResult.STOP;
+            while (buffer.hasRemaining()) {
+                int val = buffer.getInt();
+                logger.debug("Received int: "+val);
+                packetsToSend.add(val);
+            }
+            buffer.clear();
+            return ProcessResult.CONT;
+        }
+
+        @Override
+        protected ProcessResult doProcessOutboundBuffer(ByteBuffer buffer) throws Exception {
+            logger.debug("Processing outbound operation");
+            buffer.compact();
+            while (buffer.hasRemaining() && !packetsToSend.isEmpty()) {
+                Integer val = packetsToSend.poll();
+                buffer.putInt(val);
+            }
+            return ProcessResult.CONT;
+        }
+
+        @Override
+        protected void doStopUnexpected(Throwable e) {
+            throw new UnsupportedOperationException("Not supported yet.");
+        }
+
+        @Override
+        protected boolean containsPacketsForOutboundProcessing() {
+            return !packetsToSend.isEmpty();
+        }
+    }
+    
+    private class ClientTwoWayPacketProcessor extends AbstractPacketProcessor {
+        private int lastSendedVal = 0;
+        private int lastReceivedVal = 0;
+        private boolean valid = true;
+        
+        public ClientTwoWayPacketProcessor(SocketAddress address, boolean datagramProcessor, LoggerHelper logger) 
+        {
+            super(address, true, true, false, datagramProcessor, "Client", new LoggerHelper(logger, "Client. ")
+                    , bufferPool, 512);
+        }
+
+        @Override
+        protected ProcessResult doProcessInboundBuffer(ByteBuffer buffer) throws Exception {
+            if (buffer==null)
+                return ProcessResult.STOP;
+            while (buffer.hasRemaining()) {
+                int val = buffer.getInt();
+                logger.debug("Received response: "+val);
+                if (val!=lastReceivedVal+1) {
+                    valid = false;
+                    return ProcessResult.STOP;
+                } else
+                    lastReceivedVal = val;
+            }
+            buffer.clear();
+            return ProcessResult.CONT;
+        }
+
+        @Override
+        protected ProcessResult doProcessOutboundBuffer(ByteBuffer buffer) throws Exception {
+            buffer.clear();
+            if (buffer.hasRemaining()) {
+                buffer.putInt(++lastSendedVal);
+                logger.debug("Sending: "+lastSendedVal);
+            }
+            return ProcessResult.CONT;
+        }
+
+        @Override
+        protected void doStopUnexpected(Throwable e) {
+            throw new UnsupportedOperationException("Not supported yet.");
+        }
+
+        @Override
+        protected boolean containsPacketsForOutboundProcessing() {
+            return lastSendedVal<DATA_LEN2;
+        }
+
     }
 }

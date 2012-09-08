@@ -16,7 +16,6 @@
 package org.onesec.raven.net.impl;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -131,8 +130,8 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
                 {
                     if (pp.isNeedOutboundProcessing() && pp.hasPacketForOutboundProcessing())
                         key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-//                    if (pp.isNeedInboundProcessing())
-//                        key.interestOps(key.interestOps() | SelectionKey.OP_READ);
+                    if (pp.isNeedInboundProcessing())
+                        key.interestOps(key.interestOps() | SelectionKey.OP_READ);
                 }
         }
     }
@@ -186,6 +185,7 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
                 SocketChannel socketChannel = ((ServerSocketChannel)key.channel()).accept(); //can return null
                 socketChannel.configureBlocking(false);
                 socketChannel.register(selector, 0, pp);
+//                socketChannel.register(selector, genOpsForKey(0, pp), pp);
             } catch (Throwable ex) {
                 pp.stopUnexpected(ex);
             }
@@ -244,6 +244,7 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
             channel.configureBlocking(false);
             channel.socket().bind(pp.getAddress());
             key = channel.register(selector, genOpsForKey(0, pp), pp);
+//            key = channel.register(selector, genOpsForKey(0, pp), pp);
         } catch (Throwable e) {
             stopPacketProcessorUnexpected(pp, key, channel, e);
         }
@@ -266,7 +267,7 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
         try {
             channel = SocketChannel.open();
             channel.configureBlocking(false);
-            key = channel.register(selector, genOpsForKey(SelectionKey.OP_CONNECT, pp), pp);
+            key = channel.register(selector, SelectionKey.OP_CONNECT, pp);
             channel.connect(pp.getAddress());
         } catch (Throwable e) {
             stopPacketProcessorUnexpected(pp, key, channel, e);
@@ -284,8 +285,8 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
     }
     
     private int genOpsForKey(int initialOps, PacketProcessor pp) {
-        return initialOps 
-                | (pp.isNeedInboundProcessing()?SelectionKey.OP_READ:0);
+        return initialOps;
+//                | (pp.isNeedInboundProcessing()?SelectionKey.OP_READ:0);
 //                | (pp.isNeedOutboundProcessing()?SelectionKey.OP_WRITE:0);
     }
     

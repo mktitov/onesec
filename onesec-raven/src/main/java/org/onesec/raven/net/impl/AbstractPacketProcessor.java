@@ -15,14 +15,12 @@
  */
 package org.onesec.raven.net.impl;
 
-import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.onesec.raven.net.ByteBufferHolder;
 import org.onesec.raven.net.ByteBufferPool;
 import org.onesec.raven.net.PacketProcessor;
@@ -33,6 +31,8 @@ import org.raven.tree.impl.LoggerHelper;
  * @author Mikhail Titov
  */
 public abstract class AbstractPacketProcessor implements PacketProcessor {
+    public static enum ProcessResult {CONT, STOP};
+    
     protected final AtomicBoolean validFlag = new AtomicBoolean(true);
     private final SocketAddress address;
     private final boolean needInboundProcessing;
@@ -45,6 +45,7 @@ public abstract class AbstractPacketProcessor implements PacketProcessor {
     private final ByteBufferHolder inBufferHolder;
     private final ByteBufferHolder outBufferHolder;
     protected final LoggerHelper logger;
+    private boolean stoppingOutboundProcessing = false;
     
     private final AtomicBoolean processing = new AtomicBoolean(false);
 
@@ -66,6 +67,8 @@ public abstract class AbstractPacketProcessor implements PacketProcessor {
         this.inBuffer = needInboundProcessing? inBufferHolder.getBuffer() : null;
         this.outBufferHolder = needOutboundProcessing? bufferPool.getBuffer(bufferSize) : null;
         this.outBuffer = needOutboundProcessing? outBufferHolder.getBuffer() : null;
+        if (needOutboundProcessing)
+            this.outBuffer.flip();
     }
     
     public boolean isValid() {
@@ -74,24 +77,58 @@ public abstract class AbstractPacketProcessor implements PacketProcessor {
 
     public void processInboundBuffer(ReadableByteChannel channel) {
         try {
+            ProcessResult processRes = null;
             if (datagramProcessor) {
                 SocketAddress addr = ((DatagramChannel)channel).receive(inBuffer);
                 if (addr!=null)
-                    doProcessInboundBuffer(inBuffer);
+                    processRes = doProcessInboundBuffer((ByteBuffer)inBuffer.flip());
             } else {
+//                logger.debug("Processing read operation.");
                 int res = channel.read(inBuffer);
                 if (res==-1) 
-                    doProcessInboundBuffer(null);
+                    processRes = doProcessInboundBuffer(null);
                 else if (res>0)
-                    doProcessInboundBuffer(inBuffer);
+                    processRes = doProcessInboundBuffer((ByteBuffer)inBuffer.flip());
             }
-        } catch (Exception ex) {
-            if (logger.isDebugEnabled())
-                logger.debug("Channel closed: "+desc);
+            if (processRes == ProcessResult.STOP)
+                stop();
+        } catch (Throwable ex) {
+            if (logger.isErrorEnabled())
+                logger.error("Error processing inbound packet", ex);
         }
     }
+
+    public void processOutboundBuffer(WritableByteChannel channel) {
+        try {
+            logger.debug("PROCESSING OUTBOUND OPERATION. Has remaining "+outBuffer.hasRemaining());
+            if (!stoppingOutboundProcessing) {
+                ProcessResult res = doProcessOutboundBuffer(outBuffer);
+                outBuffer.flip();
+                channel.write(outBuffer);
+                if (res==ProcessResult.STOP) {
+                    if (outBuffer.hasRemaining())
+                        stoppingOutboundProcessing = true;
+                    else
+                        stop();
+                }
+            } else {
+                channel.write(outBuffer);
+                if (!outBuffer.hasRemaining())
+                    stop();
+            }
+        } catch (Throwable ex) {
+            if (logger.isErrorEnabled())
+                logger.error("Error processing outbound packet", ex);
+        }
+    }
+
+    public boolean hasPacketForOutboundProcessing() {
+        return needOutboundProcessing && (outBuffer.hasRemaining() || containsPacketsForOutboundProcessing());
+    }
     
-    protected abstract void doProcessInboundBuffer(ByteBuffer buffer) throws Exception;
+    protected abstract ProcessResult doProcessInboundBuffer(ByteBuffer buffer) throws Exception;
+    protected abstract ProcessResult doProcessOutboundBuffer(ByteBuffer buffer) throws Exception;
+    protected abstract boolean containsPacketsForOutboundProcessing();
 
     public boolean isNeedInboundProcessing() {
         return needInboundProcessing;

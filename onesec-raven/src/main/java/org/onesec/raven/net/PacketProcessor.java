@@ -16,9 +16,7 @@
 package org.onesec.raven.net;
 
 import java.net.SocketAddress;
-import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.SocketChannel;
 import java.nio.channels.WritableByteChannel;
 
 /**
