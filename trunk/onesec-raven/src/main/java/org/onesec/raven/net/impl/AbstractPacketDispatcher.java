@@ -124,7 +124,8 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
             if (!pp.isValid())
                 closeKey(key);
             else 
-                if (   key.isValid() 
+                if (   key.isValid()
+                    && !selector.selectedKeys().contains(key)
                     && (key.interestOps() & (SelectionKey.OP_ACCEPT | SelectionKey.OP_CONNECT))==0 
                     && !pp.isProcessing()) 
                 {
@@ -136,9 +137,10 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
         }
     }
     
-    private void processSelection(Selector selector) {
+    private void processSelection(Selector selector) throws Exception {
         try {
-            selector.select(1);
+//            selector.select(1);
+            selector.selectNow();
             Set<SelectionKey> keys = selector.selectedKeys();
             if (keys!=null && !keys.isEmpty()) {
                 Iterator<SelectionKey> it = keys.iterator();
@@ -157,6 +159,8 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
                     }
                 }
             }
+            if (keys.isEmpty())
+                Thread.sleep(1);
                 
         } catch (IOException ex) {
             if (logger.isErrorEnabled())
