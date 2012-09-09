@@ -19,7 +19,6 @@ import java.net.Inet4Address;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.WritableByteChannel;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -261,13 +260,14 @@ public class AbstractPacketDispatcherTest extends Assert {
 
         @Override
         protected ProcessResult doProcessOutboundBuffer(ByteBuffer buffer) throws Exception {
-            logger.debug("Processing outbound operation");
             buffer.compact();
+            Integer val = null;
             while (buffer.hasRemaining() && !packetsToSend.isEmpty()) {
-                Integer val = packetsToSend.poll();
+                val = packetsToSend.poll();
                 buffer.putInt(val);
             }
             return ProcessResult.CONT;
+//            return val!=null && val==DATA_LEN2? ProcessResult.STOP : ProcessResult.CONT;
         }
 
         @Override
@@ -296,8 +296,9 @@ public class AbstractPacketDispatcherTest extends Assert {
         protected ProcessResult doProcessInboundBuffer(ByteBuffer buffer) throws Exception {
             if (buffer==null)
                 return ProcessResult.STOP;
+            int val = 0;
             while (buffer.hasRemaining()) {
-                int val = buffer.getInt();
+                val = buffer.getInt();
                 logger.debug("Received response: "+val);
                 if (val!=lastReceivedVal+1) {
                     valid = false;
@@ -306,7 +307,7 @@ public class AbstractPacketDispatcherTest extends Assert {
                     lastReceivedVal = val;
             }
             buffer.clear();
-            return ProcessResult.CONT;
+            return val==DATA_LEN2? ProcessResult.STOP : ProcessResult.CONT;
         }
 
         @Override
@@ -314,7 +315,7 @@ public class AbstractPacketDispatcherTest extends Assert {
             buffer.clear();
             if (buffer.hasRemaining()) {
                 buffer.putInt(++lastSendedVal);
-                logger.debug("Sending: "+lastSendedVal);
+                logger.debug("Sending request: "+lastSendedVal);
             }
             return ProcessResult.CONT;
         }

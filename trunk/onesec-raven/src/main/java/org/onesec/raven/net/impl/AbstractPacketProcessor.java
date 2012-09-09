@@ -83,8 +83,9 @@ public abstract class AbstractPacketProcessor implements PacketProcessor {
                 if (addr!=null)
                     processRes = doProcessInboundBuffer((ByteBuffer)inBuffer.flip());
             } else {
-//                logger.debug("Processing read operation.");
+//                logger.debug("Buffer remaining: "+inBuffer.remaining()+":"+inBuffer.capacity());
                 int res = channel.read(inBuffer);
+//                logger.debug("Processing read operation. "+res);
                 if (res==-1) 
                     processRes = doProcessInboundBuffer(null);
                 else if (res>0)
@@ -100,7 +101,7 @@ public abstract class AbstractPacketProcessor implements PacketProcessor {
 
     public void processOutboundBuffer(WritableByteChannel channel) {
         try {
-            logger.debug("PROCESSING OUTBOUND OPERATION. Has remaining "+outBuffer.hasRemaining());
+//            logger.debug("PROCESSING OUTBOUND OPERATION. Has remaining "+outBuffer.hasRemaining());
             if (!stoppingOutboundProcessing) {
                 ProcessResult res = doProcessOutboundBuffer(outBuffer);
                 outBuffer.flip();

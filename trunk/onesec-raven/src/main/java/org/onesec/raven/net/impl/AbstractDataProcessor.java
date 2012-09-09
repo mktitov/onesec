@@ -30,7 +30,7 @@ import org.raven.tree.impl.LoggerHelper;
  */
 public abstract class AbstractDataProcessor implements DataProcessor  {
     private final Node owner;
-    private final LoggerHelper logger;
+    protected final LoggerHelper logger;
     private final int bufferSize;
     private final ByteBufferPool byteBufferPool;
     private final AtomicReference<SelectionKey> keyToProcess = new AtomicReference<SelectionKey>();
