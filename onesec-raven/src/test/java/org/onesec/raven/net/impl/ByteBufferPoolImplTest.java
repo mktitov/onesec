@@ -36,14 +36,15 @@ public class ByteBufferPoolImplTest {
         ByteBuffer buffer = holder.getBuffer();
         assertNotNull(buffer);
         assertEquals(128, buffer.capacity());
-        holder.release();
+//        holder.release();
         
         ByteBufferHolder holder2 = pool.getBuffer(128);
-        assertSame(holder, holder2);
+        assertNotSame(holder, holder2);
         
+        holder.release();
         ByteBufferHolder holder3 = pool.getBuffer(128);
         assertNotNull(holder3);
-        assertNotSame(holder, holder3);
+        assertSame(holder, holder3);
     }
     
     @Test

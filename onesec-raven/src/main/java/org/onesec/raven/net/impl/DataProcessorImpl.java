@@ -37,9 +37,11 @@ public class DataProcessorImpl extends AbstractDataProcessor {
     @Override
     protected void doProcessData(SelectionKey key) throws Exception {
         final PacketProcessor packetProcessor = (PacketProcessor) key.attachment();
-        if (key.isReadable()) 
+        if (key.isReadable()) {
+//            if (key.isValid())
+//                logger.debug(key.readyOps()+":"+key.attachment());
             packetProcessor.processInboundBuffer((ReadableByteChannel)key.channel());
-        if (key.isWritable()) 
+        } if (key.isWritable()) 
             packetProcessor.processOutboundBuffer((WritableByteChannel)key.channel());
     }
 }

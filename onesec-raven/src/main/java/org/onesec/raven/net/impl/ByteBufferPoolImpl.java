@@ -72,6 +72,7 @@ public class ByteBufferPoolImpl implements ByteBufferPool {
                 pool.put(bufferSize, list);
             }
             ByteBufferHolderImpl bufferHolder = new ByteBufferHolderImpl(bufferSize);
+            bufferHolder.use();
             list.add(bufferHolder);
             buffersCount++;
             return bufferHolder;
@@ -84,6 +85,7 @@ public class ByteBufferPoolImpl implements ByteBufferPool {
         lock.writeLock().lock();
         try {
             ByteBufferHolderImpl bufferHolder = new ByteBufferHolderImpl(bufferSize);
+            bufferHolder.use();
             bufferList.add(bufferHolder);
             buffersCount++;
             return bufferHolder;
