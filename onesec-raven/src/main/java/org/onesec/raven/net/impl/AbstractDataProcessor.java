@@ -18,6 +18,8 @@ package org.onesec.raven.net.impl;
 import java.nio.channels.SelectionKey;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.onesec.raven.net.ByteBufferPool;
 import org.onesec.raven.net.DataProcessor;
 import org.onesec.raven.net.PacketProcessor;
@@ -38,6 +40,8 @@ public abstract class AbstractDataProcessor implements DataProcessor  {
     private volatile String statusMessage;
     private final AtomicBoolean stopFlag = new AtomicBoolean(false);
     private volatile boolean processingData = false;
+    private long startTs;
+    private long usingTime = 0;
 
     public AbstractDataProcessor(Node owner, LoggerHelper logger, int bufferSize
             , ByteBufferPool byteBufferPool) 
@@ -55,9 +59,10 @@ public abstract class AbstractDataProcessor implements DataProcessor  {
                 key.interestOps(0);
 //                if (key.isWritable())
 //                    key.interestOps(key.interestOps() ^ SelectionKey.OP_WRITE);
-                synchronized(this) {
-                    notify();
-                }
+                if (!processingData)
+                    synchronized(this) {
+                        notify();
+                    }
                 return true;
             } else
                 pp.changeToUnprocessing();
@@ -82,12 +87,14 @@ public abstract class AbstractDataProcessor implements DataProcessor  {
             logger.info("Successfully started");
 //        final ByteBufferHolder bufferHolder = byteBufferPool.getBuffer(bufferSize);
 //        final ByteBuffer buffer = bufferHolder.getBuffer();
+        startTs = System.currentTimeMillis();
         try {
-//            processingData = false;
+            processingData = false;
             while (!stopFlag.get()) {
                 SelectionKey key = keyToProcess.get();
                 if (key!=null) {
-//                    processingData = true;
+//                    long usingStart = System.currentTimeMillis();
+                    processingData = true;
                     keyToProcess.set(null);
                     try {
                         try {
@@ -98,12 +105,27 @@ public abstract class AbstractDataProcessor implements DataProcessor  {
                         }
                     } finally {
                         ((PacketProcessor)key.attachment()).changeToUnprocessing();
+//                        long curTime = System.currentTimeMillis();
+//                        usingTime += curTime - usingStart;
+//                        if (startTs+1000<=curTime) {
+//                            logger.debug(String.format(
+//                                    "Usage %.2f%% for last %sms, usage time %sms "
+//                                    , 100.*usingTime/(curTime-startTs), curTime-startTs, usingTime));
+//                            startTs = curTime;
+//                            usingTime = 0;
+//                        }
                     }
                 } else {
-//                    processingData = false;
+//                    try {
+//                        Thread.sleep(1);
+//                    } catch (InterruptedException ex) {
+//                        if (logger.isErrorEnabled())
+//                            logger.error("Interrupted");
+//                    }
+                    processingData = false;
                     synchronized(this) {
                         try {
-                            wait(5);
+                            wait(1);
                         } catch (InterruptedException ex) {
                             if (logger.isErrorEnabled())
                                 logger.error("Interrupted");

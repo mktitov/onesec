@@ -44,6 +44,8 @@ public class AbstractPacketDispatcherTest extends Assert {
     private final static Logger classLogger = LoggerFactory.getLogger("org.onesec.T");
     private final static int DATA_LEN = 127;
     private final static int DATA_LEN2 = 100;
+    private final static int DATA_LEN3 = 500;
+    private final static int PACKET_SIZE = 160;
     
     private final static AtomicInteger stoppedThreadsCount = new AtomicInteger();
     private ByteBufferPoolImpl bufferPool;
@@ -112,7 +114,7 @@ public class AbstractPacketDispatcherTest extends Assert {
 //        assertEquals(5, reader.data.size());
     }
     
-    @Test
+//    @Test
     public void twoWayProcessorsTCPTest() throws Exception {
         ExecutorService executor = trainExecutor(control, 1, 2);
         control.replay();
@@ -129,7 +131,81 @@ public class AbstractPacketDispatcherTest extends Assert {
         
         dispatcher.stop();
         assertTrue(client.valid);
+        assertEquals(DATA_LEN2, client.lastReceivedVal);
 //        assertEquals(5, reader.data.size());
+    }
+    
+//    @Test
+    public void realTimeProtocolTest() throws Exception {
+        ExecutorService executor = trainExecutor(control, 1, 2);
+        control.replay();
+        
+        AbstractPacketDispatcher dispatcher = new AbstractPacketDispatcher(
+                executor, 2, null, new LoggerHelper(logger, "Dispatcher. "), bufferPool);
+        executor.execute(dispatcher);
+        SocketAddress addr = new InetSocketAddress(Inet4Address.getLocalHost(), 1234);
+        RealTimeServerPacketProcessor server = new RealTimeServerPacketProcessor(1, 160, addr, true, logger);
+        RealTimeClientPacketProcessor client = new RealTimeClientPacketProcessor(1, 160, 200, addr, true, logger);
+        dispatcher.addPacketProcessor(server);
+        dispatcher.addPacketProcessor(client);
+        Thread.sleep(5000);
+        
+        dispatcher.stop();
+        client.showStat();
+        server.showStat();
+//        assertEquals(5, reader.data.size());
+    }
+    
+    @Test
+    public void realTimeProtocolLoadTest() throws Exception {
+        ExecutorService executor = trainExecutor(control, 1, 5);
+        control.replay();
+        
+        AbstractPacketDispatcher dispatcher = new AbstractPacketDispatcher(
+                executor, 5, null, new LoggerHelper(logger, "Dispatcher. "), bufferPool);
+        executor.execute(dispatcher);
+        
+        Pair[] processors = new Pair[1000];
+        int packetsCount = 1000;
+        for (int i=0; i<processors.length; ++i) {
+            SocketAddress addr = new InetSocketAddress(Inet4Address.getLocalHost(), 1234+i);
+            RealTimeServerPacketProcessor server = new RealTimeServerPacketProcessor(i, 160, addr, true, logger);
+            RealTimeClientPacketProcessor client = new RealTimeClientPacketProcessor(i, 160, packetsCount, addr, true, logger);
+            dispatcher.addPacketProcessor(server);
+            dispatcher.addPacketProcessor(client);
+            Thread.sleep(5);
+            processors[i] = new Pair(server, client);
+        }
+        
+        Thread.sleep(packetsCount*20+processors.length*5+500);        
+        dispatcher.stop();
+        long maxClientDelta = 0;
+        double avgClientDelta = 0.;
+        long maxClientDelta2 = 0;
+        double avgClientDelta2 = 0.;
+        long maxServerDelta = 0;
+        double avgServerDelta = 0;
+        int lostPacketsCount = 0;
+        for (int i=0; i<processors.length; ++i) {
+            Pair p = processors[i];
+            maxClientDelta = Math.max(maxClientDelta, p.client.maxDelta);
+            maxClientDelta2 = Math.max(maxClientDelta2, p.client.maxDelta2);
+            maxServerDelta = Math.max(maxServerDelta, p.server.maxDelta);
+            avgClientDelta += p.client.getAvgDelta();
+            avgClientDelta2 += p.client.getAvgDelta2();
+            avgServerDelta += p.server.getAvgDelta();
+            lostPacketsCount += packetsCount - p.server.countDelta;
+        }
+        avgClientDelta /= processors.length;
+        avgClientDelta2 /= processors.length;
+        avgServerDelta /= processors.length;
+        logger.debug("Client maxDelta: "+maxClientDelta);
+        logger.debug("Client avgDelta: "+avgClientDelta);
+        logger.debug("Client maxDelta2: "+maxClientDelta2);
+        logger.debug("Client avgDelta2: "+avgClientDelta2);
+        logger.debug("Server maxDelta: "+maxServerDelta);
+        logger.debug("Server avgDelta: "+avgServerDelta);
+        logger.debug("Total packets lost: "+lostPacketsCount);
     }
     
     private ExecutorService trainExecutor(IMocksControl control, int selectorCount, int dataProcessorsCount) throws Exception {
@@ -266,8 +342,8 @@ public class AbstractPacketDispatcherTest extends Assert {
                 val = packetsToSend.poll();
                 buffer.putInt(val);
             }
-            return ProcessResult.CONT;
-//            return val!=null && val==DATA_LEN2? ProcessResult.STOP : ProcessResult.CONT;
+//            return ProcessResult.CONT;
+            return val!=null && val==DATA_LEN2? ProcessResult.STOP : ProcessResult.CONT;
         }
 
         @Override
@@ -327,8 +403,178 @@ public class AbstractPacketDispatcherTest extends Assert {
 
         @Override
         protected boolean containsPacketsForOutboundProcessing() {
-            return lastSendedVal<DATA_LEN2;
+            return lastSendedVal < DATA_LEN2;
+        }
+    }
+    
+    private class RealTimeClientPacketProcessor extends AbstractPacketProcessor {
+        private final int id;
+        private final int packetSize;
+        private final int packetsCount;
+        
+        private long nextSendTime = 0;
+        private long maxDelta = 0;
+        private long sumDelta = 0;
+        private int countDelta = 0;
+        private long maxDelta2 = 0;
+        private long sumDelta2 = 0;
+        private int countDelta2 = 0;
+        private long checkTime;
+        private boolean hasPacketToSend = false;
+        
+        public RealTimeClientPacketProcessor(int id, int packetSize, int packetsCount, SocketAddress address
+                , boolean datagramProcessor, LoggerHelper logger) 
+        {
+            super(address, false, true, false, datagramProcessor, "Client", new LoggerHelper(logger, "Client["+id+"]. ")
+                    , bufferPool, 512);
+            this.id = id;
+            this.packetSize = packetSize;
+            this.packetsCount = packetsCount;
         }
 
+        @Override
+        protected ProcessResult doProcessInboundBuffer(ByteBuffer buffer) throws Exception {
+            throw new UnsupportedOperationException("Not supported yet.");
+        }
+
+        @Override
+        protected ProcessResult doProcessOutboundBuffer(ByteBuffer buffer) throws Exception {
+            long curTime = System.currentTimeMillis();
+            long delta = curTime - checkTime;
+            maxDelta2 = Math.max(maxDelta2, delta);
+            sumDelta2 += delta;
+            ++countDelta2;
+            
+            buffer.compact();
+            if (buffer.hasRemaining()) {
+//                logger.debug("Sending packet #"+countDelta2);
+                buffer.putInt(id);
+                buffer.putInt(countDelta2);
+                buffer.putLong(curTime);
+                buffer.put((byte)(countDelta2==packetsCount?1:0));
+                for (int i=0; i<packetSize; ++i)
+                    buffer.put((byte)1);
+                hasPacketToSend = false;
+            }
+            return countDelta2==packetsCount? ProcessResult.STOP : ProcessResult.CONT;
+        }
+
+        @Override
+        protected boolean containsPacketsForOutboundProcessing() {
+            if (hasPacketToSend)
+                return true;
+            long curTime = System.currentTimeMillis();
+            if (curTime>=nextSendTime) {
+                if (nextSendTime>0) {
+                    maxDelta = Math.max(maxDelta, curTime-nextSendTime);
+                    ++countDelta;
+                    sumDelta += curTime-nextSendTime;
+                    nextSendTime += 20;
+                } else
+                    nextSendTime = curTime;
+                checkTime = curTime;
+                hasPacketToSend = true;
+                return true;
+            } 
+            return false;
+        }
+        
+        public double getAvgDelta() {
+            return sumDelta/countDelta;
+        }
+        
+        public double getAvgDelta2() {
+            return sumDelta2/countDelta2;
+        }
+        
+        public void showStat() {
+            logger.debug("avgDelta: "+getAvgDelta());
+            logger.debug("maxDelta: "+maxDelta);
+            logger.debug("avgDelta2: "+getAvgDelta2());
+            logger.debug("maxDelta2: "+maxDelta2);
+        }
+
+        @Override
+        protected void doStopUnexpected(Throwable e) {
+            throw new UnsupportedOperationException("Not supported yet.");
+        }
+    }
+    
+    private class RealTimeServerPacketProcessor extends AbstractPacketProcessor {
+        private final int id;
+        private final int packetSize;
+        private long maxDelta = 0;
+        private long sumDelta = 0;
+        private long countDelta = 0;
+        
+        public RealTimeServerPacketProcessor(int id, int packetSize, SocketAddress address, boolean datagramProcessor, LoggerHelper logger) 
+        {
+            super(address, true, false, true, datagramProcessor, "Server", new LoggerHelper(logger, "Server["+id+"]. ")
+                    , bufferPool, 512);
+            this.id = id;
+            this.packetSize = packetSize;
+        }
+
+        @Override
+        protected ProcessResult doProcessInboundBuffer(ByteBuffer buffer) throws Exception {
+            if (buffer==null)
+                return ProcessResult.STOP;
+            while (buffer.hasRemaining()) {
+                int packetId = buffer.getInt();
+                if (packetId!=id) {
+                    logger.equals("Received packet with invalid id: "+packetId);
+                    return ProcessResult.STOP;
+                }
+                int counter = buffer.getInt();
+//                logger.debug("Received packet #"+counter);
+                long curTime = System.currentTimeMillis();
+                long delta = curTime - buffer.getLong();
+                maxDelta = Math.max(maxDelta, delta);
+                sumDelta += delta;
+                boolean lastPacket = buffer.get()==0? false:true;
+                for (int i=0; i<packetSize; ++i) {
+                    byte b = buffer.get();
+                }
+                ++countDelta;
+                if (lastPacket)
+                    return ProcessResult.STOP;
+            }
+            buffer.clear();
+            return ProcessResult.CONT;
+        }
+        
+        public double getAvgDelta() {
+            return sumDelta/countDelta;
+        }
+        
+        public void showStat() {
+            logger.debug("avgDelta: "+getAvgDelta());
+            logger.debug("maxDelta: "+maxDelta);
+        }
+
+        @Override
+        protected ProcessResult doProcessOutboundBuffer(ByteBuffer buffer) throws Exception {
+            throw new UnsupportedOperationException("Not supported yet.");
+        }
+
+        @Override
+        protected boolean containsPacketsForOutboundProcessing() {
+            throw new UnsupportedOperationException("Not supported yet.");
+        }
+
+        @Override
+        protected void doStopUnexpected(Throwable e) {
+            throw new UnsupportedOperationException("Not supported yet.");
+        }
+    }
+    
+    private class Pair {
+        private final RealTimeServerPacketProcessor server;
+        private final RealTimeClientPacketProcessor client;
+
+        public Pair(RealTimeServerPacketProcessor server, RealTimeClientPacketProcessor client) {
+            this.server = server;
+            this.client = client;
+        }
     }
 }
