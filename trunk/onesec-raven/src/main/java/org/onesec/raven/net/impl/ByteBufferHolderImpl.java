@@ -28,7 +28,8 @@ public class ByteBufferHolderImpl implements ByteBufferHolder {
     private final ByteBuffer buffer;
 
     public ByteBufferHolderImpl(int bufferSize) {
-        this.buffer = ByteBuffer.allocateDirect(bufferSize);
+//        this.buffer = ByteBuffer.allocateDirect(bufferSize);
+        this.buffer = ByteBuffer.allocate(bufferSize);
     }
     
     public boolean use() {

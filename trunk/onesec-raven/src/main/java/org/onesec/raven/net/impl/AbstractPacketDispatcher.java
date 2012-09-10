@@ -19,8 +19,11 @@ import java.io.IOException;
 import java.nio.channels.*;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import org.onesec.raven.net.ByteBufferPool;
 import org.onesec.raven.net.DataProcessor;
@@ -45,7 +48,11 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
     protected final LoggerHelper logger;
     protected final ByteBufferPool byteBufferPool;
     private final DataProcessor[] dataProcessors;
+    private final int dataProcessorsCount;
     private final boolean[] runningFlag;
+    private final Queue<SelectionKey> keysQueue = new ConcurrentLinkedQueue<SelectionKey>();
+    private final AtomicInteger keysQueueSize = new AtomicInteger();
+    private final AtomicBoolean selectionThreadWaiting = new AtomicBoolean(false);
     
     protected final LinkedList<PacketProcessor> pendingProcessors = new LinkedList<PacketProcessor>();
     private final ReentrantLock pendingProcessorsLock = new ReentrantLock();
@@ -63,6 +70,7 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
         this.byteBufferPool = byteBufferPool;
         this.dataProcessors = new DataProcessor[workersCount];
         this.runningFlag = new boolean[workersCount];
+        this.dataProcessorsCount = workersCount;
     }
     
     public void addPacketProcessor(P packetProcessor) {
@@ -125,7 +133,7 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
                 closeKey(key);
             else 
                 if (   key.isValid()
-                    && !selector.selectedKeys().contains(key)
+//                    && !selector.selectedKeys().contains(key)
                     && (key.interestOps() & (SelectionKey.OP_ACCEPT | SelectionKey.OP_CONNECT))==0 
                     && !pp.isProcessing()) 
                 {
@@ -139,8 +147,8 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
     
     private void processSelection(Selector selector) throws Exception {
         try {
-//            selector.select(1);
-            selector.selectNow();
+            selector.select(1);
+//            selector.selectNow();
             Set<SelectionKey> keys = selector.selectedKeys();
             if (keys!=null && !keys.isEmpty()) {
                 Iterator<SelectionKey> it = keys.iterator();
@@ -148,27 +156,62 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
                     SelectionKey key = it.next();
                     if (key.isAcceptable()) {
                         acceptIncomingConnection(selector, key);
-                        it.remove();
+//                        it.remove();
                     } else if (key.isConnectable()) {
                         ((SocketChannel)key.channel()).finishConnect();
                         key.interestOps(genOpsForKey(0, (PacketProcessor)key.attachment()));
-                        it.remove();
+//                        it.remove();
                     } else if (key.isReadable() || key.isWritable()) {
-                        if (submitOperationToDataProcessor(key))
-                            it.remove();
+                        submitOperationToDataProcessor(key);
+//                        it.remove();
                     }
                 }
-            }
-            if (keys.isEmpty())
+                keys.clear();
+                while (keysQueueSize.get()>=dataProcessorsCount*5) {
+                    try {
+                        synchronized(keysQueue) {
+                            selectionThreadWaiting.set(true);
+                            keysQueue.wait(10);
+                        }
+                    } finally {
+                        selectionThreadWaiting.set(false);
+                    }
+                }
+            } 
+            else
                 Thread.sleep(1);
-                
         } catch (IOException ex) {
             if (logger.isErrorEnabled())
                 logger.error("Error in selection process", ex);
         }
     }
     
-    private boolean submitOperationToDataProcessor(SelectionKey key) {
+    private void submitOperationToDataProcessor(SelectionKey key) {
+        if (keysQueueSize.get()<=dataProcessorsCount*2)
+            for (int i=0; i<dataProcessors.length; ++i)
+                if (runningFlag[i] && dataProcessors[i].processData(key))
+                    return;
+        PacketProcessor pp = (PacketProcessor) key.attachment();
+        if (pp.changeToProcessing()) {
+            key.interestOps(0);
+            keysQueue.add(key);
+            keysQueueSize.incrementAndGet();
+        }
+    }
+    
+    public SelectionKey getNextKey() {
+        SelectionKey key = keysQueue.poll();
+        if (key!=null) {
+            int queueSize = keysQueueSize.decrementAndGet();
+            if (queueSize<=dataProcessorsCount*5 && selectionThreadWaiting.compareAndSet(true, false))
+                synchronized(keysQueue) {
+                    keysQueue.notify();
+                }
+        }
+        return key;
+    }
+    
+    private boolean _submitOperationToDataProcessor(SelectionKey key) {
         PacketProcessor pp = (PacketProcessor) key.attachment();
         if ( !pp.isProcessing() && 
              (key.isReadable() || (key.isWritable() && pp.hasPacketForOutboundProcessing())) )
@@ -329,8 +372,7 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
     
     private void createWorkers() {
         for (int i=0; i<dataProcessors.length; ++i) {
-            dataProcessors[i] = new DataProcessorImpl(
-                    owner, new LoggerHelper(logger, "Data processor "+i+". "), BUFFER_SIZE, byteBufferPool);
+            dataProcessors[i] = new DataProcessorImpl(owner, this, new LoggerHelper(logger, "Data processor "+i+". "));
             runningFlag[i] = executor.executeQuietly(dataProcessors[i]);
             if (!runningFlag[i])
                 hasNotStartedWorkers = true;
