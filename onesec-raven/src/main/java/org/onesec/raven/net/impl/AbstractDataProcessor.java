@@ -33,23 +33,21 @@ import org.raven.tree.impl.LoggerHelper;
 public abstract class AbstractDataProcessor implements DataProcessor  {
     private final Node owner;
     protected final LoggerHelper logger;
-    private final int bufferSize;
-    private final ByteBufferPool byteBufferPool;
     private final AtomicReference<SelectionKey> keyToProcess = new AtomicReference<SelectionKey>();
-//    private final 
+    private final AbstractPacketDispatcher packetDispatcher;
+    
     private volatile String statusMessage;
     private final AtomicBoolean stopFlag = new AtomicBoolean(false);
     private volatile boolean processingData = false;
     private long startTs;
     private long usingTime = 0;
+    private long directRequests = 0;
+    private long requestsFromQueue = 0;
 
-    public AbstractDataProcessor(Node owner, LoggerHelper logger, int bufferSize
-            , ByteBufferPool byteBufferPool) 
-    {
+    public AbstractDataProcessor(Node owner, AbstractPacketDispatcher packetDispatcher, LoggerHelper logger) {
         this.owner = owner;
+        this.packetDispatcher = packetDispatcher;
         this.logger = logger;
-        this.bufferSize = bufferSize;
-        this.byteBufferPool = byteBufferPool;
     }
 
     public boolean processData(SelectionKey key) {
@@ -92,10 +90,17 @@ public abstract class AbstractDataProcessor implements DataProcessor  {
             processingData = false;
             while (!stopFlag.get()) {
                 SelectionKey key = keyToProcess.get();
+                if (key==null) {
+                    key = packetDispatcher.getNextKey();
+                    if (key!=null)
+                        ++requestsFromQueue;
+                } else {
+                    keyToProcess.set(null);
+                    ++directRequests;
+                }
                 if (key!=null) {
 //                    long usingStart = System.currentTimeMillis();
                     processingData = true;
-                    keyToProcess.set(null);
                     try {
                         try {
                             doProcessData(key);
@@ -125,7 +130,7 @@ public abstract class AbstractDataProcessor implements DataProcessor  {
                     processingData = false;
                     synchronized(this) {
                         try {
-                            wait(1);
+                            wait(5);
                         } catch (InterruptedException ex) {
                             if (logger.isErrorEnabled())
                                 logger.error("Interrupted");
@@ -135,9 +140,10 @@ public abstract class AbstractDataProcessor implements DataProcessor  {
                 }
             }
         } finally {
-//            bufferHolder.release();
             if (logger.isInfoEnabled())
-                logger.info("Stopped");
+                logger.info(String.format(
+                        "Stopped. DQ Ratio: %.2f; Direct reqs: %s; queue reqs: %s"
+                        , 100.*directRequests/(directRequests+requestsFromQueue), directRequests, requestsFromQueue));
         }
     }
     

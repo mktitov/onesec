@@ -144,8 +144,9 @@ public class AbstractPacketDispatcherTest extends Assert {
                 executor, 2, null, new LoggerHelper(logger, "Dispatcher. "), bufferPool);
         executor.execute(dispatcher);
         SocketAddress addr = new InetSocketAddress(Inet4Address.getLocalHost(), 1234);
+        SocketAddress addr2 = new InetSocketAddress(Inet4Address.getLocalHost(), 2234);
         RealTimeServerPacketProcessor server = new RealTimeServerPacketProcessor(1, 160, addr, true, logger);
-        RealTimeClientPacketProcessor client = new RealTimeClientPacketProcessor(1, 160, 200, addr, true, logger);
+        RealTimeClientPacketProcessor client = new RealTimeClientPacketProcessor(1, 160, 200, addr2, true, logger);
         dispatcher.addPacketProcessor(server);
         dispatcher.addPacketProcessor(client);
         Thread.sleep(5000);
@@ -158,54 +159,129 @@ public class AbstractPacketDispatcherTest extends Assert {
     
     @Test
     public void realTimeProtocolLoadTest() throws Exception {
-        ExecutorService executor = trainExecutor(control, 1, 5);
+        ExecutorService executor = trainExecutor(control, 2, 8);
         control.replay();
-        
-        AbstractPacketDispatcher dispatcher = new AbstractPacketDispatcher(
-                executor, 5, null, new LoggerHelper(logger, "Dispatcher. "), bufferPool);
-        executor.execute(dispatcher);
-        
-        Pair[] processors = new Pair[1000];
         int packetsCount = 1000;
-        for (int i=0; i<processors.length; ++i) {
-            SocketAddress addr = new InetSocketAddress(Inet4Address.getLocalHost(), 1234+i);
-            RealTimeServerPacketProcessor server = new RealTimeServerPacketProcessor(i, 160, addr, true, logger);
-            RealTimeClientPacketProcessor client = new RealTimeClientPacketProcessor(i, 160, packetsCount, addr, true, logger);
-            dispatcher.addPacketProcessor(server);
-            dispatcher.addPacketProcessor(client);
-            Thread.sleep(5);
-            processors[i] = new Pair(server, client);
+        int processors = 800;
+        Dispatcher disp1 = new Dispatcher(1, processors/2, packetsCount, executor, logger);
+        Dispatcher disp2 = new Dispatcher(2, processors/2, packetsCount, executor, logger);
+        Thread.sleep(2000);
+        disp1.start(1234);
+        disp2.start(2234);
+        Thread.sleep(packetsCount*20+processors*5+500);        
+        disp1.stop();
+        disp2.stop();
+        
+//        AbstractPacketDispatcher dispatcher = new AbstractPacketDispatcher(
+//                executor, 4, null, new LoggerHelper(logger, "Dispatcher. "), bufferPool);
+//        executor.execute(dispatcher);
+//        Thread.sleep(2000);
+//        
+//        Pair[] processors = new Pair[800];
+//        int packetsCount = 1000;
+//        for (int i=0; i<processors.length; ++i) {
+//            SocketAddress addr = new InetSocketAddress(Inet4Address.getLocalHost(), 1234+i);
+//            RealTimeServerPacketProcessor server = new RealTimeServerPacketProcessor(i, 160, addr, true, logger);
+//            RealTimeClientPacketProcessor client = new RealTimeClientPacketProcessor(i, 160, packetsCount, addr, true, logger);
+//            dispatcher.addPacketProcessor(server);
+//            dispatcher.addPacketProcessor(client);
+//            Thread.sleep(1);
+//            processors[i] = new Pair(server, client);
+//        }
+//        
+//        Thread.sleep(packetsCount*20+processors.length*5+500);        
+//        dispatcher.stop();
+//        long maxClientDelta = 0;
+//        double avgClientDelta = 0.;
+//        long maxClientDelta2 = 0;
+//        double avgClientDelta2 = 0.;
+//        long maxServerDelta = 0;
+//        double avgServerDelta = 0;
+//        int lostPacketsCount = 0;
+//        for (int i=0; i<processors.length; ++i) {
+//            Pair p = processors[i];
+//            maxClientDelta = Math.max(maxClientDelta, p.client.maxDelta);
+//            maxClientDelta2 = Math.max(maxClientDelta2, p.client.maxDelta2);
+//            maxServerDelta = Math.max(maxServerDelta, p.server.maxDelta);
+//            avgClientDelta += p.client.getAvgDelta();
+//            avgClientDelta2 += p.client.getAvgDelta2();
+//            avgServerDelta += p.server.getAvgDelta();
+//            lostPacketsCount += packetsCount - p.server.countDelta;
+//        }
+//        avgClientDelta /= processors.length;
+//        avgClientDelta2 /= processors.length;
+//        avgServerDelta /= processors.length;
+//        logger.debug("Client maxDelta: "+maxClientDelta);
+//        logger.debug("Client avgDelta: "+avgClientDelta);
+//        logger.debug("Client maxDelta2: "+maxClientDelta2);
+//        logger.debug("Client avgDelta2: "+avgClientDelta2);
+//        logger.debug("Server maxDelta: "+maxServerDelta);
+//        logger.debug("Server avgDelta: "+avgServerDelta);
+//        logger.debug("Total packets lost: "+lostPacketsCount);
+    }
+    
+    private class Dispatcher {
+        private final AbstractPacketDispatcher dispatcher;
+        private final Pair[] processors;
+        private final LoggerHelper logger;
+        private final int packetsCount;
+        private final int processorsCount;
+
+        public Dispatcher(int id, int processorsCount, int packetsCount, ExecutorService executor
+                , LoggerHelper logger) 
+            throws Exception 
+        {
+            this.logger = new LoggerHelper(logger, "["+id+"]. ");
+            this.packetsCount = packetsCount;
+            this.processorsCount = processorsCount;
+            dispatcher = new AbstractPacketDispatcher(
+                    executor, 4, null, new LoggerHelper(this.logger, "Dispatcher. "), bufferPool);
+            processors = new Pair[processorsCount];
+            executor.execute(dispatcher);
         }
         
-        Thread.sleep(packetsCount*20+processors.length*5+500);        
-        dispatcher.stop();
-        long maxClientDelta = 0;
-        double avgClientDelta = 0.;
-        long maxClientDelta2 = 0;
-        double avgClientDelta2 = 0.;
-        long maxServerDelta = 0;
-        double avgServerDelta = 0;
-        int lostPacketsCount = 0;
-        for (int i=0; i<processors.length; ++i) {
-            Pair p = processors[i];
-            maxClientDelta = Math.max(maxClientDelta, p.client.maxDelta);
-            maxClientDelta2 = Math.max(maxClientDelta2, p.client.maxDelta2);
-            maxServerDelta = Math.max(maxServerDelta, p.server.maxDelta);
-            avgClientDelta += p.client.getAvgDelta();
-            avgClientDelta2 += p.client.getAvgDelta2();
-            avgServerDelta += p.server.getAvgDelta();
-            lostPacketsCount += packetsCount - p.server.countDelta;
+        public void start(int startPort) throws Exception {
+            for (int i=0; i<processors.length; ++i) {
+                SocketAddress addr = new InetSocketAddress(Inet4Address.getLocalHost(), startPort+i);
+                RealTimeServerPacketProcessor server = new RealTimeServerPacketProcessor(i, 160, addr, true, logger);
+                RealTimeClientPacketProcessor client = new RealTimeClientPacketProcessor(i, 160, packetsCount, addr, true, logger);
+                dispatcher.addPacketProcessor(server);
+                dispatcher.addPacketProcessor(client);
+                Thread.sleep(1);
+                processors[i] = new Pair(server, client);
+            }
         }
-        avgClientDelta /= processors.length;
-        avgClientDelta2 /= processors.length;
-        avgServerDelta /= processors.length;
-        logger.debug("Client maxDelta: "+maxClientDelta);
-        logger.debug("Client avgDelta: "+avgClientDelta);
-        logger.debug("Client maxDelta2: "+maxClientDelta2);
-        logger.debug("Client avgDelta2: "+avgClientDelta2);
-        logger.debug("Server maxDelta: "+maxServerDelta);
-        logger.debug("Server avgDelta: "+avgServerDelta);
-        logger.debug("Total packets lost: "+lostPacketsCount);
+        
+        public void stop() {
+            dispatcher.stop();
+            long maxClientDelta = 0;
+            double avgClientDelta = 0.;
+            long maxClientDelta2 = 0;
+            double avgClientDelta2 = 0.;
+            long maxServerDelta = 0;
+            double avgServerDelta = 0;
+            int lostPacketsCount = 0;
+            for (int i=0; i<processors.length; ++i) {
+                Pair p = processors[i];
+                maxClientDelta = Math.max(maxClientDelta, p.client.maxDelta);
+                maxClientDelta2 = Math.max(maxClientDelta2, p.client.maxDelta2);
+                maxServerDelta = Math.max(maxServerDelta, p.server.maxDelta);
+                avgClientDelta += p.client.getAvgDelta();
+                avgClientDelta2 += p.client.getAvgDelta2();
+                avgServerDelta += p.server.getAvgDelta();
+                lostPacketsCount += packetsCount - p.server.countDelta;
+            }
+            avgClientDelta /= processors.length;
+            avgClientDelta2 /= processors.length;
+            avgServerDelta /= processors.length;
+            logger.debug("Client maxDelta: "+maxClientDelta);
+            logger.debug("Client avgDelta: "+avgClientDelta);
+            logger.debug("Client maxDelta2: "+maxClientDelta2);
+            logger.debug("Client avgDelta2: "+avgClientDelta2);
+            logger.debug("Server maxDelta: "+maxServerDelta);
+            logger.debug("Server avgDelta: "+avgServerDelta);
+            logger.debug("Total packets lost: "+lostPacketsCount);
+        }
     }
     
     private ExecutorService trainExecutor(IMocksControl control, int selectorCount, int dataProcessorsCount) throws Exception {

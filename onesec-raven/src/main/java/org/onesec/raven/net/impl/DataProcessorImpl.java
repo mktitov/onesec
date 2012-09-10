@@ -18,7 +18,6 @@ package org.onesec.raven.net.impl;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.WritableByteChannel;
-import org.onesec.raven.net.ByteBufferPool;
 import org.onesec.raven.net.PacketProcessor;
 import org.raven.tree.Node;
 import org.raven.tree.impl.LoggerHelper;
@@ -29,9 +28,9 @@ import org.raven.tree.impl.LoggerHelper;
  */
 public class DataProcessorImpl extends AbstractDataProcessor {
 
-    public DataProcessorImpl(Node owner, LoggerHelper logger, int bufferSize, ByteBufferPool byteBufferPool) 
+    public DataProcessorImpl(Node owner, AbstractPacketDispatcher packetDispatcher, LoggerHelper logger) 
     {
-        super(owner, logger, bufferSize, byteBufferPool);
+        super(owner, packetDispatcher, logger);
     }
 
     @Override
