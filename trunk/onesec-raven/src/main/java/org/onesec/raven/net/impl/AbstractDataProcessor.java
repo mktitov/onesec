@@ -108,7 +108,7 @@ public abstract class AbstractDataProcessor implements DataProcessor  {
                     KeysSet keys = queue.poll(100, TimeUnit.MILLISECONDS);
                     if (keys==null)
                         continue;
-                    SelectionKey key = null;
+                    SelectionKey key;
                     while ( (key = keys.getNext())!=null ) {
                         final PacketProcessor pp = (PacketProcessor) key.attachment();
     //                    pp.changeToProcessing();
@@ -120,6 +120,8 @@ public abstract class AbstractDataProcessor implements DataProcessor  {
                                     logger.error("Error processig packet", e);
                             }
                         } finally {
+//                            if (!pp.isValid())
+//                                key.cancel();
                             pp.changeToUnprocessing();
                         }
                     }

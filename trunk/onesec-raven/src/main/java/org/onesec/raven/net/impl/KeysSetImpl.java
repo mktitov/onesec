@@ -37,7 +37,7 @@ public class KeysSetImpl implements KeysSet {
     public boolean add(SelectionKey key) {
         keys[pos++] = key;
         ((PacketProcessor)key.attachment()).changeToProcessing();
-        key.interestOps(0);
+//        key.interestOps(0);
         if (pos==keys.length) {
             switchToWaitingForProcess();
             return false;

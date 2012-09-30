@@ -40,7 +40,7 @@ public class DataProcessorImpl extends AbstractDataProcessor {
 //            if (key.isValid())
 //                logger.debug(key.readyOps()+":"+key.attachment());
             packetProcessor.processInboundBuffer((ReadableByteChannel)key.channel());
-        } if (key.isWritable()) 
+        } if (key.isWritable() && packetProcessor.hasPacketForOutboundProcessing()) 
             packetProcessor.processOutboundBuffer((WritableByteChannel)key.channel());
     }
 }
