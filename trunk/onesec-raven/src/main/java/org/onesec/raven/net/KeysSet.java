@@ -15,13 +15,18 @@
  */
 package org.onesec.raven.net;
 
-import org.raven.sched.Task;
+import java.nio.channels.SelectionKey;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface DataProcessor extends Task {
-    public boolean processData(KeysSet key);
-    public void stop();
+public interface KeysSet {
+    public boolean add(SelectionKey key);
+    public SelectionKey getNext();
+    public boolean isFree();
+    public boolean isWaitingForProcess();
+    public KeysSet switchToProcessing();
+    public KeysSet switchToWaitingForProcess();
+    public boolean hasKeys();
 }

@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import org.onesec.raven.net.ByteBufferPool;
 import org.onesec.raven.net.DataProcessor;
+import org.onesec.raven.net.KeysSet;
 import org.onesec.raven.net.PacketDispatcher;
 import org.onesec.raven.net.PacketProcessor;
 import org.raven.sched.ExecutorService;
@@ -50,6 +51,8 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
     private final DataProcessor[] dataProcessors;
     private final int dataProcessorsCount;
     private final boolean[] runningFlag;
+    private final KeysSet[] keysSet;
+    private int curKeySet = 0;
     private final Queue<SelectionKey> keysQueue = new ConcurrentLinkedQueue<SelectionKey>();
     private final AtomicInteger keysQueueSize = new AtomicInteger();
     private final AtomicBoolean selectionThreadWaiting = new AtomicBoolean(false);
@@ -60,6 +63,7 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
     protected volatile String statusMessage;
     private volatile boolean hasPendingProcessors = false;
     private boolean hasNotStartedWorkers = false;
+    private int nextDataProcessor = 0;
 
     public AbstractPacketDispatcher(ExecutorService executor, int workersCount, Node owner
             , LoggerHelper logger, ByteBufferPool byteBufferPool) 
@@ -71,6 +75,9 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
         this.dataProcessors = new DataProcessor[workersCount];
         this.runningFlag = new boolean[workersCount];
         this.dataProcessorsCount = workersCount;
+        keysSet = new KeysSet[10];
+        for (int i=0; i<keysSet.length; ++i)
+            keysSet[i] = new KeysSetImpl(100);
     }
     
     public void addPacketProcessor(P packetProcessor) {
@@ -129,99 +136,145 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
     private void managerPacketProcessors(Selector selector) {
         for (SelectionKey key: selector.keys()) {
             PacketProcessor pp = (PacketProcessor) key.attachment();
-            if (!pp.isValid())
-                closeKey(key);
-            else 
-                if (   key.isValid()
-//                    && !selector.selectedKeys().contains(key)
-                    && (key.interestOps() & (SelectionKey.OP_ACCEPT | SelectionKey.OP_CONNECT))==0 
-                    && !pp.isProcessing()) 
-                {
+            if (!pp.isProcessing()) {
+                if (!pp.isValid())
+                    closeKey(key);
+                else if ( (key.interestOps() & (SelectionKey.OP_ACCEPT | SelectionKey.OP_CONNECT))==0 ) {
                     if (pp.isNeedOutboundProcessing() && pp.hasPacketForOutboundProcessing())
                         key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
                     if (pp.isNeedInboundProcessing())
                         key.interestOps(key.interestOps() | SelectionKey.OP_READ);
                 }
+            }
         }
     }
     
     private void processSelection(Selector selector) throws Exception {
         try {
-            selector.select(1);
+            selector.select(3);
 //            selector.selectNow();
             Set<SelectionKey> keys = selector.selectedKeys();
             if (keys!=null && !keys.isEmpty()) {
                 Iterator<SelectionKey> it = keys.iterator();
                 while(it.hasNext()) {
                     SelectionKey key = it.next();
-                    if (key.isAcceptable()) {
+                    if (key.isReadable() || key.isWritable()) {
+                        if (pushKeyToKeysSet(key))
+                            it.remove();
+                    } else if (key.isAcceptable()) {
                         acceptIncomingConnection(selector, key);
-//                        it.remove();
+                        it.remove();
                     } else if (key.isConnectable()) {
                         ((SocketChannel)key.channel()).finishConnect();
                         key.interestOps(genOpsForKey(0, (PacketProcessor)key.attachment()));
-//                        it.remove();
-                    } else if (key.isReadable() || key.isWritable()) {
-                        submitOperationToDataProcessor(key);
-//                        it.remove();
+                        it.remove();
                     }
                 }
-                keys.clear();
-                while (keysQueueSize.get()>=dataProcessorsCount*5) {
-                    try {
-                        synchronized(keysQueue) {
-                            selectionThreadWaiting.set(true);
-                            keysQueue.wait(10);
-                        }
-                    } finally {
-                        selectionThreadWaiting.set(false);
-                    }
-                }
+                submitPartialKeysSet();
+//                keys.clear();
+//                while (keysQueueSize.get()>=dataProcessorsCount*5) {
+//                    try {
+//                        synchronized(keysQueue) {
+//                            selectionThreadWaiting.set(true);
+//                            keysQueue.wait(10);
+//                        }
+//                    } finally {
+//                        selectionThreadWaiting.set(false);
+//                    }
+//                }
             } 
-            else
-                Thread.sleep(1);
+//            else
+//                Thread.sleep(1);
         } catch (IOException ex) {
             if (logger.isErrorEnabled())
                 logger.error("Error in selection process", ex);
         }
     }
     
-    private void submitOperationToDataProcessor(SelectionKey key) {
-        if (keysQueueSize.get()<=dataProcessorsCount*2)
-            for (int i=0; i<dataProcessors.length; ++i)
-                if (runningFlag[i] && dataProcessors[i].processData(key))
-                    return;
-        PacketProcessor pp = (PacketProcessor) key.attachment();
-        if (pp.changeToProcessing()) {
-            key.interestOps(0);
-            keysQueue.add(key);
-            keysQueueSize.incrementAndGet();
-        }
+    private void submitPartialKeysSet() {
+        if (curKeySet==keysSet.length)
+            curKeySet = 0;
+        if (keysSet[curKeySet].isFree() && keysSet[curKeySet].hasKeys()) 
+            submitKeysSetToDataProcessor(keysSet[curKeySet++].switchToWaitingForProcess());
     }
     
-    public SelectionKey getNextKey() {
-        SelectionKey key = keysQueue.poll();
-        if (key!=null) {
-            int queueSize = keysQueueSize.decrementAndGet();
-            if (queueSize<=dataProcessorsCount*5 && selectionThreadWaiting.compareAndSet(true, false))
-                synchronized(keysQueue) {
-                    keysQueue.notify();
-                }
+    private boolean pushKeyToKeysSet(SelectionKey key) {
+        int attempt = 0;
+        while(attempt<keysSet.length) {
+            if (curKeySet==keysSet.length)
+                curKeySet = 0;
+            if (keysSet[curKeySet].isFree()) {
+                if (!keysSet[curKeySet].add(key)) 
+                    submitKeysSetToDataProcessor(keysSet[curKeySet++]);
+                return true;
+            }
+            curKeySet++;
+            attempt++;
         }
-        return key;
-    }
-    
-    private boolean _submitOperationToDataProcessor(SelectionKey key) {
-        PacketProcessor pp = (PacketProcessor) key.attachment();
-        if ( !pp.isProcessing() && 
-             (key.isReadable() || (key.isWritable() && pp.hasPacketForOutboundProcessing())) )
-        {
-            for (int i=0; i<dataProcessors.length; ++i)
-                if (runningFlag[i] && dataProcessors[i].processData(key))
-                    return true;
-        }
+            
         return false;
     }
+    
+    private void submitKeysSetToDataProcessor(KeysSet keys) {
+        int attempt = 0;
+        while (attempt<dataProcessors.length) {
+            if (nextDataProcessor>=dataProcessors.length)
+                nextDataProcessor = 0;
+            if (runningFlag[nextDataProcessor] && dataProcessors[nextDataProcessor++].processData(keys)) 
+                return;
+            ++attempt;
+        }
+    }
+    
+//    private boolean submitOperationToDataProcessor(SelectionKey key) {
+//        int attempt = 0;
+//        while (attempt<dataProcessors.length) {
+//            if (nextDataProcessor>=dataProcessors.length)
+//                nextDataProcessor = 0;
+//            if (runningFlag[nextDataProcessor] && dataProcessors[nextDataProcessor++].processData(key)) {
+//                key.interestOps(0);
+//                return true;
+//            }
+//            ++attempt;
+//        }
+//        return false;
+//    }
+        
+        
+//        if (keysQueueSize.get()<=dataProcessorsCount*2)
+//            for (int i=0; i<dataProcessors.length; ++i)
+//                if (runningFlag[i] && dataProcessors[i].processData(key))
+//                    return;
+//        PacketProcessor pp = (PacketProcessor) key.attachment();
+//        if (pp.changeToProcessing()) {
+//            key.interestOps(0);
+//            keysQueue.add(key);
+//            keysQueueSize.incrementAndGet();
+//        }
+    
+//    public SelectionKey getNextKey() {
+//        SelectionKey key = keysQueue.poll();
+//        if (key!=null) {
+//            int queueSize = keysQueueSize.decrementAndGet();
+//            if (queueSize<=dataProcessorsCount*5 && selectionThreadWaiting.compareAndSet(true, false))
+//                synchronized(keysQueue) {
+//                    keysQueue.notify();
+//                }
+//        }
+//        return key;
+//    }
+//    
+//    private boolean _submitOperationToDataProcessor(SelectionKey key) {
+//        PacketProcessor pp = (PacketProcessor) key.attachment();
+//        if ( !pp.isProcessing() && 
+//             (key.isReadable() || (key.isWritable() && pp.hasPacketForOutboundProcessing())) )
+//        {
+//            for (int i=0; i<dataProcessors.length; ++i)
+//                if (runningFlag[i] && dataProcessors[i].processData(key))
+//                    return true;
+//        }
+//        return false;
+//    }
     
     private void acceptIncomingConnection(Selector selector, SelectionKey key) {
         PacketProcessor pp = (PacketProcessor) key.attachment();

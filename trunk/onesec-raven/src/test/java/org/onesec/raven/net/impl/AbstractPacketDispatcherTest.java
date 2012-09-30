@@ -19,6 +19,8 @@ import java.net.Inet4Address;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.SelectionKey;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -163,17 +165,17 @@ public class AbstractPacketDispatcherTest extends Assert {
         control.replay();
         int packetsCount = 1000;
         int processors = 800;
-        Dispatcher disp1 = new Dispatcher(1, processors/2, packetsCount, executor, logger);
-        Dispatcher disp2 = new Dispatcher(2, processors/2, packetsCount, executor, logger);
+        Dispatcher disp1 = new Dispatcher(1, processors, packetsCount, executor, logger);
+//        Dispatcher disp2 = new Dispatcher(2, processors/2, packetsCount, executor, logger);
         Thread.sleep(2000);
         disp1.start(1234);
-        disp2.start(2234);
+//        disp2.start(2234);
         Thread.sleep(packetsCount*20+processors*5+500);        
         disp1.stop();
-        disp2.stop();
+//        disp2.stop();
         
 //        AbstractPacketDispatcher dispatcher = new AbstractPacketDispatcher(
-//                executor, 4, null, new LoggerHelper(logger, "Dispatcher. "), bufferPool);
+//                executor  , 4, null, new LoggerHelper(logger, "Dispatcher. "), bufferPool);
 //        executor.execute(dispatcher);
 //        Thread.sleep(2000);
 //        
@@ -235,7 +237,7 @@ public class AbstractPacketDispatcherTest extends Assert {
             this.packetsCount = packetsCount;
             this.processorsCount = processorsCount;
             dispatcher = new AbstractPacketDispatcher(
-                    executor, 4, null, new LoggerHelper(this.logger, "Dispatcher. "), bufferPool);
+                    executor, 2, null, new LoggerHelper(this.logger, "Dispatcher. "), bufferPool);
             processors = new Pair[processorsCount];
             executor.execute(dispatcher);
         }
@@ -330,7 +332,7 @@ public class AbstractPacketDispatcherTest extends Assert {
                 return ProcessResult.STOP;
             } 
             logger.debug("Processing read operation");
-            while (buffer.remaining()>0) {
+            while (buffer.hasRemaining()) {
                 byte val = buffer.get();
                 logger.debug("Received byte: "+val);
                 if (val != prevVal + 1) 
