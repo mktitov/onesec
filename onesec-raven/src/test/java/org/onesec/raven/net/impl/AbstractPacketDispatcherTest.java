@@ -164,7 +164,7 @@ public class AbstractPacketDispatcherTest extends Assert {
         ExecutorService executor = trainExecutor(control, 2, 8);
         control.replay();
         int packetsCount = 1000;
-        int processors = 800;
+        int processors = 2500;
         Dispatcher disp1 = new Dispatcher(1, processors, packetsCount, executor, logger);
 //        Dispatcher disp2 = new Dispatcher(2, processors/2, packetsCount, executor, logger);
         Thread.sleep(2000);

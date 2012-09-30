@@ -112,14 +112,20 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
             createWorkers();
             if (logger.isInfoEnabled())
                 logger.info("Successfully started");
+            long lastCheckForInvalidPP = System.currentTimeMillis();
             while (!stopFlag.get()) {
                 try {
                     if (hasPendingProcessors)
                         processPendingProcessors(selector);
                     if (hasNotStartedWorkers)
                         startNotStartedWorkers();
-                    managerPacketProcessors(selector);
+                    long ts = System.currentTimeMillis();
+                    if (lastCheckForInvalidPP+20 <= ts) {
+                        closeKeysForInvalidPacketProcessors(selector);
+                        lastCheckForInvalidPP = ts;
+                    }
                     processSelection(selector);
+//                    Thread.sleep(1);
                 } catch (Throwable e) {
                     if (logger.isErrorEnabled())
                         logger.error("Unexpected error in processing cycle", e);
@@ -133,18 +139,18 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
         }
     }
     
-    private void managerPacketProcessors(Selector selector) {
+    private void closeKeysForInvalidPacketProcessors(Selector selector) {
         for (SelectionKey key: selector.keys()) {
             PacketProcessor pp = (PacketProcessor) key.attachment();
             if (!pp.isProcessing()) {
                 if (!pp.isValid())
                     closeKey(key);
-                else if ( (key.interestOps() & (SelectionKey.OP_ACCEPT | SelectionKey.OP_CONNECT))==0 ) {
-                    if (pp.isNeedOutboundProcessing() && pp.hasPacketForOutboundProcessing())
-                        key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-                    if (pp.isNeedInboundProcessing())
-                        key.interestOps(key.interestOps() | SelectionKey.OP_READ);
-                }
+//                else if ( (key.interestOps() & (SelectionKey.OP_ACCEPT | SelectionKey.OP_CONNECT))==0 ) {
+//                    if (pp.isNeedOutboundProcessing() && pp.hasPacketForOutboundProcessing())
+//                        key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+//                    if (pp.isNeedInboundProcessing())
+//                        key.interestOps(key.interestOps() | SelectionKey.OP_READ);
+//                }
             }
         }
     }
@@ -158,8 +164,11 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
                 Iterator<SelectionKey> it = keys.iterator();
                 while(it.hasNext()) {
                     SelectionKey key = it.next();
+                    PacketProcessor pp = (PacketProcessor) key.attachment();
+                    if (!pp.isValid())
+                        continue;
                     if (key.isReadable() || key.isWritable()) {
-                        if (pushKeyToKeysSet(key))
+                        if (pp.isProcessing() || pushKeyToKeysSet(key))
                             it.remove();
                     } else if (key.isAcceptable()) {
                         acceptIncomingConnection(selector, key);
@@ -171,20 +180,9 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
                     }
                 }
                 submitPartialKeysSet();
-//                keys.clear();
-//                while (keysQueueSize.get()>=dataProcessorsCount*5) {
-//                    try {
-//                        synchronized(keysQueue) {
-//                            selectionThreadWaiting.set(true);
-//                            keysQueue.wait(10);
-//                        }
-//                    } finally {
-//                        selectionThreadWaiting.set(false);
-//                    }
-//                }
             } 
-//            else
-//                Thread.sleep(1);
+            else
+                Thread.sleep(1);
         } catch (IOException ex) {
             if (logger.isErrorEnabled())
                 logger.error("Error in selection process", ex);
@@ -199,19 +197,21 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
     }
     
     private boolean pushKeyToKeysSet(SelectionKey key) {
-        int attempt = 0;
-        while(attempt<keysSet.length) {
-            if (curKeySet==keysSet.length)
-                curKeySet = 0;
-            if (keysSet[curKeySet].isFree()) {
-                if (!keysSet[curKeySet].add(key)) 
-                    submitKeysSetToDataProcessor(keysSet[curKeySet++]);
-                return true;
+        PacketProcessor pp = (PacketProcessor) key.attachment();
+        if (key.isReadable() || (key.isWritable() && pp.hasPacketForOutboundProcessing())) {
+            int attempt = 0;
+            while(attempt<keysSet.length) {
+                if (curKeySet==keysSet.length)
+                    curKeySet = 0;
+                if (keysSet[curKeySet].isFree()) {
+                    if (!keysSet[curKeySet].add(key)) 
+                        submitKeysSetToDataProcessor(keysSet[curKeySet++]);
+                    return true;
+                }
+                curKeySet++;
+                attempt++;
             }
-            curKeySet++;
-            attempt++;
         }
-            
         return false;
     }
     
@@ -284,8 +284,8 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
                     logger.debug("Accepting incoming connection");
                 SocketChannel socketChannel = ((ServerSocketChannel)key.channel()).accept(); //can return null
                 socketChannel.configureBlocking(false);
-                socketChannel.register(selector, 0, pp);
-//                socketChannel.register(selector, genOpsForKey(0, pp), pp);
+//                socketChannel.register(selector, 0, pp);
+                socketChannel.register(selector, genOpsForKey(0, pp), pp);
             } catch (Throwable ex) {
                 pp.stopUnexpected(ex);
             }
@@ -385,9 +385,9 @@ public class AbstractPacketDispatcher<P extends PacketProcessor>
     }
     
     private int genOpsForKey(int initialOps, PacketProcessor pp) {
-        return initialOps;
-//                | (pp.isNeedInboundProcessing()?SelectionKey.OP_READ:0);
-//                | (pp.isNeedOutboundProcessing()?SelectionKey.OP_WRITE:0);
+        return initialOps
+                | (pp.isNeedInboundProcessing()?SelectionKey.OP_READ:0)
+                | (pp.isNeedOutboundProcessing()?SelectionKey.OP_WRITE:0);
     }
     
     private void closeKey(SelectionKey key) {
