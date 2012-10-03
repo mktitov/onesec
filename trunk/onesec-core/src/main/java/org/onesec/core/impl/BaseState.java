@@ -30,16 +30,14 @@ import org.onesec.core.StateWaitResult;
  *
  * @author Mikhail Titov
  */
-public class BaseState<T extends State, O extends ObjectDescription> 
-        implements State<T, O>, Cloneable 
-{
-    
-    private int state;
-    private long counter = 1;
+public class BaseState<T extends State, O extends ObjectDescription> implements State<T, O>, Cloneable {    
+    private volatile int state;
+    private volatile long counter = 1;
     private String errorMessage;
     private Throwable errorException;
     private O observableObject;
     private List<StateListener> listeners;
+    private final String listenersLock = "";
     private Map<Integer, String> idNames = new HashMap<Integer, String>();
 
     public BaseState(O observableObject) {
@@ -58,29 +56,35 @@ public class BaseState<T extends State, O extends ObjectDescription>
         return idNames.get(state);
     }
 
-    public synchronized void setState(int state) {
-        boolean stateChanged = state!=this.state;
-        this.state = state;
-        errorException = null;
-        errorMessage = null;
-        ++counter;
+    public void setState(int state) {
+        boolean stateChanged;
+        synchronized(this) {
+            stateChanged = state!=this.state;
+            this.state = state;
+            errorException = null;
+            errorMessage = null;
+            ++counter;
+            notifyAll();
+        }
         if (stateChanged)
             fireStateChangedEvent();
-        notifyAll();
     }
     
     public long getCounter() {
         return counter;
     }
     
-    public synchronized void setState(int state, String errorMessage, Throwable errorException) {
-        boolean stateChanged = state!=this.state;
-        this.state = state;
-        this.errorException = errorException;
-        this.errorMessage = errorMessage;
+    public void setState(int state, String errorMessage, Throwable errorException) {
+        boolean stateChanged;
+        synchronized(this) {
+            stateChanged = state!=this.state;
+            this.state = state;
+            this.errorException = errorException;
+            this.errorMessage = errorMessage;
+            notifyAll();
+        }
         if (stateChanged)
             fireStateChangedEvent();
-        notifyAll();
     }
     
     public boolean hasError() {
@@ -100,9 +104,11 @@ public class BaseState<T extends State, O extends ObjectDescription>
     }
 
     private void fireStateChangedEvent() {
+        synchronized(listenersLock) {
         if (listeners!=null)
             for (StateListener listener: listeners)
                 listener.stateChanged(this);
+        }
     }
     
     private StateWaitResult<T> waitForState(int[] states, long stateCounter, long timeout) {
@@ -119,7 +125,9 @@ public class BaseState<T extends State, O extends ObjectDescription>
                     return StateWaitResultImpl.WAIT_INTERRUPTED;
                 
                 long waitTimeout = maxTime - curTime;
-                wait(waitTimeout);
+                synchronized(this) {
+                    wait(waitTimeout);
+                }
             }
         } catch (CloneNotSupportedException ex) {
             throw new UnsupportedOperationException(ex);
@@ -133,19 +141,23 @@ public class BaseState<T extends State, O extends ObjectDescription>
         return super.clone();
     }
 
-    public synchronized StateWaitResult<T> waitForNewState(State state, long timeout) {
+    public StateWaitResult<T> waitForNewState(State state, long timeout) {
         return waitForState(new int[]{state.getId()}, state.getCounter(), timeout);
     }
 
-    public synchronized void addStateListener(StateListener listener) {
-        if (listeners==null)
-            listeners = new ArrayList<StateListener>();
-        listeners.add(listener);
+    public void addStateListener(StateListener listener) {
+        synchronized(listenersLock) {
+            if (listeners==null)
+                listeners = new ArrayList<StateListener>();
+            listeners.add(listener);
+        }
     }
 
-    public synchronized void removeStateListener(StateListener listener) {
-        if (listeners!=null)
-            listeners.remove(listener);
+    public void removeStateListener(StateListener listener) {
+        synchronized(listenersLock) {
+            if (listeners!=null)
+                listeners.remove(listener);
+        }
     }
     
     /**
@@ -156,6 +168,4 @@ public class BaseState<T extends State, O extends ObjectDescription>
     protected void addIdName(Integer id, String name) {
         idNames.put(id, name);
     }
-
-    
 }
