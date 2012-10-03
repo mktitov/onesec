@@ -88,10 +88,13 @@ public class ProviderControllerImpl implements ProviderController, ProviderObser
         this.jtapiPeer = jtapiPeer;
     }
 
-    public ProviderControllerState connect() 
-    {
+    public ProviderControllerState connect() {
         executor.execute(new ProviderConnector());
         return state;
+    }
+    
+    public void checkConnection() {
+        
     }
 
     public void shutdown()
