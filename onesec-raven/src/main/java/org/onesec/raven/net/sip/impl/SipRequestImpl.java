@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 tim.
+ * Copyright 2012 Mikhail Titov.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,19 @@
  */
 package org.onesec.raven.net.sip.impl;
 
+import org.onesec.raven.net.sip.SipRequest;
+
 /**
  *
- * @author tim
+ * @author Mikhail Titov
  */
-public class SipRequestImpl {
+public class SipRequestImpl extends AbstractSipMessage implements SipRequest {
+    private final String requestUri;
+    private final String method;
+
+    public SipRequestImpl(String method, String requestUri) {
+        this.requestUri = requestUri;
+        this.method = method;
+    }
     
 }

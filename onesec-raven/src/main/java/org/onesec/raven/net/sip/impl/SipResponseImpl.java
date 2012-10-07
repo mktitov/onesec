@@ -20,5 +20,11 @@ package org.onesec.raven.net.sip.impl;
  * @author Mikhail Titov
  */
 public class SipResponseImpl extends AbstractSipMessage {
-    
+    private final int statusCode;
+    private final String reason;
+
+    public SipResponseImpl(int statusCode, String reason) {
+        this.statusCode = statusCode;
+        this.reason = reason;
+    }
 }

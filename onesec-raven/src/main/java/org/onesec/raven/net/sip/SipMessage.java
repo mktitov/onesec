@@ -22,5 +22,4 @@ import java.util.Queue;
  * @author Mikhail Titov
  */
 public interface SipMessage {
-    public Queue<byte[]> getLines();
 }
