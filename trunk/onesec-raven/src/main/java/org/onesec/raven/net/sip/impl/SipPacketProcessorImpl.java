@@ -33,7 +33,7 @@ import org.raven.tree.impl.LoggerHelper;
  * @author Mikhail Titov
  */
 public class SipPacketProcessorImpl extends AbstractPacketProcessor implements SipPacketProcessor {
-    
+    private final static String SIP_VERSION = "SIP/2.0";
     private final static String HEAD_ENCODING = "UTF-8";
     private final SipMessageProcessor messageProcessor;
     private final Queue<MessLines> outboundQueue = new ConcurrentLinkedQueue<MessLines>();
@@ -142,12 +142,31 @@ public class SipPacketProcessorImpl extends AbstractPacketProcessor implements S
                 buffer.position(pos);
         }
 
-        private void decodeHeaderOrMessageTypeFromLine(String line) {
+        private void decodeHeaderOrMessageTypeFromLine(String line) throws Exception {
             if (line.isEmpty()) 
                 decodingContent = true;
             else {
-
+                if (message == null) 
+                    createMessage(line);
+                else 
+                    createAndAddHeader(line);
             }
+        }
+        
+        private void createMessage(String line) throws Exception {
+            String[] toks = line.split(line);
+            if (toks.length!=3) 
+                throw new Exception(String.format(
+                        "Error processing start line (%s). Invalid number of elements expected %s but was %s."
+                        , line, 3, toks.length));
+            if (SIP_VERSION.equals(toks[0]))
+                message = new SipResponseImpl(Integer.parseInt(toks[1]), toks[2]);
+            else 
+                message = new SipRequestImpl(toks[0], toks[1]);
+        }
+        
+        private void createAndAddHeader(String line) {
+            
         }
 
         private boolean decodeContent(ByteBuffer buffer) throws Exception {
