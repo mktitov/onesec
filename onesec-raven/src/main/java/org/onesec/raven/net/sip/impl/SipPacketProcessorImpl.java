@@ -25,6 +25,7 @@ import org.onesec.raven.net.sip.SipMessage;
 import org.onesec.raven.net.sip.SipMessageProcessor;
 import org.onesec.raven.net.sip.SipPacketProcessor;
 import org.onesec.raven.net.sip.SipRequest;
+import org.onesec.raven.net.sip.SipResponse;
 import org.raven.tree.impl.LoggerHelper;
 
 /**
@@ -33,8 +34,11 @@ import org.raven.tree.impl.LoggerHelper;
  */
 public class SipPacketProcessorImpl extends AbstractPacketProcessor implements SipPacketProcessor {
     
+    private final static String HEAD_ENCODING = "UTF-8";
     private final SipMessageProcessor messageProcessor;
     private final Queue<MessLines> outboundQueue = new ConcurrentLinkedQueue<MessLines>();
+    private final byte[] decodeBuffer = new byte[1024];
+    private MessageDecoder messageDecoder;
 
     public SipPacketProcessorImpl(SipMessageProcessor messageProcessor, SocketAddress address
             , boolean serverSideProcessor, boolean datagramProcessor, String desc
@@ -47,8 +51,21 @@ public class SipPacketProcessorImpl extends AbstractPacketProcessor implements S
 
     @Override
     protected ProcessResult doProcessInboundBuffer(ByteBuffer buffer) throws Exception {
-        throw new UnsupportedOperationException("Not supported yet.");
+        while (buffer.hasRemaining()) {
+            if (messageDecoder==null)
+                messageDecoder = new MessageDecoder();
+            SipMessage mess = messageDecoder.decode(buffer);
+            if (mess!=null) {
+                if (mess instanceof SipResponse)
+                    messageProcessor.processResponse((SipResponse)mess);
+                else
+                    messageProcessor.processRequest((SipRequest)mess);
+                messageDecoder = null;
+            }
+        }
+        return ProcessResult.CONT;
     }
+    
 
     @Override
     protected ProcessResult doProcessOutboundBuffer(ByteBuffer buffer) throws Exception {
@@ -77,14 +94,70 @@ public class SipPacketProcessorImpl extends AbstractPacketProcessor implements S
     }
 
     public void sendMessage(SipMessage request) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        outboundQueue.offer(new MessLines(request));
     }
-    
+
     private class MessLines {
         private final Queue<byte[]> lines;
 
         public MessLines(SipMessage mess) {
             this.lines = mess.getLines();
+        }
+    }
+    
+    private class MessageDecoder {
+        private SipMessage message;
+        private String contentEncoding;
+        private String encoding;
+        private boolean decodingContent;
+        private int contentLength;
+        private StringBuilder content;
+        
+        private SipMessage decode(ByteBuffer buffer) throws Exception {
+            if (!decodingContent)
+                decodeHeaders(buffer);
+            if (decodingContent && contentLength>0)
+                if (decodeContent(buffer))
+                    return createSipMessage();
+            return null;
+        }
+        
+        private SipMessage createSipMessage() {
+            return null;
+        }
+        
+        private void decodeHeaders(ByteBuffer buffer) throws Exception {
+            int pos = buffer.position();
+            while (buffer.hasRemaining() && !decodingContent) {
+                if (buffer.get() == 13 && buffer.hasRemaining() && buffer.get()==10) {
+                    int len = buffer.position()-pos-2;
+                    buffer.position(pos);
+                    buffer.get(decodeBuffer, 0, len);
+                    decodeHeaderOrMessageTypeFromLine(new String(decodeBuffer, 0, len, HEAD_ENCODING));
+                    buffer.get(); buffer.get();
+                    pos = buffer.position();
+                }
+            }
+            if (pos!=buffer.position())
+                buffer.position(pos);
+        }
+
+        private void decodeHeaderOrMessageTypeFromLine(String line) {
+            if (line.isEmpty()) 
+                decodingContent = true;
+            else {
+
+            }
+        }
+
+        private boolean decodeContent(ByteBuffer buffer) throws Exception {
+            int bytesToRead = buffer.remaining()>contentLength? contentLength : buffer.remaining();
+            if (bytesToRead>0) {
+                buffer.get(decodeBuffer, 0, bytesToRead);
+                content.append(new String(decodeBuffer, 0, bytesToRead, contentEncoding));
+                contentLength -= bytesToRead;
+            }
+            return contentLength==0;
         }
     }
 }
