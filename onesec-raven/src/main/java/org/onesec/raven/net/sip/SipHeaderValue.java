@@ -15,11 +15,15 @@
  */
 package org.onesec.raven.net.sip;
 
+import java.util.Collection;
+
 /**
  *
  * @author Mikhail Titov
  */
-public interface SipMessage {
-    public void addHeader(SipHeader header);
-    public void setContent(String content);
+public interface SipHeaderValue {
+    public String getDisplayName();
+    public String getValue();
+    public SipHeaderValueParam getParam(String name);
+    public Collection<SipHeaderValueParam> getParams();
 }

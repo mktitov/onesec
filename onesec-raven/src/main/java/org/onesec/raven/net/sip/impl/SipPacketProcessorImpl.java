@@ -51,7 +51,7 @@ public class SipPacketProcessorImpl extends AbstractPacketProcessor implements S
 
     @Override
     protected ProcessResult doProcessInboundBuffer(ByteBuffer buffer) throws Exception {
-        while (buffer.hasRemaining()) {
+        try {
             if (messageDecoder==null)
                 messageDecoder = new MessageDecoder();
             SipMessage mess = messageDecoder.decode(buffer);
@@ -62,8 +62,10 @@ public class SipPacketProcessorImpl extends AbstractPacketProcessor implements S
                     messageProcessor.processRequest((SipRequest)mess);
                 messageDecoder = null;
             }
+            return ProcessResult.CONT;
+        } finally {
+            buffer.clear();
         }
-        return ProcessResult.CONT;
     }
     
 
@@ -94,14 +96,14 @@ public class SipPacketProcessorImpl extends AbstractPacketProcessor implements S
     }
 
     public void sendMessage(SipMessage request) {
-        outboundQueue.offer(new MessLines(request));
+//        outboundQueue.offer(new MessLines(request));
     }
 
     private class MessLines {
-        private final Queue<byte[]> lines;
+        private  Queue<byte[]> lines;
 
         public MessLines(SipMessage mess) {
-            this.lines = mess.getLines();
+//            this.lines = mess.getLines();
         }
     }
     
@@ -118,11 +120,7 @@ public class SipPacketProcessorImpl extends AbstractPacketProcessor implements S
                 decodeHeaders(buffer);
             if (decodingContent && contentLength>0)
                 if (decodeContent(buffer))
-                    return createSipMessage();
-            return null;
-        }
-        
-        private SipMessage createSipMessage() {
+                    return message;
             return null;
         }
         
@@ -154,6 +152,8 @@ public class SipPacketProcessorImpl extends AbstractPacketProcessor implements S
         }
         
         private void createMessage(String line) throws Exception {
+            if (logger.isDebugEnabled())
+                logger.debug("Handling new SIP message: {}", line);
             String[] toks = line.split(line);
             if (toks.length!=3) 
                 throw new Exception(String.format(
@@ -163,10 +163,14 @@ public class SipPacketProcessorImpl extends AbstractPacketProcessor implements S
                 message = new SipResponseImpl(Integer.parseInt(toks[1]), toks[2]);
             else 
                 message = new SipRequestImpl(toks[0], toks[1]);
+            if (logger.isDebugEnabled())
+                logger.debug("Created new {}", message instanceof SipRequest? "REQUEST" : "RESPONSE");
         }
         
-        private void createAndAddHeader(String line) {
-            
+        private void createAndAddHeader(String line) throws Exception {
+            if (logger.isDebugEnabled())
+                logger.debug("Adding header to message: ("+line+")");
+            message.addHeader(new SipHeaderImpl(line));
         }
 
         private boolean decodeContent(ByteBuffer buffer) throws Exception {
@@ -175,6 +179,12 @@ public class SipPacketProcessorImpl extends AbstractPacketProcessor implements S
                 buffer.get(decodeBuffer, 0, bytesToRead);
                 content.append(new String(decodeBuffer, 0, bytesToRead, contentEncoding));
                 contentLength -= bytesToRead;
+            }
+            if (contentLength==0) {
+                String contentStr = content.toString();
+                if (logger.isTraceEnabled())
+                    logger.trace("Adding content to message: "+contentStr);
+                message.setContent(contentStr);
             }
             return contentLength==0;
         }
