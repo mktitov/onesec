@@ -15,21 +15,30 @@
  */
 package org.onesec.raven.net.sip.impl;
 
-import org.onesec.raven.net.sip.SipHeader;
+import java.nio.ByteBuffer;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import static org.junit.Assert.*;
+import org.onesec.raven.net.impl.AbstractPacketProcessor.ProcessResult;
 import org.onesec.raven.net.sip.SipMessage;
 
 /**
  *
  * @author Mikhail Titov
  */
-public abstract class AbstractSipMessage implements SipMessage {
-    private String content;
-
-    public void addHeader(SipHeader header) {
-        throw new UnsupportedOperationException("Not supported yet.");
+public class SipPacketProcessorImplTest {
+    
+    @Before
+    public void prepare() {
+        
     }
 
-    public void setContent(String content) {
-        this.content = content;
+    @Test
+    public void decodeTest() {
+        
     }
+
 }

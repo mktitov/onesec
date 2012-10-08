@@ -13,23 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.onesec.raven.net.sip.impl;
+package org.onesec.raven.net.sip;
 
-import org.onesec.raven.net.sip.SipHeader;
-import org.onesec.raven.net.sip.SipMessage;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  *
  * @author Mikhail Titov
  */
-public abstract class AbstractSipMessage implements SipMessage {
-    private String content;
-
-    public void addHeader(SipHeader header) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    public void setContent(String content) {
-        this.content = content;
-    }
+public interface SipConstants {
+    public final static String SIP_VERSION = "SIP/2.0";
+    public final static String HEAD_ENCODING = "UTF-8";
+    public final static Set<String> NON_COMBINABLE_HEADERS = new HashSet<String>(
+            Arrays.asList("www-authenticate", "authorization", "proxy-authenticate", "proxy-authorization"));
 }
