@@ -26,28 +26,14 @@ import org.onesec.raven.net.sip.SipHeaderValue;
  * @author Mikhail Titov
  */
 public class SipHeaderImplTest extends Assert {
-    
-    @Test(expected=Exception.class)
-    public void emptyHeader() throws Exception {
-        SipHeaderImpl header = new SipHeaderImpl("");
-    }
-    
-    @Test()
-    public void emptyValuesPart() throws Exception {
-        SipHeaderImpl header = new SipHeaderImpl("h:");
-        assertNotNull(header);
-        assertEquals(1, header.getValues().size());
-        assertEquals("", header.getValue().getValue());
-    }
-    
+        
     @Test()
     public void headerWithValuesPart() throws Exception {
-        SipHeaderImpl header = new SipHeaderImpl("h: v1, v2");
+        SipHeaderImpl header = new SipHeaderImpl("h", "v1, v2");
         assertNotNull(header);
         assertEquals(2, header.getValues().size());
         assertEquals("v1", header.getValue().getValue());
         List<SipHeaderValue> values = new ArrayList<SipHeaderValue>(header.getValues());
         assertEquals("v2", values.get(1).getValue());
     }
-    
 }

@@ -29,18 +29,15 @@ public class SipHeaderImpl implements SipHeader {
     private final String name;
     private final LinkedList<SipHeaderValue> values = new LinkedList<SipHeaderValue>();
 
-    public SipHeaderImpl(String headerLine) throws Exception {
+    public SipHeaderImpl(String name, String values) throws Exception {
         try {
-            int colonPos = headerLine.indexOf(':');
-            if (colonPos==-1)
-                throw new Exception("Error decoding header name. Not found symbol ':'");
-            name = headerLine.substring(0, colonPos);
-            decodeValues(headerLine.substring(colonPos+1));
+            this.name = name;
+            decodeValues(values);
         } catch (Exception e) {
-            throw new Exception(String.format("Error decoding header (%s). %s", headerLine, e.getMessage()), e);
+            throw new Exception(String.format("Error decoding header (%s: %s). %s", name, values, e.getMessage()), e);
         }
     }
-
+    
     public String getName() {
         return name;
     }

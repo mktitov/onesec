@@ -33,12 +33,10 @@ import org.raven.tree.impl.LoggerHelper;
  * @author Mikhail Titov
  */
 public class SipPacketProcessorImpl extends AbstractPacketProcessor implements SipPacketProcessor {
-    private final static String SIP_VERSION = "SIP/2.0";
-    private final static String HEAD_ENCODING = "UTF-8";
     private final SipMessageProcessor messageProcessor;
     private final Queue<MessLines> outboundQueue = new ConcurrentLinkedQueue<MessLines>();
     private final byte[] decodeBuffer = new byte[1024];
-    private MessageDecoder messageDecoder;
+    private SipMessageDecoder messageDecoder;
 
     public SipPacketProcessorImpl(SipMessageProcessor messageProcessor, SocketAddress address
             , boolean serverSideProcessor, boolean datagramProcessor, String desc
@@ -53,7 +51,7 @@ public class SipPacketProcessorImpl extends AbstractPacketProcessor implements S
     protected ProcessResult doProcessInboundBuffer(ByteBuffer buffer) throws Exception {
         try {
             if (messageDecoder==null)
-                messageDecoder = new MessageDecoder();
+                messageDecoder = new SipMessageDecoder(logger, decodeBuffer);
             SipMessage mess = messageDecoder.decode(buffer);
             if (mess!=null) {
                 if (mess instanceof SipResponse)
@@ -67,7 +65,6 @@ public class SipPacketProcessorImpl extends AbstractPacketProcessor implements S
             buffer.clear();
         }
     }
-    
 
     @Override
     protected ProcessResult doProcessOutboundBuffer(ByteBuffer buffer) throws Exception {
@@ -104,89 +101,6 @@ public class SipPacketProcessorImpl extends AbstractPacketProcessor implements S
 
         public MessLines(SipMessage mess) {
 //            this.lines = mess.getLines();
-        }
-    }
-    
-    private class MessageDecoder {
-        private SipMessage message;
-        private String contentEncoding;
-        private String encoding;
-        private boolean decodingContent;
-        private int contentLength;
-        private StringBuilder content;
-        
-        private SipMessage decode(ByteBuffer buffer) throws Exception {
-            if (!decodingContent)
-                decodeHeaders(buffer);
-            if (decodingContent && contentLength>0)
-                if (decodeContent(buffer))
-                    return message;
-            return null;
-        }
-        
-        private void decodeHeaders(ByteBuffer buffer) throws Exception {
-            int pos = buffer.position();
-            while (buffer.hasRemaining() && !decodingContent) {
-                if (buffer.get() == 13 && buffer.hasRemaining() && buffer.get()==10) {
-                    int len = buffer.position()-pos-2;
-                    buffer.position(pos);
-                    buffer.get(decodeBuffer, 0, len);
-                    decodeHeaderOrMessageTypeFromLine(new String(decodeBuffer, 0, len, HEAD_ENCODING));
-                    buffer.get(); buffer.get();
-                    pos = buffer.position();
-                }
-            }
-            if (pos!=buffer.position())
-                buffer.position(pos);
-        }
-
-        private void decodeHeaderOrMessageTypeFromLine(String line) throws Exception {
-            if (line.isEmpty()) 
-                decodingContent = true;
-            else {
-                if (message == null) 
-                    createMessage(line);
-                else 
-                    createAndAddHeader(line);
-            }
-        }
-        
-        private void createMessage(String line) throws Exception {
-            if (logger.isDebugEnabled())
-                logger.debug("Handling new SIP message: {}", line);
-            String[] toks = line.split(line);
-            if (toks.length!=3) 
-                throw new Exception(String.format(
-                        "Error processing start line (%s). Invalid number of elements expected %s but was %s."
-                        , line, 3, toks.length));
-            if (SIP_VERSION.equals(toks[0]))
-                message = new SipResponseImpl(Integer.parseInt(toks[1]), toks[2]);
-            else 
-                message = new SipRequestImpl(toks[0], toks[1]);
-            if (logger.isDebugEnabled())
-                logger.debug("Created new {}", message instanceof SipRequest? "REQUEST" : "RESPONSE");
-        }
-        
-        private void createAndAddHeader(String line) throws Exception {
-            if (logger.isDebugEnabled())
-                logger.debug("Adding header to message: ("+line+")");
-            message.addHeader(new SipHeaderImpl(line));
-        }
-
-        private boolean decodeContent(ByteBuffer buffer) throws Exception {
-            int bytesToRead = buffer.remaining()>contentLength? contentLength : buffer.remaining();
-            if (bytesToRead>0) {
-                buffer.get(decodeBuffer, 0, bytesToRead);
-                content.append(new String(decodeBuffer, 0, bytesToRead, contentEncoding));
-                contentLength -= bytesToRead;
-            }
-            if (contentLength==0) {
-                String contentStr = content.toString();
-                if (logger.isTraceEnabled())
-                    logger.trace("Adding content to message: "+contentStr);
-                message.setContent(contentStr);
-            }
-            return contentLength==0;
         }
     }
 }
