@@ -19,7 +19,7 @@ package org.onesec.raven.net.sip;
  *
  * @author Mikhail Titov
  */
-public interface SipMessage {
-    public void addHeader(SipHeader header);
-    public void setContent(String content);
+public interface SipHeaderValueParam {
+    public String getName();
+    public String getValue();
 }
