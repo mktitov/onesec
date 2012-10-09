@@ -25,7 +25,15 @@ import java.util.Set;
  */
 public interface SipConstants {
     public final static String SIP_VERSION = "SIP/2.0";
+    
     public final static String HEAD_ENCODING = "UTF-8";
+    public final static String FROM_HEADER = "from";
+    public final static String TO_HEADER = "to";
+    public final static String VIA_HEADER = "via";
+    public final static String MAX_FORWARDS_HEADER = "max-forwards";
+    
+    public final static String TAG_PARAM = "tag";
+    
     public final static Set<String> NON_COMBINABLE_HEADERS = new HashSet<String>(
             Arrays.asList("www-authenticate", "authorization", "proxy-authenticate", "proxy-authorization"));
 }
