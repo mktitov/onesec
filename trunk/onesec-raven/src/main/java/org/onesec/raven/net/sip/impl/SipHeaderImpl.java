@@ -28,11 +28,13 @@ import org.raven.RavenUtils;
 public class SipHeaderImpl implements SipHeader {
     private final String name;
     private final LinkedList<SipHeaderValue> values = new LinkedList<SipHeaderValue>();
+    private final String headerString;
 
     public SipHeaderImpl(String name, String values) throws Exception {
         try {
             this.name = name;
             decodeValues(values);
+            headerString = name+": "+values;
         } catch (Exception e) {
             throw new Exception(String.format("Error decoding header (%s: %s). %s", name, values, e.getMessage()), e);
         }
@@ -54,5 +56,10 @@ public class SipHeaderImpl implements SipHeader {
         String[] toks = RavenUtils.split(valuesLine, ",",  true);
         for (String tok: toks)
             values.add(new SipHeaderValueImpl(tok));
+    }
+
+    @Override
+    public String toString() {
+        return headerString;
     }
 }
