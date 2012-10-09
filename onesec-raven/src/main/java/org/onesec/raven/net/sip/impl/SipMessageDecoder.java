@@ -70,6 +70,8 @@ public class SipMessageDecoder implements SipConstants {
 
     private void decodeHeaderOrMessageTypeFromLine(String line) throws Exception {
         if (line.isEmpty()) {
+            if (message==null)
+                return;
             decodingContent = true;
             if (lastHeader!=null)
                 headers.add(lastHeader);

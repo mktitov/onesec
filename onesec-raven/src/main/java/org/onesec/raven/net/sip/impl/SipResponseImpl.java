@@ -15,11 +15,13 @@
  */
 package org.onesec.raven.net.sip.impl;
 
+import org.onesec.raven.net.sip.SipResponse;
+
 /**
  *
  * @author Mikhail Titov
  */
-public class SipResponseImpl extends AbstractSipMessage {
+public class SipResponseImpl extends AbstractSipMessage implements SipResponse {
     private final int statusCode;
     private final String reason;
 
