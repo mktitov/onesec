@@ -21,6 +21,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.onesec.raven.net.sip.SipMessage;
 import org.onesec.raven.net.sip.SipRequest;
+import org.onesec.raven.net.sip.SipResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,6 +50,24 @@ public class SipMessageDecoderTest extends Assert {
         SipMessage mess = decoder.decode(buf);
         assertNotNull(mess);
         assertTrue(mess instanceof SipRequest);
+    }
+    
+    @Test
+    public void simpleRequestDecodeWithEmptyLineBeforeMessage() throws Exception {
+        buf.put((crlf+crlf+"INVITE sip:request/uri SIP/2.0"+crlf+crlf).getBytes("utf-8"));
+        buf.flip();
+        SipMessage mess = decoder.decode(buf);
+        assertNotNull(mess);
+        assertTrue(mess instanceof SipRequest);
+    }
+    
+    @Test
+    public void simpleResponseDecode() throws Exception {
+        buf.put(("SIP/2.0 200 TEST"+crlf+crlf).getBytes("utf-8"));
+        buf.flip();
+        SipMessage mess = decoder.decode(buf);
+        assertNotNull(mess);
+        assertTrue(mess instanceof SipResponse);
     }
     
 }
