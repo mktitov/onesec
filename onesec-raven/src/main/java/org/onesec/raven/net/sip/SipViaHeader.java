@@ -15,18 +15,16 @@
  */
 package org.onesec.raven.net.sip;
 
-import org.onesec.raven.net.sip.impl.FromHeaderImpl;
-
 /**
  *
  * @author Mikhail Titov
  */
-public interface SipMessage {
-    public void addHeader(SipHeader header) throws Exception;
-    public void setContent(String content);
-    public SipAddressHeader getFrom();
-    public SipAddressHeader getTo();
-    public void getVia();
-    public void getMaxForwards();
-    public SipAddressHeader getContact();
+public interface SipViaHeader extends SipHeader {
+    public String getTransportProtocol();
+    public String getClientHost();
+    public String getClientPort();
+    public String getMaddr();
+    public String getTtl();
+    public String getReceived();
+    public String getBranch();
 }

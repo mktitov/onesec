@@ -31,7 +31,7 @@ public class SipHeaderValueParamImpl implements SipHeaderValueParam {
         if (toks.length!=2)
             throw new Exception(String.format(
                     "Error decoding value parameter (%s). Not found equals sign", param));
-        name = toks[0];
+        name = toks[0].toLowerCase();
         if (name.isEmpty())
             throw new Exception(String.format(
                     "Error decoding value parameter (%s). Empty parameter name", param));
