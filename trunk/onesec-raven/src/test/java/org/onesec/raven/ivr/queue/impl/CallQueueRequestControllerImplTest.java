@@ -29,11 +29,18 @@ import org.onesec.raven.ivr.queue.CallQueueRequest;
 import org.onesec.raven.ivr.queue.CallQueueRequestListener;
 import org.onesec.raven.ivr.queue.CallQueueRequestController;
 import org.onesec.raven.ivr.queue.CallsQueue;
-import org.onesec.raven.ivr.queue.event.DisconnectedQueueEvent;
 import static org.easymock.EasyMock.*;
+import org.easymock.IMocksControl;
+import org.onesec.raven.ivr.queue.event.impl.CommutatedQueueEventImpl;
+import org.onesec.raven.ivr.queue.event.impl.DisconnectedQueueEventImpl;
+import org.onesec.raven.ivr.queue.event.impl.OperatorQueueEventImpl;
+import org.onesec.raven.ivr.queue.event.impl.RejectedQueueEventImpl;
 import org.raven.ds.RecordException;
 import org.raven.log.LogLevel;
 import org.raven.test.DataCollector;
+import org.raven.ds.DataContext;
+import org.raven.ds.Record;
+import org.raven.ds.impl.DataContextImpl;
 
 /**
  *
@@ -74,15 +81,13 @@ public class CallQueueRequestControllerImplTest extends OnesecRavenTestCase
         IvrEndpointConversation conv = createMock(IvrEndpointConversation.class);
         IvrEndpointConversationState state = createMock(IvrEndpointConversationState.class);
         CallsQueue queue = createMock(CallsQueue.class);
-        expect(req.getConversation()).andReturn(conv).atLeastOnce();
+        
+        expect(req.getConversationInfo()).andReturn("").anyTimes();
         req.addRequestListener(isA(CallQueueRequestListener.class));
         expect(req.isCanceled()).andReturn(false).anyTimes();
         expect(req.getPriority()).andReturn(1);
-        conv.addConversationListener(isA(IvrEndpointConversationListener.class));
-        expect(conv.getCallingNumber()).andReturn("1234").atLeastOnce();
         expect(conv.getObjectName()).andReturn("[7000]").anyTimes();
         expect(state.getId()).andReturn(IvrEndpointConversationState.TALKING);
-        conv.addConversationListener(isA(IvrEndpointConversationListener.class));
 
         CallQueuedEventImpl queuedEvent = new CallQueuedEventImpl(queue, 1, "q1");
         req.callQueueChangeEvent(queuedEvent);
@@ -97,24 +102,156 @@ public class CallQueueRequestControllerImplTest extends OnesecRavenTestCase
     }
     
     @Test
-    public void invalidTest() throws Exception
+    public void sendQueuedEventTest() throws RecordException
     {
+        callsQueues.stop();
+        callsQueues.setPermittedEventTypes(CallsQueuesNode.QUEUED_EVENT);
+        assertTrue(callsQueues.start());
+        
+        EventTestHelper control = new EventTestHelper();
+
+        CallQueuedEventImpl queuedEvent = new CallQueuedEventImpl(control.queue, 1, "q1");
+        control.req.callQueueChangeEvent(queuedEvent);
+        
+        control.control.replay();
+
+        CallQueueRequestControllerImpl wrapper = new CallQueueRequestControllerImpl(callsQueues, control.req, 1);
+        assertTrue(wrapper.isValid());
+        wrapper.callQueueChangeEvent(queuedEvent);
+
+        control.control.verify();
+        
+        assertEquals(1, collector.getDataListSize());
+        Object data = collector.getDataList().get(0);
+        assertTrue(data instanceof Record);
+        Record rec = (Record) data;
+        assertTrue(rec.containsTag("eventType"));
+        assertEquals(CallsQueuesNode.QUEUED_EVENT, rec.getTag("eventType"));
+    }
+    
+    @Test
+    public void assignedToOperatorEventTest() throws RecordException {
+        callsQueues.stop();
+        callsQueues.setPermittedEventTypes(CallsQueuesNode.ASSIGNED_TO_OPERATOR_EVENT);
+        assertTrue(callsQueues.start());
+        
+        EventTestHelper control = new EventTestHelper();
+        
+        OperatorQueueEventImpl operatorEvent = new OperatorQueueEventImpl(control.queue, 1, "operator", 
+            "person", "person desc");
+        control.req.callQueueChangeEvent(operatorEvent);
+
+        control.control.replay();
+
+        CallQueueRequestControllerImpl wrapper = new CallQueueRequestControllerImpl(callsQueues, control.req, 1);
+        assertTrue(wrapper.isValid());
+        wrapper.callQueueChangeEvent(operatorEvent);
+
+        control.control.verify();
+        
+        assertEquals(1, collector.getDataListSize());
+        Object data = collector.getDataList().get(0);
+        assertTrue(data instanceof Record);
+        Record rec = (Record) data;
+        assertTrue(rec.containsTag("eventType"));
+        assertEquals(CallsQueuesNode.ASSIGNED_TO_OPERATOR_EVENT, rec.getTag("eventType"));
+    }
+    
+    @Test
+    public void conversationStartedEventTest() throws RecordException {
+        callsQueues.stop();
+        callsQueues.setPermittedEventTypes(CallsQueuesNode.CONVERSATION_STARTED_EVENT);
+        assertTrue(callsQueues.start());
+        
+        EventTestHelper control = new EventTestHelper();
+        
+        CommutatedQueueEventImpl event = new CommutatedQueueEventImpl(control.queue, 1);
+        control.req.callQueueChangeEvent(event);
+
+        control.control.replay();
+
+        CallQueueRequestControllerImpl wrapper = new CallQueueRequestControllerImpl(callsQueues, control.req, 1);
+        assertTrue(wrapper.isValid());
+        wrapper.callQueueChangeEvent(event);
+
+        control.control.verify();
+        
+        assertEquals(1, collector.getDataListSize());
+        Object data = collector.getDataList().get(0);
+        assertTrue(data instanceof Record);
+        Record rec = (Record) data;
+        assertTrue(rec.containsTag("eventType"));
+        assertEquals(CallsQueuesNode.CONVERSATION_STARTED_EVENT, rec.getTag("eventType"));
+    }
+    
+    @Test
+    public void callFinishedEventTest() throws RecordException {
+        callsQueues.stop();
+        callsQueues.setPermittedEventTypes(CallsQueuesNode.CALL_FINISHED_EVENT);
+        assertTrue(callsQueues.start());
+        
+        EventTestHelper control = new EventTestHelper();
+       
+        DisconnectedQueueEventImpl event = new DisconnectedQueueEventImpl(control.queue, 1);
+        control.req.callQueueChangeEvent(event);
+        expectLastCall().times(2);
+
+        control.control.replay();
+
+        CallQueueRequestControllerImpl wrapper = new CallQueueRequestControllerImpl(callsQueues, control.req, 1);
+        assertTrue(wrapper.isValid());
+        wrapper.callQueueChangeEvent(event);
+        wrapper.callQueueChangeEvent(event);
+
+        control.control.verify();
+        
+        assertEquals(1, collector.getDataListSize());
+        Object data = collector.getDataList().get(0);
+        assertTrue(data instanceof Record);
+        Record rec = (Record) data;
+        assertTrue(rec.containsTag("eventType"));
+        assertEquals(CallsQueuesNode.CALL_FINISHED_EVENT, rec.getTag("eventType"));
+    }
+    
+    @Test
+    public void callFinishedEvent2Test() throws RecordException {
+        callsQueues.stop();
+        callsQueues.setPermittedEventTypes(CallsQueuesNode.CALL_FINISHED_EVENT);
+        assertTrue(callsQueues.start());
+        
+        EventTestHelper control = new EventTestHelper();
+       
+        RejectedQueueEventImpl event = new RejectedQueueEventImpl(control.queue, 1);
+        control.req.callQueueChangeEvent(event);
+
+        control.control.replay();
+
+        CallQueueRequestControllerImpl wrapper = new CallQueueRequestControllerImpl(callsQueues, control.req, 1);
+        assertTrue(wrapper.isValid());
+        wrapper.callQueueChangeEvent(event);
+
+        control.control.verify();
+        
+        assertEquals(1, collector.getDataListSize());
+        Object data = collector.getDataList().get(0);
+        assertTrue(data instanceof Record);
+        Record rec = (Record) data;
+        assertTrue(rec.containsTag("eventType"));
+        assertEquals(CallsQueuesNode.CALL_FINISHED_EVENT, rec.getTag("eventType"));
+    }
+    
+    @Test
+    public void invalidTest() throws Exception {
         CallQueueRequest request = createMock(CallQueueRequest.class);
         IvrEndpointConversation conv = createMock((IvrEndpointConversation.class));
         CallsQueue queue = createMock(CallsQueue.class);
         IvrEndpointConversationState state = createMock(IvrEndpointConversationState.class);
         
-        expect(request.getConversation()).andReturn(conv).atLeastOnce();
+        expect(request.getConversationInfo()).andReturn("").anyTimes();
         request.addRequestListener(isA(CallQueueRequestListener.class));
-        expect(request.isCanceled()).andReturn(false).anyTimes();
+        expect(request.isCanceled()).andReturn(true).anyTimes();
         expect(request.getPriority()).andReturn(1);
-        conv.addConversationListener(isA(IvrEndpointConversationListener.class));
-        expect(conv.getCallingNumber()).andReturn("1234").atLeastOnce();
         expect(conv.getObjectName()).andReturn("[7000]").anyTimes();
-        conv.addConversationListener(callListenerAdded());
-        expect(conv.getState()).andReturn(state);
-        expect(state.getId()).andReturn(IvrEndpointConversationState.INVALID);
-        request.callQueueChangeEvent(isA(DisconnectedQueueEvent.class));
         
         replay(request, conv, queue, state);
         
@@ -135,5 +272,30 @@ public class CallQueueRequestControllerImplTest extends OnesecRavenTestCase
             }
         });
         return null;
+    }
+    
+    private class EventTestHelper  {
+        private final IMocksControl control;
+        private final CallQueueRequest req;
+        private final IvrEndpointConversation conv;
+        private final IvrEndpointConversationState state;
+        private final CallsQueue queue;
+        private final DataContext context;
+        
+        public EventTestHelper() {
+            control = createControl();
+            context = new DataContextImpl();
+            req = control.createMock(CallQueueRequest.class);
+            conv = control.createMock(IvrEndpointConversation.class);
+            state = control.createMock(IvrEndpointConversationState.class);
+            queue = control.createMock(CallsQueue.class);
+            expect(req.getConversationInfo()).andReturn("").anyTimes();
+            req.addRequestListener(isA(CallQueueRequestListener.class));
+            expect(req.isCanceled()).andReturn(false).anyTimes();
+            expect(req.getPriority()).andReturn(1);
+            expect(conv.getObjectName()).andReturn("[7000]").anyTimes();
+//            expect(state.getId()).andReturn(IvrEndpointConversationState.TALKING);
+            expect(req.getContext()).andReturn(context);
+       }
     }
 }

@@ -17,8 +17,12 @@
 
 package org.onesec.raven.ivr.queue.impl;
 
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import org.onesec.raven.ivr.queue.*;
 import static org.onesec.raven.ivr.queue.impl.CallQueueCdrRecordSchemaNode.*;
@@ -36,7 +40,6 @@ import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
 import org.raven.util.NodeUtils;
 import org.weda.annotations.constraints.NotNull;
-
 /**
  *
  * @author Mikhail Titov
@@ -44,6 +47,14 @@ import org.weda.annotations.constraints.NotNull;
 @NodeClass
 public class CallsQueuesNode  extends BaseNode implements DataPipe
 {
+    public final static String QUEUED_EVENT = "QUEUED"; 
+    public final static String ASSIGNED_TO_OPERATOR_EVENT = "ASSIGNED_TO_OPERATOR";
+    public final static String CONVERSATION_STARTED_EVENT = "CONVERSATION_STARTED";
+    public final static String CALL_FINISHED_EVENT = "CALL_FINISHED";
+    
+    private final static Set<String> AVAILABLE_EVENTS = new HashSet<String>(Arrays.asList(
+        QUEUED_EVENT, ASSIGNED_TO_OPERATOR_EVENT, CONVERSATION_STARTED_EVENT, CALL_FINISHED_EVENT));
+    
     @Parameter(valueHandlerType=RecordSchemaValueTypeHandlerFactory.TYPE)
     private RecordSchemaNode cdrRecordSchema;
     
@@ -52,6 +63,9 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
     
     @NotNull @Parameter(defaultValue="false")
     private Boolean useOnlyRegisteredOperators;
+    
+    @Parameter(defaultValue=CALL_FINISHED_EVENT)
+    private String permittedEventTypes;
 
     private AtomicLong requestIdSeq;
     private RecordSchemaNode _cdrRecordSchema;
@@ -59,17 +73,18 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
     private CallsQueuesContainerNode queuesNode;
     private CallsQueueTransferOperatorNode transferOperator;
     private OperatorRegistratorNode operatorRegistrator;
+    private Set<String> permittedEvents; 
+    
 
     @Override
-    protected void doStart() throws Exception
-    {
+    protected void doStart() throws Exception {
         super.doStart();
         checkRecordSchema(cdrRecordSchema);
+        permittedEvents = initPermittedEvents();
         initNodes();
     }
     
-    private void initNodes()
-    {
+    private void initNodes() {
         requestIdSeq = new AtomicLong();
         operatorRegistrator = (OperatorRegistratorNode) getChildren(OperatorRegistratorNode.NAME);
         if (operatorRegistrator==null) {
@@ -139,6 +154,18 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
                 getLogger().error(message);
             throw new CallQueueException(message, e);
         }
+    }
+    
+    public Set<String> getPermittedEvent() {
+        return permittedEvents;
+    }
+
+    public String getPermittedEventTypes() {
+        return permittedEventTypes;
+    }
+
+    public void setPermittedEventTypes(String permittedEventTypes) {
+        this.permittedEventTypes = permittedEventTypes;
     }
 
     public CallsQueueOperatorsNode getOperatorsNode() {
@@ -282,5 +309,19 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
     
     private String normalizePhoneNumber(String num) {
         return num.length()<=10? num : num.substring(num.length()-10);
+    }
+
+    private Set<String> initPermittedEvents() throws Exception {
+        String[] toks = RavenUtils.split(permittedEventTypes);
+        if (toks==null || toks.length==0)
+            return Collections.EMPTY_SET;
+        else {
+            for (int i=0; i<toks.length; ++i) {
+                toks[i] = toks[i].toUpperCase();
+                if (!AVAILABLE_EVENTS.contains(toks[i]))
+                    throw new Exception("Invalid event type: "+toks[i]);
+            }
+            return new HashSet<String>(Arrays.asList(toks));
+        }
     }
 }
