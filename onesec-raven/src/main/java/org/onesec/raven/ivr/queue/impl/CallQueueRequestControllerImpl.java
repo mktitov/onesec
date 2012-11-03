@@ -40,6 +40,8 @@ import org.raven.ds.impl.RecordSchemaNode;
 import org.raven.log.LogLevel;
 
 import static org.onesec.raven.ivr.queue.impl.CallQueueCdrRecordSchemaNode.*;
+import static org.onesec.raven.ivr.queue.impl.CallsQueuesNode.*;
+import org.raven.ds.RecordSchema;
 
 /**
  *
@@ -55,6 +57,8 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
     private final Set<RequestControllerListener> listeners = new HashSet<RequestControllerListener>();
     private final Record cdr;
     private final boolean lazyRequest;
+    private final Set<String> eventTypes;
+    private final RecordSchema cdrSchema;
 
     private int priority;
     private String queueId;
@@ -71,8 +75,7 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
     private long lastQueuedTime;
     private boolean forceResetCallsQueueFlag = false;
 
-    public CallQueueRequestControllerImpl(
-            CallsQueuesNode owner, CallQueueRequest request, long requestId)
+    public CallQueueRequestControllerImpl(CallsQueuesNode owner, CallQueueRequest request, long requestId)
         throws RecordException
     {
         this.owner = owner;
@@ -85,11 +88,11 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
         this.operatorIndex = -1;
         this.operatorHops = 0;
         this.lazyRequest = request instanceof LazyCallQueueRequest;
-//        listener = new Listener(request.getConversation(), request);
-//        request.getConversation().addConversationListener(listener);
-        RecordSchemaNode schema = owner.getCdrRecordSchema();
-        if (schema!=null) {
-            cdr = schema.createRecord();
+        this.eventTypes = owner.getPermittedEvent();
+        this.cdrSchema = owner.getCdrRecordSchema();
+        this.log = new StringBuilder();
+        if (cdrSchema!=null) {
+            cdr = cdrSchema.createRecord();
             cdr.setValue(QUEUED_TIME, getTimestamp());
             cdr.setValue(PRIORITY, request.getPriority());
         } else
@@ -270,17 +273,18 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
                             long dur = (ts.getTime()-startTs.getTime())/1000;
                             cdr.setValue(CONVERSATION_DURATION, dur);
                         }
-                        sendCdrToConsumers();
+                        sendCdrToConsumers(CALL_FINISHED_EVENT);
                     }
                 } else if (event instanceof RejectedQueueEvent) {
                     cdr.setValue(REJECTED_TIME, getTimestamp());
-                    sendCdrToConsumers();
+                    sendCdrToConsumers(CALL_FINISHED_EVENT);
                 } else if (event instanceof CallQueuedEvent) {
                     if (cdr.getValue(QUEUED_TIME)==null)
                         cdr.setValue(QUEUED_TIME, getTimestamp());
                     if (cdr.getValue(TARGET_QUEUE)==null)
                         cdr.setValue(TARGET_QUEUE, ((CallQueuedEvent)event).getQueueId());
                     cdr.setValue(HANDLED_BY_QUEUE, ((CallQueuedEvent)event).getQueueId());
+                    sendCdrToConsumers(QUEUED_EVENT);
                 } else if (event instanceof NumberChangedQueueEvent) {
                     addToLog("#"+((NumberChangedQueueEvent)event).getCurrentNumber());
                 } else if (event instanceof ReadyToCommutateQueueEvent) {
@@ -288,6 +292,7 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
                 } else if (event instanceof CommutatedQueueEvent) {
                     cdr.setValue(COMMUTATED_TIME, getTimestamp());
                     cdr.setValue(CONVERSATION_START_TIME, getTimestamp());
+                    sendCdrToConsumers(CONVERSATION_STARTED_EVENT);
                 } else if (event instanceof CallTransferedQueueEvent) {
                     cdr.setValue(TRANSFERED, 'T');
                     CallTransferedQueueEvent transferEvent = (CallTransferedQueueEvent) event;
@@ -297,10 +302,12 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
                     cdr.setValue(OPERATOR_PERSON_DESC, transferEvent.getPersonDesc());
                     addToLog(String.format("transfered to op. (%s) number (%s)"
                             , transferEvent.getOperatorId(), transferEvent.getOperatorNumber()));
+                    sendCdrToConsumers(ASSIGNED_TO_OPERATOR_EVENT);
                 } else if (event instanceof OperatorQueueEvent) {
                     cdr.setValue(OPERATOR_ID, ((OperatorQueueEvent)event).getOperatorId());
                     cdr.setValue(OPERATOR_PERSON_ID, ((OperatorQueueEvent)event).getPersonId());
                     cdr.setValue(OPERATOR_PERSON_DESC, ((OperatorQueueEvent)event).getPersonDesc());
+                    sendCdrToConsumers(ASSIGNED_TO_OPERATOR_EVENT);
                 } else if (event instanceof OperatorNumberQueueEvent) {
                     cdr.setValue(OPERATOR_NUMBER, ((OperatorNumberQueueEvent)event).getOperatorNumber());
                 }
@@ -315,10 +322,10 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
     public void addToLog(String message)
     {
         String time = new SimpleDateFormat("hh:mm:ss").format(new Date());
-        if (log==null)
-            log = new StringBuilder(time);
-        else
-            log.append("; ").append(time);
+//        if (log==null)
+//            log = new StringBuilder(time);
+//        else
+        log.append(log.length()==0?"":"; ").append(time);
         log.append(" ").append(message);
     }
 
@@ -384,13 +391,18 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
         callQueueChangeEvent(new OperatorGreetingQueueEventImpl(queue, requestId, greeting));
     }
     
-    private void sendCdrToConsumers() throws RecordException {
-        if (!cdrSent.compareAndSet(false, true))
+    private void sendCdrToConsumers(String eventType) throws RecordException {
+        if (!eventTypes.contains(eventType))
             return;
-        cdr.setValue(LOG, log.toString());
+        if (CALL_FINISHED_EVENT.equals(eventType) && !cdrSent.compareAndSet(false, true))
+            return;
+        Record rec = cdrSchema.createRecord();
+        rec.copyFrom(cdr);
+        rec.setValue(LOG, log.toString());
+        rec.setTag("eventType", eventType);
         if (owner.isLogLevelEnabled(LogLevel.DEBUG))
             owner.getLogger().debug(logMess("Sending CDR to consumers"));
-        DataSourceHelper.sendDataToConsumers(owner, cdr, request.getContext());
+        DataSourceHelper.sendDataToConsumers(owner, rec, request.getContext());
     }
 
     @Override

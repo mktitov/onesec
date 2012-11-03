@@ -200,7 +200,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
         request.addToLog("handling by operator (operator)");
         pool.requestEndpoint(sendEndpoint(endpoint));
         pool.releaseEndpoint(endpoint);
-//        request.addRequestWrapperListener(isA(RequestControllerListener.class));
+        request.addRequestWrapperListener(isA(RequestControllerListener.class));
         expect(request.isValid()).andReturn(Boolean.TRUE).anyTimes();
         expect(request.isHandlingByOperator()).andReturn(false).anyTimes();
         endpoint.invite(eq("88024"), geq(4), eq(0), checkConvListener(), same(scenario)
