@@ -15,6 +15,7 @@
  */
 package org.onesec.raven.net.sip.impl;
 
+import org.onesec.raven.net.sip.SipAddressHeader;
 import org.onesec.raven.net.sip.SipResponse;
 
 /**
@@ -29,4 +30,24 @@ public class SipResponseImpl extends AbstractSipMessage implements SipResponse {
         this.statusCode = statusCode;
         this.reason = reason;
     }
+
+  public SipAddressHeader getFrom() {
+    throw new UnsupportedOperationException("Not supported yet.");
+  }
+
+  public SipAddressHeader getTo() {
+    throw new UnsupportedOperationException("Not supported yet.");
+  }
+
+  public void getVia() {
+    throw new UnsupportedOperationException("Not supported yet.");
+  }
+
+  public void getMaxForwards() {
+    throw new UnsupportedOperationException("Not supported yet.");
+  }
+
+  public SipAddressHeader getContact() {
+    throw new UnsupportedOperationException("Not supported yet.");
+  }
 }
