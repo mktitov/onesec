@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import org.onesec.raven.ivr.queue.*;
 import static org.onesec.raven.ivr.queue.impl.CallQueueCdrRecordSchemaNode.*;
@@ -74,6 +75,7 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
     private CallsQueueTransferOperatorNode transferOperator;
     private OperatorRegistratorNode operatorRegistrator;
     private Set<String> permittedEvents; 
+    private Map<Long, CallQueueRequestController> requests;
     
 
     @Override
@@ -81,6 +83,7 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
         super.doStart();
         checkRecordSchema(cdrRecordSchema);
         permittedEvents = initPermittedEvents();
+        requests = new ConcurrentHashMap<Long, CallQueueRequestController>();
         initNodes();
     }
     
@@ -118,42 +121,49 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
         if (isLogLevelEnabled(LogLevel.DEBUG))
             getLogger().debug("{}. CallsQueues. Queueing call to the queue {}"
                     , request.getConversationInfo(), request.getQueueId());
+        CallQueueRequestController requestController = null;
         try{
-            CallQueueRequestController requestWrapper = 
-                    new CallQueueRequestControllerImpl(this, request, requestIdSeq.incrementAndGet());
+            requestController = new CallQueueRequestControllerImpl(this, request, requestIdSeq.incrementAndGet());
             if (!Status.STARTED.equals(getStatus())){
                 if (isLogLevelEnabled(LogLevel.WARN))
                     getLogger().warn(
                             logMess(request, "Rejected because of queues selector stopped"));
-                requestWrapper.addToLog("queues selector stopped");
-                requestWrapper.fireRejectedQueueEvent();
+                requestController.addToLog("queues selector stopped");
+                requestController.fireRejectedQueueEvent();
                 return;
             }
             if (request.getQueueId()==null){
                 if (isLogLevelEnabled(LogLevel.ERROR))
                     getLogger().error(
                             logMess(request, "Rejected because of queueId can not be null"));
-                requestWrapper.addToLog("null queue id");
-                requestWrapper.fireRejectedQueueEvent();
+                requestController.addToLog("null queue id");
+                requestController.fireRejectedQueueEvent();
                 return;
             }
             Node queue = queuesNode.getChildren(request.getQueueId());
             if (queue!=null && Status.STARTED.equals(queue.getStatus())) {
-                ((CallsQueue)queue).queueCall(requestWrapper);
+                requests.put(requestController.getRequestId(), requestController);
+                ((CallsQueue)queue).queueCall(requestController);
             } else {
                 if (isLogLevelEnabled(LogLevel.ERROR))
                     getLogger().error(logMess(
                             request, "Rejected because of queue (%s) not found or stopped"
                             , request.getQueueId()));
-                requestWrapper.addToLog("queue not found");
-                requestWrapper.fireRejectedQueueEvent();
+                requestController.addToLog("queue not found");
+                requestController.fireRejectedQueueEvent();
             }
         }catch(Throwable e){
+            if (requestController!=null)
+                requests.remove(requestController.getRequestId());
             String message = logMess(request, "Call queuing error ", e.getMessage());
             if (isLogLevelEnabled(LogLevel.ERROR))
                 getLogger().error(message);
             throw new CallQueueException(message, e);
         }
+    }
+
+    public Map<Long, CallQueueRequestController> getRequests() {
+        return requests;
     }
     
     public Set<String> getPermittedEvent() {
