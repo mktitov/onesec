@@ -347,6 +347,7 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
     }
     
     public void fireRejectedQueueEvent(){
+        owner.getRequests().remove(requestId);
         callQueueChangeEvent(new RejectedQueueEventImpl(queue, requestId));
     }
 
@@ -355,6 +356,7 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
     }
     
     public void fireDisconnectedQueueEvent(){
+        owner.getRequests().remove(requestId);
         callQueueChangeEvent(new DisconnectedQueueEventImpl(queue, requestId));
     }
 
