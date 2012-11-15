@@ -394,7 +394,7 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
     }
     
     private void sendCdrToConsumers(String eventType) throws RecordException {
-        if (!eventTypes.contains(eventType))
+        if (cdrSent.get() || !eventTypes.contains(eventType))
             return;
         if (CALL_FINISHED_EVENT.equals(eventType) && !cdrSent.compareAndSet(false, true))
             return;
