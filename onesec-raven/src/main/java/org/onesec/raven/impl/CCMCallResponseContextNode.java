@@ -55,7 +55,7 @@ public class CCMCallResponseContextNode
         createParameters();
     }
 
-    public String doGetResponse(String requesterIp, Map<String, Object> params)
+    public Object doGetResponse(String requesterIp, Map<String, Object> params)
             throws NetworkResponseServiceExeption
     {
         String numA = (String)params.get(NUMA_PARAMETER);
