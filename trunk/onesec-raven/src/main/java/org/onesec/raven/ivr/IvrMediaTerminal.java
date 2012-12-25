@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010 Mikhail Titov.
+ *  Copyright 2011 Mikhail Titov.
  * 
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -17,11 +17,20 @@
 
 package org.onesec.raven.ivr;
 
+import org.raven.sched.ExecutorService;
+
 /**
  *
  * @author Mikhail Titov
  */
-public interface IvrMultichannelEndpoint extends IvrMediaTerminal
+public interface IvrMediaTerminal extends IvrTerminal
 {
-
+    public RtpStreamManager getRtpStreamManager();
+    public ExecutorService getExecutor();
+    public IvrConversationScenario getConversationScenario();
+    public Codec getCodec();
+    public Integer getRtpPacketSize();
+    public Integer getRtpMaxSendAheadPacketsCount();
+    public Boolean getEnableIncomingRtp();
+    public Boolean getEnableIncomingCalls();
 }

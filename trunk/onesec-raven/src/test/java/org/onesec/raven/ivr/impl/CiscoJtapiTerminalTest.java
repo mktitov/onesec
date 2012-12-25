@@ -43,7 +43,7 @@ import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.IvrEndpointConversationEvent;
 import org.onesec.raven.ivr.IvrEndpointConversationListener;
 import org.onesec.raven.ivr.IvrIncomingRtpStartedEvent;
-import org.onesec.raven.ivr.IvrTerminal;
+import org.onesec.raven.ivr.IvrMediaTerminal;
 import org.onesec.raven.ivr.actions.StopConversationActionNode;
 import org.raven.log.LogLevel;
 import org.raven.sched.impl.ExecutorServiceNode;
@@ -135,7 +135,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
 //    @Test
     public void startStopTest() throws Exception {
         waitForProvider();
-        IvrTerminal term = trainTerminal("88049", scenario, true, true);
+        IvrMediaTerminal term = trainTerminal("88049", scenario, true, true);
         replay(term);
         endpoint = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, term);
         IvrTerminalState state = endpoint.getState();
@@ -157,7 +157,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         waitForProvider();
         createSimpleScenario();
 
-        IvrTerminal term = trainTerminal("88013", scenario, true, true);
+        IvrMediaTerminal term = trainTerminal("88013", scenario, true, true);
         IvrEndpointConversationListener listener = trainListener();
         replay(term, listener);
 
@@ -177,7 +177,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         waitForProvider();
         createSimpleScenario();
 
-        IvrTerminal term = trainTerminal("631799", scenario, true, true);
+        IvrMediaTerminal term = trainTerminal("631799", scenario, true, true);
         IvrEndpointConversationListener listener = trainListener();
         replay(term, listener);
 
@@ -197,7 +197,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         waitForProvider();
         createSimpleScenario();
 
-        IvrTerminal term = trainTerminal("631799", scenario, true, true);
+        IvrMediaTerminal term = trainTerminal("631799", scenario, true, true);
         IvrEndpointConversationListener listener = trainListener_invalidAddress();
         replay(term, listener);
 
@@ -217,7 +217,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         waitForProvider();
         createSimpleScenario();
 
-        IvrTerminal term = trainTerminal("631799", scenario, true, true);
+        IvrMediaTerminal term = trainTerminal("631799", scenario, true, true);
 //        IvrTerminal term = trainTerminal("631799", scenario, true, true);
         IvrEndpointConversationListener listener = trainInviteTimeoutListener();
         replay(term, listener);
@@ -239,7 +239,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         waitForProvider();
         createSimpleScenario2(5000);
 
-        IvrTerminal term = trainTerminal("88013", scenario, true, true);
+        IvrMediaTerminal term = trainTerminal("88013", scenario, true, true);
         IvrEndpointConversationListener listener = trainListener();
         replay(term, listener);
 
@@ -260,7 +260,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         waitForProvider();
         createSimpleScenario3();
 
-        IvrTerminal term = trainTerminal("88013", scenario, true, true);
+        IvrMediaTerminal term = trainTerminal("88013", scenario, true, true);
         IvrEndpointConversationListener listener = trainListener();
         replay(term, listener);
 
@@ -284,7 +284,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         waitForProvider();
         createSimpleScenario4();
 
-        IvrTerminal term = trainTerminal("88013", scenario, true, true);
+        IvrMediaTerminal term = trainTerminal("88013", scenario, true, true);
         IvrEndpointConversationListener listener = trainListener2();
         replay(term, listener);
 
@@ -309,7 +309,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         waitForProvider();
         createSimpleScenario2(5000);
 
-        IvrTerminal term = trainTerminal("88013", scenario, true, true);
+        IvrMediaTerminal term = trainTerminal("88013", scenario, true, true);
         IvrEndpointConversationListener listener = trainListener();
         replay(term, listener);
 
@@ -335,7 +335,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         waitForProvider();
         createSimpleScenario2(10000);
 
-        IvrTerminal term = trainTerminal("88013", scenario, true, true);
+        IvrMediaTerminal term = trainTerminal("88013", scenario, true, true);
         IvrEndpointConversationListener listener = trainListener();
         replay(term, listener);
 
@@ -356,7 +356,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         waitForProvider();
         createSimpleScenario();
 
-        IvrTerminal term = trainTerminal("631799", scenario, true, true);
+        IvrMediaTerminal term = trainTerminal("631799", scenario, true, true);
         IvrEndpointConversationListener listener = trainListener();
         replay(term, listener);
 
@@ -377,7 +377,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         waitForProvider();
         createSimpleScenario();
 
-        IvrTerminal term = trainTerminal("631799", scenario, true, true);
+        IvrMediaTerminal term = trainTerminal("631799", scenario, true, true);
         IvrEndpointConversationListener listener = trainListenerForDtmfSending();
         replay(term, listener);
 
@@ -399,7 +399,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         waitForProvider();
         createSimpleScenario();
 
-        IvrTerminal term = trainTerminal("631799", scenario, true, true);
+        IvrMediaTerminal term = trainTerminal("631799", scenario, true, true);
         IvrEndpointConversationListener listener = trainListenerForSendMessage();
         replay(term, listener);
 
@@ -625,7 +625,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         return null;
     }
 
-    private interface TestTerminal extends IvrTerminal, Node {
+    private interface TestTerminal extends IvrMediaTerminal, Node {
     }
     
 }

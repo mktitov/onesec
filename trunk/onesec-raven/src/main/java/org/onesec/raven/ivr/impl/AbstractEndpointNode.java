@@ -23,7 +23,7 @@ import org.onesec.core.services.ProviderRegistry;
 import org.onesec.core.services.StateListenersCoordinator;
 import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.IvrEndpointConversationListener;
-import org.onesec.raven.ivr.IvrTerminal;
+import org.onesec.raven.ivr.IvrMediaTerminal;
 import org.onesec.raven.ivr.IvrTerminalState;
 import org.onesec.raven.ivr.TerminalStateMonitoringService;
 import org.raven.annotations.Parameter;
@@ -39,7 +39,7 @@ import org.weda.internal.annotations.Service;
  * @author Mikhail Titov
  */
 public abstract class AbstractEndpointNode extends BaseNode
-        implements IvrTerminal, StateListener<IvrTerminalState>
+        implements IvrMediaTerminal, StateListener<IvrTerminalState>
 {
     @Service
     protected static ProviderRegistry providerRegistry;
