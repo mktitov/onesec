@@ -23,7 +23,7 @@ import org.raven.tree.Node;
 /**
  * @author Mikhail Titov
  */
-public interface IvrEndpoint extends IvrTerminal, Node
+public interface IvrEndpoint extends IvrMediaTerminal, Node
 {
     public IvrEndpointState getEndpointState();
 

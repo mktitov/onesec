@@ -101,7 +101,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
     private final int rtpMaxSendAheadPacketsCount;
     private final boolean enableIncomingRtp;
     private final boolean enableIncomingCalls;
-    private final IvrTerminal term;
+    private final IvrMediaTerminal term;
     private final Logger logger;
 
     private Address termAddress;
@@ -129,7 +129,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
 
     public CiscoJtapiTerminal(ProviderRegistry providerRegistry
             , StateListenersCoordinator stateListenersCoordinator
-            , IvrTerminal term)
+            , IvrMediaTerminal term)
     {
         this.providerRegistry = providerRegistry;
         this.rtpStreamManager = term.getRtpStreamManager();

@@ -25,7 +25,7 @@ import org.onesec.core.provider.ProviderControllerState;
 import org.onesec.core.services.StateListenersCoordinator;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.StateToNodeLogger;
-import org.onesec.raven.ivr.IvrTerminal;
+import org.onesec.raven.ivr.IvrMediaTerminal;
 import org.onesec.raven.ivr.TerminalStateMonitoringService;
 import org.raven.tree.Node.Status;
 import org.raven.tree.impl.ServicesNode;
@@ -41,9 +41,9 @@ public class TerminalStateMonitoringServiceImplTest extends OnesecRavenTestCase
     @Test
     public void startTerminalAndFilterTest()
     {
-        IvrTerminal term = createMock(IvrTerminal.class);
-        IvrTerminal term2 = createMock(IvrTerminal.class);
-        IvrTerminal term3 = createMock(IvrTerminal.class);
+        IvrMediaTerminal term = createMock(IvrMediaTerminal.class);
+        IvrMediaTerminal term2 = createMock(IvrMediaTerminal.class);
+        IvrMediaTerminal term3 = createMock(IvrMediaTerminal.class);
         ProviderControllerState state = createMock(ProviderControllerState.class);
         ProviderController controller = createMock(ProviderController.class);
 
@@ -74,7 +74,7 @@ public class TerminalStateMonitoringServiceImplTest extends OnesecRavenTestCase
 
     @Test
     public void restartTerminalTest(){
-        IvrTerminal term = createMock(IvrTerminal.class);
+        IvrMediaTerminal term = createMock(IvrMediaTerminal.class);
         ProviderControllerState state = createMock(ProviderControllerState.class);
         ProviderController controller = createMock(ProviderController.class);
 
@@ -101,7 +101,7 @@ public class TerminalStateMonitoringServiceImplTest extends OnesecRavenTestCase
 
     @Test
     public void stopStartedTerminalTest(){
-        IvrTerminal term = createMock(IvrTerminal.class);
+        IvrMediaTerminal term = createMock(IvrMediaTerminal.class);
         ProviderControllerState state = createMock(ProviderControllerState.class);
         ProviderController controller = createMock(ProviderController.class);
 
@@ -126,7 +126,7 @@ public class TerminalStateMonitoringServiceImplTest extends OnesecRavenTestCase
 
     @Test
     public void stopStoppedTerminalTest(){
-        IvrTerminal term = createMock(IvrTerminal.class);
+        IvrMediaTerminal term = createMock(IvrMediaTerminal.class);
         ProviderControllerState state = createMock(ProviderControllerState.class);
         ProviderController controller = createMock(ProviderController.class);
 

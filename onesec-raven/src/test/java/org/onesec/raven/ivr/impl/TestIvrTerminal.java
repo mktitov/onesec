@@ -19,7 +19,7 @@ package org.onesec.raven.ivr.impl;
 
 import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.IvrConversationScenario;
-import org.onesec.raven.ivr.IvrTerminal;
+import org.onesec.raven.ivr.IvrMediaTerminal;
 import org.onesec.raven.ivr.RtpStreamManager;
 import org.raven.sched.ExecutorService;
 import org.raven.tree.impl.BaseNode;
@@ -28,7 +28,7 @@ import org.raven.tree.impl.BaseNode;
  *
  * @author Mikhail Titov
  */
-public class TestIvrTerminal extends BaseNode implements IvrTerminal {
+public class TestIvrTerminal extends BaseNode implements IvrMediaTerminal {
 
 //    private final 
 
