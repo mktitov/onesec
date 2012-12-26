@@ -17,18 +17,23 @@
 
 package org.onesec.raven.ivr.impl;
 
+import java.util.Collection;
 import java.util.concurrent.atomic.AtomicReference;
 import org.onesec.core.StateListener;
 import org.onesec.core.services.ProviderRegistry;
 import org.onesec.core.services.StateListenersCoordinator;
+import org.onesec.raven.ivr.CallsRouter;
 import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.IvrEndpointConversationListener;
 import org.onesec.raven.ivr.IvrMediaTerminal;
 import org.onesec.raven.ivr.IvrTerminalState;
 import org.onesec.raven.ivr.TerminalStateMonitoringService;
 import org.raven.annotations.Parameter;
+import org.raven.ds.DataConsumer;
+import org.raven.ds.DataContext;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
+import org.raven.tree.NodeAttribute;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
 import org.weda.annotations.constraints.NotNull;
@@ -91,7 +96,8 @@ public abstract class AbstractEndpointNode extends BaseNode
     @Override
     protected void doStart() throws Exception {
         super.doStart();
-        CiscoJtapiTerminal terminal = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, this);
+        CiscoJtapiTerminal terminal = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, 
+                this, getCallsRouter());
         terminal.getState().addStateListener(this);
         term.set(terminal);
         terminalCreated(terminal);
@@ -114,6 +120,15 @@ public abstract class AbstractEndpointNode extends BaseNode
     protected abstract void terminalStopped(CiscoJtapiTerminal terminal);
     protected abstract void terminalStateChanged(IvrTerminalState state);
     protected abstract String getEndpointStateAsString();
+    public abstract CallsRouter getCallsRouter();
+
+    public boolean getDataImmediate(DataConsumer dataConsumer, DataContext context) {
+        throw new UnsupportedOperationException("This dataSource not supports pull operations");
+    }
+
+    public Collection<NodeAttribute> generateAttributes() {
+        return null;
+    }
     
     public int getActiveCallsCount() {
         CiscoJtapiTerminal _term = term.get();

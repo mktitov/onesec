@@ -15,17 +15,13 @@
  */
 package org.onesec.raven.ivr;
 
-import org.onesec.core.ObjectDescription;
-import org.raven.ds.DataSource;
+import org.raven.ds.DataConsumer;
 import org.raven.tree.Node;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface IvrTerminal extends ObjectDescription, DataSource {
-    /**
-     * Returns the terminal address (number)
-     */
+public interface CallsRouter extends DataConsumer {
     public String getAddress();
 }

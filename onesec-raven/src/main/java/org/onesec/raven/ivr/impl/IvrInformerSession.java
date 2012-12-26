@@ -160,7 +160,7 @@ public class IvrInformerSession implements EndpointRequest {
         bindings.put(BindingNames.DATA_CONTEXT_BINDING, dataContext);
         rec.setValue(CALL_START_TIME_FIELD, new Timestamp(System.currentTimeMillis()));
         
-        endpoint.invite(_abonentNumber, inviteTimeout, maxCallDuration, new ConversationListener(), scenario, bindings);
+        endpoint.invite(_abonentNumber, inviteTimeout, maxCallDuration, new ConversationListener(), scenario, bindings, null);
     }
 
 //    @Override

@@ -184,7 +184,7 @@ public class AbonentCommutationManagerImpl implements LazyCallQueueRequest, Abon
             bindings.put(ABONENT_COMMUTATION_MANAGER_BINDING, this);
             endpoint.invite(abonentNumber, inviteTimeout, 0
                     , new ConversationListener(endpoint, endpointPool)
-                    , conversationScenario, bindings);
+                    , conversationScenario, bindings, null);
         }
     }
     

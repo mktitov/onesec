@@ -15,23 +15,37 @@
  */
 package org.onesec.raven.ivr.impl;
 
+import com.cisco.jtapi.extensions.CiscoAddrInServiceEv;
+import com.cisco.jtapi.extensions.CiscoAddrOutOfServiceEv;
 import com.cisco.jtapi.extensions.CiscoMediaTerminal;
+import com.cisco.jtapi.extensions.CiscoRouteSession;
 import com.cisco.jtapi.extensions.CiscoRouteTerminal;
+import com.cisco.jtapi.extensions.CiscoTermInServiceEv;
 import com.cisco.jtapi.extensions.CiscoTerminal;
 import com.cisco.jtapi.extensions.CiscoTerminalObserver;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.telephony.Address;
 import javax.telephony.AddressObserver;
 import javax.telephony.Provider;
 import javax.telephony.Terminal;
-import javax.telephony.callcontrol.CallControlCallObserver;
+import javax.telephony.callcenter.RouteAddress;
+import javax.telephony.callcenter.RouteCallback;
+import javax.telephony.callcenter.events.ReRouteEvent;
+import javax.telephony.callcenter.events.RouteCallbackEndedEvent;
+import javax.telephony.callcenter.events.RouteEndEvent;
+import javax.telephony.callcenter.events.RouteEvent;
+import javax.telephony.callcenter.events.RouteUsedEvent;
 import javax.telephony.events.AddrEv;
 import javax.telephony.events.CallEv;
 import javax.telephony.events.TermEv;
-import javax.telephony.media.MediaCallObserver;
 import org.onesec.core.provider.ProviderController;
 import org.onesec.core.services.ProviderRegistry;
 import org.onesec.core.services.StateListenersCoordinator;
+import org.onesec.raven.ivr.CallRouteRule;
 import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.IvrEndpointException;
 import org.onesec.raven.ivr.IvrTerminal;
@@ -43,14 +57,17 @@ import org.slf4j.Logger;
  *
  * @author Mikhail Titov
  */
-public class CiscoJtapiRouteTerminal implements CiscoTerminalObserver, AddressObserver, CallControlCallObserver
-        , MediaCallObserver{
+public class CiscoJtapiRouteTerminal implements CiscoTerminalObserver, AddressObserver, RouteCallback
+{
     private final String address;
     private final ProviderRegistry providerRegistry;
     private final IvrTerminalStateImpl state;
     private final IvrTerminal term;
     private final Logger logger;
     private final AtomicBoolean stopping = new AtomicBoolean();
+    private final ConcurrentHashMap<String, CallRouteRule> routes = new ConcurrentHashMap<String, CallRouteRule>();
+    private boolean termInService = false;
+    private boolean termAddressInService = false;
     
     private Address termAddress;
     private Provider provider;
@@ -98,6 +115,16 @@ public class CiscoJtapiRouteTerminal implements CiscoTerminalObserver, AddressOb
             unregisterTerminalListeners();
         }
     }
+    
+    public Map<String, CallRouteRule> getRoutes() {
+        return Collections.unmodifiableMap(routes);
+    }
+    
+    public void registerRoute(CallRouteRule route) {
+        if (logger.isDebugEnabled())
+            logger.debug("Registering new route: "+route);
+        routes.put(route.getRuleKey(), route);
+    }
 
     private CiscoRouteTerminal registerTerminal(Address addr) throws Exception {
         Terminal[] terminals = addr.getTerminals();
@@ -119,7 +146,8 @@ public class CiscoJtapiRouteTerminal implements CiscoTerminalObserver, AddressOb
     private void registerTerminalListeners() throws Exception {
         ciscoTerm.addObserver(this);
         termAddress.addObserver(this);
-        termAddress.addCallObserver(this);
+//        termAddress.addCallObserver(this);
+        ((RouteAddress)termAddress).registerRouteCallback(this);
     }
     
     private void unexpectedUnregistration(Terminal term) {
@@ -145,7 +173,7 @@ public class CiscoJtapiRouteTerminal implements CiscoTerminalObserver, AddressOb
     private void unregisterTerminalListeners() {
         try {
             try {
-                termAddress.removeCallObserver(this);
+//                termAddress.removeCallObserver(this);
             } finally {
                 try {
                     termAddress.removeObserver(this);
@@ -168,17 +196,101 @@ public class CiscoJtapiRouteTerminal implements CiscoTerminalObserver, AddressOb
 //        }
     }
 
-    public void terminalChangedEvent(TermEv[] eventList) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    public void addressChangedEvent(AddrEv[] eventList) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    public void callChangedEvent(CallEv[] eventList) {
-        throw new UnsupportedOperationException("Not supported yet.");
+    public void terminalChangedEvent(TermEv[] events) {
+        if (logger.isDebugEnabled())
+            logger.debug("Recieved terminal events: "+eventsToString(events));
+        for (TermEv ev: events)
+            switch (ev.getID()) {
+                case CiscoTermInServiceEv.ID: termInService = true; checkState(); break;
+            }
     }
     
+    public void addressChangedEvent(AddrEv[] events) {
+        if (logger.isDebugEnabled())
+            logger.debug("Recieved address events: "+eventsToString(events));
+        for (AddrEv ev: events)
+            switch (ev.getID()) {
+                case CiscoAddrInServiceEv.ID: termAddressInService = true; checkState(); break;
+                case CiscoAddrOutOfServiceEv.ID: termAddressInService = false; checkState(); break;
+            }
+    }
+
+    public void callChangedEvent(CallEv[] events) {
+        if (logger.isDebugEnabled())
+            logger.debug("Recieved address events: "+eventsToString(events));
+        for (CallEv ev: events) {
+        }
+    }
     
+    private synchronized void checkState() {
+        if (state.getId()==IvrTerminalState.OUT_OF_SERVICE && !stopping.get()) {
+            if (termInService && termAddressInService)
+                state.setState(IvrTerminalState.IN_SERVICE);
+        } else if (!termAddressInService || !termInService)
+            state.setState(IvrTerminalState.OUT_OF_SERVICE);
+    }
+    
+    private String eventsToString(Object[] events) {
+        StringBuilder buf = new StringBuilder();
+        for (int i=0; i<events.length; ++i)
+            buf.append(i > 0 ? ", " : "").append(events[i].toString());
+        return buf.toString();
+    }
+
+    public void reRouteEvent(ReRouteEvent event) {
+        if (logger.isDebugEnabled())
+            logger.debug("Received route callback event: "+event.getClass().getName());
+    }
+
+    public void routeCallbackEndedEvent(RouteCallbackEndedEvent event) {
+        if (logger.isDebugEnabled())
+            logger.debug("Received route callback event: "+event.getClass().getName());
+    }
+
+    public void routeEvent(RouteEvent event) {
+        if (logger.isDebugEnabled())
+            logger.debug("Received route callback event: "+event.getClass().getName());
+        CiscoRouteSession sess = (CiscoRouteSession) event.getRouteSession();
+        CallRouteRule route = findRoute(event.getCallingAddress().getName());
+        try {
+            if (route==null)
+                sess.endRoute(CiscoRouteSession.ERROR_NO_CALLBACK);
+            else 
+                sess.selectRoute(route.getDestinations(), CiscoRouteSession.DEFAULT_SEARCH_SPACE, 
+                        route.getCallingNumbers());
+        } catch (Exception ex) {
+            if (logger.isErrorEnabled())
+                logger.error("Routing error", ex);
+        } 
+    }
+    
+    private CallRouteRule findRoute(String callingNumber) {
+        Iterator<CallRouteRule> it = routes.values().iterator();
+        while (it.hasNext()) {
+            CallRouteRule route = it.next();
+            if (route.accept(callingNumber)) {
+                if (logger.isDebugEnabled())
+                    logger.debug("Found route for call from ({}): {}", callingNumber, route);
+                if (!route.isPermanent()) {
+                    if (logger.isDebugEnabled())
+                        logger.debug("Removing route: "+route);
+                    it.remove();
+                }
+                return route;
+            }
+        }
+        if (logger.isErrorEnabled())
+            logger.error("Can't find route for incoming call from ({})", callingNumber);
+        return null;
+    }
+
+    public void routeUsedEvent(RouteUsedEvent event) {
+        if (logger.isDebugEnabled())
+            logger.debug("Received route callback event: "+event.getClass().getName());
+    }
+
+    public void routeEndEvent(RouteEndEvent event) {
+        if (logger.isDebugEnabled())
+            logger.debug("Received route callback event: "+event.getClass().getName());
+    }
 }

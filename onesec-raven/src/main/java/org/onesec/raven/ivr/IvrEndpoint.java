@@ -29,7 +29,7 @@ public interface IvrEndpoint extends IvrMediaTerminal, Node
 
     public void invite(String opponentNum, int inviteTimeout, int maxCallDur
             , IvrEndpointConversationListener listener
-            , IvrConversationScenario scenario, Map<String, Object> bindings);
+            , IvrConversationScenario scenario, Map<String, Object> bindings, String callingNumber);
 //    public RtpAddress getRtpAddress();
     /**
      * Adds conversation listener
