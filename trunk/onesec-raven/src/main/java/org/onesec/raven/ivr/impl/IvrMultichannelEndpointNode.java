@@ -20,6 +20,7 @@ package org.onesec.raven.ivr.impl;
 import java.util.List;
 import java.util.Map;
 import org.onesec.core.StateListener;
+import org.onesec.raven.ivr.CallsRouter;
 import org.onesec.raven.ivr.IvrEndpointState;
 import org.onesec.raven.ivr.IvrMultichannelEndpoint;
 import org.onesec.raven.ivr.IvrMultichannelEndpointState;
@@ -69,6 +70,11 @@ public class IvrMultichannelEndpointNode extends AbstractEndpointNode
     @Override
     protected String getEndpointStateAsString() {
         return endpointState.getIdName();
+    }
+
+    @Override
+    public CallsRouter getCallsRouter() {
+        return null;
     }
 
     @Override

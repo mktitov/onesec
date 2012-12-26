@@ -98,6 +98,9 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     
     @Parameter
     private Integer maxRequestsPerSecond;
+    
+    @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
+    private CallsRouter callsRouter;
 
     private ReadWriteLock lock;
     private Condition endpointReleased;
@@ -423,6 +426,14 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         this.maxRequestsPerSecond = maxRequestsPerSecond;
     }
 
+    public CallsRouter getCallsRouter() {
+        return callsRouter;
+    }
+
+    public void setCallsRouter(CallsRouter callsRouter) {
+        this.callsRouter = callsRouter;
+    }
+
     private void releaseEndpoint(IvrEndpoint endpoint, long duration)
     {
         if (isLogLevelEnabled(LogLevel.DEBUG))
@@ -665,6 +676,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                     term.setCodec(null);
                     term.setRtpMaxSendAheadPacketsCount(null);
                     term.setRtpPacketSize(null);
+                    term.setCallsRouter(null);
                     term.setLogLevel(getLogLevel());
                     term.start();
                 }

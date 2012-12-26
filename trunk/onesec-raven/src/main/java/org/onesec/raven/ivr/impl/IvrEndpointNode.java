@@ -38,6 +38,9 @@ public class IvrEndpointNode extends AbstractEndpointNode
     
     @NotNull @Parameter(defaultValue="false")
     private Boolean enableIncomingCalls;
+    
+    @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
+    private CallsRouter callsRouter;
 
     private IvrEndpointStateImpl endpointState;
 
@@ -64,12 +67,12 @@ public class IvrEndpointNode extends AbstractEndpointNode
 
     public void invite(String opponentNum, int inviteTimeout, int maxCallDur
             , IvrEndpointConversationListener listener
-            , IvrConversationScenario scenario, Map<String, Object> bindings)
+            , IvrConversationScenario scenario, Map<String, Object> bindings, String callingNumber)
     {
         CiscoJtapiTerminal _term = term.get();
         if (_term!=null) {
             changeStateTo(IvrEndpointState.INVITING, "INVITING");
-            _term.invite(opponentNum, inviteTimeout, maxCallDur, listener, scenario, bindings);
+            _term.invite(opponentNum, inviteTimeout, maxCallDur, listener, scenario, bindings, callingNumber);
         } else
             listener.conversationStopped(new IvrEndpointConversationStoppedEventImpl(
                     null, CompletionCode.TERMINAL_NOT_READY));
@@ -155,5 +158,13 @@ public class IvrEndpointNode extends AbstractEndpointNode
 
     public void setEnableIncomingCalls(Boolean enableIncomingCalls) {
         this.enableIncomingCalls = enableIncomingCalls;
+    }
+
+    public CallsRouter getCallsRouter() {
+        return callsRouter;
+    }
+
+    public void setCallsRouter(CallsRouter callsRouter) {
+        this.callsRouter = callsRouter;
     }
 }

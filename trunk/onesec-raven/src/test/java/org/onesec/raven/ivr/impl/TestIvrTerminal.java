@@ -17,11 +17,15 @@
 
 package org.onesec.raven.ivr.impl;
 
+import java.util.Collection;
 import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.IvrMediaTerminal;
 import org.onesec.raven.ivr.RtpStreamManager;
+import org.raven.ds.DataConsumer;
+import org.raven.ds.DataContext;
 import org.raven.sched.ExecutorService;
+import org.raven.tree.NodeAttribute;
 import org.raven.tree.impl.BaseNode;
 
 /**
@@ -73,6 +77,14 @@ public class TestIvrTerminal extends BaseNode implements IvrMediaTerminal {
     }
 
     public String getObjectDescription() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public boolean getDataImmediate(DataConsumer dataConsumer, DataContext context) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public Collection<NodeAttribute> generateAttributes() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

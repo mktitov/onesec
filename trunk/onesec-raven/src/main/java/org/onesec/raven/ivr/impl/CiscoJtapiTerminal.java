@@ -72,6 +72,7 @@ import org.onesec.core.provider.ProviderController;
 import org.onesec.core.services.ProviderRegistry;
 import org.onesec.core.services.StateListenersCoordinator;
 import org.onesec.raven.ivr.*;
+import org.raven.ds.impl.DataContextImpl;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.impl.AbstractTask;
@@ -103,6 +104,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
     private final boolean enableIncomingCalls;
     private final IvrMediaTerminal term;
     private final Logger logger;
+    private final CallsRouter callsRouter;
 
     private Address termAddress;
     private int maxChannels = Integer.MAX_VALUE;
@@ -129,7 +131,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
 
     public CiscoJtapiTerminal(ProviderRegistry providerRegistry
             , StateListenersCoordinator stateListenersCoordinator
-            , IvrMediaTerminal term)
+            , IvrMediaTerminal term, CallsRouter callsRouter)
     {
         this.providerRegistry = providerRegistry;
         this.rtpStreamManager = term.getRtpStreamManager();
@@ -143,6 +145,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
         this.enableIncomingCalls = term.getEnableIncomingCalls();
         this.term = term;
         this.logger = term.getLogger();
+        this.callsRouter = callsRouter;
         this.state = new IvrTerminalStateImpl(term);
         stateListenersCoordinator.addListenersToState(state, IvrTerminalState.class);
         this.state.setState(IvrTerminalState.OUT_OF_SERVICE);
@@ -190,7 +193,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
 
     public void invite(String opponentNum, int inviteTimeout, int maxCallDur
             , final IvrEndpointConversationListener listener
-            , IvrConversationScenario scenario, Map<String, Object> bindings)
+            , IvrConversationScenario scenario, Map<String, Object> bindings, String callingNumber)
     {
         Call call = null;
         try {
@@ -208,6 +211,13 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                 conv.addConversationListener(this);
                 ConvHolder holder = new ConvHolder(conv, false);
                 calls.put(call, holder);
+                if (callsRouter!=null) {
+                    callsRouter.setData(
+                            null, 
+                            new CallRouteRuleImpl(address, opponentNum, callingNumber, false), 
+                            new DataContextImpl());
+                    opponentNum = callsRouter.getAddress();
+                } 
                 call.connect(ciscoTerm, termAddress, opponentNum); //если передвинуть за lock блок 
                                 //перестает работать IvrEndpointConversation.sendMessage
                                 //поскольку IvrEndpointConversation.calledNumber == null

@@ -15,15 +15,23 @@
  */
 package org.onesec.raven.ivr.impl;
 
+import java.util.Collection;
 import java.util.concurrent.atomic.AtomicReference;
-import org.onesec.core.StateListener;
 import org.onesec.core.services.ProviderRegistry;
 import org.onesec.core.services.StateListenersCoordinator;
+import org.onesec.raven.ivr.CallRouteRule;
+import org.onesec.raven.ivr.CallsRouter;
 import org.onesec.raven.ivr.IvrTerminal;
 import org.onesec.raven.ivr.IvrTerminalState;
 import org.onesec.raven.ivr.TerminalStateMonitoringService;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
+import org.raven.ds.DataConsumer;
+import org.raven.ds.DataContext;
+import org.raven.ds.DataSource;
+import org.raven.log.LogLevel;
+import org.raven.tree.Node;
+import org.raven.tree.NodeAttribute;
 import org.raven.tree.impl.BaseNode;
 import org.weda.annotations.constraints.NotNull;
 import org.weda.internal.annotations.Service;
@@ -33,7 +41,7 @@ import org.weda.internal.annotations.Service;
  * @author Mikhail Titov
  */
 @NodeClass
-public class CiscoCallsRouterNode extends BaseNode implements IvrTerminal//, StateListener<IvrTerminalState> 
+public class CiscoCallsRouterNode extends BaseNode implements IvrTerminal, CallsRouter
 {
     @Service private static ProviderRegistry providerRegistry;
     @Service private static StateListenersCoordinator stateListenersCoordinator;
@@ -82,6 +90,11 @@ public class CiscoCallsRouterNode extends BaseNode implements IvrTerminal//, Sta
         }
     }
     
+    public IvrTerminalState getTerminalState() {
+        CiscoJtapiRouteTerminal terminal = term.get();
+        return terminal==null? null : terminal.getState();
+    }
+    
     public String getAddress() {
         return address;
     }
@@ -93,10 +106,37 @@ public class CiscoCallsRouterNode extends BaseNode implements IvrTerminal//, Sta
 //    private void
 
     public String getObjectName() {
-        return "CiscoRouteTerminal - "+address;
+        return "CiscoCallsRouteTerminal - "+address;
     }
 
     public String getObjectDescription() {
         return getObjectName();
+    }
+
+    public void setData(DataSource dataSource, Object data, DataContext context) {
+        if (data==null || getStatus()!=Node.Status.STARTED)
+            return;
+        if (!(data instanceof CallRouteRule))
+            if (isLogLevelEnabled(LogLevel.ERROR))
+            getLogger().error("Invalid data type expected ({}) but received ({})",
+                    CallRouteRule.class.getName(), data.getClass().getName());
+        if (isLogLevelEnabled(LogLevel.DEBUG))
+            getLogger().debug("Received route rule: "+data);
+        CiscoJtapiRouteTerminal terminal = term.get();
+        if (terminal!=null)
+            terminal.registerRoute((CallRouteRule)data);
+    }
+
+    public Object refereshData(Collection<NodeAttribute> sessionAttributes) {
+        throw new UnsupportedOperationException(
+                "refreshData operation is unsupported by this data source");
+    }
+
+    public boolean getDataImmediate(DataConsumer dataConsumer, DataContext context) {
+        throw new UnsupportedOperationException("Pull operation not supported by this dataSource");
+    }
+
+    public Collection<NodeAttribute> generateAttributes() {
+        return null;
     }
 }

@@ -77,7 +77,7 @@ public class AbonentCommutationManagerImplTest {
         pool.requestEndpoint(checkEndpointPoolRequest(owner, waitTimeout, priority, endpoint));
         //callToAbonent
         endpoint.invite(eq(abonentNumber), eq(inviteTimeout), eq(0), checkConversationListener(conversationEvent)
-                , same(scenario), checkBindings());
+                , same(scenario), checkBindings(), anyObject(String.class));
         expect(conversationEvent.getConversation()).andReturn(conversation);
         requestListener.conversationAssigned(conversation);
         //abonentReadyToCommutate

@@ -204,7 +204,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
         expect(request.isValid()).andReturn(Boolean.TRUE).anyTimes();
         expect(request.isHandlingByOperator()).andReturn(false).anyTimes();
         endpoint.invite(eq("88024"), geq(4), eq(0), checkConvListener(), same(scenario)
-                , checkBindings(operator, request));
+                , checkBindings(operator, request), anyObject(String.class));
         request.removeRequestWrapperListener(isA(RequestControllerListener.class));
         request.addToLog("no answer from (88024)");
         request.addToLog("NOT handled by op.(operator)");
@@ -255,7 +255,8 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
         //INVITING STEP
 //        request.fireOperatorNumberQueueEvent("88024");
         operatorEndpoint.invite(eq("88024"), geq(4), eq(0), handleConversationListener(convListener)
-                , same(scenario), checkBindings(operator, request, operatorConversation, commListener));
+                , same(scenario), checkBindings(operator, request, operatorConversation, commListener), 
+                anyObject(String.class));
         
         //OPERATOR READY TO COMMUTATE
         request.addRequestWrapperListener(isA(RequestControllerListener.class));

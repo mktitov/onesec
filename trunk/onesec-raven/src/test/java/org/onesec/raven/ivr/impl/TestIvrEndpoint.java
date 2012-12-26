@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.impl;
 
+import java.util.Collection;
 import java.util.Map;
 import org.onesec.raven.ivr.AudioStream;
 import org.onesec.raven.ivr.Codec;
@@ -28,8 +29,11 @@ import org.onesec.raven.ivr.IvrEndpointState;
 import org.onesec.raven.ivr.RtpAddress;
 import org.onesec.raven.ivr.RtpStreamManager;
 import org.raven.conv.ConversationScenarioState;
+import org.raven.ds.DataConsumer;
+import org.raven.ds.DataContext;
 import org.raven.sched.ExecutorService;
 import org.raven.tree.Node;
+import org.raven.tree.NodeAttribute;
 import org.raven.tree.impl.BaseNode;
 
 /**
@@ -147,7 +151,15 @@ public class TestIvrEndpoint extends BaseNode implements IvrEndpoint
 
     public void invite(String opponentNum, int inviteTimeout, int maxCallDur
             , IvrEndpointConversationListener listener, IvrConversationScenario scenario
-            , Map<String, Object> bindings) {
+            , Map<String, Object> bindings, String callingNumber) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public boolean getDataImmediate(DataConsumer dataConsumer, DataContext context) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public Collection<NodeAttribute> generateAttributes() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 }
