@@ -53,7 +53,8 @@ public class  CommutationManagerCallImpl
     private final AtomicBoolean canceled = new AtomicBoolean(false);
     private final List<CallsCommutationManagerListener> listeners =
             new LinkedList<CallsCommutationManagerListener>();
-    private IvrEndpointConversation operatorConversation = null;
+    private final AtomicReference<IvrEndpointConversation> operatorConversation = 
+            new AtomicReference<IvrEndpointConversation>();
     private ReentrantLock lock = new ReentrantLock();
     private AtomicReference<State> state = new AtomicReference<State>(State.INIT);
     private IvrEndpoint endpoint = null;
@@ -208,6 +209,10 @@ public class  CommutationManagerCallImpl
         return number;
     }
 
+    public IvrEndpointConversation getOperatorConversation() {
+        return operatorConversation.get();
+    }
+
     public CallsQueueOperator getOperator() {
         return manager.getOperator();
     }
@@ -259,13 +264,13 @@ public class  CommutationManagerCallImpl
 
     public void commutateCalls() throws IvrConversationBridgeExeption {
         IvrConversationsBridge bridge = manager.getConversationsBridgeManager().createBridge(
-                getRequest().getConversation(), operatorConversation, logMess(""));
+                getRequest().getConversation(), operatorConversation.get(), logMess(""));
         bridge.addBridgeListener(this);
         bridge.activateBridge();
     }
 
     public void operatorReadyToCommutate(IvrEndpointConversation operatorConversation) {
-        this.operatorConversation = operatorConversation;
+        this.operatorConversation.set(operatorConversation);
         callMoveToState(State.OPERATOR_READY, null, null);
     }
 

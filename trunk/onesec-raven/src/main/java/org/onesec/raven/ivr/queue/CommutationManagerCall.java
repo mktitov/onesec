@@ -33,6 +33,10 @@ public interface CommutationManagerCall
      */
     public String getOperatorNumber();
     /**
+     * Returns operator's conversation
+     */
+    public IvrEndpointConversation getOperatorConversation();
+    /**
      * Returns the operator associated with a call
      */
     public CallsQueueOperator getOperator();

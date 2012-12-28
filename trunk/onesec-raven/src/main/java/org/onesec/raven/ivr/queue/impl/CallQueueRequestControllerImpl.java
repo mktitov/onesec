@@ -29,6 +29,7 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import org.onesec.raven.ivr.*;
 import org.onesec.raven.ivr.queue.*;
 import org.onesec.raven.ivr.queue.event.*;
@@ -36,7 +37,6 @@ import org.onesec.raven.ivr.queue.event.impl.*;
 import org.raven.ds.Record;
 import org.raven.ds.RecordException;
 import org.raven.ds.impl.DataSourceHelper;
-import org.raven.ds.impl.RecordSchemaNode;
 import org.raven.log.LogLevel;
 
 import static org.onesec.raven.ivr.queue.impl.CallQueueCdrRecordSchemaNode.*;
@@ -59,6 +59,8 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
     private final boolean lazyRequest;
     private final Set<String> eventTypes;
     private final RecordSchema cdrSchema;
+    private final AtomicReference<CommutationManagerCall> commutationManager = 
+                  new AtomicReference<CommutationManagerCall>();
 
     private int priority;
     private String queueId;
@@ -227,6 +229,16 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
         return requestId;
     }
 
+    public String getOperatorNumber() {
+        CommutationManagerCall _commutationManager = commutationManager.get();
+        return _commutationManager==null? null : _commutationManager.getOperatorNumber();
+    }
+
+    public IvrEndpointConversation getOperatorConversation() {
+        CommutationManagerCall _commutationManager = commutationManager.get();
+        return _commutationManager==null? null : _commutationManager.getOperatorConversation();
+    }
+
     public CallsQueue getCallsQueue() {
         return queue;
     }
@@ -362,6 +374,7 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
 
     public boolean fireReadyToCommutateQueueEvent(CommutationManagerCall operator) {
         if (handlingByOperator.compareAndSet(false, true)) {
+            commutationManager.set(operator);
             callQueueChangeEvent(new ReadyToCommutateQueueEventImpl(queue, requestId, operator));
             fireOperatorNumberQueueEvent(operator.getOperatorNumber());
             fireRequestProcessingByOperator(operator);
