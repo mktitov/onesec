@@ -217,6 +217,10 @@ public class  CommutationManagerCallImpl
         return manager.getOperator();
     }
 
+    public void transferToOperator(String operatorNumber) {
+        manager.callTransfered(operatorNumber);
+    }
+
     public CallQueueRequestController getRequest() {
         return manager.getRequest();
     }

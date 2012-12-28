@@ -37,6 +37,12 @@ public interface CommutationManagerCall
      */
     public IvrEndpointConversation getOperatorConversation();
     /**
+     * Make a logical transfer to operator. If in queue exists operator with passed operatorNumber then
+     * call attached to this operator else call attached to transfer operator
+     * @param operatorNumber 
+     */
+    public void transferToOperator(String operatorNumber);
+    /**
      * Returns the operator associated with a call
      */
     public CallsQueueOperator getOperator();
