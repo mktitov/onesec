@@ -18,6 +18,7 @@
 package org.onesec.raven.ivr.queue;
 
 import org.onesec.raven.ivr.AudioFile;
+import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.queue.event.NumberChangedQueueEvent;
 import org.raven.ds.DataContext;
 
@@ -31,6 +32,14 @@ public interface CallQueueRequestController extends CallQueueRequest
      * Returns the request id
      */
     public long getRequestId();
+    /**
+     * Returns the phone number of the operator handling the call
+     */
+    public String getOperatorNumber();
+    /**
+     * Returns the conversation of the operator's leg
+     */
+    public IvrEndpointConversation getOperatorConversation();
     /**
      * 
      */
