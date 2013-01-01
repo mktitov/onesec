@@ -29,6 +29,8 @@ import org.onesec.raven.ivr.queue.CallsQueueOperator;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.log.LogLevel;
+import org.raven.sched.impl.AbstractTask;
+import org.raven.tree.Node;
 import org.weda.annotations.constraints.NotNull;
 
 /**
@@ -44,12 +46,13 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
     @Parameter
     private String personDesc;
     @Parameter
-    private Integer timeoutAfterSuccessProcess;
+    private Integer busyTimer;
 
     private AtomicBoolean busy;
     private AtomicReference<CallsCommutationManager> commutationManager;
     private AtomicReference<String> request;
     private AtomicLong timeoutEndTime;
+    private AtomicBoolean busyByBusyTimer;
     
     @Override
     protected void initFields() {
@@ -58,6 +61,7 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
         request = new AtomicReference<String>();
         commutationManager = new AtomicReference<CallsCommutationManager>();
         timeoutEndTime = new AtomicLong();
+        busyByBusyTimer = new AtomicBoolean(false);
     }
 
     @Override
@@ -66,12 +70,12 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
         super.doStart();
     }
 
-    public Integer getTimeoutAfterSuccessProcess() {
-        return timeoutAfterSuccessProcess;
+    public Integer getBusyTimer() {
+        return busyTimer;
     }
 
-    public void setTimeoutAfterSuccessProcess(Integer timeoutAfterSuccessProcess) {
-        this.timeoutAfterSuccessProcess = timeoutAfterSuccessProcess;
+    public void setBusyTimer(Integer busyTimer) {
+        this.busyTimer = busyTimer;
     }
     
     @Parameter(readOnly=true)
@@ -125,12 +129,13 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
     {
         if (getCallsQueues().getUseOnlyRegisteredOperators()==true && getOperatorId()==null)
             return false;
-        if (timeoutEndTime.get()>=System.currentTimeMillis() || !busy.compareAndSet(false, true) ) {
+//        if (timeoutEndTime.get()>=System.currentTimeMillis() || !busy.compareAndSet(false, true) ) {
+        if (busyByBusyTimer.get() || !busy.compareAndSet(false, true) ) {
             onBusyRequests.incrementAndGet();
             return false;
         }
         try {
-            timeoutEndTime.set(0);
+//            timeoutEndTime.set(0);
             this.request.set(request.toString());
             String _nums = operatorPhoneNumbers==null||operatorPhoneNumbers.trim().length()==0?
                     phoneNumbers : operatorPhoneNumbers;
@@ -149,13 +154,23 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
     protected void doRequestProcessed(CallsCommutationManager manager, boolean callHandled) {
         if (commutationManager.compareAndSet(manager, null)) {
             if (callHandled) {
-                Integer timeout = timeoutAfterSuccessProcess;
-                if (timeout!=null)
-                    timeoutEndTime.set(System.currentTimeMillis()+timeout*1000);
+                Integer timeout = busyTimer;
+                if (timeout!=null && getExecutor().executeQuietly(timeout*1000, new BusyTimerTask())) {
+                        busyByBusyTimer.set(true);
+                        ;//fireBusyTimerStarted
+                }
+//                    timeoutEndTime.set(System.currentTimeMillis()+timeout*1000);
             }
             busy.set(false);
             request.set(null);
         }
+    }
+
+    public boolean resetBusyTimer() {
+        if (!busyByBusyTimer.compareAndSet(true, false)) 
+            return false;
+        //fireBusyTimer stopped
+        return true;
     }
     
     public CallsQueueOperator callTransferedFromOperator(String phoneNumber
@@ -178,5 +193,17 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
      */
     CallsCommutationManager getCommutationManager(){
         return commutationManager.get();
+    }
+    
+    private class BusyTimerTask extends AbstractTask {
+
+        public BusyTimerTask() {
+            super(CallsQueueOperatorNode.this, "BusyTimer");
+        }
+
+        @Override
+        public void doRun() throws Exception {
+            resetBusyTimer();
+        }
     }
 }

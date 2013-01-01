@@ -26,6 +26,9 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import org.onesec.raven.ivr.queue.*;
+import org.onesec.raven.ivr.queue.event.OperatorBusyTimerStarted;
+import org.onesec.raven.ivr.queue.event.OperatorBusyTimerStopped;
+import org.onesec.raven.ivr.queue.event.OperatorEvent;
 import static org.onesec.raven.ivr.queue.impl.CallQueueCdrRecordSchemaNode.*;
 import org.raven.RavenUtils;
 import org.raven.annotations.NodeClass;
@@ -52,6 +55,8 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
     public final static String ASSIGNED_TO_OPERATOR_EVENT = "ASSIGNED_TO_OPERATOR";
     public final static String CONVERSATION_STARTED_EVENT = "CONVERSATION_STARTED";
     public final static String CALL_FINISHED_EVENT = "CALL_FINISHED";
+    public final static String OPERATOR_BUSY_TIMER_STARTED = "OPERATOR_BUSY_TIMER_STARTED";
+    public final static String OPERATOR_BUSY_TIMER_STOPPED = "OPERATOR_BUSY_TIMER_STOPPED";
     
     private final static Set<String> AVAILABLE_EVENTS = new HashSet<String>(Arrays.asList(
         QUEUED_EVENT, ASSIGNED_TO_OPERATOR_EVENT, CONVERSATION_STARTED_EVENT, CALL_FINISHED_EVENT));
@@ -232,8 +237,7 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
         return oper;
     }
 
-    String logMess(CallQueueRequest req, String message, Object... args)
-    {
+    String logMess(CallQueueRequest req, String message, Object... args) {
         return req.getConversationInfo()+". CallsQueues.  "+String.format(message, args);
     }
 
@@ -333,5 +337,28 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
             }
             return new HashSet<String>(Arrays.asList(toks));
         }
+    }
+    
+    private void processEvent(Object event) {
+        RecordSchema schema = cdrRecordSchema;
+        if (schema==null)
+            return;
+        try {
+            Record rec = schema.createRecord();
+            if (event instanceof OperatorEvent) {
+                
+            }
+        } catch (Throwable e) {
+            if (isLogLevelEnabled(LogLevel.ERROR))
+                getLogger().error("Error processing event: "+event, e);
+        }
+    }
+    
+    public void fireOperatorBusyTimerStartedEvent(OperatorBusyTimerStarted event) {
+        
+    }
+    
+    public void fireOperatorBusyTimerStoppedEvent(OperatorBusyTimerStopped event) {
+        
     }
 }
