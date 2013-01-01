@@ -55,6 +55,10 @@ public class CallsQueueVirtualOperatorNode extends AbstractOperatorNode {
         }
     }
 
+    public boolean resetBusyTimer() {
+        return false;
+    }
+
     @Override
     public String getPersonDesc() {
         return null;
