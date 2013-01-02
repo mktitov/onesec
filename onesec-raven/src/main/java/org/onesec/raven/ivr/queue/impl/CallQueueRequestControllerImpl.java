@@ -27,6 +27,7 @@ import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -42,6 +43,7 @@ import org.raven.log.LogLevel;
 import static org.onesec.raven.ivr.queue.impl.CallQueueCdrRecordSchemaNode.*;
 import static org.onesec.raven.ivr.queue.impl.CallsQueuesNode.*;
 import org.raven.ds.RecordSchema;
+import org.raven.tree.Node;
 
 /**
  *
@@ -358,8 +360,10 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
         return new Timestamp(System.currentTimeMillis());
     }
     
-    public void fireRejectedQueueEvent(){
-        owner.getRequests().remove(requestId);
+    public void fireRejectedQueueEvent() {
+        Map<Long, CallQueueRequestController> requests = owner.getRequests();
+        if (requests!=null)
+            owner.getRequests().remove(requestId);
         callQueueChangeEvent(new RejectedQueueEventImpl(queue, requestId));
     }
 

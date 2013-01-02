@@ -113,7 +113,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
     }
     
     @Test
-    public void timeoutAfterSuccessProcess() throws Exception {
+    public void busyTimerTest() throws Exception {
         CallQueueRequestController request = createMock(CallQueueRequestController.class);
         CallsQueue queue = createMock(CallsQueue.class);
         AudioFile audioFile = createMock(AudioFile.class);
@@ -142,7 +142,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
 
         assertTrue(operator.start());
         endpointPool.setEndpointPool(pool);
-        operator.setTimeoutAfterSuccessProcess(1);
+        operator.setBusyTimer(1);
         operator.processRequest(queue, request, scenario, audioFile, null);
         operator.doRequestProcessed(operator.getCommutationManager(), true);
         assertFalse(operator.getBusy());
@@ -192,6 +192,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
         IvrEndpointPool pool = createMock(IvrEndpointPool.class);
         IvrEndpoint endpoint = createMock(IvrEndpoint.class);
         IvrEndpointState endpointState = createMock(IvrEndpointState.class);
+        IvrEndpointConversation conversation = createMock(IvrEndpointConversation.class);
         StateWaitResult stateWaitResult = createMock(StateWaitResult.class);
 
         request.fireOperatorQueueEvent(operator.getName(), null, null);
@@ -203,14 +204,16 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
         request.addRequestWrapperListener(isA(RequestControllerListener.class));
         expect(request.isValid()).andReturn(Boolean.TRUE).anyTimes();
         expect(request.isHandlingByOperator()).andReturn(false).anyTimes();
+        expect(request.getConversation()).andReturn(conversation);
+        expect(conversation.getCallingNumber()).andReturn("12345");
         endpoint.invite(eq("88024"), geq(4), eq(0), checkConvListener(), same(scenario)
-                , checkBindings(operator, request), anyObject(String.class));
+                , checkBindings(operator, request), eq("12345"));
         request.removeRequestWrapperListener(isA(RequestControllerListener.class));
         request.addToLog("no answer from (88024)");
         request.addToLog("NOT handled by op.(operator)");
         queue.queueCall(checkRequest(request));
 
-        replay(request, queue, pool, endpoint, endpointState, stateWaitResult, audioFile);
+        replay(request, queue, pool, endpoint, endpointState, stateWaitResult, audioFile, conversation);
 
         operator.setInviteTimeout(5);
         assertTrue(operator.start());
@@ -223,10 +226,10 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
         long diff = System.currentTimeMillis() - startTime;
         System.out.println("diff:"+diff);
 
-        verify(request, queue, pool, endpoint, endpointState, stateWaitResult, audioFile);
+        verify(request, queue, pool, endpoint, endpointState, stateWaitResult, audioFile, conversation);
     }
 
-    @Test(timeout=10000)
+    @Test(timeout=100000)
     public void commutateTest() throws Exception {
         final CallQueueRequestController request = createMock(CallQueueRequestController.class);
         final AudioFile audioFile = createMock(AudioFile.class);
@@ -254,9 +257,11 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
         
         //INVITING STEP
 //        request.fireOperatorNumberQueueEvent("88024");
+        expect(request.getConversation()).andReturn(abonentConversation);
+        expect(abonentConversation.getCallingNumber()).andReturn("12345");
         operatorEndpoint.invite(eq("88024"), geq(4), eq(0), handleConversationListener(convListener)
                 , same(scenario), checkBindings(operator, request, operatorConversation, commListener), 
-                anyObject(String.class));
+                eq("12345"));
         
         //OPERATOR READY TO COMMUTATE
         request.addRequestWrapperListener(isA(RequestControllerListener.class));

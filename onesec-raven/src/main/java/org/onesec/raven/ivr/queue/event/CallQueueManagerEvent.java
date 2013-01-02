@@ -19,17 +19,6 @@ package org.onesec.raven.ivr.queue.event;
  *
  * @author Mikhail Titov
  */
-public interface OperatorEvent extends CallQueueManagerEvent {
-    /**
-     * Returns operator id
-     */
-    public Integer getOperatorId();
-    /**
-     * Returns the id of the person registered on operator workplace
-     */
-    public String getPersonId();
-    /**
-     * Returns the description of the person registered on operator workplace
-     */
-    public String getPersonDesc();
+public interface CallQueueManagerEvent {
+    
 }

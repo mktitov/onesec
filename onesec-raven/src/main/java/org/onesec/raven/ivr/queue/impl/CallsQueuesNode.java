@@ -25,7 +25,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import org.onesec.raven.ivr.queue.*;
+import org.onesec.raven.ivr.queue.event.CallQueueManagerEvent;
 import org.onesec.raven.ivr.queue.event.OperatorBusyTimerStarted;
 import org.onesec.raven.ivr.queue.event.OperatorBusyTimerStopped;
 import org.onesec.raven.ivr.queue.event.OperatorEvent;
@@ -34,6 +36,8 @@ import org.raven.RavenUtils;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.ds.*;
+import org.raven.ds.impl.DataContextImpl;
+import org.raven.ds.impl.DataSourceHelper;
 import org.raven.ds.impl.RecordSchemaNode;
 import org.raven.ds.impl.RecordSchemaValueTypeHandlerFactory;
 import org.raven.log.LogLevel;
@@ -57,9 +61,12 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
     public final static String CALL_FINISHED_EVENT = "CALL_FINISHED";
     public final static String OPERATOR_BUSY_TIMER_STARTED = "OPERATOR_BUSY_TIMER_STARTED";
     public final static String OPERATOR_BUSY_TIMER_STOPPED = "OPERATOR_BUSY_TIMER_STOPPED";
+    public final static String EVENT_TYPE_TAG = "eventType";
+    public final static String REQUEST_ID_TAG = "requestId";
     
     private final static Set<String> AVAILABLE_EVENTS = new HashSet<String>(Arrays.asList(
-        QUEUED_EVENT, ASSIGNED_TO_OPERATOR_EVENT, CONVERSATION_STARTED_EVENT, CALL_FINISHED_EVENT));
+        QUEUED_EVENT, ASSIGNED_TO_OPERATOR_EVENT, CONVERSATION_STARTED_EVENT, CALL_FINISHED_EVENT,
+        OPERATOR_BUSY_TIMER_STARTED, OPERATOR_BUSY_TIMER_STOPPED));
     
     @Parameter(valueHandlerType=RecordSchemaValueTypeHandlerFactory.TYPE)
     private RecordSchemaNode cdrRecordSchema;
@@ -79,21 +86,26 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
     private CallsQueuesContainerNode queuesNode;
     private CallsQueueTransferOperatorNode transferOperator;
     private OperatorRegistratorNode operatorRegistrator;
-    private Set<String> permittedEvents; 
+    private AtomicReference<Set<String>> permittedEvents; 
     private Map<Long, CallQueueRequestController> requests;
-    
+
+    @Override
+    protected void initFields() {
+        super.initFields();
+        permittedEvents = new AtomicReference<Set<String>>(Collections.EMPTY_SET);
+        requestIdSeq = new AtomicLong();
+    }
 
     @Override
     protected void doStart() throws Exception {
         super.doStart();
         checkRecordSchema(cdrRecordSchema);
-        permittedEvents = initPermittedEvents();
+        permittedEvents.set(initPermittedEvents());
         requests = new ConcurrentHashMap<Long, CallQueueRequestController>();
         initNodes();
     }
     
     private void initNodes() {
-        requestIdSeq = new AtomicLong();
         operatorRegistrator = (OperatorRegistratorNode) getChildren(OperatorRegistratorNode.NAME);
         if (operatorRegistrator==null) {
             operatorRegistrator = new OperatorRegistratorNode();
@@ -133,7 +145,7 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
                 if (isLogLevelEnabled(LogLevel.WARN))
                     getLogger().warn(
                             logMess(request, "Rejected because of queues selector stopped"));
-                requestController.addToLog("queues selector stopped");
+                requestController.addToLog("queues manager stopped");
                 requestController.fireRejectedQueueEvent();
                 return;
             }
@@ -172,7 +184,7 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
     }
     
     public Set<String> getPermittedEvent() {
-        return permittedEvents;
+        return permittedEvents.get();
     }
 
     public String getPermittedEventTypes() {
@@ -254,6 +266,7 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
             checkRecordSchemaField(fields, CALLING_NUMBER, RecordSchemaFieldType.STRING);
             checkRecordSchemaField(fields, OPERATOR_ID, RecordSchemaFieldType.STRING);
             checkRecordSchemaField(fields, OPERATOR_NUMBER, RecordSchemaFieldType.STRING);
+            checkRecordSchemaField(fields, OPERATOR_BUSY_TIMER, RecordSchemaFieldType.INTEGER);
             checkRecordSchemaField(fields, LOG, RecordSchemaFieldType.STRING);
             checkRecordSchemaField(fields, QUEUED_TIME, RecordSchemaFieldType.TIMESTAMP);
             checkRecordSchemaField(fields, REJECTED_TIME, RecordSchemaFieldType.TIMESTAMP);
@@ -261,6 +274,7 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
             checkRecordSchemaField(fields, COMMUTATED_TIME, RecordSchemaFieldType.TIMESTAMP);
             checkRecordSchemaField(fields, DISCONNECTED_TIME, RecordSchemaFieldType.TIMESTAMP);
             checkRecordSchemaField(fields, CONVERSATION_START_TIME, RecordSchemaFieldType.TIMESTAMP);
+            checkRecordSchemaField(fields, CONVERSATION_DURATION, RecordSchemaFieldType.INTEGER);
             checkRecordSchemaField(fields, CONVERSATION_DURATION, RecordSchemaFieldType.INTEGER);
             
         }catch (Exception e){
@@ -339,14 +353,27 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
         }
     }
     
-    private void processEvent(Object event) {
+    void fireEvent(CallQueueManagerEvent event) {
         RecordSchema schema = cdrRecordSchema;
         if (schema==null)
-            return;
+            return; 
         try {
             Record rec = schema.createRecord();
-            if (event instanceof OperatorEvent) {
-                
+            boolean isTimerStartedPermitted = permittedEvents.get().contains(OPERATOR_BUSY_TIMER_STARTED);
+            boolean isTimerStoppedPermitted = permittedEvents.get().contains(OPERATOR_BUSY_TIMER_STOPPED);
+            if (event instanceof OperatorEvent && (isTimerStartedPermitted || isTimerStoppedPermitted)) {
+                OperatorEvent operEv = (OperatorEvent) event;
+                rec.setValue(OPERATOR_ID, operEv.getOperatorId());
+                rec.setValue(OPERATOR_PERSON_ID, operEv.getPersonId());
+                rec.setValue(OPERATOR_PERSON_DESC, operEv.getPersonDesc());
+                if (isTimerStartedPermitted && event instanceof OperatorBusyTimerStarted) {
+                    rec.setTag(EVENT_TYPE_TAG, OPERATOR_BUSY_TIMER_STARTED);
+                    rec.setValue(OPERATOR_BUSY_TIMER, ((OperatorBusyTimerStarted)event).getTimerDuration());
+                    DataSourceHelper.sendDataToConsumers(this, rec, new DataContextImpl());
+                } else if (isTimerStoppedPermitted && event instanceof OperatorBusyTimerStopped) {
+                    rec.setTag(EVENT_TYPE_TAG, OPERATOR_BUSY_TIMER_STOPPED);
+                    DataSourceHelper.sendDataToConsumers(this, rec, new DataContextImpl());
+                }
             }
         } catch (Throwable e) {
             if (isLogLevelEnabled(LogLevel.ERROR))
@@ -354,11 +381,4 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
         }
     }
     
-    public void fireOperatorBusyTimerStartedEvent(OperatorBusyTimerStarted event) {
-        
-    }
-    
-    public void fireOperatorBusyTimerStoppedEvent(OperatorBusyTimerStopped event) {
-        
-    }
 }
