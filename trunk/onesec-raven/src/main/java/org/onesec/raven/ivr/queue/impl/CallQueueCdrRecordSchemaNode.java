@@ -39,6 +39,7 @@ public class CallQueueCdrRecordSchemaNode extends RecordSchemaNode
     public final static String OPERATOR_NUMBER = "operatorNumber";
     public final static String OPERATOR_PERSON_ID = "operatorPersonId";
     public final static String OPERATOR_PERSON_DESC = "operatorPersonDesc";
+    public final static String OPERATOR_BUSY_TIMER = "operatorBusyTimer";
     public final static String TRANSFERED = "transfered";
     public final static String LOG = "log";
     public final static String QUEUED_TIME = "queuedTime";
@@ -72,6 +73,7 @@ public class CallQueueCdrRecordSchemaNode extends RecordSchemaNode
     @Message private static String disconnectedTimeDisplayName;
     @Message private static String conversationStartTimeDisplayName;
     @Message private static String conversationDurationDisplayName;
+    @Message private static String operatorBusyTimerDisplayName;
 
     @Override
     protected void doInit() throws Exception {
@@ -103,6 +105,7 @@ public class CallQueueCdrRecordSchemaNode extends RecordSchemaNode
         createField(OPERATOR_NUMBER, operatorNumberDisplayName, RecordSchemaFieldType.STRING);
         createField(OPERATOR_PERSON_ID, operatorPersonIdDisplayName, RecordSchemaFieldType.STRING);
         createField(OPERATOR_PERSON_DESC, operatorPersonDescDisplayName, RecordSchemaFieldType.STRING);
+        createField(OPERATOR_BUSY_TIMER, operatorBusyTimerDisplayName, RecordSchemaFieldType.INTEGER);
         createField(TRANSFERED, transferedDisplayName, RecordSchemaFieldType.STRING);
         createField(LOG, logDisplayName, RecordSchemaFieldType.STRING);
         createField(QUEUED_TIME, queuedTimeDisplayName, RecordSchemaFieldType.TIMESTAMP);

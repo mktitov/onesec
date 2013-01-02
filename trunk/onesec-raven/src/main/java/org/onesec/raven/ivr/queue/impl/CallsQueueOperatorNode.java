@@ -51,7 +51,7 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
     private AtomicBoolean busy;
     private AtomicReference<CallsCommutationManager> commutationManager;
     private AtomicReference<String> request;
-    private AtomicLong timeoutEndTime;
+    private AtomicLong busyTimerEndTime;
     private AtomicBoolean busyByBusyTimer;
     
     @Override
@@ -60,7 +60,7 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
         busy = new AtomicBoolean(false);
         request = new AtomicReference<String>();
         commutationManager = new AtomicReference<CallsCommutationManager>();
-        timeoutEndTime = new AtomicLong();
+        busyTimerEndTime = new AtomicLong();
         busyByBusyTimer = new AtomicBoolean(false);
     }
 
@@ -121,6 +121,12 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
     public String getPersonId() {
         return getOperatorId();
     }
+    
+    @Parameter(readOnly=true)
+    public Long getBusyTimerValue() {
+        long val = busyTimerEndTime.get()-System.currentTimeMillis();
+        return val<0? 0 : val;
+    }
 
     @Override
     protected boolean doProcessRequest(CallsQueue queue, CallQueueRequestController request
@@ -157,6 +163,9 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
                 Integer timeout = busyTimer;
                 if (timeout!=null && getExecutor().executeQuietly(timeout*1000, new BusyTimerTask())) {
                         busyByBusyTimer.set(true);
+                        busyTimerEndTime.set(System.currentTimeMillis()+timeout*1000);
+                        getCallsQueues().fireEvent(new OperatorBusyTimerStartedImpl(
+                            timeout, getId(), personId, personDesc));
                         ;//fireBusyTimerStarted
                 }
 //                    timeoutEndTime.set(System.currentTimeMillis()+timeout*1000);
