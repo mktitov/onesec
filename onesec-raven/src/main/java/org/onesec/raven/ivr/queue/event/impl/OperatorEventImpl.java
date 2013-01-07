@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.onesec.raven.ivr.queue.impl;
+package org.onesec.raven.ivr.queue.event.impl;
 
 import org.onesec.raven.ivr.queue.event.OperatorEvent;
 
@@ -22,17 +22,17 @@ import org.onesec.raven.ivr.queue.event.OperatorEvent;
  * @author Mikhail Titov
  */
 public class OperatorEventImpl implements OperatorEvent {
-    private final Integer operatorId;
+    private final String operatorId;
     private final String personId;
     private final String personDesc;
 
-    public OperatorEventImpl(Integer operatorId, String personId, String personDesc) {
+    public OperatorEventImpl(String operatorId, String personId, String personDesc) {
         this.operatorId = operatorId;
         this.personId = personId;
         this.personDesc = personDesc;
     }
 
-    public Integer getOperatorId() {
+    public String getOperatorId() {
         return operatorId;
     }
 
