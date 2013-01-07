@@ -13,8 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.onesec.raven.ivr.queue.impl;
+package org.onesec.raven.ivr.queue.event.impl;
 
+import org.onesec.raven.ivr.queue.event.impl.OperatorEventImpl;
 import org.onesec.raven.ivr.queue.event.OperatorBusyTimerStarted;
 
 /**
@@ -24,7 +25,7 @@ import org.onesec.raven.ivr.queue.event.OperatorBusyTimerStarted;
 public class OperatorBusyTimerStartedImpl extends OperatorEventImpl implements OperatorBusyTimerStarted {
     private final int timerDuration;
 
-    public OperatorBusyTimerStartedImpl(int timerDuration, Integer operatorId, String personId, String personDesc) {
+    public OperatorBusyTimerStartedImpl(int timerDuration, String operatorId, String personId, String personDesc) {
         super(operatorId, personId, personDesc);
         this.timerDuration = timerDuration;
     }

@@ -13,8 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.onesec.raven.ivr.queue.impl;
+package org.onesec.raven.ivr.queue.event.impl;
 
+import org.onesec.raven.ivr.queue.event.impl.OperatorEventImpl;
 import org.onesec.raven.ivr.queue.event.OperatorBusyTimerStopped;
 
 /**
@@ -22,7 +23,7 @@ import org.onesec.raven.ivr.queue.event.OperatorBusyTimerStopped;
  * @author Mikhail Titov
  */
 public class OperatorBusyTimerStoppedImpl extends OperatorEventImpl implements OperatorBusyTimerStopped {
-    public OperatorBusyTimerStoppedImpl(Integer operatorId, String personId, String personDesc) {
+    public OperatorBusyTimerStoppedImpl(String operatorId, String personId, String personDesc) {
         super(operatorId, personId, personDesc);
     }
 }

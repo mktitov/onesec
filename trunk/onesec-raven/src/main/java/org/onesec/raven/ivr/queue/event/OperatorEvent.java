@@ -23,7 +23,7 @@ public interface OperatorEvent extends CallQueueManagerEvent {
     /**
      * Returns operator id
      */
-    public Integer getOperatorId();
+    public String getOperatorId();
     /**
      * Returns the id of the person registered on operator workplace
      */

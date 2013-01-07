@@ -17,6 +17,8 @@
 
 package org.onesec.raven.ivr.queue.impl;
 
+import org.onesec.raven.ivr.queue.event.impl.OperatorBusyTimerStoppedImpl;
+import org.onesec.raven.ivr.queue.event.impl.OperatorBusyTimerStartedImpl;
 import java.io.FileInputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -279,13 +281,13 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         assertTrue(queues.start());
         createCollector();
         
-        queues.fireEvent(new OperatorBusyTimerStartedImpl(10, 1, "p1", "d1"));
+        queues.fireEvent(new OperatorBusyTimerStartedImpl(10, "1", "p1", "d1"));
         assertEquals(0, collector.getDataListSize());
         
         queues.stop();
         queues.setPermittedEventTypes(CallsQueuesNode.OPERATOR_BUSY_TIMER_STARTED);
         assertTrue(queues.start());
-        queues.fireEvent(new OperatorBusyTimerStartedImpl(10, 1, "p1", "d1"));
+        queues.fireEvent(new OperatorBusyTimerStartedImpl(10, "1", "p1", "d1"));
         assertEquals(1, collector.getDataListSize());
         Object obj = collector.getDataList().get(0);
         assertTrue(obj instanceof Record);
@@ -303,13 +305,13 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         assertTrue(queues.start());
         createCollector();
         
-        queues.fireEvent(new OperatorBusyTimerStoppedImpl(1, "p1", "d1"));
+        queues.fireEvent(new OperatorBusyTimerStoppedImpl("1", "p1", "d1"));
         assertEquals(0, collector.getDataListSize());
         
         queues.stop();
         queues.setPermittedEventTypes(CallsQueuesNode.OPERATOR_BUSY_TIMER_STOPPED);
         assertTrue(queues.start());
-        queues.fireEvent(new OperatorBusyTimerStoppedImpl(1, "p1", "d1"));
+        queues.fireEvent(new OperatorBusyTimerStoppedImpl("1", "p1", "d1"));
         assertEquals(1, collector.getDataListSize());
         Object obj = collector.getDataList().get(0);
         assertTrue(obj instanceof Record);
