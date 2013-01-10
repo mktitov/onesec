@@ -161,19 +161,20 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
     @Override
     protected void doRequestProcessed(CallsCommutationManager manager, boolean callHandled) {
         if (commutationManager.compareAndSet(manager, null)) {
-            if (callHandled) {
-                Integer timeout = busyTimer;
-                if (timeout!=null && getExecutor().executeQuietly(timeout*1000, new BusyTimerTask())) {
-                        busyByBusyTimer.set(true);
-                        busyTimerEndTime.set(System.currentTimeMillis()+timeout*1000);
-                        getCallsQueues().fireEvent(new OperatorBusyTimerStartedImpl(
-                            timeout, getName(), personId, personDesc));
-                        ;//fireBusyTimerStarted
-                }
-//                    timeoutEndTime.set(System.currentTimeMillis()+timeout*1000);
-            }
+            if (callHandled) 
+                startBusyTimer();
             busy.set(false);
             request.set(null);
+        }
+    }
+    
+    private void startBusyTimer() {
+        Integer timeout = busyTimer;
+        if (timeout!=null && getExecutor().executeQuietly(timeout*1000, new BusyTimerTask())) {
+            busyByBusyTimer.set(true);
+            busyTimerEndTime.set(System.currentTimeMillis()+timeout*1000);
+            getCallsQueues().fireEvent(new OperatorBusyTimerStartedImpl(
+                timeout, getName(), personId, personDesc));
         }
     }
 
@@ -188,7 +189,7 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
     public CallsQueueOperator callTransferedFromOperator(String phoneNumber
             , CallsCommutationManager manager) 
     {
-        doRequestProcessed(commutationManager.get(), false);
+        doRequestProcessed(commutationManager.get(), true);
         return getCallsQueues().processCallTransferedEvent(phoneNumber, manager);
     }
 

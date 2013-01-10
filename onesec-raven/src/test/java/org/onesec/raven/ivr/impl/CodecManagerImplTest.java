@@ -56,10 +56,10 @@ public class CodecManagerImplTest extends Assert {
 //        }
     }
     
-//    @Test
+    @Test
     public void buildCodecChainTest() throws Exception {
         long startTs = System.currentTimeMillis();
-        CodecConfig[] codecs = manager.buildCodecChain(G711_MU_LAW.getAudioFormat(), G729.getAudioFormat());
+        CodecConfig[] codecs = manager.buildCodecChain(G711_A_LAW.getAudioFormat(), G729.getAudioFormat());
 //        for (int i=1; i<10000; ++i)
 //            codecs = manager.buildCodecChain(G711_MU_LAW.getAudioFormat(), G729.getAudioFormat());
         logger.debug("Processing time: {}", System.currentTimeMillis()-startTs);
@@ -92,7 +92,7 @@ public class CodecManagerImplTest extends Assert {
 //        assertEquals(2, codecs.length);
     }
     
-    @Test
+//    @Test
     public void buildMultiplexerTest() throws Exception {
         Multiplexer mux = manager.buildMultiplexer(FileTypeDescriptor.WAVE);
         assertNotNull(mux);

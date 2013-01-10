@@ -248,8 +248,11 @@ public class CiscoJtapiRouteTerminal implements CiscoTerminalObserver, AddressOb
     }
 
     public void routeEvent(RouteEvent event) {
-        if (logger.isDebugEnabled())
+        if (logger.isDebugEnabled()) {
             logger.debug("Received route callback event: "+event.getClass().getName());
+            logger.debug("Calling number: {}; currentRouteNumber: {}", 
+                    event.getCallingAddress().getName(), event.getCurrentRouteAddress().getName());
+        }
         CiscoRouteSession sess = (CiscoRouteSession) event.getRouteSession();
         CallRouteRule route = findRoute(event.getCallingAddress().getName());
         try {
