@@ -446,6 +446,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         if (conversationState==null) {
             conversationState = scenario.createConversationState();
             conversationState.setBinding(DTMF_BINDING, "-", BindingScope.CONVERSATION);
+            conversationState.setBinding(DISABLE_AUDIO_STREAM_RESET, false, BindingScope.CONVERSATION);
             conversationState.setBindingDefaultValue(DTMF_BINDING, "-");
             conversationState.setBinding(VARS_BINDING, new HashMap(), BindingScope.CONVERSATION);
             conversationState.setBinding(
@@ -504,8 +505,9 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                     owner.getLogger().debug(callLog(
                             "Continue conversation using dtmf ("+dtmfChar+")"));
-
-                if (!audioStreamJustCreated.compareAndSet(true, false))
+                Boolean disableAudioStreamReset = (Boolean) conversationState.getBindings().get(
+                        DISABLE_AUDIO_STREAM_RESET);
+                if (!audioStreamJustCreated.compareAndSet(true, false) && !disableAudioStreamReset)
                     audioStream.reset();
                 conversationState.getBindings().put(DTMF_BINDING, ""+dtmfChar);
                 Collection<Node> actions = scenario.makeConversation(conversationState);

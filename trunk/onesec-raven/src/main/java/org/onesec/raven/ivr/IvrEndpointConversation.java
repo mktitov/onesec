@@ -31,10 +31,11 @@ public interface IvrEndpointConversation extends ObjectDescription
     public final static char EMPTY_DTMF = '-';
     public final static String DTMF_BINDING = "dtmf";
     public final static String DTMFS_BINDING = "dtmfs";
+    public final static String DISABLE_AUDIO_STREAM_RESET = "disableAudioStreamReset";
     public final static String CONVERSATION_STATE_BINDING = "conversationState";
     public final static String VARS_BINDING = "vars";
     public final static String NUMBER_BINDING = "number";
-    public final static String CALLED_NUMBER_BINDING = "calledNumber";
+    public final static String CALLED_NUMBER_BINDING = "calledNumber";    
 
     /**
      * Adds the listener to this conversation
