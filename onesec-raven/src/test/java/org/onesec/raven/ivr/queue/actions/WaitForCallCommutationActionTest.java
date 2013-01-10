@@ -35,7 +35,7 @@ public class WaitForCallCommutationActionTest extends Assert
 {
     private static String executedKey = "executed_org.onesec.raven.ivr.queue.actions.WaitForCallCommutationAction_1";
     
-    @Test
+//    @Test
     public void errorTest()
     {
         IvrEndpointConversation conv = createMock(IvrEndpointConversation.class);
@@ -96,8 +96,8 @@ public class WaitForCallCommutationActionTest extends Assert
         };
 
         actionThread.start();
-        TimeUnit.MILLISECONDS.sleep(500);
-//        TimeUnit.MILLISECONDS.sleep(150000);
+//        TimeUnit.MILLISECONDS.sleep(500);
+        TimeUnit.MILLISECONDS.sleep(150000);
         assertTrue(actionThread.isAlive());
         action.cancel();
         TimeUnit.MILLISECONDS.sleep(150);
@@ -106,7 +106,7 @@ public class WaitForCallCommutationActionTest extends Assert
         verify(conv, state, bindings, manager, owner);
     }
 
-    @Test
+//    @Test
     public void normalTest2() throws Exception {
         final IvrEndpointConversation conv = createMock(IvrEndpointConversation.class);
         ConversationScenarioState state = createMock(ConversationScenarioState.class);
