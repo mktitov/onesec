@@ -26,6 +26,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.media.*;
 import javax.media.format.AudioFormat;
 import javax.media.protocol.ContentDescriptor;
+import org.onesec.raven.codec.AlawDepacketizer;
 import org.onesec.raven.codec.AlawEncoder;
 import org.onesec.raven.codec.AlawPacketizer;
 import org.onesec.raven.codec.UlawPacketizer;
@@ -83,6 +84,10 @@ public class CodecManagerImpl implements CodecManager {
                 , g.getSupportedOutputFormats(null)
                 , PlugInManager.CODEC);
         logger.debug("G729 encoder/packetizer ({}) successfully added", G729Encoder.class.getName());
+        
+        AlawDepacketizer adep = new AlawDepacketizer();
+        PlugInManager.addPlugIn(AlawDepacketizer.class.getName(), adep.getSupportedInputFormats(), 
+                adep.getSupportedOutputFormats(null), PlugInManager.CODEC);
 
         G729Decoder d = new G729Decoder();
         PlugInManager.addPlugIn(G729Decoder.class.getName()
@@ -117,6 +122,9 @@ public class CodecManagerImpl implements CodecManager {
                     logger.error("Error creating instance of codec ({})", className);
             }
         }
+        if (logger.isDebugEnabled())
+            for (FormatInfo format: _formats)
+                logger.debug("codec: "+format.codec.toString()+"; format: "+format.inFormat.toString());
         formats = new FormatInfo[_formats.size()];
         _formats.toArray(formats);
     }
@@ -185,11 +193,13 @@ public class CodecManagerImpl implements CodecManager {
     
     public CodecConfig[] buildCodecChain(AudioFormat inFormat, AudioFormat outFormat) throws CodecManagerException {
         try {
+            if (inFormat.getSampleRate()==AudioFormat.NOT_SPECIFIED)
+                inFormat = new AudioFormat(inFormat.getEncoding(), 8000, inFormat.getSampleSizeInBits(), inFormat.getChannels());
             CodecConfig[] codecs = getChainFromCache(inFormat, outFormat);
             if (codecs!=null)
                 return codecs;
             TailHolder tailHolder = new TailHolder();
-                getChainTail(null, inFormat, outFormat, tailHolder);
+            getChainTail(null, inFormat, outFormat, tailHolder);
             checkTail(tailHolder.tail, inFormat, outFormat);
             if (tailHolder.tail==null)
                 throw new CodecManagerException(String.format(
