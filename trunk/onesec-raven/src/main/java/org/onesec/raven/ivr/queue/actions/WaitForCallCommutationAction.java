@@ -66,6 +66,7 @@ public class WaitForCallCommutationAction extends AsyncAction
         if (commutationManager==null)
             throw new Exception("CallsCommutationManager not found in the conversation scenario state");
         
+        bindings.put(IvrEndpointConversation.DISABLE_AUDIO_STREAM_RESET, commutationManager.isCommutationValid());
         String executedFlagKey = RavenUtils.generateKey("executed_"+this.getClass().getName(), owner);
 
         boolean executed = bindings.containsKey(executedFlagKey);
@@ -77,22 +78,27 @@ public class WaitForCallCommutationAction extends AsyncAction
                 bindings.put(executedFlagKey, true);
             }
             
-            while (!executed && !hasCancelRequest() && commutationManager.isCommutationValid()) {
+            boolean commutated = false;
+            while (!executed && !hasCancelRequest() && commutationManager.isCommutationValid() && !commutated) {
+//                conv.getOwner().getLogger().debug("Playing beep");
                 IvrUtils.playAudioInAction(this, conv, new ResourceInputStreamSource(BEEP_RESOURCE_NAME), this);
                 lock.lock();
                 try {
                     if (!abonentReady)
                         abonentReadyCondition.await(ABONENT_READY_WAIT_TIMEOUT, TimeUnit.MILLISECONDS);
-                    if (abonentReady)
+                    if (abonentReady) {
                         preamblePlayedCondition.signal();
+                        commutated = true;
+                    }
                 } finally {
                     lock.unlock();
                 }
             }
 
+//            conv.getOwner().getLogger().debug("Wating for commutation finish");
             while (!hasCancelRequest() && commutationManager.isCommutationValid())
                 TimeUnit.MILLISECONDS.sleep(WAIT_TIMEOUT);
-                
+//            conv.getOwner().getLogger().debug("Commutation finished");
 //            boolean preamblePlayed = executed;
 //            while (!hasCancelRequest() && commutationManager.isCommutationValid()){
 //                if (!preamblePlayed) {
@@ -111,6 +117,7 @@ public class WaitForCallCommutationAction extends AsyncAction
 //                    TimeUnit.MILLISECONDS.sleep(WAIT_TIMEOUT);
 //            }
         } finally {
+            bindings.put(IvrEndpointConversation.DISABLE_AUDIO_STREAM_RESET, commutationManager.isCommutationValid());
             commutationManager.removeListener(this);
         }
     }
