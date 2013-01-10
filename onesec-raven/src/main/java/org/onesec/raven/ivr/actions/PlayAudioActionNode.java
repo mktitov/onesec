@@ -41,6 +41,8 @@ import org.weda.annotations.constraints.NotNull;
 @NodeClass(parentNode=IvrConversationScenarioNode.class)
 public class PlayAudioActionNode extends BaseNode implements IvrActionNode, Viewable
 {
+    public final static String AUDIO_FILE_ATTR = "audioFile";
+    
     @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
     private AudioFileNode audioFile;
     
