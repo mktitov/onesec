@@ -18,6 +18,7 @@
 package org.onesec.raven.ivr.queue.actions;
 
 import javax.script.Bindings;
+import org.onesec.raven.Constants;
 import org.onesec.raven.ivr.IvrAction;
 import org.onesec.raven.ivr.IvrActionNode;
 import org.onesec.raven.ivr.impl.AudioFileNode;
@@ -26,9 +27,12 @@ import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.expr.impl.BindingSupportImpl;
 import org.raven.tree.Node;
+import org.raven.tree.ResourceManager;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
+import org.raven.tree.impl.ResourceReferenceValueHandlerFactory;
 import org.weda.annotations.constraints.NotNull;
+import org.weda.internal.annotations.Service;
 
 /**
  *
@@ -38,8 +42,13 @@ import org.weda.annotations.constraints.NotNull;
 public class SayNumberInQueueActionNode extends BaseNode implements IvrActionNode
 {
     public final static String ACCEPT_SAY_NUMBER_ATTR = "acceptSayNumber";
+    
+    @Service
+    private static ResourceManager resourceManager;
 
-    @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
+    @NotNull 
+    @Parameter(valueHandlerType=ResourceReferenceValueHandlerFactory.TYPE, 
+               defaultValue=Constants.NUMBERS_FEMALE_RESOURCE)
     private Node numbersNode;
 
     @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
@@ -66,7 +75,8 @@ public class SayNumberInQueueActionNode extends BaseNode implements IvrActionNod
     }
 
     public IvrAction createAction() {
-        return new SayNumberInQueueAction(this, bindingSupport, numbersNode, pauseBeetweenWords, preambleAudio);
+        return new SayNumberInQueueAction(this, bindingSupport, numbersNode, pauseBeetweenWords, 
+            preambleAudio, resourceManager);
     }
 
     public Boolean getAcceptSayNumber() {

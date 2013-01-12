@@ -18,14 +18,14 @@
 package org.onesec.raven.ivr.actions;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
-import org.onesec.raven.ivr.AudioStream;
 import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.onesec.raven.ivr.impl.AudioFileInputStreamSource;
 import org.onesec.raven.ivr.impl.AudioFileNode;
 import org.onesec.raven.ivr.impl.IvrUtils;
 import org.raven.log.LogLevel;
 import org.raven.tree.Node;
+import org.raven.tree.ResourceManager;
 
 /**
  *
@@ -35,12 +35,15 @@ public abstract class AbstractSayNumberAction extends AsyncAction
 {
     private final Node numbersNode;
     private final long pauseBetweenWords;
+    private final ResourceManager resourceManager;
 
-    public AbstractSayNumberAction(String actionName, Node numbersNode, long pauseBetweenWords)
+    public AbstractSayNumberAction(String actionName, Node numbersNode, long pauseBetweenWords, 
+        ResourceManager resourceManager)
     {
         super(actionName);
         this.numbersNode = numbersNode;
         this.pauseBetweenWords = pauseBetweenWords;
+        this.resourceManager = resourceManager;
     }
 
     public boolean isFlowControlAction() {
@@ -64,7 +67,7 @@ public abstract class AbstractSayNumberAction extends AsyncAction
             if (word instanceof AudioFileNode)
                 audio = (AudioFileNode) word;
             else if (word instanceof String) {
-                Node child = numbersNode.getChildren((String)word);
+                Node child = resourceManager.getResource(numbersNode, (String)word, null);
                 if (!(child instanceof AudioFileNode)) {
                     if (conversation.getOwner().isLogLevelEnabled(LogLevel.ERROR))
                         conversation.getOwner().getLogger().error(logMess(

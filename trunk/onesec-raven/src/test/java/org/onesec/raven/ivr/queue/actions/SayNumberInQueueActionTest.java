@@ -19,6 +19,7 @@ package org.onesec.raven.ivr.queue.actions;
 
 import java.util.List;
 import java.io.File;
+import java.util.Locale;
 import javax.script.Bindings;
 import org.apache.commons.io.FileUtils;
 import org.onesec.raven.ivr.actions.TestEndpointConversationNode;
@@ -27,12 +28,14 @@ import org.raven.tree.Node;
 import org.junit.Before;
 import org.junit.Test;
 import org.onesec.raven.OnesecRavenTestCase;
-import org.onesec.raven.ivr.actions.SayAmountActionTest;
 import org.onesec.raven.ivr.impl.AudioFileNode;
 import org.onesec.raven.ivr.queue.QueuedCallStatus;
 import org.raven.conv.ConversationScenarioState;
 import org.raven.expr.BindingSupport;
 import static org.easymock.EasyMock.*;
+import org.onesec.raven.Constants;
+import org.raven.tree.ResourceManager;
+import org.raven.tree.impl.ResourcesNode;
 /**
  *
  * @author Mikhail Titov
@@ -44,15 +47,20 @@ public class SayNumberInQueueActionTest extends OnesecRavenTestCase
     private Node numbers;
     private AudioFileNode preamble;
     private SayNumberInQueueActionNode owner;
+    private ResourceManager resourceManager;
 
     @Before
     public void prepare() throws Exception
     {
+        resourceManager = registry.getService(ResourceManager.class);
+        ResourcesNode resources = (ResourcesNode) tree.getRootNode().getChildren(ResourcesNode.NAME);
+        resources.setDefaultLocale(new Locale("ru"));
+        
         executor = new ExecutorServiceNode();
         executor.setName("executor");
         tree.getRootNode().addAndSaveChildren(executor);
-        executor.setCorePoolSize(10);
-        executor.setMaximumPoolSize(10);
+        executor.setCorePoolSize(20);
+        executor.setMaximumPoolSize(20);
         assertTrue(executor.start());
 
         conv = new TestEndpointConversationNode();
@@ -62,7 +70,9 @@ public class SayNumberInQueueActionTest extends OnesecRavenTestCase
         conv.setFileName("target/number_in_queue.wav");
 //        assertTrue(conv.start());
 
-        numbers = SayAmountActionTest.createNumbersNode(tree);
+//        numbers = SayAmountActionTest.createNumbersNode(tree);
+        numbers = resourceManager.getResource(Constants.NUMBERS_FEMALE_RESOURCE, null);
+        assertNotNull(numbers);
 
         preamble = new AudioFileNode();
         preamble.setName("preamble");
@@ -101,7 +111,7 @@ public class SayNumberInQueueActionTest extends OnesecRavenTestCase
         conv.setConversationScenarioState(state);
         assertTrue(conv.start());
         SayNumberInQueueAction action =
-                new SayNumberInQueueAction(owner, bindingSupport, numbers, 50, preamble);
+                new SayNumberInQueueAction(owner, bindingSupport, numbers, 50, preamble, resourceManager);
         action.execute(conv);
         Thread.sleep(10000);
         
@@ -126,7 +136,8 @@ public class SayNumberInQueueActionTest extends OnesecRavenTestCase
         replay(state, bindings, callStatus, bindingSupport);
 
         conv.setConversationScenarioState(state);
-        SayNumberInQueueAction action = new SayNumberInQueueAction(owner, bindingSupport, numbers, 50, preamble);
+        SayNumberInQueueAction action = new SayNumberInQueueAction(owner, bindingSupport, numbers, 50, 
+            preamble, resourceManager);
         assertNull(action.formWords(conv));
 
         verify(state, bindings, callStatus, bindingSupport);
@@ -153,7 +164,8 @@ public class SayNumberInQueueActionTest extends OnesecRavenTestCase
         replay(state, bindings, callStatus, bindingSupport);
 
         conv.setConversationScenarioState(state);
-        SayNumberInQueueAction action = new SayNumberInQueueAction(owner, bindingSupport, numbers, 50, preamble);
+        SayNumberInQueueAction action = new SayNumberInQueueAction(owner, bindingSupport, numbers, 50, 
+            preamble, resourceManager);
         List words = action.formWords(conv);
         assertNotNull(words);
         assertEquals(2, words.size());

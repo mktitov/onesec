@@ -28,6 +28,7 @@ import org.onesec.raven.ivr.queue.QueuedCallStatus;
 import org.raven.RavenUtils;
 import org.raven.expr.BindingSupport;
 import org.raven.tree.Node;
+import org.raven.tree.ResourceManager;
 
 /**
  *
@@ -43,9 +44,10 @@ public class SayNumberInQueueAction extends AbstractSayNumberAction
     private final BindingSupport bindingSupport;
 
     public SayNumberInQueueAction(SayNumberInQueueActionNode owner, BindingSupport bindingSupport
-            , Node numbersNode, long pauseBetweenWords, AudioFileNode preambleAudio)
+            , Node numbersNode, long pauseBetweenWords, AudioFileNode preambleAudio
+            , ResourceManager resourceManager)
     {
-        super(NAME, numbersNode, pauseBetweenWords);
+        super(NAME, numbersNode, pauseBetweenWords, resourceManager);
         this.preambleAudio = preambleAudio;
         this.owner = owner;
         this.bindingSupport = bindingSupport;

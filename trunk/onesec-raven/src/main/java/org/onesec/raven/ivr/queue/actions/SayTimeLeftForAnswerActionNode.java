@@ -62,6 +62,12 @@ public class SayTimeLeftForAnswerActionNode extends BaseNode {
             attr.setValue(resourcePath);
         }
     }
+    
+    private void createSayNumberNode() {
+        if (getChildren(NODE1_NAME)==null) {
+//            Say
+        }
+    }
 
     public Boolean getRecreateChildNodes() {
         return recreateChildNodes;
