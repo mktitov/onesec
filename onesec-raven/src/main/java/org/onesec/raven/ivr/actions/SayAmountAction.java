@@ -21,6 +21,7 @@ import java.util.List;
 import org.onesec.raven.impl.NumberToDigitConverter;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.raven.tree.Node;
+import org.raven.tree.ResourceManager;
 
 /**
  *
@@ -32,9 +33,9 @@ public class SayAmountAction extends AbstractSayNumberAction
 
     private final Double amount;
 
-    public SayAmountAction(Node numbersNode, Double amount, long pauseBetweenWords)
+    public SayAmountAction(Node numbersNode, Double amount, long pauseBetweenWords, ResourceManager resourceManager)
     {
-        super(NAME, numbersNode, pauseBetweenWords);
+        super(NAME, numbersNode, pauseBetweenWords, resourceManager);
         this.amount = amount;
     }
 

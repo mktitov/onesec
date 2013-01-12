@@ -19,7 +19,7 @@ import java.util.Locale;
 import org.junit.Test;
 import org.onesec.raven.ivr.impl.AudioFileNode;
 import org.raven.tree.DataFile;
-import org.raven.tree.DataFileException;
+import org.raven.tree.Node;
 import org.raven.tree.ResourceManager;
 
 /**
@@ -28,16 +28,28 @@ import org.raven.tree.ResourceManager;
  */
 public class SoundResourcesRegistratorTest extends OnesecRavenTestCase implements Constants {
     
-    @Test
-    public void test() throws DataFileException {
+//    @Test
+    public void test() throws Exception {
         ResourceManager resourceManager = registry.getService(ResourceManager.class);
         assertNotNull(resourceManager);
+        checkRes(resourceManager, "/hello", "hello_ru.wav");
+        checkRes(resourceManager, "/numbers/female/1", "1_ru.wav");
+    }
+    
+    @Test
+    public void numbersResourceTest() throws Exception {
+        ResourceManager resourceManager = registry.getService(ResourceManager.class);
+        Node resource = resourceManager.getResource(NUMBERS_FEMALE_RESOURCE, null);
+        assertNotNull(resource);
+    }
+    
+    public void checkRes(ResourceManager resourceManager, String path, String filename) throws Exception {
         AudioFileNode hello = (AudioFileNode) resourceManager.getResource(
-                SOUNDS_RESOURCES_BASE+"/hello", new Locale("ru"));
+                SOUNDS_RESOURCES_BASE+path, new Locale("ru"));
         assertNotNull(hello);
         DataFile file = hello.getAudioFile();
         assertNotNull(file);
-        assertNotNull("hello_ru.wav", file.getFilename());
+        assertNotNull(filename, file.getFilename());
         assertNotNull(file.getFileSize());
         assertTrue(file.getFileSize()>0);
     }

@@ -17,15 +17,19 @@
 
 package org.onesec.raven.ivr.actions;
 
+import org.onesec.raven.Constants;
 import org.onesec.raven.ivr.IvrAction;
 import org.onesec.raven.ivr.IvrActionNode;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.tree.Node;
+import org.raven.tree.ResourceManager;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
+import org.raven.tree.impl.ResourceReferenceValueHandlerFactory;
 import org.weda.annotations.constraints.NotNull;
+import org.weda.internal.annotations.Service;
 
 /**
  *
@@ -34,13 +38,18 @@ import org.weda.annotations.constraints.NotNull;
 @NodeClass(parentNode=IvrConversationScenarioNode.class)
 public class SayAmountActionNode extends BaseNode implements IvrActionNode
 {
-    @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
+    @Service
+    private static ResourceManager resourceManager;
+    
+    @NotNull 
+    @Parameter(valueHandlerType=ResourceReferenceValueHandlerFactory.TYPE, 
+               defaultValue=Constants.NUMBERS_FEMALE_RESOURCE)
     private Node numbersNode;
 
     @Parameter
     private Double amount;
 
-    @Parameter @NotNull
+    @Parameter(defaultValue="10") @NotNull
     private Integer pauseBetweenWords;
 
     public Integer getPauseBetweenWords()
@@ -75,6 +84,6 @@ public class SayAmountActionNode extends BaseNode implements IvrActionNode
 
     public IvrAction createAction()
     {
-        return new SayAmountAction(numbersNode, amount, pauseBetweenWords);
+        return new SayAmountAction(numbersNode, amount, pauseBetweenWords, resourceManager);
     }
 }
