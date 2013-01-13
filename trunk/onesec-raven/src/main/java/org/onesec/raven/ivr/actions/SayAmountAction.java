@@ -30,16 +30,16 @@ import org.raven.tree.ResourceManager;
 public class SayAmountAction extends AbstractSayNumberAction
 {
     public final static String NAME = "Say amount action";
+    private final SayAmountActionNode actionNode;
 
-    private final Double amount;
-
-    public SayAmountAction(Node numbersNode, Double amount, long pauseBetweenWords, ResourceManager resourceManager)
+    public SayAmountAction(SayAmountActionNode actionNode, Node numbersNode, long pauseBetweenWords, 
+        ResourceManager resourceManager)
     {
         super(NAME, numbersNode, pauseBetweenWords, resourceManager);
-        this.amount = amount;
+        this.actionNode = actionNode;
     }
 
     protected List formWords(IvrEndpointConversation conversation) {
-        return NumberToDigitConverter.getCurrencyDigits(amount);
+        return NumberToDigitConverter.getCurrencyDigits(actionNode.getAmount());
     }
 }

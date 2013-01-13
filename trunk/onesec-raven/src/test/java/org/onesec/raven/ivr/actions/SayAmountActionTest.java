@@ -21,6 +21,7 @@ import java.io.File;
 import java.util.Locale;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.onesec.raven.OnesecRavenTestCase;
@@ -42,7 +43,7 @@ public class SayAmountActionTest extends OnesecRavenTestCase
 {
     private TestEndpointConversationNode conv;
     private ExecutorServiceNode executor;
-    private Node numbers;
+//    private Node numbers;
     private ResourceManager resourceManager;
 
     @Before
@@ -68,6 +69,11 @@ public class SayAmountActionTest extends OnesecRavenTestCase
         assertTrue(conv.start());
 
 //        numbers = createNumbersNode(tree);
+    }
+    
+    @After
+    public void afterTest() {
+        conv.stop();
     }
 
     @Test(timeout=15000)

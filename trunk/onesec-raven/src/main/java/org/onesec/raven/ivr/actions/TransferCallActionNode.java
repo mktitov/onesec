@@ -17,11 +17,13 @@
 
 package org.onesec.raven.ivr.actions;
 
+import javax.script.Bindings;
 import org.onesec.raven.ivr.IvrAction;
 import org.onesec.raven.ivr.IvrActionNode;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
+import org.raven.expr.impl.BindingSupportImpl;
 import org.raven.tree.impl.BaseNode;
 import org.weda.annotations.constraints.NotNull;
 
@@ -43,6 +45,21 @@ public class TransferCallActionNode extends BaseNode implements IvrActionNode
 
     @NotNull @Parameter(defaultValue="600")
     private Long callEndTimeout;
+    
+    private BindingSupportImpl bindingSupport;
+
+    @Override
+    protected void initFields() {
+        super.initFields();
+        bindingSupport = new BindingSupportImpl();
+        bindingSupport.enableScriptExecution();
+    }
+
+    @Override
+    public void formExpressionBindings(Bindings bindings) {
+        super.formExpressionBindings(bindings);
+        bindingSupport.addTo(bindings);
+    }
 
     public String getAddress()
     {
@@ -86,7 +103,6 @@ public class TransferCallActionNode extends BaseNode implements IvrActionNode
 
     public IvrAction createAction()
     {
-        return new TransferCallAction(
-                address, monitorTransfer, callStartTimeout*1000, callEndTimeout*1000);
+        return new TransferCallAction(this);
     }
 }

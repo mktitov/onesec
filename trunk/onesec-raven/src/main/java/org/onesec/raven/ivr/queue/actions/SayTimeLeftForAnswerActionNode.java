@@ -16,10 +16,12 @@
 package org.onesec.raven.ivr.queue.actions;
 
 import org.onesec.raven.ivr.actions.PlayAudioActionNode;
+import org.onesec.raven.ivr.actions.SayNumberActionNode;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.tree.NodeAttribute;
+import org.raven.tree.impl.AttributeReferenceValueHandlerFactory;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.ResourceReferenceValueHandlerFactory;
 import org.weda.annotations.constraints.NotNull;
@@ -34,12 +36,14 @@ public class SayTimeLeftForAnswerActionNode extends BaseNode {
     public final static String NODE1_NAME = "say operator will answer";
     public final static String NODE2_NAME = "say number";
     public final static String NODE3_NAME = "say minutes";
+    public final static String MINUTES_LEFT_ATTR = "minutesLeft";
     
     @NotNull @Parameter(defaultValue="true")
     private Boolean recreateChildNodes;
     
     @NotNull @Parameter(defaultValue="60")
     private Integer minRepeatInterval;
+    
 
     @Override
     protected void doStart() throws Exception {
@@ -60,13 +64,26 @@ public class SayTimeLeftForAnswerActionNode extends BaseNode {
             NodeAttribute attr = node.getNodeAttribute(PlayAudioActionNode.AUDIO_FILE_ATTR);
             attr.setValueHandlerType(ResourceReferenceValueHandlerFactory.TYPE);
             attr.setValue(resourcePath);
+            attr.save();
         }
     }
     
-    private void createSayNumberNode() {
-        if (getChildren(NODE1_NAME)==null) {
-//            Say
+    private void createSayNumberNode() throws Exception {
+        if (getChildren(NODE2_NAME)==null) {
+            SayNumberActionNode node = new SayNumberActionNode();
+            node.setName(NODE2_NAME);
+            addAndSaveChildren(node);
+            NodeAttribute attr = node.getNodeAttribute(SayNumberActionNode.NUMBER_ATTR);
+            attr.setValueHandlerType(AttributeReferenceValueHandlerFactory.TYPE);
+            attr.setValue("../@"+MINUTES_LEFT_ATTR);
+            attr.save();
+            node.start();
         }
+    }
+    
+    @Parameter(readOnly=true)
+    public Integer getMinutesLeft() {
+        return 0;
     }
 
     public Boolean getRecreateChildNodes() {

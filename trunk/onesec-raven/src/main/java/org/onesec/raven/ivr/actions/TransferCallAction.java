@@ -28,20 +28,16 @@ public class TransferCallAction extends AsyncAction
 {
     public final static String ACTION_NAME = "Transfer call action";
     
-    private final String address;
-    private final boolean monitorTransfer;
-    private final long callStartTimeout;
-    private final long callEndTimeout;
+//    private final String address;
+//    private final boolean monitorTransfer;
+//    private final long callStartTimeout;
+//    private final long callEndTimeout;
+    private final TransferCallActionNode actionNode;
 
-    public TransferCallAction(
-            String address, boolean monitorTransfer, long callStartTimeout, long callEndTimeout)
+    public TransferCallAction(TransferCallActionNode actionNode)
     {
         super(ACTION_NAME);
-        this.address = address;
-        this.monitorTransfer = monitorTransfer;
-        this.callStartTimeout = callStartTimeout;
-        this.callEndTimeout = callEndTimeout;
-        setStatusMessage("Transfering call to the ("+address+") address");
+        this.actionNode = actionNode;
     }
 
     public boolean isFlowControlAction() {
@@ -51,8 +47,11 @@ public class TransferCallAction extends AsyncAction
     @Override
     protected void doExecute(IvrEndpointConversation conversation) throws Exception
     {
+        String address = actionNode.getAddress();
+        setStatusMessage("Transfering call to the ("+address+") address");
         if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
             conversation.getOwner().getLogger().debug(logMess("Transfering call to the ("+address+") address"));
-        conversation.transfer(address, monitorTransfer, callStartTimeout, callEndTimeout);
+        conversation.transfer(address, actionNode.getMonitorTransfer(), actionNode.getCallStartTimeout()*1000, 
+            actionNode.getCallEndTimeout()*1000);
     }
 }

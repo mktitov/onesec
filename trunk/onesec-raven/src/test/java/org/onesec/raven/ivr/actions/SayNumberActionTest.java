@@ -19,6 +19,7 @@ import java.io.File;
 import java.util.Locale;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -66,6 +67,11 @@ public class SayNumberActionTest extends OnesecRavenTestCase {
         tree.getRootNode().addAndSaveChildren(actionNode);
         actionNode.setNumber(124);
         assertTrue(actionNode.start());
+    }
+    
+    @After
+    public void afterTest() {
+        conv.stop();
     }
     
     @Test
