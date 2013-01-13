@@ -17,12 +17,15 @@
 
 package org.onesec.raven.ivr.actions;
 
+import javax.script.Bindings;
 import org.onesec.raven.Constants;
 import org.onesec.raven.ivr.IvrAction;
 import org.onesec.raven.ivr.IvrActionNode;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
+import org.raven.expr.BindingSupport;
+import org.raven.expr.impl.BindingSupportImpl;
 import org.raven.tree.Node;
 import org.raven.tree.ResourceManager;
 import org.raven.tree.impl.BaseNode;
@@ -51,6 +54,21 @@ public class SayAmountActionNode extends BaseNode implements IvrActionNode
 
     @Parameter(defaultValue="10") @NotNull
     private Integer pauseBetweenWords;
+    
+    private BindingSupportImpl bindingSupport;
+
+    @Override
+    protected void initFields() {
+        super.initFields();
+        bindingSupport = new BindingSupportImpl();
+        bindingSupport.enableScriptExecution();
+    }
+
+    @Override
+    public void formExpressionBindings(Bindings bindings) {
+        super.formExpressionBindings(bindings);
+        bindingSupport.addTo(bindings);
+    }
 
     public Integer getPauseBetweenWords()
     {
@@ -84,6 +102,6 @@ public class SayAmountActionNode extends BaseNode implements IvrActionNode
 
     public IvrAction createAction()
     {
-        return new SayAmountAction(numbersNode, amount, pauseBetweenWords, resourceManager);
+        return new SayAmountAction(this, numbersNode, pauseBetweenWords, resourceManager);
     }
 }

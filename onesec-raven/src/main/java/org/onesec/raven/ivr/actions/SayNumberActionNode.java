@@ -37,6 +37,8 @@ import org.weda.internal.annotations.Service;
 @NodeClass(parentNode=IvrConversationScenarioNode.class)
 public class SayNumberActionNode extends BaseNode implements IvrActionNode {
     
+    public final static String NUMBER_ATTR = "number";
+    
     @Service
     private static ResourceManager resourceManager;
     
