@@ -27,8 +27,8 @@ import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.actions.AsyncAction;
 import org.onesec.raven.ivr.impl.IvrUtils;
 import org.onesec.raven.ivr.impl.ResourceInputStreamSource;
-import org.onesec.raven.ivr.queue.CommutationManagerCall;
 import org.onesec.raven.ivr.queue.CallsCommutationManagerListener;
+import org.onesec.raven.ivr.queue.CommutationManagerCall;
 import org.raven.RavenUtils;
 import org.raven.tree.Node;
 
@@ -99,23 +99,6 @@ public class WaitForCallCommutationAction extends AsyncAction
             while (!hasCancelRequest() && commutationManager.isCommutationValid())
                 TimeUnit.MILLISECONDS.sleep(WAIT_TIMEOUT);
 //            conv.getOwner().getLogger().debug("Commutation finished");
-//            boolean preamblePlayed = executed;
-//            while (!hasCancelRequest() && commutationManager.isCommutationValid()){
-//                if (!preamblePlayed) {
-//                    lock.lock();
-//                    try {
-//                        if (abonentReadyCondition.await(WAIT_TIMEOUT, TimeUnit.MILLISECONDS)) {
-//                            preamblePlayed = true;
-//                            IvrUtils.playAudioInAction(this, conv
-//                                    , new ResourceInputStreamSource(BEEP_RESOURCE_NAME), this);
-//                            preamblePlayedCondition.signal();
-//                        }
-//                    } finally {
-//                        lock.unlock();
-//                    }
-//                } else
-//                    TimeUnit.MILLISECONDS.sleep(WAIT_TIMEOUT);
-//            }
         } finally {
             bindings.put(IvrEndpointConversation.DISABLE_AUDIO_STREAM_RESET, commutationManager.isCommutationValid());
             commutationManager.removeListener(this);

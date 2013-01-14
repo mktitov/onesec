@@ -43,7 +43,6 @@ import org.raven.log.LogLevel;
 import static org.onesec.raven.ivr.queue.impl.CallQueueCdrRecordSchemaNode.*;
 import static org.onesec.raven.ivr.queue.impl.CallsQueuesNode.*;
 import org.raven.ds.RecordSchema;
-import org.raven.tree.Node;
 
 /**
  *
