@@ -59,7 +59,10 @@ public class SayNumberActionNode extends BaseNode implements IvrActionNode {
     protected void initFields() {
         super.initFields();
         bindingSupport = new BindingSupportImpl();
-        bindingSupport.enableScriptExecution();
+    }
+
+    BindingSupportImpl getBindingSupport() {
+        return bindingSupport;
     }
 
     @Override

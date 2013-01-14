@@ -61,13 +61,16 @@ public class SayAmountActionNode extends BaseNode implements IvrActionNode
     protected void initFields() {
         super.initFields();
         bindingSupport = new BindingSupportImpl();
-        bindingSupport.enableScriptExecution();
     }
 
     @Override
     public void formExpressionBindings(Bindings bindings) {
         super.formExpressionBindings(bindings);
         bindingSupport.addTo(bindings);
+    }
+
+    BindingSupportImpl getBindingSupport() {
+        return bindingSupport;
     }
 
     public Integer getPauseBetweenWords()

@@ -62,6 +62,7 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
     private final RecordSchema cdrSchema;
     private final AtomicReference<CommutationManagerCall> commutationManager = 
                   new AtomicReference<CommutationManagerCall>();
+    private final long queuedTime = System.currentTimeMillis();
 
     private int priority;
     private String queueId;
@@ -359,10 +360,15 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
         return new Timestamp(System.currentTimeMillis());
     }
     
+    private int getCallDuration() {
+        return (int) ((System.currentTimeMillis()-queuedTime)/1000);
+    }
+    
     public void fireRejectedQueueEvent() {
         Map<Long, CallQueueRequestController> requests = owner.getRequests();
         if (requests!=null)
             owner.getRequests().remove(requestId);
+        queue.updateCallDuration(getCallDuration());
         callQueueChangeEvent(new RejectedQueueEventImpl(queue, requestId));
     }
 
@@ -372,6 +378,7 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
     
     public void fireDisconnectedQueueEvent(){
         owner.getRequests().remove(requestId);
+        queue.updateCallDuration(getCallDuration());
         callQueueChangeEvent(new DisconnectedQueueEventImpl(queue, requestId));
     }
 

@@ -40,6 +40,11 @@ public class SayAmountAction extends AbstractSayNumberAction
     }
 
     protected List formWords(IvrEndpointConversation conversation) {
-        return NumberToDigitConverter.getCurrencyDigits(actionNode.getAmount());
+        actionNode.getBindingSupport().enableScriptExecution();
+        try {
+            return NumberToDigitConverter.getCurrencyDigits(actionNode.getAmount());
+        } finally {
+            actionNode.getBindingSupport().reset();
+        }
     }
 }
