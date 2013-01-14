@@ -27,17 +27,22 @@ import org.raven.tree.ResourceManager;
  */
 public class SayNumberAction extends AbstractSayNumberAction {
     public final static String NAME = "Say number action";
-    private final SayNumberActionNode owner;
+    private final SayNumberActionNode actionNode;
 
     public SayNumberAction(SayNumberActionNode owner, Node numbersNode, long pauseBetweenWords, 
         ResourceManager resourceManager) 
     {
         super(NAME, numbersNode, pauseBetweenWords, resourceManager);
-        this.owner = owner;
+        this.actionNode = owner;
     }
 
     @Override
     protected List formWords(IvrEndpointConversation conversation) {
-        return NumberToDigitConverter.getDigits(owner.getNumber());
+        actionNode.getBindingSupport().enableScriptExecution();
+        try {
+            return NumberToDigitConverter.getDigits(actionNode.getNumber());
+        } finally {
+            actionNode.getBindingSupport().reset();
+        }
     }
 }

@@ -27,4 +27,7 @@ public interface CallsQueue {
     public void queueCall(CallQueueRequestController request);
     public String getName();
     public Collection<CallQueueRequestController> getRequests();
+    public int getActiveOperatorsCount();
+    public int getAvgCallDuration();
+    public void updateCallDuration(int callDuration);
 }

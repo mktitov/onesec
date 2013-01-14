@@ -20,6 +20,8 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -27,6 +29,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.onesec.raven.ivr.queue.CallQueueRequestController;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviour;
+import org.onesec.raven.ivr.queue.CallsQueueOperator;
 import org.onesec.raven.ivr.queue.CallsQueueOperatorRef;
 import org.onesec.raven.ivr.queue.CallsQueuePrioritySelector;
 import org.raven.annotations.NodeClass;
@@ -61,6 +64,7 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask,
     @NotNull @Parameter(valueHandlerType=SystemSchedulerValueHandlerFactory.TYPE)
     private ExecutorService executor;
     
+    @Message private static String queueTitleMessage;
     @Message private static String queueBusyMessage;
     @Message private static String numberInQueueMessage;
     @Message private static String priorityMessage;
@@ -70,6 +74,16 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask,
     @Message private static String nextOnBusyBehaviourStepMessage;
     @Message private static String lastOperatorIndexMessage;
     @Message private static String requestMessage;
+    @Message private static String operatorsTitleMessage;
+    @Message private static String operatorPhoneMessage;
+    @Message private static String operatorDescMessage;
+    @Message private static String operatorActiveMessage;
+    @Message private static String operatorBusyMessage;
+    @Message private static String operatorBusyTimerMessage;
+    @Message private static String operatorHandledCallsMessage;
+    @Message private static String operatorChanceToReceiveCallMessage;
+    @Message private static String operatorCurrentCallMessage;
+    
 
     private AtomicReference<String> statusMessage;
     private AtomicBoolean stopProcessing;
@@ -78,6 +92,8 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask,
     private ReadWriteLock lock;
     private Condition requestAddedCondition;
     private CallsQueueRequestComparator requestComparator;
+    private AtomicLong sumCallDuration;
+    private AtomicInteger callsCount;
 
     @Override
     protected void initFields() {
@@ -88,6 +104,8 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask,
         lock = new ReentrantReadWriteLock();
         requestAddedCondition = lock.writeLock().newCondition();
         requestComparator = new CallsQueueRequestComparator();
+        callsCount = new AtomicInteger();
+        sumCallDuration = new AtomicLong();
     }
 
     @Override
@@ -163,6 +181,28 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask,
         return Collections.EMPTY_LIST;
     }
 
+    @Parameter(readOnly=true)
+    public int getAvgCallDuration() {
+        int _callsCount = callsCount.get();
+        return (int) (_callsCount==0? 0 : sumCallDuration.get()/_callsCount);
+    }
+
+    @Parameter(readOnly=true)
+    public int getActiveOperatorsCount() {
+        Set<Integer> opers = new HashSet<Integer>();
+        for (Node priority: getChildrens())
+            for (CallsQueueOperatorRefNode ref: NodeUtils.getChildsOfType(priority, CallsQueueOperatorRefNode.class)) {
+                CallsQueueOperator oper = ref.getOperator();
+                if (Status.STARTED.equals(oper.getStatus()) && oper.isActive())
+                    opers.add(oper.getId());
+            }
+        return opers.size();
+    }
+
+    public void updateCallDuration(int callDuration) {
+        sumCallDuration.addAndGet(callDuration);
+    }
+
     public Boolean getAutoRefresh() {
         return true;
     }
@@ -175,6 +215,8 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask,
             throws Exception 
     {
         List<ViewableObject> vos = new ArrayList<ViewableObject>(1);
+        //queue table
+        vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, queueTitleMessage));
         if (lock.readLock().tryLock(500, TimeUnit.MILLISECONDS)) {
             try {
                 TableImpl tab = new TableImpl(new String[]{numberInQueueMessage, requestIdMessage,
@@ -195,7 +237,32 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask,
             }
         } else 
             vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, queueBusyMessage));
+        //queue operators table
+        vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, operatorsTitleMessage));
+        TableImpl opersTab = new TableImpl(new String[]{operatorPhoneMessage, operatorDescMessage, 
+            operatorActiveMessage, operatorBusyMessage, operatorBusyTimerMessage, operatorHandledCallsMessage,
+            operatorChanceToReceiveCallMessage, operatorCurrentCallMessage});
+        for (CallsQueueOperator oper: getOpers()) {
+            CallsQueueOperatorNode operNode = (CallsQueueOperatorNode)(oper instanceof CallsQueueOperatorNode? oper : null);
+            String operPhone = operNode==null? null : operNode.getPhoneNumbers();
+            Boolean busy = operNode==null? null : operNode.getBusy();
+            Long busyTimer = operNode==null? null : operNode.getBusyTimerValue();
+            opersTab.addRow(new Object[]{operPhone, oper.getPersonDesc(), oper.isActive(), busy, busyTimer, 
+                oper.getHandledRequests(), });
+        }
+        vos.add(new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, opersTab));
         return vos;
+    }
+    
+    private Set<CallsQueueOperator> getOpers() {
+        Set<CallsQueueOperator> opers = new HashSet<CallsQueueOperator>();
+        for (Node priority: getChildrens())
+            for (CallsQueueOperatorRefNode ref: NodeUtils.getChildsOfType(priority, CallsQueueOperatorRefNode.class)) {
+                CallsQueueOperator oper = ref.getOperator();
+                if (Status.STARTED.equals(oper.getStatus()))
+                    opers.add(oper);
+            }
+        return opers;
     }
 
     public Node getTaskNode() {

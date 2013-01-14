@@ -90,6 +90,10 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
         return request.get();
     }
 
+    public boolean isActive() {
+        return getActive();
+    }
+
     public String getOperatorDesc() {
         return personDesc;
     }
@@ -126,7 +130,7 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
     
     @Parameter(readOnly=true)
     public Long getBusyTimerValue() {
-        long val = busyTimerEndTime.get()-System.currentTimeMillis();
+        long val = (busyTimerEndTime.get()-System.currentTimeMillis())/1000;
         return val<0? 0 : val;
     }
 

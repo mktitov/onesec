@@ -55,6 +55,10 @@ public class CallsQueueVirtualOperatorNode extends AbstractOperatorNode {
         }
     }
 
+    public boolean isActive() {
+        return true;
+    }
+
     public boolean resetBusyTimer() {
         return false;
     }

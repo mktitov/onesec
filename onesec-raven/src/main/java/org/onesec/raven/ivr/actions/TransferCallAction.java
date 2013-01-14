@@ -47,11 +47,16 @@ public class TransferCallAction extends AsyncAction
     @Override
     protected void doExecute(IvrEndpointConversation conversation) throws Exception
     {
-        String address = actionNode.getAddress();
-        setStatusMessage("Transfering call to the ("+address+") address");
-        if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
-            conversation.getOwner().getLogger().debug(logMess("Transfering call to the ("+address+") address"));
-        conversation.transfer(address, actionNode.getMonitorTransfer(), actionNode.getCallStartTimeout()*1000, 
-            actionNode.getCallEndTimeout()*1000);
+        actionNode.getBindingSupport().enableScriptExecution();
+        try {
+            String address = actionNode.getAddress();
+            setStatusMessage("Transfering call to the ("+address+") address");
+            if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
+                conversation.getOwner().getLogger().debug(logMess("Transfering call to the ("+address+") address"));
+            conversation.transfer(address, actionNode.getMonitorTransfer(), actionNode.getCallStartTimeout()*1000, 
+                actionNode.getCallEndTimeout()*1000);
+        } finally {
+            actionNode.getBindingSupport().reset();
+        }
     }
 }

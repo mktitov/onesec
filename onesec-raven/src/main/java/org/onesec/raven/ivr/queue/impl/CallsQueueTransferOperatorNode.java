@@ -53,6 +53,10 @@ public class CallsQueueTransferOperatorNode extends BaseNode implements CallsQue
         onNoAnswerRequests = new AtomicInteger();
         onNoFreeEndpointsRequests = new AtomicInteger();
     }
+
+    public boolean isActive() {
+        return true;
+    }
     
     public int getTotalRequests() {
         return totalRequests.get();

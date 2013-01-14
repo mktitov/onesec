@@ -69,4 +69,5 @@ public interface CallsQueueOperator extends Node {
     public void incOnNoFreeEndpointsRequests();
     public String getPersonId();
     public String getPersonDesc();
+    public boolean isActive();
 }
