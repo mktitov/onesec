@@ -41,6 +41,9 @@ import org.raven.ds.impl.DataSourceHelper;
 import org.raven.ds.impl.RecordSchemaNode;
 import org.raven.ds.impl.RecordSchemaValueTypeHandlerFactory;
 import org.raven.log.LogLevel;
+import org.raven.sched.Schedulable;
+import org.raven.sched.Scheduler;
+import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
 import org.raven.tree.Node;
 import org.raven.tree.Node.Status;
 import org.raven.tree.NodeAttribute;
@@ -53,7 +56,7 @@ import org.weda.annotations.constraints.NotNull;
  * @author Mikhail Titov
  */
 @NodeClass
-public class CallsQueuesNode  extends BaseNode implements DataPipe
+public class CallsQueuesNode  extends BaseNode implements DataPipe, Schedulable
 {
     public final static String QUEUED_EVENT = "QUEUED"; 
     public final static String ASSIGNED_TO_OPERATOR_EVENT = "ASSIGNED_TO_OPERATOR";
@@ -79,6 +82,9 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
     
     @Parameter(defaultValue=CALL_FINISHED_EVENT)
     private String permittedEventTypes;
+    
+    @Parameter(valueHandlerType=SystemSchedulerValueHandlerFactory.TYPE)
+    private Scheduler resetStatScheduler;
 
     private AtomicLong requestIdSeq;
     private RecordSchemaNode _cdrRecordSchema;
@@ -193,6 +199,14 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
 
     public void setPermittedEventTypes(String permittedEventTypes) {
         this.permittedEventTypes = permittedEventTypes;
+    }
+
+    public Scheduler getResetStatScheduler() {
+        return resetStatScheduler;
+    }
+
+    public void setResetStatScheduler(Scheduler resetStatScheduler) {
+        this.resetStatScheduler = resetStatScheduler;
     }
 
     public CallsQueueOperatorsNode getOperatorsNode() {
@@ -379,6 +393,13 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe
             if (isLogLevelEnabled(LogLevel.ERROR))
                 getLogger().error("Error processing event: "+event, e);
         }
+    }
+
+    public void executeScheduledJob(Scheduler scheduler) {
+        for (Node container: new Node[]{getOperatorsNode(), getQueuesNode()})
+            for (Node node: container.getChildrens())
+                if (node instanceof StatisticCollector)
+                    ((StatisticCollector)node).resetStat();
     }
     
 }

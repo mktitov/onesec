@@ -249,6 +249,10 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
         return lastQueuedTime;
     }
 
+    public CallsQueue getLastQueue() {
+        return request.getLastQueue();
+    }
+
     public void setForceResetCallsQueueFlag() {
         forceResetCallsQueueFlag = true;
     }
@@ -263,7 +267,9 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
 //            requestId=0;
             operatorIndex=-1;
             operatorHops = 0;
+//            request.setLastQueuedTime(queuedTime);
             lastQueuedTime = System.currentTimeMillis();
+//            fire
             forceResetCallsQueueFlag = false;
             if (targetQueue==null)
                 targetQueue = queue;
@@ -361,7 +367,7 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
     }
     
     private int getCallDuration() {
-        return (int) ((System.currentTimeMillis()-queuedTime)/1000);
+        return (int) ((System.currentTimeMillis()-getLastQueuedTime())/1000);
     }
     
     public void fireRejectedQueueEvent() {

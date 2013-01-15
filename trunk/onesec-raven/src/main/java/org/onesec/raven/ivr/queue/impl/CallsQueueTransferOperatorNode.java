@@ -42,6 +42,13 @@ public class CallsQueueTransferOperatorNode extends BaseNode implements CallsQue
         super(NAME);
     }
 
+    public void resetStat() {
+        totalRequests.set(0);
+        handledRequests.set(0);
+        onNoAnswerRequests.set(0);
+        onNoAnswerRequests.set(0);
+    }
+
     @Override
     public void setName(String name) { }
 
@@ -52,6 +59,12 @@ public class CallsQueueTransferOperatorNode extends BaseNode implements CallsQue
         handledRequests = new AtomicInteger();
         onNoAnswerRequests = new AtomicInteger();
         onNoFreeEndpointsRequests = new AtomicInteger();
+    }
+
+    @Override
+    protected void doStart() throws Exception {
+        super.doStart();
+        resetStat();
     }
 
     public boolean isActive() {

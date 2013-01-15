@@ -80,4 +80,12 @@ public interface CallQueueRequest
      * Sets the operator phone numbers
      */
     public void setOperatorPhoneNumbers(String phoneNumbers);
+    /**
+     * Returns last queued time
+     */
+    public long getLastQueuedTime();
+    /**
+     * Returns last queue
+     */
+    public CallsQueue getLastQueue();
 }

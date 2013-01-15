@@ -25,6 +25,7 @@ import org.onesec.raven.ivr.*;
 import org.onesec.raven.ivr.impl.IvrEndpointConversationListenerAdapter;
 import org.onesec.raven.ivr.queue.AbonentCommutationManager;
 import org.onesec.raven.ivr.queue.CallQueueRequestListener;
+import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.CommutationManagerCall;
 import org.onesec.raven.ivr.queue.LazyCallQueueRequest;
 import org.onesec.raven.ivr.queue.event.CallQueueEvent;
@@ -104,6 +105,14 @@ public class AbonentCommutationManagerImpl implements LazyCallQueueRequest, Abon
         {
             conversation.stopConversation(CompletionCode.COMPLETED_BY_ENDPOINT);
         }
+    }
+
+    public long getLastQueuedTime() {
+        return 0;
+    }
+
+    public CallsQueue getLastQueue() {
+        return null;
     }
 
     public boolean isCommutationValid() {

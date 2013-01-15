@@ -19,10 +19,10 @@ import java.util.Collection;
 import javax.script.Bindings;
 import javax.script.SimpleBindings;
 import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.onesec.raven.ivr.IvrEndpointConversationState;
 import org.onesec.raven.ivr.actions.PlayAudioActionNode;
 import org.onesec.raven.ivr.actions.SayNumberActionNode;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
+import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.QueuedCallStatus;
 import org.raven.RavenUtils;
 import org.raven.annotations.NodeClass;
@@ -89,7 +89,7 @@ public class SayTimeLeftForAnswerActionNode extends BaseNode {
             return null;
         Bindings bindings = convState.getBindings();
         //initializing
-        bindingSupport.enableScriptExecution();
+        final boolean debugEnabled = getLogger().isDebugEnabled();
         try {
             String lastInformTimeKey = getLastInformTimeKey();
             String lastMinutesLeftKey = getLastMinutesLeftKey();
@@ -105,18 +105,36 @@ public class SayTimeLeftForAnswerActionNode extends BaseNode {
             QueuedCallStatus callStatus = (QueuedCallStatus) bindings.get(
                     QueueCallAction.QUEUED_CALL_STATUS_BINDING);
             Integer _avgCallDuration = avgCallDuration;
+            if (debugEnabled)
+                getLogger().debug(logMess(callStatus, "Average conversation duration for queue = "+_avgCallDuration));
             if (_avgCallDuration==null || _avgCallDuration<=0)
                 _avgCallDuration = minCallDuration;
-            Integer minutesLeft = numberInQueue * _avgCallDuration / operatorsCount / 60;
+            int secondsLeft = numberInQueue * _avgCallDuration / operatorsCount;
+            long waitingTime = callStatus.getLastQueuedTime();
+            if (debugEnabled)
+                getLogger().debug(logMess(callStatus, "Seconds left (%d) excluding current wating time (%d)", 
+                        secondsLeft, waitingTime));
+            if (secondsLeft <= 0)
+                return null;
+            long minutesLeft = (long) (Math.ceil(secondsLeft-waitingTime) / 60.);
             Integer lastMinutesLeft = (Integer) bindings.get(lastMinutesLeftKey);
+            if (debugEnabled)
+                getLogger().debug(logMess(callStatus, "Calculated minutesLeft (%d), lastMinutesLeft (%d)", 
+                        minutesLeft, lastMinutesLeft));
             if (minutesLeft >= lastMinutesLeft || minutesLeft <= 0)
                 return null;
+            if (debugEnabled)
+                getLogger().debug(logMess(callStatus, "Informing abonent about time left"));
             bindings.put(lastMinutesLeftKey, minutesLeft);
             bindings.put(lastInformTimeKey, System.currentTimeMillis());
             return super.getEffectiveChildrens();
         } finally {
             bindingSupport.reset();
         }
+    }
+    
+    private String logMess(QueuedCallStatus callStatus, String fmt, Object... args) {
+        return callStatus.getConversationInfo()+": "+String.format(fmt, args);
     }
 
     @Override
@@ -138,8 +156,11 @@ public class SayTimeLeftForAnswerActionNode extends BaseNode {
             createChildNodes();
     }
     
-    private void createChildNodes() {
+    private void createChildNodes() throws Exception {
         recreateChildNodes = false;
+        createAudioNode(NODE1_NAME, "");
+        createSayNumberNode();
+        createAudioNode(NODE3_NAME, "");
     }
     
     private void createAudioNode(String name, String resourcePath) throws Exception {
@@ -189,17 +210,23 @@ public class SayTimeLeftForAnswerActionNode extends BaseNode {
     
     @Parameter(readOnly=true)
     public Integer getMinutesLeft() {
-        return 0;
+        ConversationScenarioState state = getConversationState();
+        if (state==null) return null;
+        return (Integer) state.getBindings().get(getLastMinutesLeftKey());
     }
     
     @Parameter(readOnly=true)
     public Integer getQueueAvgCallDuration() {
-        return null;
+        QueuedCallStatus callStatus = getQueuedCallStatus(); 
+        CallsQueue queue = callStatus==null? null : callStatus.getLastQueue();
+        return queue==null? null : queue.getAvgCallDuration();
     }
 
     @Parameter(readOnly=true)
     public Integer getQueueOperatorsCount() {
-        return null;
+        QueuedCallStatus callStatus = getQueuedCallStatus();
+        CallsQueue queue = callStatus==null? null : callStatus.getLastQueue();
+        return queue==null? null : queue.getActiveOperatorsCount();
     }
     
     @Parameter(readOnly=true)
@@ -255,5 +282,4 @@ public class SayTimeLeftForAnswerActionNode extends BaseNode {
     public void setNumberInQueue(Integer numberInQueue) {
         this.numberInQueue = numberInQueue;
     }
-    
 }

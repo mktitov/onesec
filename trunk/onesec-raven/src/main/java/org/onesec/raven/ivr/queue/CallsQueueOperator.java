@@ -25,7 +25,7 @@ import org.raven.tree.Node;
  *
  * @author Mikhail Titov
  */
-public interface CallsQueueOperator extends Node {
+public interface CallsQueueOperator extends Node, StatisticCollector {
     /**
      * Returns the total requests count received by operator
      */
