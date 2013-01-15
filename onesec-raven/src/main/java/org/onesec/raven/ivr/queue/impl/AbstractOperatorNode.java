@@ -93,6 +93,15 @@ public abstract class AbstractOperatorNode extends BaseNode implements CallsQueu
     public AbstractOperatorNode() {
     }
 
+    public void resetStat() {
+        totalRequests.set(0);
+        handledRequests.set(0);
+        onBusyRequests.set(0);
+        onNoFreeEndpointsRequests.set(0);
+        onNoAnswerRequests.set(0);
+        onNotStartedRequests.set(0);
+    }
+
     @Override
     protected void initFields() {
         super.initFields();
@@ -103,6 +112,12 @@ public abstract class AbstractOperatorNode extends BaseNode implements CallsQueu
         onNoAnswerRequests = new AtomicInteger();
         onNotStartedRequests = new AtomicInteger();
         processingRequestCount = new AtomicInteger();
+    }
+
+    @Override
+    protected void doStart() throws Exception {
+        super.doStart();
+        resetStat();
     }
     
     //CallQueueOpertor's method

@@ -48,6 +48,9 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         executor = new ExecutorServiceNode();
         executor.setName("executor");
         tree.getRootNode().addAndSaveChildren(executor);
+        executor.setCorePoolSize(20);
+        executor.setMaximumPoolSize(20);
+        executor.setLogLevel(LogLevel.TRACE);
         assertTrue(executor.start());
         
         queue = new CallsQueueNode();
@@ -100,9 +103,12 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         
         List<ViewableObject> vos = queue.getViewableObjects(null);
         assertNotNull(vos);
-        assertEquals(1, vos.size());
-        assertEquals(Viewable.RAVEN_TABLE_MIMETYPE, vos.get(0).getMimeType());
-        Table tab = (Table) vos.get(0).getData();
+        assertEquals(4, vos.size());
+        assertEquals(Viewable.RAVEN_TEXT_MIMETYPE, vos.get(0).getMimeType());
+        assertEquals(Viewable.RAVEN_TABLE_MIMETYPE, vos.get(1).getMimeType());
+        assertEquals(Viewable.RAVEN_TEXT_MIMETYPE, vos.get(2).getMimeType());
+        assertEquals(Viewable.RAVEN_TABLE_MIMETYPE, vos.get(3).getMimeType());
+        Table tab = (Table) vos.get(1).getData();
         List<Object[]> rows = RavenUtils.tableAsList(tab);
         assertEquals(1, rows.size());
         
@@ -110,9 +116,8 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
     }
     
     @Test
-    public void rejectedByMaxQueueSize()
-    {
-        executor.stop();
+    public void rejectedByMaxQueueSize() throws Exception {
+//        executor.stop();
         
         CallQueueRequestController req = createMock(CallQueueRequestController.class);
         CallQueueRequestController req1 = createMock(CallQueueRequestController.class);
@@ -133,12 +138,12 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         req1.fireRejectedQueueEvent();
         
         replay(req, req1);
-        
         queue.setMaxQueueSize(1);
         assertTrue(queue.start());
         queue.queueCall(req);
+//        executor.start();
         queue.queueCall(req1);
-        
+        Thread.sleep(500);
         verify(req, req1);
     }
     

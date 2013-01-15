@@ -23,7 +23,7 @@ import java.util.Collection;
  *
  * @author Mikhail Titov
  */
-public interface CallsQueue {
+public interface CallsQueue extends StatisticCollector {
     public void queueCall(CallQueueRequestController request);
     public String getName();
     public Collection<CallQueueRequestController> getRequests();

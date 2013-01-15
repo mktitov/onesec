@@ -83,6 +83,8 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask,
     @Message private static String operatorHandledCallsMessage;
     @Message private static String operatorChanceToReceiveCallMessage;
     @Message private static String operatorCurrentCallMessage;
+    @Message private static String yesMessage;
+    @Message private static String noMessage;
     
 
     private AtomicReference<String> statusMessage;
@@ -115,6 +117,7 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask,
             throw new Exception(
                     "Can't start calls queue because of processing thread is still running");
         queue = new LinkedList();
+        resetStat();
         stopProcessing.set(false);
         executor.execute(this);
     }
@@ -199,6 +202,11 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask,
         return opers.size();
     }
 
+    public void resetStat() {
+        sumCallDuration.set(0l);
+        callsCount.set(0);
+    }
+
     public void updateCallDuration(int callDuration) {
         sumCallDuration.addAndGet(callDuration);
     }
@@ -241,17 +249,46 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask,
         vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, operatorsTitleMessage));
         TableImpl opersTab = new TableImpl(new String[]{operatorPhoneMessage, operatorDescMessage, 
             operatorActiveMessage, operatorBusyMessage, operatorBusyTimerMessage, operatorHandledCallsMessage,
-            operatorChanceToReceiveCallMessage, operatorCurrentCallMessage});
+            operatorCurrentCallMessage});
+        List<Object[]> tableRows = new ArrayList<Object[]>();
         for (CallsQueueOperator oper: getOpers()) {
             CallsQueueOperatorNode operNode = (CallsQueueOperatorNode)(oper instanceof CallsQueueOperatorNode? oper : null);
             String operPhone = operNode==null? null : operNode.getPhoneNumbers();
             Boolean busy = operNode==null? null : operNode.getBusy();
             Long busyTimer = operNode==null? null : operNode.getBusyTimerValue();
-            opersTab.addRow(new Object[]{operPhone, oper.getPersonDesc(), oper.isActive(), busy, busyTimer, 
-                oper.getHandledRequests(), });
+            String curCall = operNode==null? null : operNode.getProcessingRequest();
+            tableRows.add(new Object[]{operPhone, oper.getPersonDesc(), oper.isActive(), busy, busyTimer, 
+                oper.getHandledRequests(), curCall});
         }
+        sortOpersRows(tableRows);
+        addMarkupToOpersRows(tableRows);
+        for (Object[] row: tableRows)
+            opersTab.addRow(row);
         vos.add(new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, opersTab));
         return vos;
+    }
+    
+    private void addMarkupToOpersRows(List<Object[]> rows) {
+        for (Object[] row: rows) {
+            boolean active = (Boolean)row[2];
+            for (int i=0; i<row.length; ++i) {
+                if (row[i] instanceof Boolean)
+                    row[i] = (Boolean)row[i]? yesMessage : noMessage;
+                if (!active)
+                    row[i] = "<span style='color:#7a7a7a'>"+(row[i]==null?"":row[i])+"</span>";
+            }
+        }
+    }
+    
+    private void sortOpersRows(List<Object[]> rows) {
+        Collections.sort(rows, new Comparator<Object>() {
+            public int compare(Object o1, Object o2) {
+                return mkHash((Object[])o1).compareTo(mkHash((Object[])o2));
+            }
+            private String mkHash(Object[] r) {
+                return ""+((Boolean)r[2]? 0:1)+r[1];
+            }
+        });
     }
     
     private Set<CallsQueueOperator> getOpers() {

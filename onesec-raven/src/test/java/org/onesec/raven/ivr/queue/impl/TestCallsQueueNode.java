@@ -37,4 +37,16 @@ public class TestCallsQueueNode extends BaseNode implements CallsQueue {
     public Collection<CallQueueRequestController> getRequests() {
         return Collections.EMPTY_LIST;
     }
+
+    public int getActiveOperatorsCount() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public int getAvgCallDuration() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public void updateCallDuration(int callDuration) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
 }

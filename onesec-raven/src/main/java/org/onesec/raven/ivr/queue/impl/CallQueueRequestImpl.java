@@ -20,12 +20,16 @@ package org.onesec.raven.ivr.queue.impl;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.queue.CallQueueRequestListener;
+import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.CommutationManagerCall;
 import org.onesec.raven.ivr.queue.QueuedCallStatus;
 import org.onesec.raven.ivr.queue.event.CallQueueEvent;
+import org.onesec.raven.ivr.queue.event.CallQueuedEvent;
 import org.onesec.raven.ivr.queue.event.CommutatedQueueEvent;
 import org.onesec.raven.ivr.queue.event.DisconnectedQueueEvent;
 import org.onesec.raven.ivr.queue.event.NumberChangedQueueEvent;
@@ -54,6 +58,8 @@ public class CallQueueRequestImpl implements QueuedCallStatus
     private final AtomicBoolean canceledFlag = new AtomicBoolean(false);
     private final List<CallQueueRequestListener> listeners = new LinkedList<CallQueueRequestListener>();
     private final DataContext context;
+    private AtomicReference<CallsQueue> lastQueue;
+    private AtomicLong lastQueuedTime; 
 
     public CallQueueRequestImpl(IvrEndpointConversation conversation, int priority, String queueId,
             String operatorPhoneNumbers,
@@ -70,6 +76,8 @@ public class CallQueueRequestImpl implements QueuedCallStatus
         this.prevSerialNumber = -1;
         this.context = context;
         this.operatorPhoneNumbers = operatorPhoneNumbers;
+        this.lastQueue = new AtomicReference<CallsQueue>();
+        this.lastQueuedTime = new AtomicLong();
     }
 
     public void addRequestListener(CallQueueRequestListener listener) {
@@ -99,6 +107,14 @@ public class CallQueueRequestImpl implements QueuedCallStatus
         return conversation.getObjectName();
     }
 
+    public long getLastQueuedTime() {
+        return lastQueuedTime.get();
+    }
+
+    public CallsQueue getLastQueue() {
+        return lastQueue.get();
+    }
+
     public DataContext getContext() {
         return context;
     }
@@ -107,7 +123,13 @@ public class CallQueueRequestImpl implements QueuedCallStatus
     {
         boolean continueConversation = false;
         synchronized(this){
-            if (event instanceof ReadyToCommutateQueueEvent) {
+            if (event instanceof CallQueuedEvent) {
+                CallsQueue eventQueue = ((CallQueuedEvent)event).getCallsQueue();
+                if (eventQueue!=lastQueue.get()) {
+                    lastQueue.set(eventQueue);
+                    lastQueuedTime.set(System.currentTimeMillis());
+                }
+            } else if (event instanceof ReadyToCommutateQueueEvent) {
                 status = Status.READY_TO_COMMUTATE;
                 commutationManager = ((ReadyToCommutateQueueEvent)event).getCommutationManager();
                 if (continueConversationOnReadyToCommutate)
