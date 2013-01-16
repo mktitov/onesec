@@ -30,6 +30,8 @@ import org.raven.annotations.Parameter;
 import org.raven.conv.BindingScope;
 import org.raven.conv.ConversationScenarioState;
 import org.raven.expr.impl.BindingSupportImpl;
+import org.raven.expr.impl.IfNode;
+import org.raven.expr.impl.ScriptAttributeValueHandlerFactory;
 import org.raven.tree.Node;
 import org.raven.tree.NodeAttribute;
 import org.raven.tree.impl.AttributeReferenceValueHandlerFactory;
@@ -45,8 +47,11 @@ import org.weda.annotations.constraints.NotNull;
 public class SayTimeLeftForAnswerActionNode extends BaseNode {
     
     public final static String NODE1_NAME = "say operator will answer";
+    public static final String IFNODE1_NAME = "if minutesLeft>1";
+    public static final String IFNODE2_NAME = "if minutesLefT==1";
     public final static String NODE2_NAME = "say number";
     public final static String NODE3_NAME = "say minutes";
+    public final static String NODE4_NAME = "say minute";
     public final static String MINUTES_LEFT_ATTR = "minutesLeft";
     public final static String QUEUE_AVG_CALL_DURATION_ATTR = "queueAvgCallDuration";
     public final static String QUEUE_OPERATORS_COUNT_ATTR = "queueOperatorsCount";
@@ -90,6 +95,7 @@ public class SayTimeLeftForAnswerActionNode extends BaseNode {
         Bindings bindings = convState.getBindings();
         //initializing
         final boolean debugEnabled = getLogger().isDebugEnabled();
+        bindingSupport.enableScriptExecution();
         try {
             String lastInformTimeKey = getLastInformTimeKey();
             String lastMinutesLeftKey = getLastMinutesLeftKey();
@@ -158,31 +164,51 @@ public class SayTimeLeftForAnswerActionNode extends BaseNode {
     
     private void createChildNodes() throws Exception {
         recreateChildNodes = false;
-        createAudioNode(NODE1_NAME, "");
-        createSayNumberNode();
-        createAudioNode(NODE3_NAME, "");
+        createAudioNode(this,NODE1_NAME, "IVR/sounds/hello");
+        Node ifnode1 = createIfNode(IFNODE1_NAME, "node.parent['"+MINUTES_LEFT_ATTR+"'].value>1");
+        createSayNumberNode(ifnode1);
+        createAudioNode(ifnode1, NODE3_NAME, "IVR/sounds/hello");
+        Node ifnode2 = createIfNode(IFNODE2_NAME, "node.parent['"+MINUTES_LEFT_ATTR+"'].value==1");
+        createAudioNode(ifnode2, NODE4_NAME, "IVR/sounds/hello");
     }
     
-    private void createAudioNode(String name, String resourcePath) throws Exception {
+    private Node createIfNode(String name, String expression) throws Exception {
+        IfNode ifnode = (IfNode) getChildren(name);
+        if (ifnode==null) {
+            ifnode = new IfNode();
+            ifnode.setName(name);
+            addAndSaveChildren(ifnode);
+            ifnode.setUsedInTemplate(false);
+            NodeAttribute expr = ifnode.getNodeAttribute(IfNode.EXPRESSION_ATTRIBUTE);
+            expr.setValueHandlerType(ScriptAttributeValueHandlerFactory.TYPE);
+            expr.setValue(expression);
+            expr.save();
+            ifnode.start();
+        }
+        return ifnode;
+    }
+    
+    private void createAudioNode(Node owner, String name, String resourcePath) throws Exception {
         if (getChildren(name)==null) {
             PlayAudioActionNode node = new PlayAudioActionNode();
             node.setName(name);
-            addAndSaveChildren(node);
+            owner.addAndSaveChildren(node);
             NodeAttribute attr = node.getNodeAttribute(PlayAudioActionNode.AUDIO_FILE_ATTR);
             attr.setValueHandlerType(ResourceReferenceValueHandlerFactory.TYPE);
             attr.setValue(resourcePath);
             attr.save();
+            node.start();
         }
     }
     
-    private void createSayNumberNode() throws Exception {
-        if (getChildren(NODE2_NAME)==null) {
+    private void createSayNumberNode(Node owner) throws Exception {
+        if (owner.getChildren(NODE2_NAME)==null) {
             SayNumberActionNode node = new SayNumberActionNode();
             node.setName(NODE2_NAME);
-            addAndSaveChildren(node);
+            owner.addAndSaveChildren(node);
             NodeAttribute attr = node.getNodeAttribute(SayNumberActionNode.NUMBER_ATTR);
             attr.setValueHandlerType(AttributeReferenceValueHandlerFactory.TYPE);
-            attr.setValue("../@"+MINUTES_LEFT_ATTR);
+            attr.setValue("../../@"+MINUTES_LEFT_ATTR);
             attr.save();
             node.start();
         }
@@ -211,7 +237,7 @@ public class SayTimeLeftForAnswerActionNode extends BaseNode {
     @Parameter(readOnly=true)
     public Integer getMinutesLeft() {
         ConversationScenarioState state = getConversationState();
-        if (state==null) return null;
+        if (state==null) return 0;
         return (Integer) state.getBindings().get(getLastMinutesLeftKey());
     }
     

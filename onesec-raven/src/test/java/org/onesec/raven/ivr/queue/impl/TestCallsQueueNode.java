@@ -49,4 +49,8 @@ public class TestCallsQueueNode extends BaseNode implements CallsQueue {
     public void updateCallDuration(int callDuration) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
+
+    public void resetStat() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
 }
