@@ -15,23 +15,83 @@
  */
 package org.onesec.raven.ivr.queue.actions;
 
+import javax.script.Bindings;
+import org.junit.Before;
 import org.junit.Test;
 import org.onesec.raven.OnesecRavenTestCase;
+import org.onesec.raven.ivr.actions.PlayAudioActionNode;
+import org.onesec.raven.ivr.actions.SayNumberActionNode;
+import org.raven.expr.impl.IfNode;
+import org.raven.test.BindingsContainer;
+import org.raven.tree.Node;
+import static org.easymock.EasyMock.*;
+import org.easymock.IMocksControl;
+import org.easymock.internal.MocksControl;
+import org.raven.conv.ConversationScenarioState;
 
 /**
  *
  * @author Mikhail Titov
  */
 public class SayTimeLeftForAnswerActionNodeTest extends OnesecRavenTestCase {
+    private SayTimeLeftForAnswerActionNode sayNode;
+    private BindingsContainer container;
+    
+    @Before
+    public void prepare() {
+        container = new BindingsContainer();
+        container.setName("root");
+        tree.getRootNode().addAndSaveChildren(container);
+        assertTrue(container.start());
+        
+        sayNode = new SayTimeLeftForAnswerActionNode();
+        sayNode.setName("say minutes left");
+        container.addAndSaveChildren(sayNode);
+    }
+
+    @Test
+    public void startTest() {
+        assertTrue(sayNode.start());
+        Node node = sayNode.getChildren(SayTimeLeftForAnswerActionNode.NODE1_NAME);
+        assertTrue(node instanceof PlayAudioActionNode);
+        
+        //check if minutesLeft>1
+        node = sayNode.getChildren(SayTimeLeftForAnswerActionNode.IFNODE1_NAME);
+        assertTrue(node instanceof IfNode);
+        assertStarted(node);
+        assertFalse(((IfNode)node).getUsedInTemplate());
+        Node node2 = node.getChildren(SayTimeLeftForAnswerActionNode.NODE2_NAME);
+        assertTrue(node2 instanceof SayNumberActionNode);
+        assertStarted(node2);
+        node2 = node.getChildren(SayTimeLeftForAnswerActionNode.NODE3_NAME);
+        assertTrue(node2 instanceof PlayAudioActionNode);
+        assertStarted(node2);
+        
+        //check if minutesLeft==1
+        node = sayNode.getChildren(SayTimeLeftForAnswerActionNode.IFNODE2_NAME);
+        assertTrue(node instanceof IfNode);
+        assertStarted(node);
+        assertFalse(((IfNode)node).getUsedInTemplate());
+        node2 = node.getChildren(SayTimeLeftForAnswerActionNode.NODE4_NAME);
+        assertTrue(node2 instanceof PlayAudioActionNode);
+        assertStarted(node2);
+    }
     
     @Test
-    public void prepare() {
-        
+    public void nullConversationStateTest() throws Exception {
+        assertNull(sayNode.getEffectiveChildrens());
     }
-
+    
     @Test
-    public void test() {
+    public void earlyLastInformTime() throws Exception {
+        IMocksControl control = createControl();
+        ConversationScenarioState state = control.createMock(ConversationScenarioState.class);
+        Bindings bindings = control.createMock(Bindings.class);
         
+        expect(state.getBindings()).andReturn(bindings);
+        expect()
+        control.replay();
+        
+        control.verify();
     }
-
 }
