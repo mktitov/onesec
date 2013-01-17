@@ -36,7 +36,6 @@ import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.impl.CCMCallOperatorNode;
 import org.onesec.raven.impl.ProviderNode;
 import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.onesec.raven.ivr.IvrEndpointConversationListener;
 import org.onesec.raven.ivr.actions.PauseActionNode;
 import org.onesec.raven.ivr.actions.StopConversationActionNode;
 import org.onesec.raven.ivr.impl.*;
@@ -275,7 +274,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         verify(req, context);
     }
     
-    @Test
+//    @Test
     public void fireOperatorBusyTimerStartedTest() throws Exception {
         queues.setCdrRecordSchema(schema);
         assertTrue(queues.start());
@@ -299,7 +298,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         assertEquals("d1", rec.getValue(OPERATOR_PERSON_DESC));
     }
     
-    @Test
+//    @Test
     public void fireOperatorBusyTimerStoppedTest() throws Exception {
         queues.setCdrRecordSchema(schema);
         assertTrue(queues.start());
@@ -322,7 +321,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         assertEquals("d1", rec.getValue(OPERATOR_PERSON_DESC));
     }
     
-//    @Test
+    @Test
     public void realTest() throws Exception
     {
         prepareRealTest();
@@ -363,20 +362,20 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         tree.getRootNode().addAndSaveChildren(callOperator);
         assertTrue(callOperator.start());
 
-        ProviderNode provider = new ProviderNode();
-        provider.setName("88013 provider");
-        callOperator.getProvidersNode().addAndSaveChildren(provider);
-        provider.setFromNumber(88013);
-        provider.setToNumber(88049);
-        provider.setHost("10.16.15.1");
-        provider.setPassword(privateProperties.getProperty("cti_user1"));
-        provider.setUser("cti_user1");
-        assertTrue(provider.start());
+//        ProviderNode provider = new ProviderNode();
+//        provider.setName("88013 provider");
+//        callOperator.getProvidersNode().addAndSaveChildren(provider);
+//        provider.setFromNumber(88013);
+//        provider.setToNumber(88049);
+//        provider.setHost("10.16.15.1");
+//        provider.setPassword(privateProperties.getProperty("cti_user1"));
+//        provider.setUser("cti_user1");
+//        assertTrue(provider.start());
 
-        provider = new ProviderNode();
+        ProviderNode provider = new ProviderNode();
         provider.setName("631609 provider");
         callOperator.getProvidersNode().addAndSaveChildren(provider);
-        provider.setFromNumber(631609);
+        provider.setFromNumber(631605);
         provider.setToNumber(631799);
         provider.setHost("10.0.137.125");
         provider.setPassword(privateProperties.getProperty("ccm_dialer_proxy_kom"));
@@ -517,7 +516,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         endpoint.setName("endpoint");
         tree.getRootNode().addAndSaveChildren(endpoint);
         endpoint.setLogLevel(LogLevel.TRACE);
-        endpoint.setAddress("631609");
+        endpoint.setAddress("631616");
         endpoint.setConversationScenario(scenario);
         endpoint.setExecutor(executor);
         endpoint.setRtpStreamManager(manager);

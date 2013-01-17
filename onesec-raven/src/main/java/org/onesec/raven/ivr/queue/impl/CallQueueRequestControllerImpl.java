@@ -56,7 +56,7 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
     private final long requestId;
     private final AtomicBoolean cdrSent = new AtomicBoolean(false);
     private final Set<RequestControllerListener> listeners = new HashSet<RequestControllerListener>();
-    private final Record cdr;
+    private volatile Record cdr;
     private final boolean lazyRequest;
     private final Set<String> eventTypes;
     private final RecordSchema cdrSchema;
@@ -95,13 +95,17 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
         this.eventTypes = owner.getPermittedEvent();
         this.cdrSchema = owner.getCdrRecordSchema();
         this.log = new StringBuilder();
+        initCdr();
+        request.addRequestListener(new RequestListener());
+    }
+    
+    private void initCdr() throws RecordException {
         if (cdrSchema!=null) {
             cdr = cdrSchema.createRecord();
             cdr.setValue(QUEUED_TIME, getTimestamp());
             cdr.setValue(PRIORITY, request.getPriority());
         } else
             cdr = null;
-        request.addRequestListener(new RequestListener());
     }
 
     public void addRequestListener(CallQueueRequestListener listener) { }
@@ -284,7 +288,14 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
             owner.getLogger().debug(logMess("Received event: %s", event.getClass().getName()));
         try{
             if (cdr!=null){
-                if        (event instanceof DisconnectedQueueEvent) {
+                if (event instanceof DisconnectedQueueEvent || event instanceof CallTransferedQueueEvent) {
+                    boolean transfered = event instanceof CallTransferedQueueEvent;
+                    CallTransferedQueueEvent transferEvent = transfered? (CallTransferedQueueEvent)event : null;
+                    if (transfered) {
+                        cdr.setValue(TRANSFERED, 'T');
+                        addToLog(String.format("transfered to op. (%s) number (%s)"
+                                , transferEvent.getOperatorId(), transferEvent.getOperatorNumber()));
+                    }
                     if (cdr.getValue(DISCONNECTED_TIME)==null) {
                         Timestamp ts = getTimestamp();
                         cdr.setValue(DISCONNECTED_TIME, ts);
@@ -294,6 +305,15 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
                             cdr.setValue(CONVERSATION_DURATION, dur);
                         }
                         sendCdrToConsumers(CALL_FINISHED_EVENT);
+                    }
+                    if (transfered) {
+                        initCdr();
+                        lastQueuedTime = System.currentTimeMillis();
+                        cdr.setValue(OPERATOR_ID, transferEvent.getOperatorId());
+                        cdr.setValue(OPERATOR_NUMBER, transferEvent.getOperatorNumber());
+                        cdr.setValue(OPERATOR_PERSON_ID, transferEvent.getPersonId());
+                        cdr.setValue(OPERATOR_PERSON_DESC, transferEvent.getPersonDesc());
+                        sendCdrToConsumers(ASSIGNED_TO_OPERATOR_EVENT);
                     }
                 } else if (event instanceof RejectedQueueEvent) {
                     cdr.setValue(REJECTED_TIME, getTimestamp());
@@ -313,16 +333,16 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
                     cdr.setValue(COMMUTATED_TIME, getTimestamp());
                     cdr.setValue(CONVERSATION_START_TIME, getTimestamp());
                     sendCdrToConsumers(CONVERSATION_STARTED_EVENT);
-                } else if (event instanceof CallTransferedQueueEvent) {
-                    cdr.setValue(TRANSFERED, 'T');
-                    CallTransferedQueueEvent transferEvent = (CallTransferedQueueEvent) event;
-                    cdr.setValue(OPERATOR_ID, transferEvent.getOperatorId());
-                    cdr.setValue(OPERATOR_NUMBER, transferEvent.getOperatorNumber());
-                    cdr.setValue(OPERATOR_PERSON_ID, transferEvent.getPersonId());
-                    cdr.setValue(OPERATOR_PERSON_DESC, transferEvent.getPersonDesc());
-                    addToLog(String.format("transfered to op. (%s) number (%s)"
-                            , transferEvent.getOperatorId(), transferEvent.getOperatorNumber()));
-                    sendCdrToConsumers(ASSIGNED_TO_OPERATOR_EVENT);
+//                } else if (event instanceof CallTransferedQueueEvent) {
+//                    cdr.setValue(TRANSFERED, 'T');
+//                    CallTransferedQueueEvent transferEvent = (CallTransferedQueueEvent) event;
+//                    cdr.setValue(OPERATOR_ID, transferEvent.getOperatorId());
+//                    cdr.setValue(OPERATOR_NUMBER, transferEvent.getOperatorNumber());
+//                    cdr.setValue(OPERATOR_PERSON_ID, transferEvent.getPersonId());
+//                    cdr.setValue(OPERATOR_PERSON_DESC, transferEvent.getPersonDesc());
+//                    addToLog(String.format("transfered to op. (%s) number (%s)"
+//                            , transferEvent.getOperatorId(), transferEvent.getOperatorNumber()));
+//                    sendCdrToConsumers(ASSIGNED_TO_OPERATOR_EVENT);
                 } else if (event instanceof OperatorQueueEvent) {
                     cdr.setValue(OPERATOR_ID, ((OperatorQueueEvent)event).getOperatorId());
                     cdr.setValue(OPERATOR_PERSON_ID, ((OperatorQueueEvent)event).getPersonId());

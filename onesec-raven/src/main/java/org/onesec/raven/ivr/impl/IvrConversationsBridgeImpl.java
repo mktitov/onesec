@@ -119,6 +119,22 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
         conn2.init();
     }
 
+    public synchronized void reactivateBridge() {
+        if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+            owner.getLogger().debug(logMess("ReActivating bridge"));
+        if (status.get()==IvrConversationsBridgeStatus.DEACTIVATED) {
+            if (owner.isLogLevelEnabled(LogLevel.ERROR))
+                owner.getLogger().error(logMess("Can't reactivate DEACTIVATED bridge"));
+        } else {
+            fireBridgeDeactivatedEvent();
+            if (status.get()==IvrConversationsBridgeStatus.ACTIVATED) {
+                activated = false;
+                fireBridgeActivatedEvent();
+                activated = true;
+            }
+        }
+    }
+
     public void deactivateBridge() {
         throw new UnsupportedOperationException("Not supported yet.");
     }

@@ -55,6 +55,8 @@ public class  CommutationManagerCallImpl
             new LinkedList<CallsCommutationManagerListener>();
     private final AtomicReference<IvrEndpointConversation> operatorConversation = 
             new AtomicReference<IvrEndpointConversation>();
+    private final AtomicReference<IvrConversationsBridge> bridge = 
+            new AtomicReference<IvrConversationsBridge>();
     private ReentrantLock lock = new ReentrantLock();
     private AtomicReference<State> state = new AtomicReference<State>(State.INIT);
     private IvrEndpoint endpoint = null;
@@ -218,7 +220,15 @@ public class  CommutationManagerCallImpl
     }
 
     public void transferToOperator(String operatorNumber) {
-        manager.callTransfered(operatorNumber);
+        IvrEndpointConversation conv = operatorConversation.get();
+        if (conv!=null)
+            conv.makeLogicalTransfer(operatorNumber);
+    }
+    
+    private void reactivateBridge() {
+        IvrConversationsBridge _bridge = bridge.get();
+        if (_bridge != null)
+            _bridge.reactivateBridge();
     }
 
     public CallQueueRequestController getRequest() {
@@ -267,10 +277,12 @@ public class  CommutationManagerCallImpl
     }
 
     public void commutateCalls() throws IvrConversationBridgeExeption {
-        IvrConversationsBridge bridge = manager.getConversationsBridgeManager().createBridge(
+        IvrConversationsBridge _bridge = manager.getConversationsBridgeManager().createBridge(
                 getRequest().getConversation(), operatorConversation.get(), logMess(""));
-        bridge.addBridgeListener(this);
-        bridge.activateBridge();
+        bridge.set(_bridge);
+        _bridge.addBridgeListener(this);
+        _bridge.activateBridge();
+        
     }
 
     public void operatorReadyToCommutate(IvrEndpointConversation operatorConversation) {
@@ -285,7 +297,8 @@ public class  CommutationManagerCallImpl
     public void bridgeReactivated(IvrConversationsBridge bridge) { }
 
     public void bridgeActivated(IvrConversationsBridge bridge) {
-        callMoveToState(State.COMMUTATED, null, null);
+        if (state.get()!=State.COMMUTATED)
+            callMoveToState(State.COMMUTATED, null, null);
     }
 
     public void bridgeDeactivated(IvrConversationsBridge bridge) { }
@@ -334,6 +347,7 @@ public class  CommutationManagerCallImpl
                     manager.callTransfered(number);
                 }
             }
+            reactivateBridge();
         }
     }
 }

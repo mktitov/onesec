@@ -51,6 +51,10 @@ public interface IvrConversationsBridge
      * Activates bridge
      */
     public void activateBridge();
+    /** 
+     * Sends bridgeDeactivated event and then bridgeActivated event
+     */
+    public void reactivateBridge();
     /**
      * Deactivates bridge
      */

@@ -111,4 +111,5 @@ public interface IvrEndpointConversation extends ObjectDescription
      * Sends every char in <b>digits</b> as dtmf signals.
      */
     public void sendDTMF(String digits);
+    public void makeLogicalTransfer(String opponentNumber);
 }

@@ -91,6 +91,13 @@ public class IvrConversationsBridgeManagerNode extends BaseNode
     }
 
     public void bridgeActivated(IvrConversationsBridge bridge) { 
+        lock.writeLock().lock();
+        try {
+            if (!bridges.contains(bridge))
+                bridges.add(bridge);
+        } finally {
+            lock.writeLock().unlock();
+        }
         for (IvrConversationsBridgeListener listener: getBridgeListeners())
             listener.bridgeActivated(bridge);
     }
