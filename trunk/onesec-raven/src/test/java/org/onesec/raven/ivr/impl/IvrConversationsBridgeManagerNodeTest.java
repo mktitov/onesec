@@ -27,7 +27,6 @@ import org.easymock.EasyMock;
 import static org.easymock.EasyMock.*;
 import org.easymock.IArgumentMatcher;
 import org.junit.Before;
-import org.junit.Test;
 import org.onesec.core.StateWaitResult;
 import org.onesec.core.provider.ProviderController;
 import org.onesec.core.provider.ProviderControllerState;

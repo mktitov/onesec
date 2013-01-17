@@ -94,8 +94,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     private String callId;
     private BindingSupportImpl bindingSupport;
     private IvrEndpointConversationStateImpl state;
-    private String callingNumber;
-    private String calledNumber;
+    private volatile String callingNumber;
+    private volatile String calledNumber;
     private Collection<IvrEndpointConversationListener> listeners;
     private volatile boolean stopping = false;
 
@@ -280,10 +280,33 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         }
     }
 
+    public void makeLogicalTransfer(String opponentNumber) {
+        lock.writeLock().lock();
+        try {
+            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                owner.getLogger().debug(callLog(
+                        "Handling logical transfer to number (%s)", opponentNumber));
+            checkForOpponentPartyTransfered(opponentNumber);
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
     private void checkForOpponentPartyTransfered(String opponentNumber) {
         if (!ObjectUtils.in(opponentNumber, callingNumber, calledNumber)) {
+            String newNumber = getPartyNumber(true);
+            if (terminalAddress.equals(callingNumber))
+                calledNumber = opponentNumber;
+            else
+                callingNumber = opponentNumber;
+//            if (newNumber!=null && !newNumber.equals(callingNumber))
+//                callingNumber = newNumber;
+//            newNumber = getPartyNumber(false);
+//            if (newNumber!=null && !newNumber.equals(calledNumber))
+//                calledNumber = newNumber;
             if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                owner.getLogger().debug(callLog("Call transfered to number (%s)", opponentNumber));
+                owner.getLogger().debug(callLog("Call transfered to number (%s). calledNumber: %s, callingNumber: %s", 
+                        opponentNumber, calledNumber, callingNumber));
             fireTransferedEvent(opponentNumber);
         }
     }

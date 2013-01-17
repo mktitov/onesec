@@ -26,7 +26,6 @@ import org.raven.test.BindingsContainer;
 import org.raven.tree.Node;
 import static org.easymock.EasyMock.*;
 import org.easymock.IMocksControl;
-import org.easymock.internal.MocksControl;
 import org.raven.conv.ConversationScenarioState;
 
 /**
@@ -89,7 +88,7 @@ public class SayTimeLeftForAnswerActionNodeTest extends OnesecRavenTestCase {
         Bindings bindings = control.createMock(Bindings.class);
         
         expect(state.getBindings()).andReturn(bindings);
-        expect()
+//        expect()
         control.replay();
         
         control.verify();
