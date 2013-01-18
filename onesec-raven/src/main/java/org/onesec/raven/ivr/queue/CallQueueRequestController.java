@@ -21,6 +21,7 @@ import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.queue.event.NumberChangedQueueEvent;
 import org.raven.ds.DataContext;
+import org.raven.ds.Record;
 
 /**
  *
@@ -58,6 +59,10 @@ public interface CallQueueRequestController extends CallQueueRequest
      * return value for this method
      */
     public CallsQueue getTargetQueue();
+    /**
+     * Returns current CDR for this request or null if record schema for CDR not configured
+     */
+    public Record getCdr();
     /**
      * Fires "rejected" event for the request
      */

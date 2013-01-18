@@ -94,18 +94,23 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
         this.lazyRequest = request instanceof LazyCallQueueRequest;
         this.eventTypes = owner.getPermittedEvent();
         this.cdrSchema = owner.getCdrRecordSchema();
-        this.log = new StringBuilder();
         initCdr();
         request.addRequestListener(new RequestListener());
     }
     
     private void initCdr() throws RecordException {
+        this.log = new StringBuilder();
         if (cdrSchema!=null) {
+            cdrSent.set(false);
             cdr = cdrSchema.createRecord();
             cdr.setValue(QUEUED_TIME, getTimestamp());
             cdr.setValue(PRIORITY, request.getPriority());
         } else
             cdr = null;
+    }
+
+    public Record getCdr() {
+        return cdr;
     }
 
     public void addRequestListener(CallQueueRequestListener listener) { }
@@ -296,8 +301,8 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
                         addToLog(String.format("transfered to op. (%s) number (%s)"
                                 , transferEvent.getOperatorId(), transferEvent.getOperatorNumber()));
                     }
+                    Timestamp ts = getTimestamp();
                     if (cdr.getValue(DISCONNECTED_TIME)==null) {
-                        Timestamp ts = getTimestamp();
                         cdr.setValue(DISCONNECTED_TIME, ts);
                         if (cdr.getValue(COMMUTATED_TIME)!=null){
                             Timestamp startTs = (Timestamp)cdr.getValue(COMMUTATED_TIME);
@@ -307,13 +312,20 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
                         sendCdrToConsumers(CALL_FINISHED_EVENT);
                     }
                     if (transfered) {
+                        Record oldCdr = cdr;
                         initCdr();
                         lastQueuedTime = System.currentTimeMillis();
                         cdr.setValue(OPERATOR_ID, transferEvent.getOperatorId());
                         cdr.setValue(OPERATOR_NUMBER, transferEvent.getOperatorNumber());
                         cdr.setValue(OPERATOR_PERSON_ID, transferEvent.getPersonId());
                         cdr.setValue(OPERATOR_PERSON_DESC, transferEvent.getPersonDesc());
-                        sendCdrToConsumers(ASSIGNED_TO_OPERATOR_EVENT);
+                        cdr.setValue(TARGET_QUEUE, oldCdr.getValue(TARGET_QUEUE));
+                        cdr.setValue(HANDLED_BY_QUEUE, oldCdr.getValue(HANDLED_BY_QUEUE));
+                        cdr.setValue(CALLING_NUMBER, oldCdr.getValue(CALLING_NUMBER));
+                        cdr.setValue(COMMUTATED_TIME, ts);
+                        cdr.setValue(CONVERSATION_START_TIME, ts);
+                        cdr.setValue(READY_TO_COMMUTATE_TIME, ts);
+                        sendCdrToConsumers(ASSIGNED_TO_OPERATOR_EVENT);                        
                     }
                 } else if (event instanceof RejectedQueueEvent) {
                     cdr.setValue(REJECTED_TIME, getTimestamp());
