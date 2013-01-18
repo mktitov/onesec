@@ -88,6 +88,8 @@ public class SayTimeLeftForAnswerActionNode extends BaseNode {
 
     @Override
     public Collection<Node> getEffectiveChildrens() {
+        if (!Status.STARTED.equals(getStatus()))
+            return null;
         //get conversation bindings
         ConversationScenarioState convState = getConversationState();
         if (convState==null)
@@ -106,16 +108,19 @@ public class SayTimeLeftForAnswerActionNode extends BaseNode {
             }
             //calculating
             Long lastInformTime = (Long) bindings.get(lastInformTimeKey);
-            if (lastInformTime+minCallDuration>System.currentTimeMillis())
+            if (lastInformTime+minRepeatInterval*1000>System.currentTimeMillis())
                 return null;
+            Integer _avgCallDuration = avgCallDuration;
             QueuedCallStatus callStatus = (QueuedCallStatus) bindings.get(
                     QueueCallAction.QUEUED_CALL_STATUS_BINDING);
-            Integer _avgCallDuration = avgCallDuration;
             if (debugEnabled)
                 getLogger().debug(logMess(callStatus, "Average conversation duration for queue = "+_avgCallDuration));
             if (_avgCallDuration==null || _avgCallDuration<=0)
                 _avgCallDuration = minCallDuration;
-            int secondsLeft = numberInQueue * _avgCallDuration / operatorsCount;
+            Integer _operatorsCount = operatorsCount;
+            if (_operatorsCount==null || _operatorsCount<=0)
+                return null;
+            int secondsLeft = numberInQueue * _avgCallDuration / _operatorsCount;
             long waitingTime = callStatus.getLastQueuedTime();
             if (debugEnabled)
                 getLogger().debug(logMess(callStatus, "Seconds left (%d) excluding current wating time (%d)", 
@@ -226,11 +231,11 @@ public class SayTimeLeftForAnswerActionNode extends BaseNode {
                (state==null? null : state.getBindings().get(QueueCallAction.QUEUED_CALL_STATUS_BINDING));
     }
     
-    private String getLastInformTimeKey() {
+    String getLastInformTimeKey() {
         return RavenUtils.generateKey("lastInformTime", this);
     }
     
-    private String getLastMinutesLeftKey() {
+    String getLastMinutesLeftKey() {
         return RavenUtils.generateKey("lastMinutesLeft", this);
     }
     

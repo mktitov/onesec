@@ -174,4 +174,8 @@ public class TestEndpointConversationNode extends BaseNode implements IvrEndpoin
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
+    public void makeLogicalTransfer(String opponentNumber) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
 }

@@ -26,7 +26,12 @@ import org.raven.test.BindingsContainer;
 import org.raven.tree.Node;
 import static org.easymock.EasyMock.*;
 import org.easymock.IMocksControl;
+import org.onesec.raven.ivr.IvrEndpointConversation;
+import org.onesec.raven.ivr.queue.CallsQueue;
+import org.onesec.raven.ivr.queue.QueuedCallStatus;
+import org.raven.conv.BindingScope;
 import org.raven.conv.ConversationScenarioState;
+import org.raven.log.LogLevel;
 
 /**
  *
@@ -46,9 +51,10 @@ public class SayTimeLeftForAnswerActionNodeTest extends OnesecRavenTestCase {
         sayNode = new SayTimeLeftForAnswerActionNode();
         sayNode.setName("say minutes left");
         container.addAndSaveChildren(sayNode);
+        sayNode.setLogLevel(LogLevel.TRACE);
     }
 
-    @Test
+//    @Test
     public void startTest() {
         assertTrue(sayNode.start());
         Node node = sayNode.getChildren(SayTimeLeftForAnswerActionNode.NODE1_NAME);
@@ -76,21 +82,72 @@ public class SayTimeLeftForAnswerActionNodeTest extends OnesecRavenTestCase {
         assertStarted(node2);
     }
     
-    @Test
+//    @Test
     public void nullConversationStateTest() throws Exception {
+        assertTrue(sayNode.start());
         assertNull(sayNode.getEffectiveChildrens());
     }
     
-    @Test
+//    @Test
     public void earlyLastInformTime() throws Exception {
+        Mocks mocks = new Mocks();
+        mocks.prepareStage1();
+        mocks.control.replay();
+        
+        container.addBinding(IvrEndpointConversation.CONVERSATION_STATE_BINDING, mocks.state);
+        assertTrue(sayNode.start());
+        assertNull(sayNode.getEffectiveChildrens());
+        
+        mocks.control.verify();
+    }
+    
+    @Test
+    public void zeroActiveOperatorsTest() throws Exception {
+        Mocks mocks = new Mocks();
+        mocks.prepareStage2();
+        mocks.control.replay();
+        
+        container.addBinding(IvrEndpointConversation.CONVERSATION_STATE_BINDING, mocks.state);
+        assertTrue(sayNode.start());
+        assertNull(sayNode.getEffectiveChildrens());
+        
+        mocks.control.verify();
+    }
+    
+    private class Mocks {
         IMocksControl control = createControl();
-        ConversationScenarioState state = control.createMock(ConversationScenarioState.class);
-        Bindings bindings = control.createMock(Bindings.class);
+        ConversationScenarioState state;
+        Bindings bindings;
+        QueuedCallStatus callStatus;
+        CallsQueue callsQueue;
         
-        expect(state.getBindings()).andReturn(bindings);
-//        expect()
-        control.replay();
+        private void initStage1() {
+            state = control.createMock(ConversationScenarioState.class);
+            bindings = control.createMock(Bindings.class);
+            
+            expect(state.getBindings()).andReturn(bindings).atLeastOnce();
+            expect(bindings.containsKey(sayNode.getLastInformTimeKey())).andReturn(false);
+            state.setBinding(eq(sayNode.getLastInformTimeKey()), isA(Long.class), eq(BindingScope.POINT));
+            state.setBinding(eq(sayNode.getLastMinutesLeftKey()), isA(Integer.class), eq(BindingScope.POINT));
+        }
+       
+        public void prepareStage1() {
+            initStage1();
+            expect(bindings.get(sayNode.getLastInformTimeKey())).andReturn(System.currentTimeMillis());
+        }
         
-        control.verify();
+        public void prepareStage2() {
+            initStage1();
+            callStatus = control.createMock(QueuedCallStatus.class);
+            callsQueue = control.createMock(CallsQueue.class);
+            
+            expect(bindings.get(sayNode.getLastInformTimeKey())).andReturn(
+                    System.currentTimeMillis()-sayNode.getMinRepeatInterval()*1000-1);
+            expect(bindings.get(QueueCallAction.QUEUED_CALL_STATUS_BINDING)).andReturn(callStatus).atLeastOnce();
+            expect(callStatus.getConversationInfo()).andReturn("[A->B]").anyTimes();
+            expect(callStatus.getLastQueue()).andReturn(callsQueue).atLeastOnce();
+            expect(callsQueue.getAvgCallDuration()).andReturn(0);
+            expect(callsQueue.getActiveOperatorsCount()).andReturn(0);
+        }
     }
 }
