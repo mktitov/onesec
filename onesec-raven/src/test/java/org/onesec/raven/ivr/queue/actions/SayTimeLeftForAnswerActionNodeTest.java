@@ -101,7 +101,7 @@ public class SayTimeLeftForAnswerActionNodeTest extends OnesecRavenTestCase {
         mocks.control.verify();
     }
     
-    @Test
+//    @Test
     public void zeroActiveOperatorsTest() throws Exception {
         Mocks mocks = new Mocks();
         mocks.prepareStage2();
@@ -110,6 +110,19 @@ public class SayTimeLeftForAnswerActionNodeTest extends OnesecRavenTestCase {
         container.addBinding(IvrEndpointConversation.CONVERSATION_STATE_BINDING, mocks.state);
         assertTrue(sayNode.start());
         assertNull(sayNode.getEffectiveChildrens());
+        
+        mocks.control.verify();
+    }
+    
+    @Test
+    public void oneMinuteLeftTest() throws Exception {
+        Mocks mocks = new Mocks();
+        mocks.prepareStage3();
+        mocks.control.replay();
+        
+        container.addBinding(IvrEndpointConversation.CONVERSATION_STATE_BINDING, mocks.state);
+        assertTrue(sayNode.start());
+        assertNotNull(sayNode.getEffectiveChildrens());
         
         mocks.control.verify();
     }
@@ -136,8 +149,7 @@ public class SayTimeLeftForAnswerActionNodeTest extends OnesecRavenTestCase {
             expect(bindings.get(sayNode.getLastInformTimeKey())).andReturn(System.currentTimeMillis());
         }
         
-        public void prepareStage2() {
-            initStage1();
+        private void initStage2() {
             callStatus = control.createMock(QueuedCallStatus.class);
             callsQueue = control.createMock(CallsQueue.class);
             
@@ -146,8 +158,25 @@ public class SayTimeLeftForAnswerActionNodeTest extends OnesecRavenTestCase {
             expect(bindings.get(QueueCallAction.QUEUED_CALL_STATUS_BINDING)).andReturn(callStatus).atLeastOnce();
             expect(callStatus.getConversationInfo()).andReturn("[A->B]").anyTimes();
             expect(callStatus.getLastQueue()).andReturn(callsQueue).atLeastOnce();
+        }
+        
+        public void prepareStage2() {
+            initStage1();
+            initStage2();
             expect(callsQueue.getAvgCallDuration()).andReturn(0);
             expect(callsQueue.getActiveOperatorsCount()).andReturn(0);
+        }
+        
+        public void prepareStage3() {
+            initStage1();
+            initStage2();
+            expect(callsQueue.getAvgCallDuration()).andReturn(0);
+            expect(callsQueue.getActiveOperatorsCount()).andReturn(1);
+            expect(callStatus.getSerialNumber()).andReturn(2);
+            expect(callStatus.getLastQueuedTime()).andReturn(System.currentTimeMillis()-30000);
+            expect(bindings.get(sayNode.getLastMinutesLeftKey())).andReturn(3).times(2); //first time on node start
+            expect(bindings.put(sayNode.getLastMinutesLeftKey(), 2)).andReturn(2);
+            expect(bindings.put(eq(sayNode.getLastInformTimeKey()), isA(Long.class))).andReturn(null);
         }
     }
 }

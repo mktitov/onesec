@@ -121,13 +121,13 @@ public class SayTimeLeftForAnswerActionNode extends BaseNode {
             if (_operatorsCount==null || _operatorsCount<=0)
                 return null;
             int secondsLeft = numberInQueue * _avgCallDuration / _operatorsCount;
-            long waitingTime = callStatus.getLastQueuedTime();
+            long waitingTime = (System.currentTimeMillis()-callStatus.getLastQueuedTime()) / 1000;
             if (debugEnabled)
                 getLogger().debug(logMess(callStatus, "Seconds left (%d) excluding current wating time (%d)", 
                         secondsLeft, waitingTime));
             if (secondsLeft <= 0)
                 return null;
-            long minutesLeft = (long) (Math.ceil(secondsLeft-waitingTime) / 60.);
+            long minutesLeft = (long) (Math.ceil((secondsLeft-waitingTime) / 60.));
             Integer lastMinutesLeft = (Integer) bindings.get(lastMinutesLeftKey);
             if (debugEnabled)
                 getLogger().debug(logMess(callStatus, "Calculated minutesLeft (%d), lastMinutesLeft (%d)", 
@@ -136,7 +136,7 @@ public class SayTimeLeftForAnswerActionNode extends BaseNode {
                 return null;
             if (debugEnabled)
                 getLogger().debug(logMess(callStatus, "Informing abonent about time left"));
-            bindings.put(lastMinutesLeftKey, minutesLeft);
+            bindings.put(lastMinutesLeftKey, (int)minutesLeft);
             bindings.put(lastInformTimeKey, System.currentTimeMillis());
             return super.getEffectiveChildrens();
         } finally {
