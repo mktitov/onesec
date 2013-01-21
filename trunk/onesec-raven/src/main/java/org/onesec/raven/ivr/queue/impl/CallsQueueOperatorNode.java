@@ -17,7 +17,6 @@
 
 package org.onesec.raven.ivr.queue.impl;
 
-import org.onesec.raven.ivr.queue.event.impl.OperatorBusyTimerStartedImpl;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -27,12 +26,12 @@ import org.onesec.raven.ivr.queue.CallQueueRequestController;
 import org.onesec.raven.ivr.queue.CallsCommutationManager;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.CallsQueueOperator;
+import org.onesec.raven.ivr.queue.event.impl.OperatorBusyTimerStartedImpl;
 import org.onesec.raven.ivr.queue.event.impl.OperatorBusyTimerStoppedImpl;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.log.LogLevel;
 import org.raven.sched.impl.AbstractTask;
-import org.raven.tree.Node;
 import org.weda.annotations.constraints.NotNull;
 
 /**
@@ -174,11 +173,13 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
     
     private void startBusyTimer() {
         Integer timeout = busyTimer;
-        if (timeout!=null && getExecutor().executeQuietly(timeout*1000, new BusyTimerTask())) {
-            busyByBusyTimer.set(true);
-            busyTimerEndTime.set(System.currentTimeMillis()+timeout*1000);
-            getCallsQueues().fireEvent(new OperatorBusyTimerStartedImpl(
-                timeout, getName(), personId, personDesc));
+        if (timeout!=null && busyByBusyTimer.compareAndSet(false, true)) {
+            if (getExecutor().executeQuietly(timeout*1000, new BusyTimerTask())) { 
+                busyTimerEndTime.set(System.currentTimeMillis()+timeout*1000);
+                getCallsQueues().fireEvent(new OperatorBusyTimerStartedImpl(
+                    timeout, getName(), personId, personDesc));
+            } else
+                busyByBusyTimer.set(false);
         }
     }
 
