@@ -70,7 +70,7 @@ public class IvrConversationsBridgeImplTest extends OnesecRavenTestCase
         node.setLogLevel(LogLevel.TRACE);
         assertTrue(node.start());
         IvrConversationsBridge br = new IvrConversationsBridgeImpl(
-                conv1Mocks.conv, conv2Mocks.conv, node, null);
+                conv1Mocks.conv, conv2Mocks.conv, node, null, true);
 
         IvrConversationsBridgeListener listener = createMock(IvrConversationsBridgeListener.class);
         IvrIncomingRtpStartedEvent rtpStartedEv = createStrictMock(IvrIncomingRtpStartedEvent.class);

@@ -34,6 +34,7 @@ import org.onesec.raven.ivr.IvrConversationsBridgeListener;
 import org.onesec.raven.ivr.IvrConversationsBridgeManager;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.raven.annotations.NodeClass;
+import org.raven.annotations.Parameter;
 import org.raven.table.TableImpl;
 import org.raven.tree.NodeAttribute;
 import org.raven.tree.Viewable;
@@ -41,6 +42,7 @@ import org.raven.tree.ViewableObject;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.ViewableObjectImpl;
 import org.raven.util.NodeUtils;
+import org.weda.annotations.constraints.NotNull;
 import org.weda.internal.annotations.Message;
 
 /**
@@ -53,6 +55,9 @@ public class IvrConversationsBridgeManagerNode extends BaseNode
 {
     private Set<IvrConversationsBridge> bridges;
     private ReadWriteLock lock;
+    
+    @NotNull @Parameter(defaultValue="true")
+    private Boolean passDtmf;
 
     @Message
     private static String phoneNumberMessage;
@@ -81,7 +86,7 @@ public class IvrConversationsBridgeManagerNode extends BaseNode
     {
         lock.writeLock().lock();
         try {
-            IvrConversationsBridge bridge = new IvrConversationsBridgeImpl(conv1, conv2, this, logPrefix);
+            IvrConversationsBridge bridge = new IvrConversationsBridgeImpl(conv1, conv2, this, logPrefix, passDtmf);
             bridges.add(bridge);
             bridge.addBridgeListener(this);
             return bridge;
@@ -167,5 +172,13 @@ public class IvrConversationsBridgeManagerNode extends BaseNode
     
     private List<IvrConversationsBridgeListener> getBridgeListeners() {
         return NodeUtils.extractNodesOfType(getDependentNodes(), IvrConversationsBridgeListener.class);
+    }
+
+    public Boolean getPassDtmf() {
+        return passDtmf;
+    }
+
+    public void setPassDtmf(Boolean passDtmf) {
+        this.passDtmf = passDtmf;
     }
 }
