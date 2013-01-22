@@ -45,15 +45,17 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
     private BridgeConnection conn2;
     private boolean activated = false;
     private AtomicReference<IvrConversationsBridgeStatus> status;
+    private final boolean passDtmf;
 
     public IvrConversationsBridgeImpl(
-            IvrEndpointConversation conv1, IvrEndpointConversation conv2, Node owner, String logPrefix)
+            IvrEndpointConversation conv1, IvrEndpointConversation conv2, Node owner, String logPrefix, boolean passDtmf)
     {
         this.conv1 = conv1;
         this.conv2 = conv2;
         this.owner = owner;
         this.logPrefix = logPrefix;
         this.createdTimestamp = System.currentTimeMillis();
+        this.passDtmf = passDtmf;
         activatingTimestamp = new AtomicLong();
         activatedTimestamp = new AtomicLong();
         listeners = new LinkedList<IvrConversationsBridgeListener>();
@@ -279,7 +281,7 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
         }
 
         public void dtmfReceived(IvrDtmfReceivedConversationEvent ev) {
-            if (ev.getConversation()!=conv1)
+            if (ev.getConversation()!=conv1 || !passDtmf)
                 return;
             conv2.sendDTMF(""+ev.getDtmf());
         }
