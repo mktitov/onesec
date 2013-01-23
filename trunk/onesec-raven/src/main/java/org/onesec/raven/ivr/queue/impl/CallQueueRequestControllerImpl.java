@@ -464,6 +464,7 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
         rec.setValue(LOG, log.toString());
         rec.setTag("eventType", eventType);
         rec.setTag("requestId", requestId);
+        rec.setTag("requestController", this);
         if (owner.isLogLevelEnabled(LogLevel.DEBUG))
             owner.getLogger().debug(logMess("Sending CDR to consumers"));
         DataSourceHelper.sendDataToConsumers(owner, rec, request.getContext());
