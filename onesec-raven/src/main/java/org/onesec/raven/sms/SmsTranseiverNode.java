@@ -52,6 +52,10 @@ public class SmsTranseiverNode extends BaseNode implements DataPipe, ISmeConfig 
         
     }
 
+    public Boolean getStopProcessingOnError() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
     public int getBindMode() {
         throw new UnsupportedOperationException("Not supported yet.");
     }

@@ -177,6 +177,10 @@ public class CallRecorderNode extends BaseNode
         throw new UnsupportedOperationException("DataSource not supports pull operations");
     }
 
+    public Boolean getStopProcessingOnError() {
+        return false;
+    }
+
     public Collection<NodeAttribute> generateAttributes() {
         return null;
     }

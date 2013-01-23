@@ -185,6 +185,10 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe, Schedulable
         }
     }
 
+    public Boolean getStopProcessingOnError() {
+        return false;
+    }
+
     public Map<Long, CallQueueRequestController> getRequests() {
         return requests;
     }

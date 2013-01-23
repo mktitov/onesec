@@ -33,7 +33,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.onesec.raven.ivr.ConversationCompletionCallback;
 import org.onesec.raven.ivr.ConversationCdr;
 import org.onesec.raven.ivr.IvrEndpoint;
-import org.onesec.raven.ivr.IvrEndpointException;
 import org.onesec.raven.ivr.IvrEndpointState;
 import org.onesec.raven.ivr.IvrInformerStatus;
 import org.raven.annotations.NodeClass;
@@ -185,6 +184,10 @@ public class IvrInformer
         lastSuccessfullyProcessedAbonId = null;
         lastAbonId = null;
         informerStatus.set(IvrInformerStatus.WAITING);
+    }
+
+    public Boolean getStopProcessingOnError() {
+        return false;
     }
 
     private void generateNodes()

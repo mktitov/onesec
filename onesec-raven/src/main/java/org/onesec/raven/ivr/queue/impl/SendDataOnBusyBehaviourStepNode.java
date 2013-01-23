@@ -90,6 +90,10 @@ public class SendDataOnBusyBehaviourStepNode extends BaseNode
         bindingSupport.addTo(bindings);
     }
 
+    public Boolean getStopProcessingOnError() {
+        return false;
+    }
+
     public Object getExpression() {
         return expression;
     }
