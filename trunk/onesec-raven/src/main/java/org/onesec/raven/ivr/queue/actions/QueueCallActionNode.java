@@ -72,6 +72,10 @@ public class QueueCallActionNode extends BaseNode implements IvrActionNode, Data
         return null;
     }
 
+    public Boolean getStopProcessingOnError() {
+        return false;
+    }
+    
     public void sendCallQueueRequest(CallQueueRequest request, DataContext context)
     {
         DataSourceHelper.sendDataToConsumers(this, request, context);

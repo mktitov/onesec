@@ -53,6 +53,10 @@ public class StartRecordingActionNode extends BaseNode implements IvrActionNode,
         this.noiseLevel = noiseLevel;
     }
 
+    public Boolean getStopProcessingOnError() {
+        return false;
+    }
+
     public Double getMaxGainCoef() {
         return maxGainCoef;
     }

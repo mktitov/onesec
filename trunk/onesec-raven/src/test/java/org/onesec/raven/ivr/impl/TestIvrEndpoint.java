@@ -52,6 +52,10 @@ public class TestIvrEndpoint extends BaseNode implements IvrEndpoint
         endpointState.setState(IvrEndpointState.IN_SERVICE);
     }
 
+    public Boolean getStopProcessingOnError() {
+        return false;
+    }
+    
     public String getAddress() {
         throw new UnsupportedOperationException("Not supported yet.");
     }

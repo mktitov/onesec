@@ -78,6 +78,10 @@ public class CiscoCallsRouterNode extends BaseNode implements IvrTerminal, Calls
         terminal.start();
     }
 
+    public Boolean getStopProcessingOnError() {
+        return false;
+    }
+
     @Override
     protected void doStop() throws Exception {
         super.doStop();

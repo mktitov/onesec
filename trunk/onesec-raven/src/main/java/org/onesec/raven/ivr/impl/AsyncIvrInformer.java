@@ -322,6 +322,10 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         stopProcessing();
     }
 
+    public Boolean getStopProcessingOnError() {
+        return false;
+    }
+
     public RecordSchemaNode getRecordSchema()
     {
         return recordSchema;

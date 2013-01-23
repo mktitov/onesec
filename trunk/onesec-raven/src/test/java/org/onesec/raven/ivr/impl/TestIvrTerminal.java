@@ -40,6 +40,10 @@ public class TestIvrTerminal extends BaseNode implements IvrMediaTerminal {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
+    public Boolean getStopProcessingOnError() {
+        return false;
+    }
+
     public RtpStreamManager getRtpStreamManager() {
         throw new UnsupportedOperationException("Not supported yet.");
     }

@@ -59,6 +59,10 @@ public class SendDataActionNode extends BaseNode implements IvrActionNode, DataS
         throw new UnsupportedOperationException("Pull mode not supported");
     }
 
+    public Boolean getStopProcessingOnError() {
+        return false;
+    }
+
     public Collection<NodeAttribute> generateAttributes() {
         return null;
     }
