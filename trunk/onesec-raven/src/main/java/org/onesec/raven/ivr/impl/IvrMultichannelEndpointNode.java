@@ -77,6 +77,10 @@ public class IvrMultichannelEndpointNode extends AbstractEndpointNode
         return null;
     }
 
+    public Boolean getStopProcessingOnError() {
+        return false;
+    }
+
     @Override
     protected void terminalCreated(CiscoJtapiTerminal terminal) { }
 

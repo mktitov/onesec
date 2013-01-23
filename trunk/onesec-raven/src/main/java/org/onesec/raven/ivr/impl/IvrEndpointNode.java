@@ -65,6 +65,10 @@ public class IvrEndpointNode extends AbstractEndpointNode
         super.doStart();
     }
 
+    public Boolean getStopProcessingOnError() {
+        return false;
+    }
+
     public void invite(String opponentNum, int inviteTimeout, int maxCallDur
             , IvrEndpointConversationListener listener
             , IvrConversationScenario scenario, Map<String, Object> bindings, String callingNumber)
