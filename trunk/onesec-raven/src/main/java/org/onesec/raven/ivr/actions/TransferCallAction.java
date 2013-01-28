@@ -18,6 +18,7 @@
 package org.onesec.raven.ivr.actions;
 
 import org.onesec.raven.ivr.IvrEndpointConversation;
+import org.raven.expr.impl.BindingSupportImpl;
 import org.raven.log.LogLevel;
 
 /**
@@ -45,8 +46,9 @@ public class TransferCallAction extends AsyncAction
     }
 
     @Override
-    protected void doExecute(IvrEndpointConversation conversation) throws Exception
-    {
+    protected void doExecute(IvrEndpointConversation conversation) throws Exception {
+        BindingSupportImpl bindings = actionNode.getBindingSupport();
+        bindings.putAll(conversation.getConversationScenarioState().getBindings());
         actionNode.getBindingSupport().enableScriptExecution();
         try {
             String address = actionNode.getAddress();
@@ -56,7 +58,7 @@ public class TransferCallAction extends AsyncAction
             conversation.transfer(address, actionNode.getMonitorTransfer(), actionNode.getCallStartTimeout()*1000, 
                 actionNode.getCallEndTimeout()*1000);
         } finally {
-            actionNode.getBindingSupport().reset();
+            bindings.reset();
         }
     }
 }
