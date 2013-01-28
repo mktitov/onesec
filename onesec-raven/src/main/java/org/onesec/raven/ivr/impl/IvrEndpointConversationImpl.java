@@ -118,6 +118,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
 
         state = new IvrEndpointConversationStateImpl(this);
         state.setState(INVALID);
+//        call.getConnections()[0].getTerminalConnections()[0].
 //        stateListenersCoordinator.addListenersToState(state, IvrEndpointConversationState.class);
     }
 
