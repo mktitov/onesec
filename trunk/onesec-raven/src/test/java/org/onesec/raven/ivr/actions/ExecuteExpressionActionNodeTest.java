@@ -45,8 +45,13 @@ public class ExecuteExpressionActionNodeTest extends OnesecRavenTestCase
         expr.setName("expr");
         node.addAndSaveChildren(expr);
         expr.setExpression("test.hello='hello'");
+        
+        assertTrue(expr.isConditionalNode());
+        assertNull(expr.getEffectiveChildrens());
+        assertNull(node.map.get("hello"));
+        
+        
         assertTrue(expr.start());
-
         assertTrue(expr.isConditionalNode());
         assertNull(expr.getEffectiveChildrens());
         assertEquals("hello", node.map.get("hello"));

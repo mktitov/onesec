@@ -42,7 +42,9 @@ public class ExecuteExpressionActionNode extends BaseNode
 
     @Override
     public Collection<Node> getEffectiveChildrens() {
-        Object res = expression;
+        if (isStarted()) {
+            Object res = expression;
+        }
         return null;
     }
 
