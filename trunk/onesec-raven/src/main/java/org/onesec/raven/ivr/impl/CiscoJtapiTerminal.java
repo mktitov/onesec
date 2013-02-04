@@ -17,10 +17,12 @@
 
 package org.onesec.raven.ivr.impl;
 
+import com.cisco.jtapi.InvalidStateExceptionImpl;
 import com.cisco.jtapi.extensions.CiscoAddrInServiceEv;
 import com.cisco.jtapi.extensions.CiscoAddrOutOfServiceEv;
 import com.cisco.jtapi.extensions.CiscoCall;
 import com.cisco.jtapi.extensions.CiscoConnection;
+import com.cisco.jtapi.extensions.CiscoJtapiException;
 import com.cisco.jtapi.extensions.CiscoMediaOpenLogicalChannelEv;
 import com.cisco.jtapi.extensions.CiscoMediaTerminal;
 import com.cisco.jtapi.extensions.CiscoRTPInputStartedEv;
@@ -456,8 +458,15 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                 logger.debug(callLog(ev.getCall(), "Accepting call"));
             ((CallControlConnection)ev.getConnection()).accept();
         } catch (Throwable e) {
-            if (isLogLevelEnabled(LogLevel.WARN))
-                logger.error(callLog(ev.getCall(), "Problem with accepting call"), e);
+            if (isLogLevelEnabled(LogLevel.WARN)) {
+                if (e instanceof CiscoJtapiException) {
+                    CiscoJtapiException ciscoEx = (CiscoJtapiException) e;
+                    logger.error(callLog(ev.getCall(), "Problem with accepting call. "
+                            + "Error: code (%s); name (%s); description (%s)", ciscoEx.getErrorCode(),
+                            ciscoEx.getErrorName(), ciscoEx.getErrorDescription()), e);
+                } else 
+                    logger.error(callLog(ev.getCall(), "Problem with accepting call"), e);
+            }
         }
     }
 
