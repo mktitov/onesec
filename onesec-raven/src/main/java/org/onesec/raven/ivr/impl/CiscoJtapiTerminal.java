@@ -862,7 +862,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
         private final Call call;
 
         public MaxCallDurationHandler(IvrEndpointConversationImpl conv, Call call) {
-            super(term, "Invite timeout handler for call");
+            super(term, "Long call duration handler");
             this.conv = conv;
             this.call = call;
         }   
