@@ -173,7 +173,7 @@ public class CiscoJtapiRouteTerminal implements CiscoTerminalObserver, AddressOb
     private void unregisterTerminalListeners() {
         try {
             try {
-//                termAddress.removeCallObserver(this);
+                ((RouteAddress)termAddress).cancelRouteCallback(this);
             } finally {
                 try {
                     termAddress.removeObserver(this);

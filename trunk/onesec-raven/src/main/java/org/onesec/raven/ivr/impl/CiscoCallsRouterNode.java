@@ -70,7 +70,6 @@ public class CiscoCallsRouterNode extends BaseNode implements IvrTerminal, Calls
     @Override
     protected void doStart() throws Exception {
         super.doStart();
-        super.doStart();
         CiscoJtapiRouteTerminal terminal = new CiscoJtapiRouteTerminal(providerRegistry, stateListenersCoordinator, this);
 //        terminal.getState().addStateListener(this);
         term.set(terminal);
@@ -85,12 +84,9 @@ public class CiscoCallsRouterNode extends BaseNode implements IvrTerminal, Calls
     @Override
     protected void doStop() throws Exception {
         super.doStop();
-//        super.doStop();
         CiscoJtapiRouteTerminal terminal = term.getAndSet(null);
         if (terminal!=null) {
-//            terminal.getState().removeStateListener(this);
             terminal.stop();
-//            terminalStopped(terminal);
         }
     }
     
