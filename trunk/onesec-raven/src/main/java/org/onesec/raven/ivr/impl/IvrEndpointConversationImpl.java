@@ -122,6 +122,10 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
 //        stateListenersCoordinator.addListenersToState(state, IvrEndpointConversationState.class);
     }
 
+    public CiscoCall getCall() {
+        return call;
+    }
+
     public void addConversationListener(IvrEndpointConversationListener listener) {
         lock.writeLock().lock();
         try {

@@ -24,6 +24,9 @@ import org.onesec.raven.ivr.IvrEndpointConversationStoppedEvent;
 import org.onesec.raven.ivr.actions.PlayAudioActionNode;
 import java.io.FileInputStream;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.telephony.Call;
 import org.easymock.IArgumentMatcher;
 import org.raven.tree.Node;
 import org.onesec.raven.ivr.IvrTerminalState;
@@ -49,6 +52,8 @@ import org.raven.log.LogLevel;
 import org.raven.sched.impl.ExecutorServiceNode;
 import org.raven.tree.impl.ContainerNode;
 import static org.easymock.EasyMock.*;
+import org.onesec.raven.ivr.IvrEndpointConversation;
+import org.onesec.raven.ivr.IvrEndpointException;
 import org.onesec.raven.ivr.SendMessageDirection;
 
 /**
@@ -63,6 +68,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
     private CiscoJtapiTerminal endpoint;
     private ContainerNode termNode;
     private static AtomicBoolean convStopped = new AtomicBoolean();
+    private IvrEndpointConversation conv;
 
     @Before
     public void prepare() throws Exception {
@@ -172,7 +178,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
 
     //В данном тесте система позвонит, на указанный адрес. Необходимо взять трубку. Должны услышать:
     //  Пароли не совпадают
-    @Test(timeout=50000)
+//    @Test(timeout=50000)
     public void inviteTest() throws Exception {
         waitForProvider();
         createSimpleScenario();
@@ -189,6 +195,38 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         stopEndpoint(endpoint);
         
         verify(term, listener);
+    }
+    
+    //В данном тесте система позвонит, на указанный адрес. Необходимо взять трубку. Должны услышать:
+    //  Пароли не совпадают
+    @Test(timeout=50000)
+    public void transferTest() throws Exception {
+        waitForProvider();
+        createSimpleScenarioWithPause();
+
+        IvrMediaTerminal term = trainTerminal("631799", scenario, true, true);
+        IvrEndpointConversationListener listener = new IvrEndpointConversationListenerAdapter(){
+            @Override
+            public void conversationStarted(IvrEndpointConversationEvent event) {
+                Call call = ((IvrEndpointConversationImpl)event.getConversation()).getCall();
+                try {
+                    endpoint.transfer(call, "631730");
+                } catch (IvrEndpointException ex) {
+                    ex.printStackTrace();
+                    Logger.getLogger(CiscoJtapiTerminalTest.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+        };
+        replay(term);
+
+        endpoint = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, term, null);
+        startEndpoint(endpoint);
+        endpoint.invite("88024", 0, 0, listener, scenario, null, null);
+//        endpoint.invite("88027", 0, 0, listener, scenario, null);
+        waitForConversationStop();
+        stopEndpoint(endpoint);
+        
+        verify(term);
     }
     
     
@@ -440,6 +478,13 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
     private void createSimpleScenario() throws Exception {
         AudioFileNode audio = createAudioFileNode("audio", "src/test/wav/test.wav");
         createPlayAudioActionNode("play audio", scenario, audio);
+        createStopConversationAction(scenario);
+    }
+
+    private void createSimpleScenarioWithPause() throws Exception {
+        AudioFileNode audio = createAudioFileNode("audio", "src/test/wav/test.wav");
+        createPlayAudioActionNode("play audio", scenario, audio);
+        createPauseActionNode(scenario, 5000l);
         createStopConversationAction(scenario);
     }
 

@@ -17,7 +17,6 @@
 
 package org.onesec.raven.ivr.impl;
 
-import com.cisco.jtapi.InvalidStateExceptionImpl;
 import com.cisco.jtapi.extensions.CiscoAddrInServiceEv;
 import com.cisco.jtapi.extensions.CiscoAddrOutOfServiceEv;
 import com.cisco.jtapi.extensions.CiscoCall;
@@ -35,6 +34,7 @@ import com.cisco.jtapi.extensions.CiscoRouteTerminal;
 import com.cisco.jtapi.extensions.CiscoTermInServiceEv;
 import com.cisco.jtapi.extensions.CiscoTermOutOfServiceEv;
 import com.cisco.jtapi.extensions.CiscoTerminal;
+import com.cisco.jtapi.extensions.CiscoTerminalConnection;
 import com.cisco.jtapi.extensions.CiscoTerminalObserver;
 import com.cisco.jtapi.extensions.CiscoTransferEndEv;
 import java.text.SimpleDateFormat;
@@ -45,15 +45,25 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.logging.Level;
 import javax.telephony.Address;
 import javax.telephony.AddressObserver;
 import javax.telephony.Call;
+import javax.telephony.Connection;
+import javax.telephony.InvalidArgumentException;
+import javax.telephony.InvalidPartyException;
+import javax.telephony.InvalidStateException;
+import javax.telephony.MethodNotSupportedException;
+import javax.telephony.PrivilegeViolationException;
 import javax.telephony.Provider;
+import javax.telephony.ResourceUnavailableException;
 import javax.telephony.Terminal;
+import javax.telephony.TerminalConnection;
 import javax.telephony.callcontrol.CallControlCall;
 import javax.telephony.callcontrol.CallControlCallObserver;
 import javax.telephony.callcontrol.CallControlConnection;
@@ -117,6 +127,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
 
     private final Map<Call, ConvHolder> calls = new HashMap<Call, ConvHolder>();
     private final Map<Integer, ConvHolder> connIds = new HashMap<Integer, ConvHolder>();
+    private final Set<Call> transferCalls = new ConcurrentSkipListSet<Call>();
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
     private final IvrTerminalStateImpl state;
     private final Set<IvrEndpointConversationListener> conversationListeners =
@@ -244,6 +255,32 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
             });
             conversationStopped(ev);
         }
+    }
+    
+    public void transfer(Call callForTransfer, String address) throws IvrEndpointException {
+        if (logger.isErrorEnabled())
+            logger.debug(callLog(callForTransfer, "Transfering call to the ({})", address));
+        lock.writeLock().lock();
+        try {
+            CiscoTerminalConnection conn = findSelfTerminalConnection((CiscoCall)callForTransfer);
+            if (conn==null)
+                throw new IvrEndpointException(callLog(callForTransfer, "Transfer error. Can't find terminal connection"));
+            CiscoCall call = null;
+            try {
+                call = (CiscoCall) provider.createCall();
+                calls.put(call, new ConvHolder(callForTransfer));
+                try {
+                    call.consult(conn, address);            
+                } finally {
+                }
+            } catch (Throwable e) {
+                dropCallQuietly(call);
+                throw new IvrEndpointException(callLog(callForTransfer, "Transfer error"), e);
+            }
+        } finally {
+            lock.writeLock().unlock();
+        }
+        
     }
     
     public int getActiveCallsCount() {
@@ -486,7 +523,11 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
             logger.debug(callLog(ev.getCall(), "Logical connection opened for address (%s)"
                     , ev.getConnection().getAddress().getName()));
         ConvHolder conv = getConvHolderByCall(ev.getCall());
-        if (conv!=null)
+        if (conv==null)
+            return;
+        if (conv.isTransfer()) {            
+            doTransfer(ev.getCall(), conv);
+        } else 
             try {
                 conv.conv.logicalConnectionCreated(ev.getConnection().getAddress().getName());
             } catch (IvrEndpointConversationException e) {
@@ -496,6 +537,18 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                             , ev.getConnection().getAddress().getName()), e);
                 conv.conv.stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
             }
+    }
+    
+    private void doTransfer(Call call, ConvHolder conv) {
+        try {
+            conv.callForTransfer.transfer(call);
+        } catch (Throwable ex) {
+            if (isLogLevelEnabled(LogLevel.ERROR))
+                logger.error(callLog(conv.callForTransfer, 
+                        "Transfer error to address (%s)"
+                        , ((CiscoCall)call).getCallingAddress().getName()), ex);
+            
+        }
     }
     
     private void callTransfered(CiscoTransferEndEv ev) {
@@ -519,7 +572,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
     
     private void initInRtp(CiscoMediaOpenLogicalChannelEv ev) {
         ConvHolder conv = getConvHolderByConnId(ev.getCiscoRTPHandle().getHandle());
-        if (conv==null)
+        if (conv==null || conv.isTransfer())
             return;
         try {
             if (isLogLevelEnabled(LogLevel.DEBUG))
@@ -539,7 +592,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
 
     private void initAndStartOutRtp(CiscoRTPOutputStartedEv ev) {
         ConvHolder conv = getConvHolderByCall(ev.getCallID().getCall());
-        if (conv==null)
+        if (conv==null || conv.isTransfer())
             return;
         try {
             CiscoRTPOutputProperties props = ev.getRTPOutputProperties();
@@ -680,6 +733,27 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
         } else if (!termAddressInService || !termInService)
             state.setState(IvrTerminalState.OUT_OF_SERVICE);
     }
+    
+    private CiscoTerminalConnection findSelfTerminalConnection(CiscoCall call) {
+        Connection[] conns = call.getConnections();
+        if (conns!=null)
+            for (Connection conn: conns)
+                if (termAddress.equals(conn.getAddress())) {
+                    TerminalConnection[] termCons = conn.getTerminalConnections();
+                    if (termCons!=null && termCons.length>0)
+                        return (CiscoTerminalConnection) termCons[0];
+                }
+        return null;
+    }
+    
+    private void dropCallQuietly(Call acall) {
+        if (acall==null)
+            return;
+        CiscoCall call = (CiscoCall) acall;
+        try {
+            call.drop();
+        } catch (Exception e){}
+    }
 
     int getCallsCount() {
         lock.readLock().lock();
@@ -792,10 +866,22 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
         private final IvrEndpointConversationImpl conv;
         private final boolean incoming;
         private final long created = System.currentTimeMillis();
+        private final CiscoCall callForTransfer;
 
         public ConvHolder(IvrEndpointConversationImpl conv, boolean incoming) {
             this.conv = conv;
             this.incoming = incoming;
+            callForTransfer = null;
+        }
+
+        public ConvHolder(Call callForTransfer) {
+            this.conv = null;
+            this.incoming = false;
+            this.callForTransfer = (CiscoCall)callForTransfer;
+        }
+        
+        public boolean isTransfer() {
+            return callForTransfer!=null;
         }
         
         public long getDuration() {
