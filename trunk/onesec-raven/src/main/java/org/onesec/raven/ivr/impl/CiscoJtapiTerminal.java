@@ -20,8 +20,8 @@ package org.onesec.raven.ivr.impl;
 import com.cisco.jtapi.extensions.CiscoAddrInServiceEv;
 import com.cisco.jtapi.extensions.CiscoAddrOutOfServiceEv;
 import com.cisco.jtapi.extensions.CiscoCall;
+import com.cisco.jtapi.extensions.CiscoCallChangedEv;
 import com.cisco.jtapi.extensions.CiscoConnection;
-import com.cisco.jtapi.extensions.CiscoJtapiException;
 import com.cisco.jtapi.extensions.CiscoMediaOpenLogicalChannelEv;
 import com.cisco.jtapi.extensions.CiscoMediaTerminal;
 import com.cisco.jtapi.extensions.CiscoRTPInputStartedEv;
@@ -45,23 +45,17 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.logging.Level;
 import javax.telephony.Address;
 import javax.telephony.AddressObserver;
 import javax.telephony.Call;
 import javax.telephony.Connection;
-import javax.telephony.InvalidArgumentException;
-import javax.telephony.InvalidPartyException;
-import javax.telephony.InvalidStateException;
-import javax.telephony.MethodNotSupportedException;
-import javax.telephony.PrivilegeViolationException;
 import javax.telephony.Provider;
-import javax.telephony.ResourceUnavailableException;
 import javax.telephony.Terminal;
 import javax.telephony.TerminalConnection;
 import javax.telephony.callcontrol.CallControlCall;
@@ -83,6 +77,7 @@ import javax.telephony.media.events.MediaTermConnDtmfEv;
 import org.onesec.core.provider.ProviderController;
 import org.onesec.core.services.ProviderRegistry;
 import org.onesec.core.services.StateListenersCoordinator;
+import static org.onesec.raven.impl.CCMUtils.*;
 import org.onesec.raven.ivr.*;
 import org.raven.ds.impl.DataContextImpl;
 import org.raven.log.LogLevel;
@@ -91,6 +86,7 @@ import org.raven.sched.impl.AbstractTask;
 import org.raven.table.TableImpl;
 import org.raven.tree.Viewable;
 import org.raven.tree.ViewableObject;
+import org.raven.tree.impl.LoggerHelper;
 import org.raven.tree.impl.ViewableObjectImpl;
 import org.slf4j.Logger;
 import org.weda.beans.ObjectUtils;
@@ -117,6 +113,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
     private final IvrMediaTerminal term;
     private final Logger logger;
     private final CallsRouter callsRouter;
+    private final Map<String, Call> callsToUnpark = new ConcurrentHashMap<String, Call>();
 
     private Address termAddress;
     private int maxChannels = Integer.MAX_VALUE;
@@ -157,7 +154,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
         this.enableIncomingRtp = term.getEnableIncomingRtp();
         this.enableIncomingCalls = term.getEnableIncomingCalls();
         this.term = term;
-        this.logger = term.getLogger();
+        this.logger = new LoggerHelper(term, null);
         this.callsRouter = callsRouter;
         this.state = new IvrTerminalStateImpl(term);
         stateListenersCoordinator.addListenersToState(state, IvrTerminalState.class);
@@ -183,7 +180,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
             ciscoTerm = registerTerminal(termAddress);
             registerTerminalListeners();
         } catch (Throwable e) {
-            throw new IvrEndpointException("Problem with starting endpoint", e);
+            throw new IvrEndpointException(ccmExLog("Problem with starting endpoint.", e), e);
         }
     }
 
@@ -218,7 +215,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                 if (calls.size()>=maxChannels)
                     throw new Exception("Can't invite oppenent to conversation. Too many opened channels");
                 call = provider.createCall();
-                conv = new IvrEndpointConversationImpl(term, executor, scenario
+                conv = new IvrEndpointConversationImpl(term, this, executor, scenario
                         , rtpStreamManager, enableIncomingRtp, address, bindings);
                 conv.addConversationListener(listener);
                 conv.addConversationListener(this);
@@ -243,7 +240,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                 executor.execute(maxCallDur*1000, new MaxCallDurationHandler(conv, call));
         } catch (Throwable e) {
             if (isLogLevelEnabled(LogLevel.WARN)) 
-                logger.warn(String.format("Problem with inviting abonent with number (%s)", opponentNum), e);
+                logger.warn(ccmExLog(String.format("Problem with inviting abonent with number (%s)", opponentNum), e), e);
             final IvrEndpointConversationStoppedEvent ev = new IvrEndpointConversationStoppedEventImpl(
                     null, CompletionCode.TERMINAL_NOT_READY);
             if (call!=null)
@@ -259,28 +256,62 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
     
     public void transfer(Call callForTransfer, String address) throws IvrEndpointException {
         if (logger.isErrorEnabled())
-            logger.debug(callLog(callForTransfer, "Transfering call to the ({})", address));
-        lock.writeLock().lock();
+            logger.debug(callLog(callForTransfer, "Transfering call to the (%s)", address));
+        CiscoTerminalConnection conn = findSelfTerminalConnection((CiscoCall)callForTransfer);
+        if (conn==null)
+            throw new IvrEndpointException(callLog(callForTransfer, "Transfer error. Can't find terminal connection"));
+        CiscoCall call = null;
         try {
-            CiscoTerminalConnection conn = findSelfTerminalConnection((CiscoCall)callForTransfer);
-            if (conn==null)
-                throw new IvrEndpointException(callLog(callForTransfer, "Transfer error. Can't find terminal connection"));
-            CiscoCall call = null;
-            try {
+            ConvHolder convHolder = getConvHolderByCall(callForTransfer);
+            if (convHolder==null) {
+                if (logger.isWarnEnabled())
+                    logger.warn(callLog(callForTransfer, "Can't find a call to transfer (maybe dropped)"));
+            } else {
+                convHolder.transfering = true;
                 call = (CiscoCall) provider.createCall();
-                calls.put(call, new ConvHolder(callForTransfer));
+                lock.writeLock().lock();
                 try {
-                    call.consult(conn, address);            
+                    calls.put(call, new ConvHolder(callForTransfer, address));
                 } finally {
+                    lock.writeLock().unlock();
                 }
-            } catch (Throwable e) {
-                dropCallQuietly(call);
-                throw new IvrEndpointException(callLog(callForTransfer, "Transfer error"), e);
+                call.consult(conn, address);            
+//                    call.connect(ciscoTerm, termAddress, address);            
             }
-        } finally {
-            lock.writeLock().unlock();
+        } catch (Throwable e) {
+            String mess = ccmExLog(callLog(callForTransfer, "Transfer error"), e);
+            if (logger.isErrorEnabled())
+                logger.error(mess, e);
+            if (call!=null)
+                getAndRemoveConvHolder(call);
+            dropCallQuietly(call);
+            stopConversation(callForTransfer, CompletionCode.TRANSFER_ERROR);
+            throw new IvrEndpointException(mess, e);
         }
-        
+    }
+    
+    public void unpark(Call acall, String parkDN) throws IvrEndpointException {
+        try {
+//            callsToUnpark.put(parkDN, acall);
+            TerminalConnection conn = ciscoTerm.unPark(termAddress, parkDN);            
+            if (logger.isDebugEnabled()) {
+                logger.debug(callLog(acall, "UnPark terminal connection created: "+conn));
+                logger.debug(callLog(acall, "UnPark call: "+getCallDesc((CiscoCall)conn.getConnection().getCall())));
+            }
+            ConvHolder conv = new ConvHolder(parkDN, acall);
+            lock.writeLock().lock();
+            try {
+                calls.put(conn.getConnection().getCall(), conv);
+            } finally {
+                lock.writeLock().unlock();
+            }
+        } catch (Throwable e) {
+            String mess = ccmExLog(callLog(acall, "Unpark error"), e);
+            if (logger.isErrorEnabled())
+                logger.error(ccmExLog(callLog(acall, "Unpark error"), e), e);
+            stopConversation(acall, CompletionCode.UNPARK_ERROR);
+            throw new IvrEndpointException(mess, e);
+        }
     }
     
     public int getActiveCallsCount() {
@@ -368,7 +399,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                 ((CiscoMediaTerminal)term).unregister();
         } catch (Throwable e) {
             if (isLogLevelEnabled(LogLevel.ERROR))
-                logger.error("Problem with terminal unregistration", e);
+                logger.error(ccmExLog("Problem with terminal unregistration", e), e);
         }
     }
 
@@ -385,7 +416,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
             }
         } catch (Throwable e) {
             if (isLogLevelEnabled(LogLevel.WARN))
-                logger.warn("Problem with unregistering listeners from the cisco terminal", e);
+                logger.warn(ccmExLog("Problem with unregistering listeners from the cisco terminal", e), e);
         }
     }
 
@@ -405,11 +436,12 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
     }
 
     public void callChangedEvent(CallEv[] events) {
-        if (isLogLevelEnabled(LogLevel.DEBUG))
-            logger.debug("Recieved call events: "+eventsToString(events));
+        if (logger.isDebugEnabled())
+            logCallEvents(events);
         for (CallEv ev: events)
             switch (ev.getID()) {
                 case CallActiveEv.ID: createConversation(((CallActiveEv)ev).getCall()); break;
+                case CiscoCallChangedEv.ID: replaceCalls((CiscoCallChangedEv)ev);
                 case ConnConnectedEv.ID: bindConnIdToConv((ConnConnectedEv)ev); break;
                 case CallCtlConnOfferedEv.ID: acceptIncomingCall((CallCtlConnOfferedEv) ev); break;
                 case TermConnRingingEv.ID   : answerOnIncomingCall((TermConnRingingEv)ev); break;
@@ -433,15 +465,22 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
     }
 
     private void createConversation(Call call) {
+        if (logger.isDebugEnabled()) {
+            CallControlCall c = (CallControlCall) call;
+            logger.debug(callLog(call, "Trying to create conversation. (%s) -> (%s)", 
+                    c.getCallingAddress(), c.getCalledAddress()));
+        }
         lock.writeLock().lock();
         try {
             try {
                 ConvHolder holder = calls.get(call);
+                if (holder!=null && holder.isTransferCall())
+                    return;
                 if (holder==null && enableIncomingCalls && calls.size()<=maxChannels) {
                     if (isLogLevelEnabled(LogLevel.DEBUG))
                         logger.debug(callLog(call, "Creating conversation"));
                     IvrEndpointConversationImpl conv = new IvrEndpointConversationImpl(
-                            term, executor, conversationScenario, rtpStreamManager
+                            term, this, executor, conversationScenario, rtpStreamManager
                             , enableIncomingRtp, address, null);
                     conv.setCall((CallControlCall) call);
                     conv.addConversationListener(this);
@@ -450,10 +489,25 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                     holder.conv.setCall((CallControlCall) call);
             } catch (Throwable e) {
                 if (isLogLevelEnabled(LogLevel.ERROR))
-                    logger.error("Error creating conversation", e);
+                    logger.error(ccmExLog("Error creating conversation", e), e);
             }
         } finally {
             lock.writeLock().unlock();
+        }
+    }
+    
+    private void replaceCalls(CiscoCallChangedEv event) {
+        ConvHolder holder = getAndRemoveConvHolder(event.getOriginalCall());
+        if (holder!=null) {
+            if (logger.isDebugEnabled())
+                logger.debug(callLog(event.getOriginalCall(), "Replacing this call with: "+
+                        getCallDesc(event.getSurvivingCall())));
+            lock.writeLock().lock();
+            try {
+                calls.put(event.getSurvivingCall(), holder);
+            } finally {
+                lock.writeLock().unlock();
+            }
         }
     }
 
@@ -487,23 +541,16 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
     }
 
     private void acceptIncomingCall(CallCtlConnOfferedEv ev) {
-        ConvHolder conv = getConvHolderByCall(ev.getCall());
-        if (conv==null || !conv.incoming) //|| !conv.incoming
+        ConvHolder conv = getConvHolderByCall(ev.getCall());        
+        if (conv==null || !conv.incoming || conv.isUnparkCall()) 
             return;
         try {
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 logger.debug(callLog(ev.getCall(), "Accepting call"));
             ((CallControlConnection)ev.getConnection()).accept();
         } catch (Throwable e) {
-            if (isLogLevelEnabled(LogLevel.WARN)) {
-                if (e instanceof CiscoJtapiException) {
-                    CiscoJtapiException ciscoEx = (CiscoJtapiException) e;
-                    logger.error(callLog(ev.getCall(), "Problem with accepting call. "
-                            + "Error: code (%s); name (%s); description (%s)", ciscoEx.getErrorCode(),
-                            ciscoEx.getErrorName(), ciscoEx.getErrorDescription()), e);
-                } else 
-                    logger.error(callLog(ev.getCall(), "Problem with accepting call"), e);
-            }
+            if (isLogLevelEnabled(LogLevel.WARN)) 
+                logger.warn(ccmExLog(callLog(ev.getCall(), "Problem with accepting call"), e), e);
         }
     }
 
@@ -514,7 +561,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
             ev.getTerminalConnection().answer();
         } catch (Throwable e) {
             if (isLogLevelEnabled(LogLevel.ERROR))
-                logger.error(callLog(ev.getCall(), "Problem with answering on call"), e);
+                logger.error(callLog(ev.getCall(), "Problem with answering on call", e), e);
         }
     }
     
@@ -523,32 +570,58 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
             logger.debug(callLog(ev.getCall(), "Logical connection opened for address (%s)"
                     , ev.getConnection().getAddress().getName()));
         ConvHolder conv = getConvHolderByCall(ev.getCall());
-        if (conv==null)
+        if (conv==null) {
+            if (logger.isDebugEnabled())
+                logger.debug(callLog(ev.getCall(), "Ignoring 'logical connection opened' conversation not found"));
             return;
-        if (conv.isTransfer()) {            
-            doTransfer(ev.getCall(), conv);
+        }
+        if (conv.isTransferCall() || conv.isUnparkCall()) {            
+//            if (termAddress.equals(ev.getConnection().getAddress()))
+                doTransfer((CiscoCall)ev.getCall(), conv);
         } else 
             try {
                 conv.conv.logicalConnectionCreated(ev.getConnection().getAddress().getName());
             } catch (IvrEndpointConversationException e) {
                 if (isLogLevelEnabled(LogLevel.ERROR))
                     logger.error(callLog(ev.getCall(), 
-                            "Error open logical connection for address (%s)"
+                            "Error open logical connection for address (%s)", e
                             , ev.getConnection().getAddress().getName()), e);
                 conv.conv.stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
             }
     }
     
-    private void doTransfer(Call call, ConvHolder conv) {
-        try {
-            conv.callForTransfer.transfer(call);
-        } catch (Throwable ex) {
-            if (isLogLevelEnabled(LogLevel.ERROR))
-                logger.error(callLog(conv.callForTransfer, 
-                        "Transfer error to address (%s)"
-                        , ((CiscoCall)call).getCallingAddress().getName()), ex);
-            
+    private void doTransfer(final CiscoCall call, final ConvHolder conv) {
+        if (logger.isDebugEnabled())
+            logger.debug(callLog(call, "Trying to transfer call"));
+        Connection[] conns = call.getConnections();
+        if (conns==null || conns.length==0)
+            return;
+        for (Connection con: conns)
+            if (con.getState()!=Connection.CONNECTED)
+                return;
+        if (!conv.transfered.compareAndSet(false, true)) {
+            if (logger.isDebugEnabled())
+                logger.debug(callLog(call, "Already transfered"));
+            return;
         }
+        String mess = callLog(conv.callForTransfer, "Transfering call to address (%s)", conv.transferAddress);
+        if (logger.isDebugEnabled())
+            logger.debug(mess);
+        executor.executeQuietly(new AbstractTask(term, mess) {
+            @Override public void doRun() throws Exception {
+                try {
+//                    call.setTransferController(findSelfTerminalConnection(call));
+//                    conv.callForTransfer.setTransferController(findSelfTerminalConnection(conv.callForTransfer));
+                    conv.callForTransfer.transfer(call);
+                } catch (Throwable ex) {
+                    if (isLogLevelEnabled(LogLevel.ERROR))
+                        logger.error(ccmExLog(callLog(conv.callForTransfer, 
+                                "Transfer error to address (%s)"
+                                , ((CiscoCall)call).getCallingAddress().getName()), ex), ex);
+
+                }
+            }
+        });
     }
     
     private void callTransfered(CiscoTransferEndEv ev) {
@@ -572,7 +645,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
     
     private void initInRtp(CiscoMediaOpenLogicalChannelEv ev) {
         ConvHolder conv = getConvHolderByConnId(ev.getCiscoRTPHandle().getHandle());
-        if (conv==null || conv.isTransfer())
+        if (conv==null || conv.isTransferCall() || conv.isTransfering())
             return;
         try {
             if (isLogLevelEnabled(LogLevel.DEBUG))
@@ -585,14 +658,14 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                 ((CiscoRouteTerminal)ev.getTerminal()).setRTPParams(ev.getCiscoRTPHandle(), params);
         } catch (Throwable e) {
             if (conv.conv.getState().getId()!=IvrEndpointConversationState.INVALID && isLogLevelEnabled(LogLevel.ERROR))
-                logger.error("Error initializing incoming RTP stream", e);
+                logger.error(ccmExLog("Error initializing incoming RTP stream", e), e);
             conv.conv.stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
         }
     }
 
     private void initAndStartOutRtp(CiscoRTPOutputStartedEv ev) {
         ConvHolder conv = getConvHolderByCall(ev.getCallID().getCall());
-        if (conv==null || conv.isTransfer())
+        if (conv==null || conv.isTransferCall())
             return;
         try {
             CiscoRTPOutputProperties props = ev.getRTPOutputProperties();
@@ -619,7 +692,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
         } catch (Throwable e) {
             if (isLogLevelEnabled(LogLevel.ERROR))
                 logger.error(callLog(ev.getCallID().getCall()
-                        ,"Error initializing and starting outgoing RTP stream"), e);
+                        ,"Error initializing and starting outgoing RTP stream", e), e);
             conv.conv.stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
         }
     }
@@ -632,7 +705,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
             conv.conv.startIncomingRtp();
         } catch (Throwable e) {
             if (isLogLevelEnabled(LogLevel.ERROR))
-                logger.error(callLog(ev.getCallID().getCall(), "Problem with start incoming RTP stream"), e);
+                logger.error(callLog(ev.getCallID().getCall(), "Problem with start incoming RTP stream", e), e);
             conv.conv.stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
         }
     }
@@ -682,6 +755,10 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
     private static String callLog(Call call, String message, Object... args) {
         return getCallDesc((CiscoCall)call)+" : Terminal. "+String.format(message, args);
     }
+    
+    private static String callLog(Call call, String message, Throwable ex, Object... args) {
+        return ccmExLog(callLog(call, message, args), ex);
+    }
 
     private static String getCallDesc(CiscoCall call){
         return "[call id: "+call.getCallID().intValue()+", calling number: "+call.getCallingAddress().getName()+"]";
@@ -692,6 +769,13 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
         for (int i=0; i<events.length; ++i)
             buf.append(i > 0 ? ", " : "").append(events[i].toString());
         return buf.toString();
+    }
+    
+    private void logCallEvents(CallEv[] events) {
+        if (events!=null && events.length>0)
+            for (CallEv event: events)
+                logger.debug(callLog(event.getCall(), "Received call event: "+event));
+                
     }
 
     private ConvHolder getConvHolderByConnId(int connId) {
@@ -752,7 +836,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
         CiscoCall call = (CiscoCall) acall;
         try {
             call.drop();
-        } catch (Exception e){}
+        } catch (Throwable e){}
     }
 
     int getCallsCount() {
@@ -859,29 +943,60 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
             }
         });
     }
-
     //--------------- End of the IvrEndpointConversationListener methods -----------------//
-
+    
     private class ConvHolder {
         private final IvrEndpointConversationImpl conv;
         private final boolean incoming;
         private final long created = System.currentTimeMillis();
-        private final CiscoCall callForTransfer;
+        private final AtomicBoolean transfered = new AtomicBoolean(false);
+        private volatile CiscoCall callForTransfer;
+        private volatile String transferAddress;
+        private volatile boolean unparkCall = false;
+        private volatile boolean transfering = false;
+        
 
         public ConvHolder(IvrEndpointConversationImpl conv, boolean incoming) {
             this.conv = conv;
             this.incoming = incoming;
             callForTransfer = null;
+            this.transferAddress = null;
         }
 
-        public ConvHolder(Call callForTransfer) {
+        public ConvHolder(Call callForTransfer, String transferAddress) {
             this.conv = null;
             this.incoming = false;
             this.callForTransfer = (CiscoCall)callForTransfer;
+            this.transferAddress = transferAddress;
         }
         
-        public boolean isTransfer() {
+        public ConvHolder(String parkDN, Call callForUnpark) {
+            this(callForUnpark, parkDN);
+            this.unparkCall = true;
+        }
+        
+        /**
+         * Returns <b>true</b> if this call created to make transfer
+         */
+        public boolean isTransferCall() {
             return callForTransfer!=null;
+        }
+        
+        /**
+         *  Returns <b>true</b> if this call is transferring
+         */
+        public boolean isTransfering() {
+            return transfering;
+        }
+        
+        public boolean isUnparkCall() {
+            return unparkCall;
+        }
+        
+        public void setCallForUnpark(CiscoCall call, String unparkDN) {
+            unparkCall = true;
+            callForTransfer = call;
+            this.transferAddress = unparkDN;
         }
         
         public long getDuration() {

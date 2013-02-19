@@ -101,6 +101,21 @@ public interface IvrEndpointConversation extends ObjectDescription
      */
     public void transfer(String address, boolean monitorTransfer, long callStartTimeout, long callEndTimeout);
     /**
+     * Transfers current call to the address passed in the parameter.
+     */
+    public void transfer(String address) throws IvrEndpointConversationException;
+    /**
+     * Parks conversation call and return number where call parked
+     * @throws IvrEndpointConversationException 
+     */
+    public String park() throws IvrEndpointConversationException;
+    /**
+     * UnParks call parked by {@link #park()} method
+     * @param parkDN
+     * @throws IvrEndpointConversationException 
+     */
+    public void unpark(String parkDN) throws IvrEndpointConversationException;
+    /**
      * Sends text message to the one of the conversation participants. 
      * @param message the message that will be sent to terminal
      * @param encoding in this encoding message will be sent to the terminal

@@ -24,6 +24,7 @@ import org.onesec.raven.ivr.IvrEndpointConversationStoppedEvent;
 import org.onesec.raven.ivr.actions.PlayAudioActionNode;
 import java.io.FileInputStream;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.telephony.Call;
@@ -60,12 +61,15 @@ import org.onesec.raven.ivr.SendMessageDirection;
  * @author Mikhail Titov
  */
 public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
+    private final static String TEST_NUMBER = "631799";
+    
     private ProviderRegistry providerRegistry;
     private StateListenersCoordinator stateListenersCoordinator;
     private ExecutorServiceNode executor;
     private IvrConversationScenarioNode scenario;
     private RtpStreamManagerNode manager;
     private CiscoJtapiTerminal endpoint;
+    private CiscoJtapiTerminal endpoint2;
     private ContainerNode termNode;
     private static AtomicBoolean convStopped = new AtomicBoolean();
     private IvrEndpointConversation conv;
@@ -118,8 +122,8 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         executor = new ExecutorServiceNode();
         executor.setName("executor");
         tree.getRootNode().addAndSaveChildren(executor);
-        executor.setMaximumPoolSize(15);
-        executor.setCorePoolSize(10);
+        executor.setMaximumPoolSize(30);
+        executor.setCorePoolSize(30);
         assertTrue(executor.start());
 
         scenario = new IvrConversationScenarioNode();
@@ -158,12 +162,12 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
 
     //В данном тесте необходимо самому позвонить на номер, указанный в тесте. Должны услышать:
     //  Пароли не совпадают
-//    @Test(timeout=20000)
+//    @Test(timeout=50000)
     public void incomingCallTest() throws Exception {
         waitForProvider();
         createSimpleScenario();
 
-        IvrMediaTerminal term = trainTerminal("88013", scenario, true, true);
+        IvrMediaTerminal term = trainTerminal(TEST_NUMBER, scenario, true, true);
         IvrEndpointConversationListener listener = trainListener();
         replay(term, listener);
 
@@ -184,6 +188,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         createSimpleScenario();
 
         IvrMediaTerminal term = trainTerminal("631799", scenario, true, true);
+//        IvrMediaTerminal term = trainTerminal("631751", scenario, true, true);
         IvrEndpointConversationListener listener = trainListener();
         replay(term, listener);
 
@@ -197,26 +202,15 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         verify(term, listener);
     }
     
-    //В данном тесте система позвонит, на указанный адрес. Необходимо взять трубку. Должны услышать:
-    //  Пароли не совпадают
-    @Test(timeout=50000)
+    //В данном тесте система позвонит, на указанный адрес. Необходимо взять трубку. 
+    //в течении секунды вызов должен переадресоваться на 88028
+//    @Test(timeout=70000)
     public void transferTest() throws Exception {
         waitForProvider();
         createSimpleScenarioWithPause();
 
         IvrMediaTerminal term = trainTerminal("631799", scenario, true, true);
-        IvrEndpointConversationListener listener = new IvrEndpointConversationListenerAdapter(){
-            @Override
-            public void conversationStarted(IvrEndpointConversationEvent event) {
-                Call call = ((IvrEndpointConversationImpl)event.getConversation()).getCall();
-                try {
-                    endpoint.transfer(call, "631730");
-                } catch (IvrEndpointException ex) {
-                    ex.printStackTrace();
-                    Logger.getLogger(CiscoJtapiTerminalTest.class.getName()).log(Level.SEVERE, null, ex);
-                }
-            }
-        };
+        IvrEndpointConversationListener listener = createTransferListener("88028");
         replay(term);
 
         endpoint = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, term, null);
@@ -224,9 +218,82 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         endpoint.invite("88024", 0, 0, listener, scenario, null, null);
 //        endpoint.invite("88027", 0, 0, listener, scenario, null);
         waitForConversationStop();
+        assertEquals(0, endpoint.getActiveCallsCount());
         stopEndpoint(endpoint);
         
         verify(term);
+    }
+    
+    //В данном тесте система 
+    //1. позвонит на номер (88024). Необходимо взять трубку. 
+    //2. в течении секунды вызов припакуется на 631730
+    //3. позвонит на номер (88028). Необходимо взять трубку. 
+    //4. в течении секунды вызов должен распарковаться, т.е. в разговоре останутся 88024 >-< 88028
+//    @Test(timeout=70000)
+    public void parkUnparkToDirectNumberTest() throws Exception {
+        waitForProvider();
+        createSimpleScenarioWithPause();
+
+        IvrMediaTerminal term = trainTerminal("631799", scenario, true, true);
+        IvrMediaTerminal term2 = trainTerminal("631798", scenario, true, true);
+        IvrEndpointConversationListener listener = createTransferListener("631730");
+        IvrEndpointConversationListener listener2 = createTransferListener("9998631730");
+        replay(term, term2);
+
+        endpoint = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, term, null);
+        endpoint2 = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, term2, null);
+        startEndpoint(endpoint);
+        startEndpoint(endpoint2);
+        endpoint.invite("88024", 0, 0, listener, scenario, null, null);
+        waitForConversationStop();
+        assertEquals(0, endpoint.getActiveCallsCount());
+        
+        convStopped.set(false);
+        endpoint2.invite("88028", 0, 0, listener2, scenario, null, null);
+        waitForConversationStop();
+        assertEquals(0, endpoint2.getActiveCallsCount());
+        stopEndpoint(endpoint);
+        stopEndpoint(endpoint2);
+        
+        verify(term, term2);
+        Thread.sleep(5000);
+    }
+    
+    //В данном тесте система 
+    //1. позвонит на номер (88024). Необходимо взять трубку. 
+    //2. в течении секунды вызов припакуется при помощи IvrEndpointConversation.park()
+    //3. позвонит на номер (88028). Необходимо взять трубку. 
+    //4. в течении секунды вызов должен распарковаться, т.е. в разговоре останутся 88024 >-< 88028
+    @Test(timeout=70000)
+    public void parkUnparkTest() throws Exception {
+        waitForProvider();
+        createSimpleScenarioWithPause();
+
+        IvrMediaTerminal term = trainTerminal("631798", scenario, true, true);
+        IvrMediaTerminal term2 = trainTerminal("631799", scenario, true, true);
+        final AtomicReference<String> parkNumber = new AtomicReference<String>();
+        IvrEndpointConversationListener listener = createParkListener(parkNumber);
+        IvrEndpointConversationListener listener2 = createUnParkListener(parkNumber);
+        replay(term, term2);
+
+        endpoint = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, term, null);
+        endpoint2 = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, term2, null);
+        startEndpoint(endpoint);
+        startEndpoint(endpoint2);
+        endpoint.invite("88024", 0, 0, listener, scenario, null, null);
+        waitForConversationStop();
+        assertEquals(0, endpoint.getActiveCallsCount());
+        
+        convStopped.set(false);
+        endpoint2.invite("88028", 0, 0, listener2, scenario, null, null);
+        waitForConversationStop();
+        Thread.sleep(1000);
+        assertEquals(0, endpoint2.getActiveCallsCount());
+        stopEndpoint(endpoint);
+        stopEndpoint(endpoint2);
+        
+        verify(term, term2);
+        Thread.sleep(5000);
     }
     
     
@@ -482,9 +549,9 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
     }
 
     private void createSimpleScenarioWithPause() throws Exception {
-        AudioFileNode audio = createAudioFileNode("audio", "src/test/wav/test.wav");
-        createPlayAudioActionNode("play audio", scenario, audio);
-        createPauseActionNode(scenario, 5000l);
+//        AudioFileNode audio = createAudioFileNode("audio", "src/test/wav/test.wav");
+//        createPlayAudioActionNode("play audio", scenario, audio);
+        createPauseActionNode(scenario, 25000l);
         createStopConversationAction(scenario);
     }
 
@@ -582,6 +649,9 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         expect(term.getRtpMaxSendAheadPacketsCount()).andReturn(0);
         expect(term.getRtpPacketSize()).andReturn(null);
         expect(term.getRtpStreamManager()).andReturn(manager);
+        expect(term.getPath()).andReturn(termNode.getPath()).anyTimes();
+        expect(term.getLogLevel()).andReturn(LogLevel.TRACE).anyTimes();
+        expect(term.getName()).andReturn("Terminal "+address).anyTimes();
 
         return term;
     }
@@ -629,6 +699,60 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         owner.addAndSaveChildren(stopAction);
         assertTrue(stopAction.start());
         return stopAction;
+    }
+    
+    private IvrEndpointConversationListener createTransferListener(final String transferAddress) {
+        return new IvrEndpointConversationListenerAdapter(){
+            @Override public void conversationStarted(final IvrEndpointConversationEvent event) {
+                new Thread(new Runnable() {
+                    public void run() {
+                        try {
+                            Thread.sleep(1000);
+                            event.getConversation().transfer(transferAddress);
+                        } catch (Exception ex) { }
+                    }
+                }).start();
+            }
+            @Override public void conversationStopped(IvrEndpointConversationStoppedEvent event) {
+                convStopped.set(true);
+            }
+        };        
+    }
+
+    private IvrEndpointConversationListener createParkListener(final AtomicReference<String> parkDN) {
+        return new IvrEndpointConversationListenerAdapter(){
+            @Override public void conversationStarted(final IvrEndpointConversationEvent event) {
+                new Thread(new Runnable() {
+                    public void run() {
+                        try {
+                            Thread.sleep(1000);
+                            parkDN.set(event.getConversation().park());
+                        } catch (Exception ex) { }
+                    }
+                }).start();
+            }
+            @Override public void conversationStopped(IvrEndpointConversationStoppedEvent event) {
+                convStopped.set(true);
+            }
+        };        
+    }
+
+    private IvrEndpointConversationListener createUnParkListener(final AtomicReference<String> parkDN) {
+        return new IvrEndpointConversationListenerAdapter(){
+            @Override public void conversationStarted(final IvrEndpointConversationEvent event) {
+                new Thread(new Runnable() {
+                    public void run() {
+                        try {
+                            Thread.sleep(1000);
+                            event.getConversation().unpark(parkDN.get());
+                        } catch (Exception ex) { }
+                    }
+                }).start();
+            }
+            @Override public void conversationStopped(IvrEndpointConversationStoppedEvent event) {
+                convStopped.set(true);
+            }
+        };        
     }
 
     public static IvrEndpointConversationStoppedEvent handleConversationStopped() {
