@@ -25,6 +25,8 @@ import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorServiceException;
 import org.raven.sched.Task;
 import org.raven.tree.Node;
+import org.raven.tree.impl.LoggerHelper;
+import org.slf4j.Logger;
 
 /**
  *
@@ -33,6 +35,7 @@ import org.raven.tree.Node;
 public abstract class AsyncAction extends AbstractAction implements Task
 {
     protected IvrEndpointConversation conversation;
+    protected Logger logger;
     private final AtomicBoolean cancelRequest;
 
     public AsyncAction(String actionName)
@@ -54,6 +57,7 @@ public abstract class AsyncAction extends AbstractAction implements Task
     public void execute(IvrEndpointConversation endpoint) throws IvrActionException
     {
         this.conversation = endpoint;
+        logger = new LoggerHelper(conversation.getOwner(), logMess(""));
         try
         {
             setStatus(IvrActionStatus.EXECUTING);
@@ -65,23 +69,27 @@ public abstract class AsyncAction extends AbstractAction implements Task
             throw new IvrActionException("Error executing async action", ex);
         }
     }
+    
+    //for tests purposes
+    public void setLogger(Logger logger) {
+        this.logger = logger;
+    }
 
     public Node getTaskNode() {
         return conversation.getOwner();
     }
 
     public void run() {
-        try{
+        try {
             try {
-                if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
-                    conversation.getOwner().getLogger().debug(logMess("Executing..."));
+                if (logger.isDebugEnabled())
+                    logger.debug("Executing...");
                 doExecute(conversation);
-                if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
-                    conversation.getOwner().getLogger().debug(logMess("Executed"));
-            }
-            catch (Exception ex) {
-                if (conversation.getOwner().isLogLevelEnabled(LogLevel.ERROR))
-                    conversation.getOwner().getLogger().error(logMess("Execution error"), ex);
+                if (logger.isDebugEnabled())
+                    logger.debug("Executed");
+            } catch (Exception ex) {
+                if (logger.isErrorEnabled())
+                    logger.error("Execution error", ex);
             }
         }
         finally {
