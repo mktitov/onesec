@@ -274,9 +274,9 @@ public class IvrEndpointConversationImplTest extends OnesecRavenTestCase
                         CiscoRTPOutputStartedEv rtpOutput = (CiscoRTPOutputStartedEv) event;
                         CiscoRTPOutputProperties props = rtpOutput.getRTPOutputProperties();
                         if (conversation==null){
-                            conversation = new IvrEndpointConversationImpl(
-                                    conversationOwner, executor, scenario
-                                    , manager, true, null, null);
+//                            conversation = new IvrEndpointConversationImpl(
+//                                    conversationOwner, executor, scenario
+//                                    , manager, true, null, null);
                             //TODO: Восстановить работу теста
 //                            conversation.init(
 //                                    call, props.getRemoteAddress().getHostAddress(), props.getRemotePort()

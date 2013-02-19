@@ -28,6 +28,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.media.protocol.FileTypeDescriptor;
 import javax.telephony.*;
 import javax.telephony.callcontrol.CallControlCall;
@@ -46,13 +48,14 @@ import org.raven.conv.ConversationScenarioPoint;
 import org.raven.conv.ConversationScenarioState;
 import org.raven.conv.impl.GotoNode;
 import org.raven.expr.impl.BindingSupportImpl;
-import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.impl.AbstractTask;
 import org.raven.tree.Node;
 import org.raven.tree.Tree;
 import org.weda.beans.ObjectUtils;
 import org.weda.internal.annotations.Service;
+import static org.onesec.raven.impl.CCMUtils.*;
+import org.raven.tree.impl.LoggerHelper;
 
 /**
  *
@@ -69,6 +72,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     @Service private static CodecManager codecManager;
 
     private final Node owner;
+    private final CiscoJtapiTerminal terminal;
+    private final LoggerHelper logger;
     private final ExecutorService executor;
     private final ConversationScenario scenario;
     private final RtpStreamManager streamManager;
@@ -101,7 +106,9 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
     public IvrEndpointConversationImpl(
-            Node owner, ExecutorService executor
+            Node owner
+            , CiscoJtapiTerminal terminal
+            , ExecutorService executor
             , ConversationScenario scenario, RtpStreamManager streamManager
             , boolean enableIncomingRtpStream
             , String terminalAddress
@@ -109,6 +116,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         throws Exception
     {
         this.owner = owner;
+        this.terminal = terminal;
+        this.logger = new LoggerHelper(owner, null);
         this.executor = executor;
         this.scenario = scenario;
         this.streamManager = streamManager;
@@ -230,8 +239,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             inRtp = streamManager.getIncomingRtpStream(owner);
             inRtp.setLogPrefix(callId+" : ");
             inRtpStatus = RtpStatus.CREATED;
-            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                owner.getLogger().debug(callLog("Incoming RTP successfully created"));
+            if (logger.isDebugEnabled())
+                logger.debug(callLog("Incoming RTP successfully created"));
             checkState();
             return inRtp;
         } finally {
@@ -260,8 +269,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             if (outRtp!=null) {
                 outRtp.setLogPrefix(callId+" : ");
                 outRtpStatus = RtpStatus.CREATED;
-                if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                    owner.getLogger().debug(callLog("Outgoing RTP successfully created"));
+                if (logger.isDebugEnabled())
+                    logger.debug(callLog("Outgoing RTP successfully created"));
                 checkState();
             } else
                 throw new IvrEndpointConversationException("Error creating outgoing rtp stream");
@@ -273,8 +282,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     public void logicalConnectionCreated(String opponentNumber) throws IvrEndpointConversationException {
         lock.writeLock().lock();
         try {
-            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                owner.getLogger().debug(callLog(
+            if (logger.isDebugEnabled())
+                logger.debug(callLog(
                         "Logical connection created for opponent number (%s)", opponentNumber));
             checkForOpponentPartyTransfered(opponentNumber);
             if (state.getId()==CONNECTING)
@@ -287,8 +296,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     public void makeLogicalTransfer(String opponentNumber) {
         lock.writeLock().lock();
         try {
-            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                owner.getLogger().debug(callLog(
+            if (logger.isDebugEnabled())
+                logger.debug(callLog(
                         "Handling logical transfer to number (%s)", opponentNumber));
             checkForOpponentPartyTransfered(opponentNumber);
         } finally {
@@ -308,8 +317,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
 //            newNumber = getPartyNumber(false);
 //            if (newNumber!=null && !newNumber.equals(calledNumber))
 //                calledNumber = newNumber;
-            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                owner.getLogger().debug(callLog("Call transfered to number (%s). calledNumber: %s, callingNumber: %s", 
+            if (logger.isDebugEnabled())
+                logger.debug(callLog("Call transfered to number (%s). calledNumber: %s, callingNumber: %s", 
                         opponentNumber, calledNumber, callingNumber));
             fireTransferedEvent(opponentNumber);
         }
@@ -323,9 +332,9 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     private boolean isAllLogicalConnectionEstablished() {
         Connection[] cons = call.getConnections();
         if (cons!=null) {
-            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+            if (logger.isDebugEnabled())
                 for (Connection con: cons)
-                    owner.getLogger().debug(callLog(
+                    logger.debug(callLog(
                             "Call connection: address=%s; state=%s; callControlState=%s"
                             , con.getAddress().getName(), con.getState()
                             , ((CallControlConnection)con).getCallControlState()));
@@ -340,8 +349,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     public void startIncomingRtp() throws IvrEndpointConversationException {
         lock.writeLock().lock();
         try {
-            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                owner.getLogger().debug(callLog("Trying to start incoming RTP stream"));
+            if (logger.isDebugEnabled())
+                logger.debug(callLog("Trying to start incoming RTP stream"));
             if (state.getId()!=CONNECTING)
                 throw new IvrEndpointConversationStateException(
                         "Can't start incoming RTP", "CONNECTING", state.getIdName());
@@ -357,14 +366,14 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                     inRtpStatus = RtpStatus.CONNECTED;
                     checkState();
                 } else {
-                    if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                        owner.getLogger().debug(callLog(
+                    if (logger.isDebugEnabled())
+                        logger.debug(callLog(
                                 "Incoming RTP. Can't start. Outgoing RTP not created, waiting..."));
                     inRtpStatus = RtpStatus.WAITING_FOR_START;
                 }
             } catch (RtpStreamException e){
-                if (owner.isLogLevelEnabled(LogLevel.ERROR))
-                    owner.getLogger().error(callLog("Error starting incoming RTP"), e);
+                if (logger.isErrorEnabled())
+                    logger.error(callLog("Error starting incoming RTP"), e);
                 stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
             }
         } finally {
@@ -375,8 +384,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     public void startOutgoingRtp() throws IvrEndpointConversationException {
         lock.writeLock().lock();
         try {
-            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                owner.getLogger().debug(callLog("Trying to start outgoing RTP stream"));
+            if (logger.isDebugEnabled())
+                logger.debug(callLog("Trying to start outgoing RTP stream"));
             if (state.getId()!=CONNECTING)
                 throw new IvrEndpointConversationStateException(
                         "Can't start incoming RTP", "CONNECTING", state.getIdName());
@@ -396,15 +405,15 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                     fireOutgoingRtpStartedEvent();
                     checkState();
                 } else {
-                    if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                        owner.getLogger().debug(callLog(
+                    if (logger.isDebugEnabled())
+                        logger.debug(callLog(
                                 "Outgoing RTP. Can't start. "
                                 + "Not all logical connections are established. Waiting..."));
                     outRtpStatus = RtpStatus.WAITING_FOR_START;
                 }
             } catch (Exception e) {
-                if (owner.isLogLevelEnabled(LogLevel.ERROR))
-                    owner.getLogger().error(callLog("Error starting outgoing RTP"), e);
+                if (logger.isErrorEnabled())
+                    logger.error(callLog("Error starting outgoing RTP"), e);
                 stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
             }
         } finally {
@@ -423,8 +432,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                     checkState();
                 }
             } catch (Throwable e) {
-                if (owner.isLogLevelEnabled(LogLevel.WARN))
-                    owner.getLogger().warn("Problem with stopping incoming rtp stream", e);
+                if (logger.isWarnEnabled())
+                    logger.warn("Problem with stopping incoming rtp stream", e);
             }
         } finally {
             lock.writeLock().unlock();
@@ -449,8 +458,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                     checkState();
                 }
             } catch (Throwable e) {
-                if (owner.isLogLevelEnabled(LogLevel.WARN))
-                    owner.getLogger().warn("Problem with stopping outgoing rtp stream", e);
+                if (logger.isWarnEnabled())
+                    logger.warn("Problem with stopping outgoing rtp stream", e);
             }
         } finally {
             lock.writeLock().unlock();
@@ -460,8 +469,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     private void startConversation() throws IvrEndpointConversationException {
         try {
             boolean initialized = initConversation();
-            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                owner.getLogger().debug(callLog("Conversation %s", initialized?"started":"restarted"));
+            if (logger.isDebugEnabled())
+                logger.debug(callLog("Conversation %s", initialized?"started":"restarted"));
             continueConversation(EMPTY_DTMF);
         } catch (Throwable e) {
             stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
@@ -499,8 +508,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 if (dtmfChar!=EMPTY_DTMF)
                     fireDtmfReceived(dtmfChar);
                 if (IvrEndpointConversationState.TALKING!=state.getId()) {
-                    if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                        owner.getLogger().debug(callLog(
+                    if (logger.isDebugEnabled())
+                        logger.debug(callLog(
                                 "Can't continue conversation. "
                                 + "Conversation is not started. "
                                 + "Current conversation state is %s", state.getIdName()));
@@ -515,22 +524,22 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                         || validDtmfs==null
                         || validDtmfs.indexOf(dtmfChar)<0))
                 {
-                    if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                        owner.getLogger().debug(callLog("Invalid dtmf (%s). Skipping", dtmfChar));
+                    if (logger.isDebugEnabled())
+                        logger.debug(callLog("Invalid dtmf (%s). Skipping", dtmfChar));
                     return;
                 }
 
                 if (actionsExecutor.hasDtmfProcessPoint(dtmfChar)) {
-                    if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                        owner.getLogger().debug("Collecting DTMF chars. Collected: "
+                    if (logger.isDebugEnabled())
+                        logger.debug("Collecting DTMF chars. Collected: "
                                 +actionsExecutor.getCollectedDtmfs().toString());
                     return;
                 }
 
                 conversationState.enableDtmfProcessing();
 
-                if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                    owner.getLogger().debug(callLog(
+                if (logger.isDebugEnabled())
+                    logger.debug(callLog(
                             "Continue conversation using dtmf ("+dtmfChar+")"));
                 Boolean disableAudioStreamReset = (Boolean) conversationState.getBindings().get(
                         DISABLE_AUDIO_STREAM_RESET);
@@ -558,8 +567,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                     bindingSupport.reset();
                 }
             } catch(Exception e) {
-                if (owner.isLogLevelEnabled(LogLevel.ERROR))
-                    owner.getLogger().error(callLog("Error continue conversation using dtmf %s", dtmfChar), e);
+                if (logger.isErrorEnabled())
+                    logger.error(callLog("Error continue conversation using dtmf %s", dtmfChar), e);
             }
         } finally  {
             lock.writeLock().unlock();
@@ -578,11 +587,11 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             try {
                 checkState();
             } catch (IvrEndpointConversationException e) {
-                if (owner.isLogLevelEnabled(LogLevel.WARN))
-                    owner.getLogger().warn(callLog("Problem with stopping conversation"), e);
+                if (logger.isWarnEnabled())
+                    logger.warn(callLog("Problem with stopping conversation"), e);
             }
-            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                owner.getLogger().debug(callLog("Conversation stopped (%s)", completionCode));
+            if (logger.isDebugEnabled())
+                logger.debug(callLog("Conversation stopped (%s)", completionCode));
         } finally {
             lock.writeLock().unlock();
         }
@@ -592,18 +601,29 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     private void dropCallConnections()  {
         try {
             if (call.getState() == Call.ACTIVE) {
-                if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                    owner.getLogger().debug(callLog("Dropping the call"));
+                if (logger.isDebugEnabled())
+                    logger.debug(callLog("Dropping the call"));
+                try {
+                    call.drop();
+                    long ts = System.currentTimeMillis();
+                    while (call.getState()==Call.ACTIVE && ts+5000>=System.currentTimeMillis()) 
+                        TimeUnit.MILLISECONDS.sleep(10);
+                    if (call.getState() != Call.ACTIVE)
+                        return;
+                } catch (Throwable e) {
+                    if (logger.isWarnEnabled())
+                        logger.warn(callLog("Error dropping entire call"), e);
+                }
                 Connection[] connections = call.getConnections();
                 if (connections != null && connections.length > 0)
                     for (Connection connection : connections) {
-                        if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                            owner.getLogger().debug(callLog("Disconnecting connection for address (%s)"
+                        if (logger.isDebugEnabled())
+                            logger.debug(callLog("Disconnecting connection for address (%s)"
                                     , connection.getAddress().getName()));
                         if (((CiscoAddress) connection.getAddress()).getState() == CiscoAddress.IN_SERVICE)
                             connection.disconnect();
-                        else if (owner.getLogger().isDebugEnabled())
-                            owner.getLogger().debug(callLog("Can't disconnect address not IN_SERVICE"));
+                        else if (logger.isDebugEnabled())
+                            logger.debug(callLog("Can't disconnect address not IN_SERVICE"));
                     }
                 long ts = System.currentTimeMillis();
                 while (call.getState()==Call.ACTIVE) {
@@ -613,8 +633,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 }
             }
         } catch (Throwable e) {
-            if (owner.isLogLevelEnabled(LogLevel.WARN))
-                owner.getLogger().warn(callLog("Can't drop call connections"), e);
+            if (logger.isWarnEnabled())
+                logger.warn(callLog("Can't drop call connections"), e);
 
         }
     }
@@ -628,8 +648,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             CiscoTerminal term = (CiscoTerminal)controller.getProvider().getAddress(address).getTerminals()[0];
             term.addObserver(new SendTerminalObserver(message, encoding));
         } catch (Throwable e){
-            if (owner.isLogLevelEnabled(LogLevel.WARN))
-                owner.getLogger().warn(callLog("Can't send message to %s (%s)", direction, address), e);
+            if (logger.isWarnEnabled())
+                logger.warn(callLog("Can't send message to %s (%s)", direction, address), e);
         }
     }
 
@@ -651,8 +671,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 throw new Exception("Not found terminal connection");
             termCon.generateDtmf(digits);
         } catch(Throwable e) {
-            if (owner.isLogLevelEnabled(LogLevel.WARN))
-                owner.getLogger().warn(callLog("Error sending DTMF (%s)", digits), e);
+            if (logger.isWarnEnabled())
+                logger.warn(callLog("Error sending DTMF (%s)", digits), e);
         }
     }
 
@@ -676,14 +696,22 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     {
         return inRtp;
     }
+    
+    public void transfer(String address) throws IvrEndpointConversationException {
+        try {
+            terminal.transfer(call, address);
+        } catch (IvrEndpointException ex) {
+            throw new IvrEndpointConversationException(callLog("Transfer error"), ex);
+        }
+    }
 
     public void transfer(String address, boolean monitorTransfer, long callStartTimeout, long callEndTimeout)
     {
         lock.writeLock().lock();
         try {
             if (state.getId()!=TALKING) {
-                if (owner.isLogLevelEnabled(LogLevel.WARN))
-                    owner.getLogger().warn(callLog(
+                if (logger.isWarnEnabled())
+                    logger.warn(callLog(
                             "Can't transfer call to the address (%s). Invalid call state (%s)"
                             , address, state.getIdName()));
                 return;
@@ -694,8 +722,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                     call.transfer(address);
                     fireTransferedEvent(address);
                 } catch (Exception ex) {
-                    if (owner.isLogLevelEnabled(LogLevel.ERROR))
-                        owner.getLogger().error(
+                    if (logger.isErrorEnabled())
+                        logger.error(
                                 callLog("Error transferring call to the address %s", address)
                                 , ex);
                 }
@@ -704,6 +732,33 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             }
         } finally {
             lock.writeLock().unlock();
+        }
+    }
+    
+    public void unpark(String parkDN) throws IvrEndpointConversationException {
+        try {
+            terminal.unpark(call, parkDN);
+        } catch (IvrEndpointException ex) {
+            throw new IvrEndpointConversationException(callLog("Unpark error"), ex);
+        }
+    }
+    
+    public String park() throws IvrEndpointConversationException {
+        try {
+            CiscoConnection conn = getOwnConnection();
+            if (conn==null) 
+                throw new Exception("Call connection not found");
+            if (logger.isDebugEnabled())
+                logger.debug(callLog("Found own connection (%s)", conn));
+            String parkDn = conn.park();
+            if (logger.isDebugEnabled())
+                logger.debug(callLog("Parked at (%s)", parkDn));
+            return parkDn;
+        } catch (Throwable e) {
+            String mess = ccmExLog(callLog("Parking error"), e);
+            if (logger.isErrorEnabled())
+                logger.error(mess);
+            throw new IvrEndpointConversationException(mess, e);
         }
     }
 
@@ -722,6 +777,15 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     @Override
     public String toString() {
         return callId;
+    }
+    
+    private CiscoConnection getOwnConnection() {
+        Connection[] conns = call.getConnections();
+        if (conns!=null && conns.length>0)
+            for (Connection con: conns)
+                if (terminalAddress.equals(con.getAddress().getName()))
+                    return (CiscoConnection)con;
+        return null;
     }
 
     private void fireEvent(final boolean conversationStartEvent, CompletionCode completionCode)
@@ -808,8 +872,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                             ev.getTerminal().removeObserver(this);
                         }
                     } catch (Exception ex) {
-                        if (owner.isLogLevelEnabled(LogLevel.WARN))
-                            owner.getLogger().warn(callLog("Can't send message"), ex);
+                        if (logger.isWarnEnabled())
+                            logger.warn(callLog("Can't send message"), ex);
                     }
                 }
             }
