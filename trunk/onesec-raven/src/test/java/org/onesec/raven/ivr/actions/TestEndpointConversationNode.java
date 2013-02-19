@@ -178,4 +178,16 @@ public class TestEndpointConversationNode extends BaseNode implements IvrEndpoin
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
+    public void transfer(String address) throws IvrEndpointConversationException {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public String park() throws IvrEndpointConversationException {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public void unpark(String parkDN) throws IvrEndpointConversationException {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
 }
