@@ -24,11 +24,10 @@ import com.cisco.jtapi.extensions.CiscoTermInServiceEv;
 import com.cisco.jtapi.extensions.CiscoTerminal;
 import com.cisco.jtapi.extensions.CiscoTerminalObserver;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.telephony.Address;
@@ -277,8 +276,13 @@ public class CiscoJtapiRouteTerminal implements CiscoTerminalObserver, AddressOb
 //                if (route.getCallingNumbers()==null)
 //                    sess.selectRoute(route.getDestinations(), CiscoRouteSession.DEFAULT_SEARCH_SPACE);
 //                else
-                    sess.selectRoute(route.getDestinations(), CiscoRouteSession.DEFAULT_SEARCH_SPACE, 
-                            route.getCallingNumbers());
+                String[] callingNumbers = route.getCallingNumbers();
+                String[] destinations = route.getDestinations();
+                if (callingNumbers==null) {
+                    callingNumbers = new String[destinations.length];
+                    Arrays.fill(callingNumbers, event.getCallingAddress().getName());
+                }
+                sess.selectRoute(destinations, CiscoRouteSession.DEFAULT_SEARCH_SPACE, callingNumbers);
             }
         } catch (Exception ex) {
             if (logger.isErrorEnabled())
@@ -315,7 +319,7 @@ public class CiscoJtapiRouteTerminal implements CiscoTerminalObserver, AddressOb
     
     private class RuleComparator implements Comparator<CallRouteRule> {
         public int compare(CallRouteRule o1, CallRouteRule o2) {
-            return Integer.compare(o1.getPriority(), o2.getPriority());
+            return o1.getPriority()>o2.getPriority()? 1 : (o1.getPriority()<o2.getPriority()? -1 : 0);
         }
     }
 }
