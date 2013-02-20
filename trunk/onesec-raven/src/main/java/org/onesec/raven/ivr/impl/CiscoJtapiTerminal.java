@@ -224,7 +224,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                 if (callsRouter!=null) {
                     callsRouter.setData(
                             null, 
-                            new CallRouteRuleImpl(address, opponentNum, callingNumber, false), 
+                            new CallRouteRuleImpl(address, opponentNum, callingNumber, false, 10), 
                             new DataContextImpl());
                     opponentNum = callsRouter.getAddress();
                 } 
@@ -275,8 +275,8 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                 } finally {
                     lock.writeLock().unlock();
                 }
-                call.consult(conn, address);            
-//                    call.connect(ciscoTerm, termAddress, address);            
+//                call.consult(conn, address);            
+                    call.connect(ciscoTerm, termAddress, address);            
             }
         } catch (Throwable e) {
             String mess = ccmExLog(callLog(callForTransfer, "Transfer error"), e);
@@ -561,7 +561,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
             ev.getTerminalConnection().answer();
         } catch (Throwable e) {
             if (isLogLevelEnabled(LogLevel.ERROR))
-                logger.error(callLog(ev.getCall(), "Problem with answering on call", e), e);
+                logger.error(callLogEx(ev.getCall(), "Problem with answering on call", e), e);
         }
     }
     
@@ -583,7 +583,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                 conv.conv.logicalConnectionCreated(ev.getConnection().getAddress().getName());
             } catch (IvrEndpointConversationException e) {
                 if (isLogLevelEnabled(LogLevel.ERROR))
-                    logger.error(callLog(ev.getCall(), 
+                    logger.error(callLogEx(ev.getCall(), 
                             "Error open logical connection for address (%s)", e
                             , ev.getConnection().getAddress().getName()), e);
                 conv.conv.stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
@@ -612,12 +612,12 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                 try {
 //                    call.setTransferController(findSelfTerminalConnection(call));
 //                    conv.callForTransfer.setTransferController(findSelfTerminalConnection(conv.callForTransfer));
+//                    if (logger.isDebugEnabled())
                     conv.callForTransfer.transfer(call);
                 } catch (Throwable ex) {
                     if (isLogLevelEnabled(LogLevel.ERROR))
-                        logger.error(ccmExLog(callLog(conv.callForTransfer, 
-                                "Transfer error to address (%s)"
-                                , ((CiscoCall)call).getCallingAddress().getName()), ex), ex);
+                        logger.error(callLogEx(conv.callForTransfer, 
+                                "Transfer error to address (%s)", ex, conv.transferAddress), ex);
 
                 }
             }
@@ -691,7 +691,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
             conv.conv.startOutgoingRtp();
         } catch (Throwable e) {
             if (isLogLevelEnabled(LogLevel.ERROR))
-                logger.error(callLog(ev.getCallID().getCall()
+                logger.error(callLogEx(ev.getCallID().getCall()
                         ,"Error initializing and starting outgoing RTP stream", e), e);
             conv.conv.stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
         }
@@ -705,7 +705,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
             conv.conv.startIncomingRtp();
         } catch (Throwable e) {
             if (isLogLevelEnabled(LogLevel.ERROR))
-                logger.error(callLog(ev.getCallID().getCall(), "Problem with start incoming RTP stream", e), e);
+                logger.error(callLogEx(ev.getCallID().getCall(), "Problem with start incoming RTP stream", e), e);
             conv.conv.stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
         }
     }
@@ -756,7 +756,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
         return getCallDesc((CiscoCall)call)+" : Terminal. "+String.format(message, args);
     }
     
-    private static String callLog(Call call, String message, Throwable ex, Object... args) {
+    private static String callLogEx(Call call, String message, Throwable ex, Object... args) {
         return ccmExLog(callLog(call, message, args), ex);
     }
 

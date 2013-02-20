@@ -28,8 +28,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.media.protocol.FileTypeDescriptor;
 import javax.telephony.*;
 import javax.telephony.callcontrol.CallControlCall;
@@ -723,9 +721,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                     fireTransferedEvent(address);
                 } catch (Exception ex) {
                     if (logger.isErrorEnabled())
-                        logger.error(
-                                callLog("Error transferring call to the address %s", address)
-                                , ex);
+                        logger.error(ccmExLog(
+                                callLog("Error transferring call to the address %s", address), ex), ex);
                 }
             } finally {
                 stopConversation(CompletionCode.COMPLETED_BY_OPPONENT);

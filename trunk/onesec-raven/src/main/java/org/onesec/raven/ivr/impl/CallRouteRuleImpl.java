@@ -27,23 +27,26 @@ public class CallRouteRuleImpl implements CallRouteRule {
     private final String[] destinations;
     private final String[] callingNumbers;
     private final boolean permanent;
+    private final int priority;
 
     public CallRouteRuleImpl(String originalCallingNumber, String[] destinations, String[] callingNumbers, 
-            boolean permanent) 
+            boolean permanent, int priority) 
     {
         this.originalCallingNumber = originalCallingNumber;
         this.destinations = destinations;
         this.callingNumbers = callingNumbers;
         this.permanent = permanent;
+        this.priority = priority;
     }
     
     public CallRouteRuleImpl(String originalCallingNumber, String destination, String callingNumber, 
-            boolean permanent) 
+            boolean permanent, int priority) 
     {
         this.originalCallingNumber = originalCallingNumber;
         this.destinations = new String[]{destination};
         this.callingNumbers = new String[]{callingNumber};
         this.permanent = permanent;
+        this.priority = priority;
     }
     
     public boolean accept(String callingNumber) {
@@ -52,6 +55,10 @@ public class CallRouteRuleImpl implements CallRouteRule {
 
     public boolean isPermanent() {
         return permanent;
+    }
+    
+    public int getPriority() {
+        return priority;
     }
 
     public String[] getDestinations() {

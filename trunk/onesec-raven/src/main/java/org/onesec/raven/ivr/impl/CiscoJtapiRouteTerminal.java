@@ -23,8 +23,11 @@ import com.cisco.jtapi.extensions.CiscoRouteTerminal;
 import com.cisco.jtapi.extensions.CiscoTermInServiceEv;
 import com.cisco.jtapi.extensions.CiscoTerminal;
 import com.cisco.jtapi.extensions.CiscoTerminalObserver;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -116,14 +119,26 @@ public class CiscoJtapiRouteTerminal implements CiscoTerminalObserver, AddressOb
         }
     }
     
-    public Map<String, CallRouteRule> getRoutes() {
-        return Collections.unmodifiableMap(routes);
+    public List<CallRouteRule> getRoutes() {
+        List<CallRouteRule> rules = new ArrayList<CallRouteRule>(routes.values());
+        Collections.sort(rules, new RuleComparator());
+        return rules;
     }
     
     public void registerRoute(CallRouteRule route) {
         if (logger.isDebugEnabled())
             logger.debug("Registering new route: "+route);
         routes.put(route.getRuleKey(), route);
+    }
+    
+    public void unregisterRoute(String ruleKey) {
+        if (logger.isDebugEnabled())
+            logger.debug("Trying to unregister route rule with key ({})", ruleKey);
+        CallRouteRule rule = routes.remove(ruleKey);
+        if (rule==null)
+            logger.debug("Can't unregister route rule ({}). Rule not found", ruleKey);
+        else
+            logger.debug("Route rule successfully unregistered: "+rule);
     }
 
     private CiscoRouteTerminal registerTerminal(Address addr) throws Exception {
@@ -258,9 +273,13 @@ public class CiscoJtapiRouteTerminal implements CiscoTerminalObserver, AddressOb
         try {
             if (route==null)
                 sess.endRoute(CiscoRouteSession.ERROR_NO_CALLBACK);
-            else 
-                sess.selectRoute(route.getDestinations(), CiscoRouteSession.DEFAULT_SEARCH_SPACE, 
-                        route.getCallingNumbers());
+            else {
+//                if (route.getCallingNumbers()==null)
+//                    sess.selectRoute(route.getDestinations(), CiscoRouteSession.DEFAULT_SEARCH_SPACE);
+//                else
+                    sess.selectRoute(route.getDestinations(), CiscoRouteSession.DEFAULT_SEARCH_SPACE, 
+                            route.getCallingNumbers());
+            }
         } catch (Exception ex) {
             if (logger.isErrorEnabled())
                 logger.error("Routing error", ex);
@@ -268,20 +287,17 @@ public class CiscoJtapiRouteTerminal implements CiscoTerminalObserver, AddressOb
     }
     
     private CallRouteRule findRoute(String callingNumber) {
-        Iterator<CallRouteRule> it = routes.values().iterator();
-        while (it.hasNext()) {
-            CallRouteRule route = it.next();
-            if (route.accept(callingNumber)) {
+        for (CallRouteRule rule: getRoutes()) 
+            if (rule.accept(callingNumber)) {
                 if (logger.isDebugEnabled())
-                    logger.debug("Found route for call from ({}): {}", callingNumber, route);
-                if (!route.isPermanent()) {
+                    logger.debug("Found route for call from ({}): {}", callingNumber, rule);
+                if (!rule.isPermanent()) {
                     if (logger.isDebugEnabled())
-                        logger.debug("Removing route: "+route);
-                    it.remove();
+                        logger.debug("Removing route: "+rule);
+                    routes.remove(rule.getRuleKey());
                 }
-                return route;
+                return rule;
             }
-        }
         if (logger.isErrorEnabled())
             logger.error("Can't find route for incoming call from ({})", callingNumber);
         return null;
@@ -295,5 +311,11 @@ public class CiscoJtapiRouteTerminal implements CiscoTerminalObserver, AddressOb
     public void routeEndEvent(RouteEndEvent event) {
         if (logger.isDebugEnabled())
             logger.debug("Received route callback event: "+event.getClass().getName());
+    }
+    
+    private class RuleComparator implements Comparator<CallRouteRule> {
+        public int compare(CallRouteRule o1, CallRouteRule o2) {
+            return Integer.compare(o1.getPriority(), o2.getPriority());
+        }
     }
 }
