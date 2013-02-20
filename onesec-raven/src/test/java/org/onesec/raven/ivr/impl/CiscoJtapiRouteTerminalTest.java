@@ -15,6 +15,7 @@
  */
 package org.onesec.raven.ivr.impl;
 
+import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -34,7 +35,12 @@ import org.raven.sched.impl.ExecutorServiceNode;
 import org.raven.tree.impl.ContainerNode;
 import static org.easymock.EasyMock.*;
 import org.easymock.IMocksControl;
+import org.raven.RavenUtils;
+import org.raven.expr.impl.ScriptAttributeValueHandlerFactory;
+import org.raven.table.Table;
 import org.raven.tree.Node;
+import org.raven.tree.Viewable;
+import org.raven.tree.ViewableObject;
 
 /**
  *
@@ -61,7 +67,8 @@ public class CiscoJtapiRouteTerminalTest extends OnesecRavenTestCase {
         callOperator.getProvidersNode().addAndSaveChildren(provider);
         provider.setFromNumber(88000);
         provider.setToNumber(631799);
-        provider.setHost("10.16.15.1");
+        provider.setHost("10.0.137.125");
+//        provider.setHost("10.16.15.1");
         provider.setPassword(privateProperties.getProperty("ccm_dialer_proxy_kom"));
         provider.setUser("ccm_dialer_proxy_kom");
         assertTrue(provider.start());
@@ -109,20 +116,22 @@ public class CiscoJtapiRouteTerminalTest extends OnesecRavenTestCase {
 //    @Test
     public void routeTest() throws Exception {
         waitForProvider();
-        IvrTerminal term = trainTerminal("88191");
+        IvrTerminal term = trainTerminal("631691");
         mockControl.replay();
         terminal = new CiscoJtapiRouteTerminal(providerRegistry, stateListenersCoordinator, term);
         terminal.start();
         terminal.getState().waitForState(new int[]{IvrTerminalState.IN_SERVICE}, 5000);
         assertEquals(0, terminal.getRoutes().size());
-        terminal.registerRoute(new CallRouteRuleImpl("88024", "0325532", "9111110000", false));
+//        terminal.registerRoute(new CallRouteRuleImpl("88024", "88027", "9111110000", false, 0));
+        terminal.registerRoute(new CallRouteRuleImpl("88024"
+                , new String[]{"88028", "88027"}, null, false, 0));
         assertEquals(1, terminal.getRoutes().size());
         Thread.sleep(30000);
         assertEquals(0, terminal.getRoutes().size());
         terminal.stop();        
     }
     
-    @Test
+//    @Test
     public void realRouteTest() throws Exception {
         waitForProvider();
         CiscoCallsRouterNode router = new CiscoCallsRouterNode();
@@ -130,8 +139,43 @@ public class CiscoJtapiRouteTerminalTest extends OnesecRavenTestCase {
         tree.getRootNode().addAndSaveChildren(router);        
         router.setAddress("88191");
         assertTrue(router.start());
-        router.getTerminalState().waitForState(new int[]{IvrTerminalState.IN_SERVICE}, 5000);
-        router.setData(null, new CallRouteRuleImpl("88024", "0325532", "9111110000", false), null);
+        router.getTerminalState().waitForState(new int[]{IvrTerminalState.IN_SERVICE}, 15000);
+//        router.setData(null, new CallRouteRuleImpl("88024", "88027", "9111110000", false, 0), null);
+        Thread.sleep(5000);
+        router.setData(null, new CallRouteRuleImpl("88024"
+                , new String[]{"88027", "88028"}, null, false, 0), null);
+        Thread.sleep(30000);
+        router.stop();
+    }
+    
+    @Test
+    public void realRouteWithExpressionRuleTest() throws Exception {
+        waitForProvider();
+        CiscoCallsRouterNode router = new CiscoCallsRouterNode();
+        router.setName("router: 631691");
+        tree.getRootNode().addAndSaveChildren(router);        
+        router.setAddress("631691");
+        router.setLogLevel(LogLevel.TRACE);
+        assertTrue(router.start());
+        
+        ExpressionRouteRule rule = new ExpressionRouteRule();
+        rule.setName("rule1");
+        router.addAndSaveChildren(rule);
+        rule.getAttr(ExpressionRouteRule.ACCEPT_ATTR).setValue("callingNumber=='88024'");
+        rule.getAttr(ExpressionRouteRule.ACCEPT_ATTR).setValueHandlerType(ScriptAttributeValueHandlerFactory.TYPE);
+        rule.getAttr(ExpressionRouteRule.DESTINATIONS_ATTR).setValue("88027..88028");
+        assertTrue(rule.start());
+        
+        List<ViewableObject> vos = router.getViewableObjects(null);
+        assertNotNull(vos);
+        assertEquals(1, vos.size());
+        assertEquals(Viewable.RAVEN_TABLE_MIMETYPE, vos.get(0).getMimeType());
+        Object data = vos.get(0).getData();
+        assertTrue(data instanceof Table);
+        List<Object[]> rows = RavenUtils.tableAsList((Table)data);
+        assertEquals(1, rows.size());
+        
+        router.getTerminalState().waitForState(new int[]{IvrTerminalState.IN_SERVICE}, 15000);
         Thread.sleep(30000);
         router.stop();
     }

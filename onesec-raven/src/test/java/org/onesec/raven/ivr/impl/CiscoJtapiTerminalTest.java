@@ -62,6 +62,7 @@ import org.onesec.raven.ivr.SendMessageDirection;
  */
 public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
     private final static String TEST_NUMBER = "631799";
+    private final static String RP_TEST_NUMBER = "631690";
     
     private ProviderRegistry providerRegistry;
     private StateListenersCoordinator stateListenersCoordinator;
@@ -224,6 +225,31 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         verify(term);
     }
     
+    //В данном тесте
+    //1. Необходимо позвонить на номер RP указанный в тесте. 
+    //2. RP возьмет трубку 
+    //3. В течении секунды вызов должен переадресоваться на 88028
+//    @Test(timeout=70000)
+    public void transferFromRoutePointTest() throws Exception {
+        waitForProvider();
+        createSimpleScenarioWithPause();
+
+        IvrMediaTerminal term = trainTerminal("631690", scenario, true, true);
+        IvrEndpointConversationListener listener = createTransferListener2("88028");
+        replay(term);
+
+        endpoint = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, term, null);
+        endpoint.addConversationListener(listener);
+        startEndpoint(endpoint);
+//        endpoint.invite("88024", 0, 0, listener, scenario, null, null);
+//        endpoint.invite("88027", 0, 0, listener, scenario, null);
+        waitForConversationStop();
+        assertEquals(0, endpoint.getActiveCallsCount());
+        stopEndpoint(endpoint);
+        
+        verify(term);
+    }
+    
     //В данном тесте система 
     //1. позвонит на номер (88024). Необходимо взять трубку. 
     //2. в течении секунды вызов припакуется на 631730
@@ -264,7 +290,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
     //2. в течении секунды вызов припакуется при помощи IvrEndpointConversation.park()
     //3. позвонит на номер (88028). Необходимо взять трубку. 
     //4. в течении секунды вызов должен распарковаться, т.е. в разговоре останутся 88024 >-< 88028
-    @Test(timeout=70000)
+//    @Test(timeout=70000)
     public void parkUnparkTest() throws Exception {
         waitForProvider();
         createSimpleScenarioWithPause();
@@ -274,6 +300,44 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         final AtomicReference<String> parkNumber = new AtomicReference<String>();
         IvrEndpointConversationListener listener = createParkListener(parkNumber);
         IvrEndpointConversationListener listener2 = createUnParkListener(parkNumber);
+        replay(term, term2);
+
+        endpoint = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, term, null);
+        endpoint2 = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, term2, null);
+        startEndpoint(endpoint);
+        startEndpoint(endpoint2);
+        endpoint.invite("88024", 0, 0, listener, scenario, null, null);
+        waitForConversationStop();
+        assertEquals(0, endpoint.getActiveCallsCount());
+        
+        convStopped.set(false);
+        endpoint2.invite("88028", 0, 0, listener2, scenario, null, null);
+        waitForConversationStop();
+        Thread.sleep(1000);
+        assertEquals(0, endpoint2.getActiveCallsCount());
+        stopEndpoint(endpoint);
+        stopEndpoint(endpoint2);
+        
+        verify(term, term2);
+        Thread.sleep(5000);
+    }
+    
+    //В данном тесте система 
+    //1. позвонит на номер (88024). Необходимо взять трубку. 
+    //2. в течении секунды вызов припакуется при помощи IvrEndpointConversation.park()
+    //3. позвонит на номер (88028). Необходимо взять трубку. 
+    //4. в течении секунды вызов должен распарковаться, т.е. в разговоре останутся 88024 >-< 88028
+    @Test(timeout=70000)
+    public void parkUnparkFromRoutePointTest() throws Exception {
+        waitForProvider();
+        createSimpleScenarioWithPause();
+
+        IvrMediaTerminal term = trainTerminal("631798", scenario, true, true);
+        IvrMediaTerminal term2 = trainTerminal("631690", scenario, true, true);
+        final AtomicReference<String> parkNumber = new AtomicReference<String>();
+        IvrEndpointConversationListener listener = createParkListener(parkNumber);
+//        IvrEndpointConversationListener listener2 = createUnParkListener(parkNumber);
+        IvrEndpointConversationListener listener2 = createTransferListener3(parkNumber);
         replay(term, term2);
 
         endpoint = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, term, null);
@@ -709,6 +773,42 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
                         try {
                             Thread.sleep(1000);
                             event.getConversation().transfer(transferAddress);
+                        } catch (Exception ex) { }
+                    }
+                }).start();
+            }
+            @Override public void conversationStopped(IvrEndpointConversationStoppedEvent event) {
+                convStopped.set(true);
+            }
+        };        
+    }
+
+    private IvrEndpointConversationListener createTransferListener2(final String transferAddress) {
+        return new IvrEndpointConversationListenerAdapter(){
+            @Override public void conversationStarted(final IvrEndpointConversationEvent event) {
+                new Thread(new Runnable() {
+                    public void run() {
+                        try {
+                            Thread.sleep(1000);
+                            event.getConversation().transfer(transferAddress, false, 0, 0);
+                        } catch (Exception ex) { }
+                    }
+                }).start();
+            }
+            @Override public void conversationStopped(IvrEndpointConversationStoppedEvent event) {
+                convStopped.set(true);
+            }
+        };        
+    }
+
+    private IvrEndpointConversationListener createTransferListener3(final AtomicReference<String> transferAddress) {
+        return new IvrEndpointConversationListenerAdapter(){
+            @Override public void conversationStarted(final IvrEndpointConversationEvent event) {
+                new Thread(new Runnable() {
+                    public void run() {
+                        try {
+                            Thread.sleep(1000);
+                            event.getConversation().transfer(transferAddress.get(), false, 0, 0);
                         } catch (Exception ex) { }
                     }
                 }).start();

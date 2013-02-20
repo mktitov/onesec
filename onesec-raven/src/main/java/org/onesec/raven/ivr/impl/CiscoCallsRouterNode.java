@@ -15,11 +15,15 @@
  */
 package org.onesec.raven.ivr.impl;
 
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import org.onesec.core.services.ProviderRegistry;
 import org.onesec.core.services.StateListenersCoordinator;
 import org.onesec.raven.ivr.CallRouteRule;
+import org.onesec.raven.ivr.CallRouteRuleProvider;
 import org.onesec.raven.ivr.CallsRouter;
 import org.onesec.raven.ivr.IvrTerminal;
 import org.onesec.raven.ivr.IvrTerminalState;
@@ -30,9 +34,14 @@ import org.raven.ds.DataConsumer;
 import org.raven.ds.DataContext;
 import org.raven.ds.DataSource;
 import org.raven.log.LogLevel;
+import org.raven.table.TableImpl;
 import org.raven.tree.Node;
 import org.raven.tree.NodeAttribute;
+import org.raven.tree.Viewable;
+import org.raven.tree.ViewableObject;
 import org.raven.tree.impl.BaseNode;
+import org.raven.tree.impl.ViewableObjectImpl;
+import org.raven.util.NodeUtils;
 import org.weda.annotations.constraints.NotNull;
 import org.weda.internal.annotations.Service;
 
@@ -41,7 +50,7 @@ import org.weda.internal.annotations.Service;
  * @author Mikhail Titov
  */
 @NodeClass
-public class CiscoCallsRouterNode extends BaseNode implements IvrTerminal, CallsRouter
+public class CiscoCallsRouterNode extends BaseNode implements IvrTerminal, CallsRouter, Viewable
 {
     @Service private static ProviderRegistry providerRegistry;
     @Service private static StateListenersCoordinator stateListenersCoordinator;
@@ -75,6 +84,7 @@ public class CiscoCallsRouterNode extends BaseNode implements IvrTerminal, Calls
         term.set(terminal);
 //        terminalCreated(terminal);
         terminal.start();
+        addInternalRules(terminal);
     }
 
     public Boolean getStopProcessingOnError() {
@@ -138,5 +148,53 @@ public class CiscoCallsRouterNode extends BaseNode implements IvrTerminal, Calls
 
     public Collection<NodeAttribute> generateAttributes() {
         return null;
+    }
+
+    @Override
+    public void nodeStatusChanged(Node node, Status oldStatus, Status newStatus) {
+        super.nodeStatusChanged(node, oldStatus, newStatus);
+        getLogger().debug("node ({}) newStatus ({})", node.getName(), newStatus);
+        if (node.getParent()!=this || !isStarted() || !(node instanceof CallRouteRuleProvider))
+            return;
+        CiscoJtapiRouteTerminal terminal = term.get();
+        if (terminal==null)
+            return;
+        if (Status.STARTED.equals(newStatus))
+            terminal.registerRoute(((CallRouteRuleProvider)node).getCallRouteRule());
+        else if (Status.INITIALIZED.equals(newStatus))
+            terminal.unregisterRoute(formRuleKey(node));
+        
+    }
+
+    public String formRuleKey(Node node) {
+        return "INTERNAL_RULE_"+node.getId();
+    }
+    
+    public int getRouteRulePriority(Node node) {
+        return 100+node.getIndex();
+    }
+
+    private void addInternalRules(CiscoJtapiRouteTerminal terminal) {
+        for (CallRouteRuleProvider ruleProv: NodeUtils.getChildsOfType(this, CallRouteRuleProvider.class))
+            terminal.registerRoute(ruleProv.getCallRouteRule());
+    }
+
+    public Map<String, NodeAttribute> getRefreshAttributes() throws Exception {
+        return null;
+    }
+
+    public List<ViewableObject> getViewableObjects(Map<String, NodeAttribute> refreshAttributes) throws Exception {
+        TableImpl table = new TableImpl(new String[]{"Rule key", "Rule priority", "Permanent", "Rule description"});
+        CiscoJtapiRouteTerminal terminal = term.get();
+        if (terminal!=null) {
+            for (CallRouteRule rule: terminal.getRoutes())
+                table.addRow(new Object[]{rule.getRuleKey(), rule.getPriority(), rule.isPermanent(), rule.toString()});
+        }
+        ViewableObject vo = new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, table);
+        return Arrays.asList(vo);
+    }
+
+    public Boolean getAutoRefresh() {
+        return true;
     }
 }
