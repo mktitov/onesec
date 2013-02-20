@@ -304,7 +304,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     }
 
     private void checkForOpponentPartyTransfered(String opponentNumber) {
-        if (!ObjectUtils.in(opponentNumber, callingNumber, calledNumber)) {
+        if (!terminalAddress.equals(opponentNumber) && !ObjectUtils.in(opponentNumber, callingNumber, calledNumber)) {
             String newNumber = getPartyNumber(true);
             if (terminalAddress.equals(callingNumber))
                 calledNumber = opponentNumber;
@@ -323,8 +323,13 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     }
 
     private String getPartyNumber(boolean callingParty) {
-        Address addr = callingParty? call.getCallingAddress() : call.getCalledAddress();
+        Address addr = callingParty? getCallingAddress() : call.getCalledAddress();
         return addr==null? null : addr.getName();
+    }
+    
+    private Address getCallingAddress() {
+        Address addr = call.getModifiedCallingAddress();
+        return addr != null? addr : call.getCallingAddress();
     }
 
     private boolean isAllLogicalConnectionEstablished() {
