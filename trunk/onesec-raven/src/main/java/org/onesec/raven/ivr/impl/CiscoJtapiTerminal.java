@@ -38,10 +38,11 @@ import com.cisco.jtapi.extensions.CiscoTerminalConnection;
 import com.cisco.jtapi.extensions.CiscoTerminalObserver;
 import com.cisco.jtapi.extensions.CiscoTransferEndEv;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -324,29 +325,59 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
     }
 
     public List<ViewableObject> getViewableObjects() throws Exception {
-        ViewableObject obj = null;
-        int callsCount = 0;
-        if (lock.readLock().tryLock(500, TimeUnit.MILLISECONDS)){
-            try{
-                callsCount = calls.size();
-                TableImpl table = new TableImpl(new String[]{callIdColumnMessage
-                        , callCreationTimeColumnMessage, callDurationColumnMessage, callInfoColumnMessage});
-                for (Map.Entry<Call, ConvHolder> entry: calls.entrySet())
-                    table.addRow(new Object[]{
-                        entry.getKey().toString(),
-                        new SimpleDateFormat("dd.MM.yyyy HH:mm:ss").format(new Date(entry.getValue().created)),
-                        entry.getValue().getDuration(),
-                        entry.getValue().toString()});
-                obj = new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, table);
-            }finally{
-                lock.readLock().unlock();
-            }
+        List<ViewableObject> vos = new ArrayList<ViewableObject>(2);
+        List<CallInfo> callsInfo = getCallsInfo();
+        if (callsInfo==null) {
+            vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, endpointBusyMessage));
         } else {
-            obj = new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, endpointBusyMessage);
+            int callsCount = callsInfo.size();
+            TableImpl table = new TableImpl(new String[]{callIdColumnMessage
+                    , callCreationTimeColumnMessage, callDurationColumnMessage, callInfoColumnMessage});
+            for (CallInfo info: callsInfo)
+                table.addRow(new Object[]{
+                    info.getCallId(), new SimpleDateFormat("dd.MM.yyyy HH:mm:ss").format(info.getCreated()),
+                    info.getDuration(), info.getDescription()
+                });
+            vos.add(new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, table));
+            vos.add(new ViewableObjectImpl(
+                    Viewable.RAVEN_TEXT_MIMETYPE, String.format(callsCountMessage, callsCount)));
         }
-        ViewableObject callsCountText = new ViewableObjectImpl(
-                Viewable.RAVEN_TEXT_MIMETYPE, String.format(callsCountMessage, callsCount));
-        return Arrays.asList(obj, callsCountText);
+//        if (lock.readLock().tryLock(500, TimeUnit.MILLISECONDS)){
+//            try{
+//                callsCount = calls.size();
+//                TableImpl table = new TableImpl(new String[]{callIdColumnMessage
+//                        , callCreationTimeColumnMessage, callDurationColumnMessage, callInfoColumnMessage});
+//                for (Map.Entry<Call, ConvHolder> entry: calls.entrySet())
+//                    table.addRow(new Object[]{
+//                        entry.getKey().toString(),
+//                        new SimpleDateFormat("dd.MM.yyyy HH:mm:ss").format(new Date(entry.getValue().created)),
+//                        entry.getValue().getDuration(),
+//                        entry.getValue().toString()});
+//                obj = new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, table);
+//            }finally{
+//                lock.readLock().unlock();
+//            }
+//        } else {
+//            obj = new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, endpointBusyMessage);
+//        }
+        return vos;
+    }
+    
+    public List<CallInfo> getCallsInfo() {
+        try {
+            if (lock.readLock().tryLock(500, TimeUnit.MILLISECONDS))
+                try {
+                    List<CallInfo> res = new LinkedList<CallInfo>();
+                    for (Map.Entry<Call, ConvHolder> entry: calls.entrySet())
+                        res.add(new CallInfo(
+                                entry.getKey().toString(), new Date(entry.getValue().created), 
+                                entry.getValue().getDuration(), entry.getValue().toString()));
+                    return res;
+                } finally {
+                    lock.readLock().unlock();
+                }
+        } catch (InterruptedException e) {}
+        return null;
     }
 
     private CiscoTerminal registerTerminal(Address addr) throws Exception {
@@ -1079,4 +1110,33 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
         }
     }
     
+    public static class CallInfo {
+        private final String callId;
+        private final Date created;
+        private final long duration;
+        private final String description;
+
+        public CallInfo(String callId, Date created, long duration, String description) {
+            this.callId = callId;
+            this.created = created;
+            this.duration = duration;
+            this.description = description;
+        }
+
+        public String getCallId() {
+            return callId;
+        }
+
+        public Date getCreated() {
+            return created;
+        }
+
+        public long getDuration() {
+            return duration;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+    }
 }

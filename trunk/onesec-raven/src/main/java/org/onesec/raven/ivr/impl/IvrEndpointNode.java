@@ -17,6 +17,8 @@
 
 package org.onesec.raven.ivr.impl;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import org.onesec.raven.ivr.*;
 import org.raven.annotations.NodeClass;
@@ -80,6 +82,11 @@ public class IvrEndpointNode extends AbstractEndpointNode
         } else
             listener.conversationStopped(new IvrEndpointConversationStoppedEventImpl(
                     null, CompletionCode.TERMINAL_NOT_READY));
+    }
+    
+    public List<CiscoJtapiTerminal.CallInfo> getCallsInfo() {
+        CiscoJtapiTerminal terminal = term.get();
+        return terminal==null? null : terminal.getCallsInfo();
     }
     
     private synchronized void changeStateTo(int stateId, String stateName) {

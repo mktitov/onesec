@@ -17,7 +17,10 @@
 
 package org.onesec.raven.ivr.impl;
 
+import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -32,6 +35,7 @@ import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.log.LogLevel;
 import org.raven.sched.*;
+import org.raven.sched.impl.AbstractTask;
 import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
 import org.raven.table.TableImpl;
 import org.raven.tree.Node;
@@ -54,6 +58,14 @@ import org.weda.internal.annotations.Message;
 public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Viewable, ManagedTask, Schedulable
 {
     public static final int LOADAVERAGE_INTERVAL = 60000;
+    
+    private final static String STATUS_FORMAT = "<span style=\"color: %s\"><b>%s</b></span>";
+    
+    public enum UseCase {INCOMING_CALLS, OUTGOING_CALLS};
+    
+    @NotNull @Parameter(defaultValue="OUTGOING_CALLS")
+    private UseCase useCase;
+    
     @NotNull @Parameter(defaultValue="100")
     private Integer maxRequestQueueSize;
 
@@ -114,33 +126,28 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     private int sessionMaxRequestsPerSecond;
     private int requestsCountInSecond;
     private long lastMaxRequestsPerSecondCheckTime;
+    private Set<IvrEndpoint> reservedEndpoints;
 
-    @Message
-    private static String totalUsageCountMessage;
-    @Message
-    private static String terminalsTableTitleMessage;
-    @Message
-    private static String terminalColumnMessage;
-    @Message
-    private static String terminalPortMessage;
-    @Message
-    private static String terminalStatusColumnMessage;
-    @Message
-    private static String terminalPoolStatusColumnMessage;
-    @Message
-    private static String usageCountColumnMessage;
-    @Message
-    private static String currentUsageTimeMessage;
-    @Message
-    private static String requesterNodeMessage;
-    @Message
-    private static String requesterStatusMessage;
-    @Message
-    private static String queueTableTitleMessage;
-    @Message
-    private static String queueTimeMessage;
-    @Message
-    private static String waitingTimeMessage;
+    @Message private static String totalUsageCountMessage;
+    @Message private static String terminalsTableTitleMessage;
+    @Message private static String terminalColumnMessage;
+    @Message private static String terminalPortMessage;
+    @Message private static String terminalStatusColumnMessage;
+    @Message private static String terminalPoolStatusColumnMessage;
+    @Message private static String usageCountColumnMessage;
+    @Message private static String currentUsageTimeMessage;
+    @Message private static String requesterNodeMessage;
+    @Message private static String requesterStatusMessage;
+    @Message private static String queueTableTitleMessage;
+    @Message private static String queueTimeMessage;
+    @Message private static String waitingTimeMessage;
+    @Message private static String terminalReservedStatus;
+    @Message private static String callIdMessage;
+    @Message private static String callCreatedMessage;
+    @Message private static String callDurationMessage;
+    @Message private static String callDescriptionMessage;
+    @Message private static String yesMessage;
+    @Message private static String noMessage;
 
     @Override
     protected void initFields() {
@@ -148,11 +155,12 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         lock = new ReentrantReadWriteLock();
         endpointReleased = lock.writeLock().newCondition();
         busyEndpoints = new HashMap<Integer, RequestInfo>();
-        usageCounters = new HashMap<Integer, Long>();
+        usageCounters = new ConcurrentHashMap<Integer, Long>();
         stopManagerTask = new AtomicBoolean(false);
         statusMessage = new AtomicReference<String>("");
         managerThreadStoped = new AtomicBoolean(true);
         auxiliaryPoolUsageCount = new AtomicInteger(0);
+        reservedEndpoints = new ConcurrentSkipListSet<IvrEndpoint>();
     }
 
     @Override
@@ -173,6 +181,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         sessionMaxRequestsPerSecond = maxRequestsPerSecond==null? Integer.MAX_VALUE : maxRequestsPerSecond;
         lastMaxRequestsPerSecondCheckTime = 0;
         requestsCountInSecond = 0;
+        reservedEndpoints.clear();
     }
 
     @Override
@@ -188,9 +197,36 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         return TaskRestartPolicy.RESTART_NODE;
     }
 
+    public IvrEndpoint reserveEndpoint(long timeout) {
+        if (!isStarted())
+            return null;
+        if (useCase!=UseCase.INCOMING_CALLS) {
+            if (isLogLevelEnabled(LogLevel.WARN))
+                getLogger().warn("Can't reserve endpoints in OUTGOING_CALLS mode");
+            return null;
+        }
+        for (IvrEndpoint endpoint: NodeUtils.getChildsOfType(this, IvrEndpoint.class))
+            if (   endpoint.getEndpointState().getId()==IvrEndpointState.IN_SERVICE 
+                && reservedEndpoints.add(endpoint)) 
+            {
+                executor.executeQuietly(timeout, new UnreserveEndpointTask(endpoint));
+                incEnpointUsageCounter(endpoint);
+                return endpoint;
+            }
+        if (isLogLevelEnabled(LogLevel.WARN))
+            getLogger().warn("No free endpoints in the pool");
+        return null;
+    }
+
     public void requestEndpoint(EndpointRequest request) 
     {
-        if (!Status.STARTED.equals(getStatus()) || stopManagerTask.get()) {
+        if (!isStarted() || stopManagerTask.get()) {
+            request.processRequest(null);
+            return;
+        }
+        if (useCase!=UseCase.OUTGOING_CALLS) {
+            if (isLogLevelEnabled(LogLevel.WARN))
+                getLogger().warn("Can't requests endpoints in INCOMING_CALLS mode");
             request.processRequest(null);
             return;
         }
@@ -312,6 +348,14 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                 error("Error executing task for ("+requestInfo.getTaskNode().getPath()+")", e);
         }
         return false;
+    }
+
+    public UseCase getUseCase() {
+        return useCase;
+    }
+
+    public void setUseCase(UseCase useCase) {
+        this.useCase = useCase;
     }
 
     public ExecutorService getExecutor() {
@@ -458,17 +502,22 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                 && ((IvrEndpoint)endpoint).getEndpointState().getId() == IvrEndpointState.IN_SERVICE)
             {
                 busyEndpoints.put(endpoint.getId(), requestInfo);
-                requestInfo.terminalUsageTime = System.currentTimeMillis();
+                requestInfo.terminalUsageTime = System.currentTimeMillis();                
                 requestInfo.endpoint = (IvrEndpoint) endpoint;
-                Long counter = usageCounters.get(endpoint.getId());
-                usageCounters.put(endpoint.getId(), counter == null ? 1 : counter + 1);
+                incEnpointUsageCounter(endpoint);
+//                Long counter = usageCounters.get(endpoint.getId());
+//                usageCounters.put(endpoint.getId(), counter == null ? 1 : counter + 1);
                 return;
             }
         }
     }
+    
+    private void incEnpointUsageCounter(IvrEndpoint endpoint) {
+        Long counter = usageCounters.get(endpoint.getId());
+        usageCounters.put(endpoint.getId(), counter == null ? 1 : counter + 1);
+    }
 
-    public Map<String, NodeAttribute> getRefreshAttributes() throws Exception
-    {
+    public Map<String, NodeAttribute> getRefreshAttributes() throws Exception {
         return null;
     }
 
@@ -476,62 +525,91 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     public List<ViewableObject> getViewableObjects(Map<String, NodeAttribute> refreshAttributes)
             throws Exception
     {
+        return useCase==UseCase.OUTGOING_CALLS? 
+                getViewableObjectsForOutgoingCallsUseCase() : getViewableObjectsForIncomingCallsUseCase();
+    }
+    
+    private List<ViewableObject> getViewableObjectsForOutgoingCallsUseCase() {
         TableImpl table = new TableImpl(
                 new String[]{
-                    terminalColumnMessage, terminalPortMessage, terminalStatusColumnMessage
+                    terminalColumnMessage, terminalStatusColumnMessage
                     , terminalPoolStatusColumnMessage, usageCountColumnMessage
                     , currentUsageTimeMessage, requesterNodeMessage, requesterStatusMessage});
-
-        Collection<Node> childs = getSortedChildrens();
         long totalUsageCount = 0;
-        if (childs!=null && !childs.isEmpty())
-        {
-            lock.readLock().lock();
-            try
-            {
-                String statusFormat = "<span style=\"color: %s\"><b>%s</b></span>";
-                for (Node child: childs)
-                    if (child instanceof IvrEndpoint)
-                    {
-                        IvrEndpoint endpoint = (IvrEndpoint) child;
-                        String name = endpoint.getName();
-                        if (!Status.STARTED.equals(endpoint.getStatus()))
-                            name = "<span style=\"color: yellow\">"+name+"</span>";
-//                        RtpAddress rtpAddress = endpoint.getRtpAddress();
-                        RtpAddress rtpAddress = null;
-                        Object port = rtpAddress==null? "" : rtpAddress.getPort();
-                        String status = endpoint.getEndpointState().getIdName();
-                        status = String.format(
-                            statusFormat, status.equals("IN_SERVICE")? "green" : "blue", status);
-                        String poolStatus = busyEndpoints.containsKey(endpoint.getId())
-                                ? "BUSY" : "FREE";
-                        poolStatus = String.format(
-                                statusFormat, poolStatus.equals("BUSY")
-                                    ? "blue" : "green", poolStatus);
-                        Long counter = usageCounters.get(endpoint.getId());
-                        String usageCount = counter==null? "0" : counter.toString();
-                        if (counter!=null)
-                            totalUsageCount+=counter;
-                        RequestInfo ri = busyEndpoints.get(endpoint.getId());
-                        String currentUsageTime = null; String requester = null;
-                        String requesterStatus = null;
-                        if (ri!=null)
-                        {
-                            currentUsageTime = ""+((System.currentTimeMillis()-ri.terminalUsageTime)/1000);
-                            requester = ri.getTaskNode().getPath();
-                            requesterStatus = ri.getStatusMessage();
-                        }
-
-                        table.addRow(new Object[]{
-                            name, port, status, poolStatus, usageCount, currentUsageTime, requester
-                                    , requesterStatus});
-                    }
+        lock.readLock().lock();
+        try {
+            for (IvrEndpoint endpoint: NodeUtils.getChildsOfType(this, IvrEndpoint.class, false)) {
+                String name = getEndpointNodeStatus(endpoint);
+                String status = getEndpointState(endpoint);
+                String poolStatus = busyEndpoints.containsKey(endpoint.getId())? "BUSY" : "FREE";
+                poolStatus = String.format(
+                        STATUS_FORMAT, poolStatus.equals("BUSY")? "blue" : "green", poolStatus);
+                long counter = getEndpointUsageCount(endpoint);
+                totalUsageCount+=counter;
+                RequestInfo ri = busyEndpoints.get(endpoint.getId());
+                String currentUsageTime = null; String requester = null;
+                String requesterStatus = null;
+                if (ri!=null) {
+                    currentUsageTime = ""+((System.currentTimeMillis()-ri.terminalUsageTime)/1000);
+                    requester = ri.getTaskNode().getPath();
+                    requesterStatus = ri.getStatusMessage();
+                }
+                table.addRow(new Object[]{
+                    name, status, poolStatus, counter, currentUsageTime, requester, requesterStatus});
+                
             }
-            finally
-            {
-                lock.readLock().unlock();
-            }
+        } finally {
+            lock.readLock().unlock();
         }
+//        Collection<Node> childs = getNodes();
+//        long totalUsageCount = 0;
+//        if (childs!=null && !childs.isEmpty()) {
+//            lock.readLock().lock();
+//            try
+//            {
+//                String statusFormat = "<span style=\"color: %s\"><b>%s</b></span>";
+//                for (Node child: childs)
+//                    if (child instanceof IvrEndpoint)
+//                    {
+//                        IvrEndpoint endpoint = (IvrEndpoint) child;
+//                        String name = endpoint.getName();
+//                        if (!Status.STARTED.equals(endpoint.getStatus()))
+//                            name = "<span style=\"color: yellow\">"+name+"</span>";
+////                        RtpAddress rtpAddress = endpoint.getRtpAddress();
+//                        RtpAddress rtpAddress = null;
+//                        Object port = rtpAddress==null? "" : rtpAddress.getPort();
+//                        String status = endpoint.getEndpointState().getIdName();
+//                        status = String.format(
+//                            statusFormat, status.equals("IN_SERVICE")? "green" : "blue", status);
+//                        String poolStatus = busyEndpoints.containsKey(endpoint.getId())
+//                                ? "BUSY" : "FREE";
+//                        poolStatus = String.format(
+//                                statusFormat, poolStatus.equals("BUSY")
+//                                    ? "blue" : "green", poolStatus);
+//                        Long counter = usageCounters.get(endpoint.getId());
+//                        String usageCount = counter==null? "0" : counter.toString();
+//                        if (counter!=null)
+//                            totalUsageCount+=counter;
+//                        RequestInfo ri = busyEndpoints.get(endpoint.getId());
+//                        String currentUsageTime = null; String requester = null;
+//                        String requesterStatus = null;
+//                        if (ri!=null)
+//                        {
+//                            currentUsageTime = ""+((System.currentTimeMillis()-ri.terminalUsageTime)/1000);
+//                            requester = ri.getTaskNode().getPath();
+//                            requesterStatus = ri.getStatusMessage();
+//                        }
+//
+//                        table.addRow(new Object[]{
+//                            name, port, status, poolStatus, usageCount, currentUsageTime, requester
+//                                    , requesterStatus});
+//                    }
+//            }
+//            finally
+//            {
+//                lock.readLock().unlock();
+//            }
+//        }
         List<ViewableObject> vos = new ArrayList<ViewableObject>(5);
         vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, "<b>"+terminalsTableTitleMessage+"</b>"));
         vos.add(new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, table));
@@ -545,9 +623,67 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, "<b>"+queueTableTitleMessage+"</b>"));
         vos.add(new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, queueTable));
 
+        return vos;        
+    }
+    
+    private List<ViewableObject> getViewableObjectsForIncomingCallsUseCase() {
+        List<ViewableObject> vos = new LinkedList<ViewableObject>();
+        TableImpl table = new TableImpl(new String[]{terminalColumnMessage, terminalStatusColumnMessage,
+            terminalReservedStatus, usageCountColumnMessage, callIdMessage, callCreatedMessage, 
+            callDurationMessage, callDescriptionMessage});
+        long totalUsages = 0;
+        for (IvrEndpointNode endpoint: NodeUtils.getChildsOfType(this, IvrEndpointNode.class, false)) {
+            List<CiscoJtapiTerminal.CallInfo> callsInfo = endpoint.getCallsInfo();
+            if (callsInfo==null || callsInfo.isEmpty()) {
+                callsInfo = new ArrayList<CiscoJtapiTerminal.CallInfo>(1);
+                callsInfo.add(null);
+            }
+            int i=0;
+            for (CiscoJtapiTerminal.CallInfo info: callsInfo) {
+                Object[] row = new Object[table.getColumnNames().length];
+                if (i++ == 0) {
+                    row[0]= getEndpointNodeStatus(endpoint);
+                    row[1]= getEndpointState(endpoint);
+                    row[2]= getReservedStatus(endpoint);
+                    long endpointUsages = getEndpointUsageCount(endpoint);
+                    totalUsages += endpointUsages;
+                    row[3] = endpointUsages;
+                }
+                if (info!=null) {
+                    row[4] = info.getCallId();
+                    row[5] = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss").format(info.getCreated());
+                    row[6] = info.getDuration();
+                    row[7] = info.getDescription();
+                }
+                table.addRow(row);
+            }
+        }
+        vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, "<b>"+terminalsTableTitleMessage+"</b>"));
+        vos.add(new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, table));
+        vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, "<b>"+totalUsageCountMessage+": </b>"+totalUsages));
         return vos;
     }
-
+    
+    private static String getEndpointNodeStatus(IvrEndpoint endpoint) {
+        return endpoint.isStarted()? 
+                endpoint.getName() : "<span style=\"color: yellow\">"+endpoint.getName()+"</span>";
+    }
+    
+    private static String getEndpointState(IvrEndpoint endpoint) {
+        String status = endpoint.getEndpointState().getIdName();
+        return String.format(STATUS_FORMAT, status.equals("IN_SERVICE")? "green" : "blue", status);
+    }
+    
+    private String getReservedStatus(IvrEndpoint endpoint) {
+        boolean reserved = reservedEndpoints.contains(endpoint);
+        return String.format(STATUS_FORMAT, reserved?"blue": "green", reserved? yesMessage: noMessage);
+    }
+    
+    private long getEndpointUsageCount(IvrEndpoint endpoint) {
+        Long usages = usageCounters.get(endpoint.getId());
+        return usages==null? 0l : usages;
+    }
+    
     public Boolean getAutoRefresh() {
         return true;
     }
@@ -562,6 +698,8 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
 
     public void executeScheduledJob(Scheduler scheduler)
     {
+        if (useCase==UseCase.INCOMING_CALLS)
+            return;
         try {
             if (lock.writeLock().tryLock(500, TimeUnit.MILLISECONDS)) {
                 try {
@@ -748,6 +886,20 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
             if (res==0 && o1!=o2)
                 res = new Long(o1.id).compareTo(o2.id);
             return res;
+        }
+    }
+    
+    private class UnreserveEndpointTask extends AbstractTask {
+        private final IvrEndpoint endpoint;
+
+        public UnreserveEndpointTask(IvrEndpoint endpoint) {
+            super(IvrEndpointPoolNode.this, String.format("Unreserving endpoint (%s)", endpoint.getName()));
+            this.endpoint = endpoint;
+        }
+
+        @Override
+        public void doRun() throws Exception {
+            reservedEndpoints.remove(endpoint);
         }
     }
 }
