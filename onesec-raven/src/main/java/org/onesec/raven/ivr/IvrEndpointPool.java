@@ -38,4 +38,11 @@ public interface IvrEndpointPool extends Node
      * @param endpoint endpoint which must be released (returned to the pool)
      */
     public void releaseEndpoint(IvrEndpoint endpoint);
+    /**
+     * Returns free endpoint (in status <b>IN_SERVICE</b>) and reserve it on <b>timeout</b> \
+     * milliseconds (so next call of this method do not returns reserved endpoint even if endpoint \
+     * status is <b>IN_SERVICE</b>).
+     * @param timeout - timeout in millisecond
+     */
+    public IvrEndpoint reserveEndpoint(long timeout);
 }
