@@ -588,8 +588,9 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
     private void answerOnIncomingCall(TermConnRingingEv ev) {
         try {
             if (isLogLevelEnabled(LogLevel.DEBUG))
-                logger.debug(callLog(ev.getCall(), "Answering on call"));
-            ev.getTerminalConnection().answer();
+                logger.debug(callLog(ev.getCall(), "Answering on call: ev (%s); termConn (%s)", ev, ev.getTerminalConnection()));
+            if (ev.getTerminalConnection().getState()==TerminalConnection.RINGING)
+                ev.getTerminalConnection().answer();
         } catch (Throwable e) {
             if (isLogLevelEnabled(LogLevel.ERROR))
                 logger.error(callLogEx(ev.getCall(), "Problem with answering on call", e), e);
