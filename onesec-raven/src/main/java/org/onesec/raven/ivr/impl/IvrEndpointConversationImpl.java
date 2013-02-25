@@ -725,8 +725,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                     call.transfer(address);
                     fireTransferedEvent(address);
                 } catch (Exception ex) {
-                    if (logger.isErrorEnabled())
-                        logger.error(ccmExLog(
+                    if (logger.isDebugEnabled())
+                        logger.debug(ccmExLog(
                                 callLog("Error transferring call to the address %s", address), ex), ex);
                 }
             } finally {

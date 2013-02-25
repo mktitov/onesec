@@ -163,7 +163,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
 
     //В данном тесте необходимо самому позвонить на номер, указанный в тесте. Должны услышать:
     //  Пароли не совпадают
-//    @Test(timeout=50000)
+    @Test(timeout=50000)
     public void incomingCallTest() throws Exception {
         waitForProvider();
         createSimpleScenario();
@@ -327,7 +327,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
     //2. в течении секунды вызов припакуется при помощи IvrEndpointConversation.park()
     //3. позвонит на номер (88028). Необходимо взять трубку. 
     //4. в течении секунды вызов должен распарковаться, т.е. в разговоре останутся 88024 >-< 88028
-    @Test(timeout=70000)
+//    @Test(timeout=70000)
     public void parkUnparkFromRoutePointTest() throws Exception {
         waitForProvider();
         createSimpleScenarioWithPause();
