@@ -215,11 +215,27 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             if (state.getId()!=INVALID)
                 throw new IvrEndpointConversationStateException("Can't setCall", "INVALID", state.getIdName());
             this.call = (CiscoCall) call;
-            callId = "[call id: " + this.call.getCallID().intValue()+", calling number: "
-                    + call.getCallingAddress().getName() + "]";
+//            callId = "[call id: " + this.call.getCallID().intValue()+", calling number: "
+//                    + call.getCallingAddress().getName() + "]";
+            callId = terminal.getCallDesc((CiscoCall)call);
             callingNumber = getPartyNumber(true);
             calledNumber = getPartyNumber(false);
             checkState();
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+    
+    public void replaceCall(CallControlCall call) throws IvrEndpointConversationException {
+        lock.writeLock().lock();
+        try {
+            this.call = (CiscoCall) call;
+//            callId = "[call id: " + this.call.getCallID().intValue()+", calling number: "
+//                    + call.getCallingAddress().getName() + "]";
+            callId = terminal.getCallDesc((CiscoCall)call);
+            callingNumber = getPartyNumber(true);
+            calledNumber = getPartyNumber(false);
+//            checkState();
         } finally {
             lock.writeLock().unlock();
         }
@@ -277,7 +293,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         }
     }
 
-    public void logicalConnectionCreated(String opponentNumber) throws IvrEndpointConversationException {
+   public void logicalConnectionCreated(String opponentNumber) throws IvrEndpointConversationException {
         lock.writeLock().lock();
         try {
             if (logger.isDebugEnabled())
@@ -600,6 +616,27 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         }
         fireEvent(false, completionCode);
     }
+    
+    private void softlyStopConversation(CompletionCode completionCode) {
+        lock.writeLock().lock();
+        try {
+            if (state.getId()==INVALID || stopping)
+                return;
+            state.setState(INVALID);
+            stopping = true;
+            terminal.getAndRemoveConvHolder(call);
+            stopIncomingRtp();
+            stopOutgoingRtp();
+//            audioStream.reset();
+            call = null;
+            if (logger.isDebugEnabled())
+                logger.debug(callLog("Conversation \"softly\"stopped (%s)", completionCode));
+        } finally {
+            lock.writeLock().unlock();
+        }
+        fireEvent(false, completionCode);
+        
+    }
 
     private void dropCallConnections()  {
         try {
@@ -720,17 +757,18 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 return;
             }
             try {
-                audioStream.reset();
+                CiscoCall _call = call;
+                softlyStopConversation(CompletionCode.COMPLETED_BY_ENDPOINT);
                 try {
-                    call.transfer(address);
+                    _call.transfer(address);
                     fireTransferedEvent(address);
                 } catch (Exception ex) {
+//                    stopConversation(CompletionCode.COMPLETED_BY_OPPONENT);
                     if (logger.isDebugEnabled())
                         logger.debug(ccmExLog(
                                 callLog("Error transferring call to the address %s", address), ex), ex);
                 }
             } finally {
-                stopConversation(CompletionCode.COMPLETED_BY_OPPONENT);
             }
         } finally {
             lock.writeLock().unlock();

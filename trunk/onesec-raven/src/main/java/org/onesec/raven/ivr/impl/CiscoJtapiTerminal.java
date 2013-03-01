@@ -81,7 +81,6 @@ import org.onesec.core.services.StateListenersCoordinator;
 import static org.onesec.raven.impl.CCMUtils.*;
 import org.onesec.raven.ivr.*;
 import org.raven.ds.impl.DataContextImpl;
-import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.impl.AbstractTask;
 import org.raven.table.TableImpl;
@@ -168,14 +167,14 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
 
     public void start() throws IvrEndpointException {
         try {
-            if (isLogLevelEnabled(LogLevel.DEBUG))
+            if (logger.isDebugEnabled())
                 logger.debug("Checking provider...");
             ProviderController providerController = providerRegistry.getProviderController(address);
             provider = providerController.getProvider();
             if (provider==null || provider.getState()!=Provider.IN_SERVICE)
                 throw new Exception(String.format(
                         "Provider (%s) not IN_SERVICE", providerController.getName()));
-            if (isLogLevelEnabled(LogLevel.DEBUG))
+            if (logger.isDebugEnabled())
                 logger.debug("Checking terminal address...");
             termAddress = provider.getAddress(address);
             ciscoTerm = registerTerminal(termAddress);
@@ -240,7 +239,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
             else if (maxCallDur>0)
                 executor.execute(maxCallDur*1000, new MaxCallDurationHandler(conv, call));
         } catch (Throwable e) {
-            if (isLogLevelEnabled(LogLevel.WARN)) 
+            if (logger.isWarnEnabled()) 
                 logger.warn(ccmExLog(String.format("Problem with inviting abonent with number (%s)", opponentNum), e), e);
             final IvrEndpointConversationStoppedEvent ev = new IvrEndpointConversationStoppedEventImpl(
                     null, CompletionCode.TERMINAL_NOT_READY);
@@ -386,7 +385,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
             throw new Exception(String.format("Address (%s) does not have terminals", address));
         CiscoTerminal terminal = (CiscoTerminal) terminals[0];
         if (terminal instanceof CiscoRouteTerminal) {
-            if (isLogLevelEnabled(LogLevel.DEBUG))
+            if (logger.isDebugEnabled())
                 logger.debug("Registering {} terminal", CiscoRouteTerminal.class.getName());
             CiscoRouteTerminal routeTerm = (CiscoRouteTerminal) terminal;
             if (routeTerm.isRegisteredByThisApp())
@@ -394,7 +393,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
             routeTerm.register(codec.getCiscoMediaCapabilities(), CiscoRouteTerminal.DYNAMIC_MEDIA_REGISTRATION);
             return routeTerm;
         } else if (terminal instanceof CiscoMediaTerminal) {
-            if (isLogLevelEnabled(LogLevel.DEBUG))
+            if (logger.isDebugEnabled())
                 logger.debug("Registering {} terminal", CiscoMediaTerminal.class.getName());
             CiscoMediaTerminal mediaTerm = (CiscoMediaTerminal) terminal;
             if (mediaTerm.isRegisteredByThisApp())
@@ -415,7 +414,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
     }
     
     private void unexpectedUnregistration(Terminal term) {
-        if (isLogLevelEnabled(LogLevel.WARN))
+        if (logger.isWarnEnabled())
             logger.warn("Unexpected terminal unregistration. Triyng to register terminal but it "
                     + "already registered by this application! "
                     + "So unregistering terminal first");
@@ -429,7 +428,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
             else if (term instanceof CiscoMediaTerminal)
                 ((CiscoMediaTerminal)term).unregister();
         } catch (Throwable e) {
-            if (isLogLevelEnabled(LogLevel.ERROR))
+            if (logger.isErrorEnabled())
                 logger.error(ccmExLog("Problem with terminal unregistration", e), e);
         }
     }
@@ -446,13 +445,13 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                 }
             }
         } catch (Throwable e) {
-            if (isLogLevelEnabled(LogLevel.WARN))
+            if (logger.isWarnEnabled())
                 logger.warn(ccmExLog("Problem with unregistering listeners from the cisco terminal", e), e);
         }
     }
 
     public void terminalChangedEvent(TermEv[] events) {
-        if (isLogLevelEnabled(LogLevel.DEBUG))
+        if (logger.isDebugEnabled())
             logger.debug("Recieved terminal events: "+eventsToString(events));
         for (TermEv ev: events)
             switch (ev.getID()) {
@@ -486,7 +485,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
     }
     
     public void addressChangedEvent(AddrEv[] events) {
-        if (isLogLevelEnabled(LogLevel.DEBUG))
+        if (logger.isDebugEnabled())
             logger.debug("Recieved address events: "+eventsToString(events));
         for (AddrEv ev: events)
             switch (ev.getID()) {
@@ -497,9 +496,9 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
 
     private void createConversation(Call call) {
         if (logger.isDebugEnabled()) {
-            CallControlCall c = (CallControlCall) call;
+            CiscoCall c = (CiscoCall) call;
             logger.debug(callLog(call, "Trying to create conversation. (%s) -> (%s)", 
-                    c.getCallingAddress(), c.getCalledAddress()));
+                    c.getCurrentCallingAddress(), c.getCurrentCalledAddress()));
         }
         lock.writeLock().lock();
         try {
@@ -508,7 +507,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                 if (holder!=null && holder.isTransferCall())
                     return;
                 if (holder==null && enableIncomingCalls && calls.size()<=maxChannels) {
-                    if (isLogLevelEnabled(LogLevel.DEBUG))
+                    if (logger.isDebugEnabled())
                         logger.debug(callLog(call, "Creating conversation"));
                     IvrEndpointConversationImpl conv = new IvrEndpointConversationImpl(
                             term, this, executor, conversationScenario, rtpStreamManager
@@ -519,7 +518,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                 } else if (holder!=null && !holder.incoming) 
                     holder.conv.setCall((CallControlCall) call);
             } catch (Throwable e) {
-                if (isLogLevelEnabled(LogLevel.ERROR))
+                if (logger.isErrorEnabled())
                     logger.error(ccmExLog("Error creating conversation", e), e);
             }
         } finally {
@@ -528,7 +527,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
     }
     
     private void replaceCalls(CiscoCallChangedEv event) {
-        ConvHolder holder = getAndRemoveConvHolder(event.getOriginalCall());
+        ConvHolder holder = getAndRemoveConvHolder(event.getOriginalCall());        
         if (holder!=null) {
             if (logger.isDebugEnabled())
                 logger.debug(callLog(event.getOriginalCall(), "Replacing this call with: "+
@@ -538,6 +537,13 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                 calls.put(event.getSurvivingCall(), holder);
             } finally {
                 lock.writeLock().unlock();
+            }
+            try {
+                holder.conv.replaceCall((CiscoCall)event.getSurvivingCall());
+            } catch (IvrEndpointConversationException ex) {
+                if (logger.isErrorEnabled())
+                    logger.error(callLog(event.getCall(), "Error replacing call in conversation with: %s", 
+                            getCallDesc(event.getSurvivingCall())), ex);
             }
         }
     }
@@ -549,7 +555,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                 ConvHolder conv = calls.get(ev.getCall());
                 if (conv!=null) {
                     connIds.put(((CiscoConnection)ev.getConnection()).getConnectionID().intValue(), conv);
-                    if (isLogLevelEnabled(LogLevel.DEBUG))
+                    if (logger.isDebugEnabled())
                         logger.debug(callLog(ev.getCall(), "Connection ID binded to the conversation"));
                 }
             }
@@ -562,7 +568,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
         if (address.equals(ev.getConnection().getAddress().getName())) {
             lock.writeLock().lock();
             try {
-                if (isLogLevelEnabled(LogLevel.DEBUG))
+                if (logger.isDebugEnabled())
                     logger.debug(callLog(ev.getCall(), "Unbinding connection ID from the conversation"));
                 connIds.remove(((CiscoConnection)ev.getConnection()).getConnectionID().intValue());
             } finally {
@@ -576,29 +582,33 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
         if (conv==null || !conv.incoming || conv.isUnparkCall()) 
             return;
         try {
-            if (isLogLevelEnabled(LogLevel.DEBUG))
+            if (logger.isDebugEnabled())
                 logger.debug(callLog(ev.getCall(), "Accepting call"));
             ((CallControlConnection)ev.getConnection()).accept();
         } catch (Throwable e) {
-            if (isLogLevelEnabled(LogLevel.WARN)) 
+            if (logger.isWarnEnabled()) 
                 logger.warn(ccmExLog(callLog(ev.getCall(), "Problem with accepting call"), e), e);
         }
     }
 
     private void answerOnIncomingCall(TermConnRingingEv ev) {
         try {
-            if (isLogLevelEnabled(LogLevel.DEBUG))
+            if (logger.isDebugEnabled())
                 logger.debug(callLog(ev.getCall(), "Answering on call: ev (%s); termConn (%s)", ev, ev.getTerminalConnection()));
-            if (ev.getTerminalConnection().getState()==TerminalConnection.RINGING)
+//            if (ev.getTerminalConnection().getState()==TerminalConnection.RINGING)
+            if (ciscoTerm.equals(ev.getTerminalConnection().getTerminal())) {
                 ev.getTerminalConnection().answer();
+                if (logger.isDebugEnabled())
+                    logger.debug(callLog(ev.getCall(), "Answered"));
+            }
         } catch (Throwable e) {
-            if (isLogLevelEnabled(LogLevel.ERROR))
+            if (logger.isErrorEnabled())
                 logger.error(callLogEx(ev.getCall(), "Problem with answering on call", e), e);
         }
     }
     
     private void openLogicalChannel(CallCtlConnEstablishedEv ev) {
-        if (isLogLevelEnabled(LogLevel.DEBUG))
+        if (logger.isDebugEnabled())
             logger.debug(callLog(ev.getCall(), "Logical connection opened for address (%s)"
                     , ev.getConnection().getAddress().getName()));
         ConvHolder conv = getConvHolderByCall(ev.getCall());
@@ -614,7 +624,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
             try {
                 conv.conv.logicalConnectionCreated(ev.getConnection().getAddress().getName());
             } catch (IvrEndpointConversationException e) {
-                if (isLogLevelEnabled(LogLevel.ERROR))
+                if (logger.isErrorEnabled())
                     logger.error(callLogEx(ev.getCall(), 
                             "Error open logical connection for address (%s)", e
                             , ev.getConnection().getAddress().getName()), e);
@@ -647,7 +657,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
 //                    if (logger.isDebugEnabled())
                     conv.callForTransfer.transfer(call);
                 } catch (Throwable ex) {
-                    if (isLogLevelEnabled(LogLevel.ERROR))
+                    if (logger.isErrorEnabled())
                         logger.error(callLogEx(conv.callForTransfer, 
                                 "Transfer error to address (%s)", ex, conv.transferAddress), ex);
 
@@ -657,7 +667,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
     }
     
     private void callTransfered(CiscoTransferEndEv ev) {
-//        if (isLogLevelEnabled(LogLevel.DEBUG))
+//        if (logger.isDebugEnabled())
 //            logger.debug(callLog(ev.getCall(), "Logical connection opened for address (%s)"
 //                    , ev.getConnection().getAddress().getName()));
 //        System.out.println("!!! Transfer controller address: "+ev.getTransferControllerAddress().getName());
@@ -667,7 +677,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
 //        }
 //            try {
 //            } catch (IvrEndpointConversationException e) {
-//                if (isLogLevelEnabled(LogLevel.ERROR))
+//                if (logger.isErrorEnabled())
 //                    logger.error(callLog(ev.getCall(), 
 //                            "Error open logical connection for address (%s)"
 //                            , ev.getConnection().getAddress().getName()), e);
@@ -680,8 +690,8 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
         if (conv==null || conv.isTransferCall() || conv.isTransfering())
             return;
         try {
-            if (isLogLevelEnabled(LogLevel.DEBUG))
-                logger.debug("Initializing incoming RTP stream");
+            if (logger.isDebugEnabled())
+                logger.debug("Initializing incoming RTP stream for terminal: "+ev.getTerminal());
             IncomingRtpStream rtp = conv.conv.initIncomingRtp();
             CiscoRTPParams params = new CiscoRTPParams(rtp.getAddress(), rtp.getPort());
             if (ev.getTerminal() instanceof CiscoMediaTerminal)
@@ -689,7 +699,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
             else if (ev.getTerminal() instanceof CiscoRouteTerminal)
                 ((CiscoRouteTerminal)ev.getTerminal()).setRTPParams(ev.getCiscoRTPHandle(), params);
         } catch (Throwable e) {
-            if (conv.conv.getState().getId()!=IvrEndpointConversationState.INVALID && isLogLevelEnabled(LogLevel.ERROR))
+            if (conv.conv.getState().getId()!=IvrEndpointConversationState.INVALID && logger.isErrorEnabled())
                 logger.error(ccmExLog("Error initializing incoming RTP stream", e), e);
             conv.conv.stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
         }
@@ -701,7 +711,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
             return;
         try {
             CiscoRTPOutputProperties props = ev.getRTPOutputProperties();
-            if (isLogLevelEnabled(LogLevel.DEBUG))
+            if (logger.isDebugEnabled())
                     logger.debug(callLog(ev.getCallID().getCall(),
                             "Proposed RTP params: remoteHost (%s), remotePort (%s), packetSize (%s ms), " +
                             "payloadType (%s), bitrate (%s)"
@@ -714,7 +724,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                         "Not supported payload type (%s)", props.getPayloadType()));
             if (psize==null)
                 psize = (int)streamCodec.getPacketSizeForMilliseconds(props.getPacketSize());
-            if (isLogLevelEnabled(LogLevel.DEBUG))
+            if (logger.isDebugEnabled())
                 logger.debug(callLog(ev.getCallID().getCall()
                     ,"Choosed RTP params: packetSize (%s ms), codec (%s), audioFormat (%s)"
                     , streamCodec.getMillisecondsForPacketSize(psize), streamCodec, streamCodec.getAudioFormat()));
@@ -722,7 +732,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                     , psize, rtpMaxSendAheadPacketsCount, streamCodec);
             conv.conv.startOutgoingRtp();
         } catch (Throwable e) {
-            if (isLogLevelEnabled(LogLevel.ERROR))
+            if (logger.isErrorEnabled())
                 logger.error(callLogEx(ev.getCallID().getCall()
                         ,"Error initializing and starting outgoing RTP stream", e), e);
             conv.conv.stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
@@ -730,13 +740,16 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
     }
 
     private void startInRtp(CiscoRTPInputStartedEv ev) {
-        ConvHolder conv = getConvHolderByCall(ev.getCallID().getCall());
+        final Call call = ev.getCallID().getCall();
+        ConvHolder conv = getConvHolderByCall(call);
+        if (logger.isDebugEnabled())
+            logger.debug(callLog(call, "Trying to start incoming RTP"));
         if (conv==null)
             return;
         try {
             conv.conv.startIncomingRtp();
         } catch (Throwable e) {
-            if (isLogLevelEnabled(LogLevel.ERROR))
+            if (logger.isErrorEnabled())
                 logger.error(callLogEx(ev.getCallID().getCall(), "Problem with start incoming RTP stream", e), e);
             conv.conv.stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
         }
@@ -761,6 +774,10 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
     }
 
     private void handleConnFailedEvent(CallCtlConnFailedEv ev) {
+        final Call call = ev.getCall();
+        if (logger.isWarnEnabled())
+            logger.warn(callLog(call, "Connection failed (%s). Cause: %s, Call control cause: %s", 
+                    ev.getConnection(), ev.getCause(), ev.getCallControlCause()));
         ConvHolder conv = getAndRemoveConvHolder(ev.getCall());
         if (conv==null)
             return;
@@ -784,16 +801,21 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
             conv.conv.stopConversation(completionCode);
     }
 
-    private static String callLog(Call call, String message, Object... args) {
+    private String callLog(Call call, String message, Object... args) {
         return getCallDesc((CiscoCall)call)+" : Terminal. "+String.format(message, args);
     }
     
-    private static String callLogEx(Call call, String message, Throwable ex, Object... args) {
+    private String callLogEx(Call call, String message, Throwable ex, Object... args) {
         return ccmExLog(callLog(call, message, args), ex);
     }
 
-    private static String getCallDesc(CiscoCall call){
-        return "[call id: "+call.getCallID().intValue()+", calling number: "+call.getCallingAddress().getName()+"]";
+    String getCallDesc(CiscoCall call) {
+        return "[cid: "+call.getCallID().intValue()+", "+"("+termAddress.getName()+")"+
+                getAddrName(call.getCurrentCallingAddress())+"->"+getAddrName(call.getCurrentCalledAddress())+"]";
+    }
+    
+    private static String getAddrName(Address addr) {
+        return addr==null? "" : addr.getName();
     }
     
     private String eventsToString(Object[] events) {
@@ -828,7 +850,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
         }
     }
 
-    private ConvHolder getAndRemoveConvHolder(Call call) {
+    ConvHolder getAndRemoveConvHolder(Call call) {
         lock.writeLock().lock();
         try {
             return calls.remove(call);
@@ -837,10 +859,10 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
         }
     }
 
-    private boolean isLogLevelEnabled(LogLevel logLevel) {
-        return term.isLogLevelEnabled(logLevel);
-//        return this.logLevel.ordinal() <= logLevel.ordinal();
-    }
+//    private boolean isLogLevelEnabled(LogLevel logLevel) {
+//        return term.isLogLevelEnabled(logLevel);
+////        return this.logLevel.ordinal() <= logLevel.ordinal();
+//    }
 
     private synchronized void checkState() {
         if (state.getId()==IvrTerminalState.OUT_OF_SERVICE && !stopping.get()) {
@@ -1064,7 +1086,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
             if (valid.get() && ObjectUtils.in(conv.getState().getId(), IvrEndpointConversationState.READY
                     , IvrEndpointConversationState.CONNECTING))
             {
-                if (isLogLevelEnabled(LogLevel.DEBUG))
+                if (logger.isDebugEnabled())
                     logger.debug(callLog(call, "Detected INVITE TIMEOUT. Canceling a call"));
                 getAndRemoveConvHolder(call);
                 conv.stopConversation(CompletionCode.OPPONENT_NOT_ANSWERED);
@@ -1103,7 +1125,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
         @Override
         public void doRun() throws Exception {
             if (conv.getState().getId()!=IvrEndpointConversationState.INVALID) {
-                if (isLogLevelEnabled(LogLevel.DEBUG))
+                if (logger.isDebugEnabled())
                     logger.debug(callLog(call, "The call duration is TOO LONG. Canceling a call"));
                 getAndRemoveConvHolder(call);
                 conv.stopConversation(CompletionCode.CALL_DURATION_TOO_LONG);
@@ -1140,4 +1162,20 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
             return description;
         }
     }
+    
+//    private static class StopConversationTask extends AbstractTask {
+//        private final IvrEndpointConversation conversation;
+//        private final Node taskNode;
+//
+//        public StopConversationTask(Node taskNode, IvrEndpointConversation conversation) {
+//            super(taskNode, status);
+//            this.conversation = conversation;
+//        }
+//
+//        @Override
+//        public void doRun() throws Exception {
+//            conversation.stopConversation(CompletionCode.OPPONENT_BUSY);
+//        }
+//        
+//    }
 }
