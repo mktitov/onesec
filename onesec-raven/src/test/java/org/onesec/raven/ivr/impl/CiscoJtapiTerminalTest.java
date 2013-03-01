@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.impl;
 
+import com.cisco.jtapi.extensions.CiscoCall;
 import org.onesec.raven.ivr.IvrOutgoingRtpStartedEvent;
 import org.onesec.raven.ivr.actions.PauseActionNode;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -163,7 +164,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
 
     //В данном тесте необходимо самому позвонить на номер, указанный в тесте. Должны услышать:
     //  Пароли не совпадают
-    @Test(timeout=50000)
+//    @Test(timeout=50000)
     public void incomingCallTest() throws Exception {
         waitForProvider();
         createSimpleScenario();
@@ -223,6 +224,35 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         stopEndpoint(endpoint);
         
         verify(term);
+    }
+    
+    //В данном тесте
+    //1. Необходимо позвонить на номер RP указанный в тесте. 
+    //2. RP возьмет трубку 
+    //3. В течении секунды вызов должен переадресоваться на 88028
+    @Test(timeout=70000)
+    public void transferFromRoutePointToTerminalTest() throws Exception {
+        waitForProvider();
+        createSimpleScenarioWithPause();
+
+        IvrMediaTerminal term = trainTerminal("631798", scenario, true, true);
+        IvrEndpointConversationListener listener = createTransferListener2("631799");
+        IvrMediaTerminal term2 = trainTerminal("631799", scenario, true, true);
+        IvrEndpointConversationListener listener2 = createLogCallListener();
+        replay(term, term2);
+
+        endpoint = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, term, null);
+        endpoint.addConversationListener(listener);
+        startEndpoint(endpoint);
+        endpoint2 = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, term2, null);
+        endpoint2.addConversationListener(listener2);
+        startEndpoint(endpoint2);
+        Thread.sleep(30000);
+        waitForConversationStop();
+        assertEquals(0, endpoint.getActiveCallsCount());
+        stopEndpoint(endpoint);
+        
+        verify(term, term2);
     }
     
     //В данном тесте
@@ -791,6 +821,33 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
                         try {
                             Thread.sleep(1000);
                             event.getConversation().transfer(transferAddress, false, 0, 0);
+                        } catch (Exception ex) { }
+                    }
+                }).start();
+            }
+            @Override public void conversationStopped(IvrEndpointConversationStoppedEvent event) {
+                convStopped.set(true);
+            }
+        };        
+    }
+
+    private IvrEndpointConversationListener createLogCallListener() {
+        return new IvrEndpointConversationListenerAdapter(){
+            @Override public void conversationStarted(final IvrEndpointConversationEvent event) {
+                new Thread(new Runnable() {
+                    public void run() {
+                        try {
+                            IvrEndpointConversationImpl conv = (IvrEndpointConversationImpl) event.getConversation();
+                            CiscoCall call = conv.getCall();
+                            
+                            System.out.println("!!! CALL. called address: "+call.getCalledAddress());
+                            System.out.println("!!! CALL. calling address: "+call.getCallingAddress());
+                            System.out.println("!!! CALL. current called address: "+call.getCurrentCalledAddress());
+                            System.out.println("!!! CALL. current calling address: "+call.getCurrentCallingAddress());
+                            System.out.println("!!! CALL. last redirected address: "+call.getLastRedirectedAddress());
+                            System.out.println("!!! CALL. modified called address: "+call.getModifiedCalledAddress());
+                            System.out.println("!!! CALL. modified calling address: "+call.getModifiedCallingAddress());
+                            System.out.println("!!! CALL. LastRedirectedPartyInfo: "+call.getLastRedirectedPartyInfo());
                         } catch (Exception ex) { }
                     }
                 }).start();
