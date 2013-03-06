@@ -113,6 +113,10 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
         return cdr;
     }
 
+    public String getAbonentNumber() {
+        return lazyRequest? ((LazyCallQueueRequest)request).getAbonentNumber() : getConversation().getCallingNumber();
+    }
+
     public void addRequestListener(CallQueueRequestListener listener) { }
 
     public void addRequestWrapperListener(RequestControllerListener listener) {
@@ -416,7 +420,8 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
     
     public void fireDisconnectedQueueEvent(){
         owner.getRequests().remove(requestId);
-        queue.updateCallDuration(getCallDuration());
+        if (queue!=null)
+            queue.updateCallDuration(getCallDuration());
         callQueueChangeEvent(new DisconnectedQueueEventImpl(queue, requestId));
     }
 

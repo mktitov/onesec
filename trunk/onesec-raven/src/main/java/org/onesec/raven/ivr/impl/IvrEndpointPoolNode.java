@@ -206,7 +206,8 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
             return null;
         }
         for (IvrEndpoint endpoint: NodeUtils.getChildsOfType(this, IvrEndpoint.class))
-            if (   endpoint.getEndpointState().getId()==IvrEndpointState.IN_SERVICE 
+            if (   endpoint.getEndpointState().getId()==IvrEndpointState.IN_SERVICE
+                && endpoint.getActiveCallsCount()==0
                 && reservedEndpoints.add(endpoint)) 
             {
                 executor.executeQuietly(timeout, new UnreserveEndpointTask(endpoint));

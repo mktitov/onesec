@@ -273,7 +273,7 @@ public class  CommutationManagerCallImpl
         endpoint.invite(getOperatorNumber(), (int)manager.getInviteTimeout()/1000, 0
                 , new OperatorConversationListener()
                 , manager.getConversationScenario(), bindings, 
-                getRequest().getConversation().getCallingNumber());
+                getRequest().getAbonentNumber());
     }
 
     public void commutateCalls() throws IvrConversationBridgeExeption {
