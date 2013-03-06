@@ -29,6 +29,7 @@ import org.raven.ds.Record;
  */
 public interface CallQueueRequestController extends CallQueueRequest
 {
+    public String getAbonentNumber();
     /**
      * Returns the request id
      */

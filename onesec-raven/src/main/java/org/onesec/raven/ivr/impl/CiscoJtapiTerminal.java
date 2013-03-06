@@ -19,6 +19,7 @@ package org.onesec.raven.ivr.impl;
 
 import com.cisco.jtapi.extensions.CiscoAddrInServiceEv;
 import com.cisco.jtapi.extensions.CiscoAddrOutOfServiceEv;
+import com.cisco.jtapi.extensions.CiscoAddress;
 import com.cisco.jtapi.extensions.CiscoCall;
 import com.cisco.jtapi.extensions.CiscoCallChangedEv;
 import com.cisco.jtapi.extensions.CiscoConnection;
@@ -317,10 +318,21 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
     public int getActiveCallsCount() {
         lock.readLock().lock();
         try {
-            return calls.size();
+            return Math.max(calls.size(), getTerminalCallsCount());
         } finally {
             lock.readLock().unlock();
         }
+    }
+    
+    private int getTerminalCallsCount() {
+        TerminalConnection[] connections = ciscoTerm.getTerminalConnections();
+        if (connections!=null && connections.length>0) {
+            Set<Call> _calls = new HashSet<Call>();
+            for (TerminalConnection connection: connections)
+                _calls.add(connection.getConnection().getCall());
+            return _calls.size();
+        }
+        return 0;
     }
 
     public List<ViewableObject> getViewableObjects() throws Exception {
@@ -775,8 +787,8 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
 
     private void handleConnFailedEvent(CallCtlConnFailedEv ev) {
         final Call call = ev.getCall();
-        if (logger.isWarnEnabled())
-            logger.warn(callLog(call, "Connection failed (%s). Cause: %s, Call control cause: %s", 
+        if (logger.isDebugEnabled())
+            logger.debug(callLog(call, "Connection failed (%s). Cause: %s, Call control cause: %s", 
                     ev.getConnection(), ev.getCause(), ev.getCallControlCause()));
         ConvHolder conv = getAndRemoveConvHolder(ev.getCall());
         if (conv==null)
