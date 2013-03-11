@@ -140,7 +140,7 @@ public class  CommutationManagerCallImpl
                     break;
                 case INVALID: 
                     getRequest().removeRequestWrapperListener(this);
-                    boolean success = ObjectUtils.in(state.get(), State.HANDLED, State.OPERATOR_READY)
+                    boolean success = ObjectUtils.in(state.get(), State.HANDLED, State.OPERATOR_READY, State.ABONENT_READY)
                                         || canceled.get();
                     if (!success) {
                         if (completionCode!=null) {
@@ -148,7 +148,7 @@ public class  CommutationManagerCallImpl
                                 logger.debug(logMess("Operator's number (%s) not answered", getOperatorNumber()));
                             addToLog("no answer from (%s)", getOperatorNumber());
                         }
-                    } else if (state.get()==State.OPERATOR_READY || canceled.get())
+                    } else if (state.get()==State.OPERATOR_READY || state.get()==State.ABONENT_READY || canceled.get())
                         manager.getRequest().fireDisconnectedQueueEvent();
                     manager.callFinished(this, success);
                     if (endpoint!=null) {
