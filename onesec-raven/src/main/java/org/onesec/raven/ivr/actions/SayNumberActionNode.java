@@ -15,6 +15,10 @@
  */
 package org.onesec.raven.ivr.actions;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedList;
+import java.util.List;
 import javax.script.Bindings;
 import org.onesec.raven.Constants;
 import org.onesec.raven.ivr.IvrAction;
@@ -23,10 +27,12 @@ import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.expr.impl.BindingSupportImpl;
+import org.raven.log.LogLevel;
 import org.raven.tree.Node;
 import org.raven.tree.ResourceManager;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.ResourceReferenceValueHandlerFactory;
+import org.raven.util.NodeUtils;
 import org.weda.annotations.constraints.NotNull;
 import org.weda.internal.annotations.Service;
 
@@ -43,7 +49,7 @@ public class SayNumberActionNode extends BaseNode implements IvrActionNode {
     private static ResourceManager resourceManager;
     
     @NotNull @Parameter
-    private Integer number;
+    private String number;
     
     @NotNull 
     @Parameter(valueHandlerType=ResourceReferenceValueHandlerFactory.TYPE, 
@@ -74,12 +80,40 @@ public class SayNumberActionNode extends BaseNode implements IvrActionNode {
     public IvrAction createAction() {
         return new SayNumberAction(this, numbersNode, pauseBetweenWords, resourceManager);
     }
+    
+    public Collection<Integer> getNumberSequence() {
+        List<Pattern> patterns = NodeUtils.getChildsOfType(this, Pattern.class);
+        List<String> strNumbers = new LinkedList<String>();
+        String _number = number;
+        if (patterns.isEmpty()) 
+            strNumbers.add(_number);
+        else
+            for (Pattern pattern: patterns) {
+                Collection<String> groups = pattern.matches(_number);
+                if (groups!=null) {
+                    strNumbers.addAll(groups);
+                    break;
+                }
+            }
+        if (strNumbers.isEmpty())
+            return null;
+        List<Integer> numbers = new ArrayList<Integer>(strNumbers.size());
+        for (String strNumber: strNumbers) 
+            try {
+                numbers.add(Integer.parseInt(strNumber));
+            } catch (NumberFormatException e) {
+                if (isLogLevelEnabled(LogLevel.ERROR))
+                    getLogger().error("Can't convert ({}) to integer");
+                return null;
+            }
+        return numbers;
+    }
 
-    public Integer getNumber() {
+    public String getNumber() {
         return number;
     }
 
-    public void setNumber(Integer number) {
+    public void setNumber(String number) {
         this.number = number;
     }
 
