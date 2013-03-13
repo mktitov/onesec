@@ -43,6 +43,9 @@ public class CollectDtmfsActionNode extends BaseNode {
     
     @NotNull @Parameter(defaultValue="POINT")
     private BindingScope bindingScope;
+    
+    @NotNull @Parameter(defaultValue=DTMFS_BINDING)
+    private String dtmfsBindingName;
 
     @Override
     public boolean isConditionalNode() {
@@ -60,7 +63,7 @@ public class CollectDtmfsActionNode extends BaseNode {
         if (dtmfs==null) {
             dtmfs = new LinkedList<String>();
             getConversationState(bindings).setBinding(tempDtmfsKey, dtmfs, BindingScope.POINT);
-            getConversationState(bindings).setBinding(DTMFS_BINDING, dtmfs, bindingScope);
+            getConversationState(bindings).setBinding(dtmfsBindingName, dtmfs, bindingScope);
         }
         String dtmf = (String) bindings.get(DTMF_BINDING);
         if (stopDtmf.equals(dtmf)) {
@@ -91,5 +94,13 @@ public class CollectDtmfsActionNode extends BaseNode {
 
     public void setStopDtmf(String stopDtmf) {
         this.stopDtmf = stopDtmf;
+    }
+
+    public String getDtmfsBindingName() {
+        return dtmfsBindingName;
+    }
+
+    public void setDtmfsBindingName(String dtmfsBindingName) {
+        this.dtmfsBindingName = dtmfsBindingName;
     }
 }
