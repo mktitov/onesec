@@ -86,11 +86,11 @@ public class CollectDtmfsActionNodeTest extends OnesecRavenTestCase {
         //testing
         parent.addBinding(IvrEndpointConversation.CONVERSATION_STATE_BINDING, state);
         parent.addBinding(IvrEndpointConversation.DTMF_BINDING, "-");
-        assertNull(collector.getEffectiveChildrens());
+        assertNull(collector.getEffectiveNodes());
         parent.addBinding(IvrEndpointConversation.DTMF_BINDING, "1");
-        assertNull(collector.getEffectiveChildrens());
+        assertNull(collector.getEffectiveNodes());
         parent.addBinding(IvrEndpointConversation.DTMF_BINDING, "*");
-        Collection<Node> childs = collector.getEffectiveChildrens();
+        Collection<Node> childs = collector.getEffectiveNodes();
         assertNotNull(childs);
         assertEquals(1, childs.size());
         assertSame(child, childs.iterator().next());
