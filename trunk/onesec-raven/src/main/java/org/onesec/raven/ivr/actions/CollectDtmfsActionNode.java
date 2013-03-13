@@ -50,7 +50,7 @@ public class CollectDtmfsActionNode extends BaseNode {
     }
 
     @Override
-    public Collection<Node> getEffectiveChildrens() {
+    public Collection<Node> getEffectiveNodes() {
         if (getStatus()!=Node.Status.STARTED)
             return null;
         Bindings bindings = new SimpleBindings();
@@ -65,7 +65,7 @@ public class CollectDtmfsActionNode extends BaseNode {
         String dtmf = (String) bindings.get(DTMF_BINDING);
         if (stopDtmf.equals(dtmf)) {
             getConversationState(bindings).setBinding(tempDtmfsKey, null, BindingScope.POINT);
-            return super.getEffectiveChildrens();
+            return super.getEffectiveNodes();
         } else {
             if (!(EMPTY_DTMF+"").equals(dtmf))
                 dtmfs.add(dtmf);
