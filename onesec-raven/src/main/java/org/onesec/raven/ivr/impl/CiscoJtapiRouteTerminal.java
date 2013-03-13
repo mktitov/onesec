@@ -273,16 +273,17 @@ public class CiscoJtapiRouteTerminal implements CiscoTerminalObserver, AddressOb
             if (route==null)
                 sess.endRoute(CiscoRouteSession.ERROR_NO_CALLBACK);
             else {
-//                if (route.getCallingNumbers()==null)
-//                    sess.selectRoute(route.getDestinations(), CiscoRouteSession.DEFAULT_SEARCH_SPACE);
-//                else
-                String[] callingNumbers = route.getCallingNumbers();
                 String[] destinations = route.getDestinations();
-                if (callingNumbers==null) {
-                    callingNumbers = new String[destinations.length];
-                    Arrays.fill(callingNumbers, event.getCallingAddress().getName());
+                if (destinations==null || destinations.length==0)
+                    sess.endRoute(CiscoRouteSession.ERROR_NO_CALLBACK);
+                else {
+                    String[] callingNumbers = route.getCallingNumbers();
+                    if (callingNumbers==null) {
+                        callingNumbers = new String[destinations.length];
+                        Arrays.fill(callingNumbers, event.getCallingAddress().getName());
+                    }
+                    sess.selectRoute(destinations, CiscoRouteSession.DEFAULT_SEARCH_SPACE, callingNumbers);
                 }
-                sess.selectRoute(destinations, CiscoRouteSession.DEFAULT_SEARCH_SPACE, callingNumbers);
             }
         } catch (Exception ex) {
             if (logger.isErrorEnabled())
