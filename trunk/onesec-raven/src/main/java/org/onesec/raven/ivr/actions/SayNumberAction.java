@@ -15,6 +15,7 @@
  */
 package org.onesec.raven.ivr.actions;
 
+import java.util.LinkedList;
 import java.util.List;
 import org.onesec.raven.impl.NumberToDigitConverter;
 import org.onesec.raven.ivr.IvrEndpointConversation;
@@ -30,17 +31,20 @@ public class SayNumberAction extends AbstractSayNumberAction {
     private final SayNumberActionNode actionNode;
 
     public SayNumberAction(SayNumberActionNode owner, Node numbersNode, long pauseBetweenWords, 
-        ResourceManager resourceManager) 
+        long pauseBetweenNumbers, ResourceManager resourceManager) 
     {
-        super(NAME, numbersNode, pauseBetweenWords, resourceManager);
+        super(NAME, numbersNode, pauseBetweenWords, pauseBetweenNumbers, resourceManager);
         this.actionNode = owner;
     }
 
     @Override
-    protected List formWords(IvrEndpointConversation conversation) {
+    protected List<List> formWords(IvrEndpointConversation conversation) {
         actionNode.getBindingSupport().enableScriptExecution();
         try {
-            return NumberToDigitConverter.getDigits(actionNode.getNumber());
+            List<List> res = new LinkedList<List>();
+            for (Long number: actionNode.getNumbersSequence())
+                res.add(NumberToDigitConverter.getDigits(number));
+            return res;
         } finally {
             actionNode.getBindingSupport().reset();
         }

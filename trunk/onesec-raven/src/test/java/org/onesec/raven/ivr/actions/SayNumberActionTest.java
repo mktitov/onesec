@@ -49,24 +49,20 @@ public class SayNumberActionTest extends OnesecRavenTestCase {
         executor = new ExecutorServiceNode();
         executor.setName("executor");
         tree.getRootNode().addAndSaveChildren(executor);
-        executor.setCorePoolSize(20);
-        executor.setMaximumPoolSize(20);
+        executor.setCorePoolSize(40);
+        executor.setMaximumPoolSize(40);
         assertTrue(executor.start());
 
         conv = new TestEndpointConversationNode();
         conv.setName("endpoint");
         tree.getRootNode().addAndSaveChildren(conv);
         conv.setExecutorService(executor);
-        conv.setFileName("target/number.wav");
-        assertTrue(conv.start());
 
 //        numbers = createNumbersNode(tree);
         
         actionNode = new SayNumberActionNode();
         actionNode.setName("say number");
         tree.getRootNode().addAndSaveChildren(actionNode);
-        actionNode.setNumber(124);
-        assertTrue(actionNode.start());
     }
     
     @After
@@ -74,12 +70,33 @@ public class SayNumberActionTest extends OnesecRavenTestCase {
         conv.stop();
     }
     
-    @Test
-    public void test() throws Exception {
+//    @Test
+    public void withoutPatternsTest() throws Exception {
+        conv.setFileName("target/number.wav");
+        assertTrue(conv.start());
+        actionNode.setNumber("124");
+        assertTrue(actionNode.start());
         SayNumberAction action = (SayNumberAction) actionNode.createAction();
         assertNotNull(action);
         action.execute(conv);
         Thread.sleep(10000);
+    }
+    
+    @Test
+    public void withPatternsTest() throws Exception {
+        conv.setFileName("target/numbers.wav");
+        assertTrue(conv.start());
+        actionNode.setNumber("9128672947");
+        assertTrue(actionNode.start());
+        RegexpPattern pattern = new RegexpPattern();
+        pattern.setName("pattern1");
+        actionNode.addAndSaveChildren(pattern);
+        pattern.setPattern("(\\d\\d\\d)(\\d\\d\\d)(\\d\\d)(\\d\\d)");
+        assertTrue(pattern.start());
+        SayNumberAction action = (SayNumberAction) actionNode.createAction();
+        assertNotNull(action);
+        action.execute(conv);
+        Thread.sleep(20000);
     }
     
     public static Node createNumbersNode(Tree tree) throws Exception {

@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.actions;
 
+import java.util.Arrays;
 import java.util.List;
 import org.onesec.raven.impl.NumberToDigitConverter;
 import org.onesec.raven.ivr.IvrEndpointConversation;
@@ -35,14 +36,14 @@ public class SayAmountAction extends AbstractSayNumberAction
     public SayAmountAction(SayAmountActionNode actionNode, Node numbersNode, long pauseBetweenWords, 
         ResourceManager resourceManager)
     {
-        super(NAME, numbersNode, pauseBetweenWords, resourceManager);
+        super(NAME, numbersNode, pauseBetweenWords, 0, resourceManager);
         this.actionNode = actionNode;
     }
 
-    protected List formWords(IvrEndpointConversation conversation) {
+    protected List<List> formWords(IvrEndpointConversation conversation) {
         actionNode.getBindingSupport().enableScriptExecution();
         try {
-            return NumberToDigitConverter.getCurrencyDigits(actionNode.getAmount());
+            return Arrays.asList((List)NumberToDigitConverter.getCurrencyDigits(actionNode.getAmount()));
         } finally {
             actionNode.getBindingSupport().reset();
         }
