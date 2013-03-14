@@ -79,7 +79,7 @@ public class VMailManagerNode extends BaseNode implements VMailManager {
     public void nodeNameChanged(Node node, String oldName, String newName) {
         super.nodeNameChanged(node, oldName, newName);
         if (node instanceof VMailBoxNumber) {
-            VMailBoxNode vbox = vmailBoxes.remove(node.getName());
+            VMailBoxNode vbox = vmailBoxes.remove(oldName);
             if (vbox!=null)
                 vmailBoxes.put(newName, vbox);
         }
@@ -88,14 +88,16 @@ public class VMailManagerNode extends BaseNode implements VMailManager {
     @Override
     public void nodeStatusChanged(Node node, Status oldStatus, Status newStatus) {
         super.nodeStatusChanged(node, oldStatus, newStatus);
-        if (node instanceof VMailBoxNode || node instanceof VMailBoxNumber) {
+        if (isStarted() && (node instanceof VMailBoxNode || node instanceof VMailBoxNumber)) {
             List<Node> numbers = new LinkedList<Node>();
             if (node instanceof VMailBoxNode)
                 numbers.addAll(NodeUtils.getChildsOfType(node, VMailBoxNumber.class));
             else
                 numbers.add(node);
-            
+            for (Node number: numbers)
+                if (newStatus==Node.Status.STARTED) {
+                    vmailBoxes.put(number.getName(), (VMailBoxNode)number.getParent());
+                } else vmailBoxes.remove(number.getName());
         }
     }
-    
 }
