@@ -18,12 +18,10 @@
 package org.onesec.raven.ivr.actions;
 
 import java.util.List;
-import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.impl.AudioFileNode;
 import org.onesec.raven.ivr.impl.IvrUtils;
-import org.raven.log.LogLevel;
 import org.raven.tree.Node;
 import org.raven.tree.ResourceManager;
 
@@ -35,14 +33,16 @@ public abstract class AbstractSayNumberAction extends AsyncAction
 {
     private final Node numbersNode;
     private final long pauseBetweenWords;
+    private final long pauseBetweenNumbers;
     private final ResourceManager resourceManager;
 
     public AbstractSayNumberAction(String actionName, Node numbersNode, long pauseBetweenWords, 
-        ResourceManager resourceManager)
+        long pauseBetweenNumbers, ResourceManager resourceManager)
     {
         super(actionName);
         this.numbersNode = numbersNode;
         this.pauseBetweenWords = pauseBetweenWords;
+        this.pauseBetweenNumbers = pauseBetweenNumbers;
         this.resourceManager = resourceManager;
     }
 
@@ -50,13 +50,23 @@ public abstract class AbstractSayNumberAction extends AsyncAction
         return false;
     }
 
-    protected abstract List formWords(IvrEndpointConversation conversation);
+    protected abstract List<List> formWords(IvrEndpointConversation conversation);
 
     @Override
     protected void doExecute(IvrEndpointConversation conversation) throws Exception
     {
-        List words = formWords(conversation);
-
+        List<List> numbers = formWords(conversation);
+        if (numbers==null || numbers.isEmpty()) {
+            if (logger.isWarnEnabled())
+                logger.warn("No number(s) to say");            
+        } else
+            for (List number: numbers) {
+                sayNumber(number);
+                TimeUnit.MILLISECONDS.sleep(pauseBetweenNumbers);
+            }
+    }
+    
+    private void sayNumber(List words) throws Exception {
         if (words==null || words.isEmpty())
             return;
         
@@ -69,9 +79,9 @@ public abstract class AbstractSayNumberAction extends AsyncAction
             else if (word instanceof String) {
                 Node child = resourceManager.getResource(numbersNode, (String)word, null);
                 if (!(child instanceof AudioFileNode)) {
-                    if (conversation.getOwner().isLogLevelEnabled(LogLevel.ERROR))
-                        conversation.getOwner().getLogger().error(logMess(
-                                "Can not say the amount because of not found " +
+                    if (logger.isErrorEnabled())
+                        logger.error(String.format(
+                                "Can not say the number because of not found " +
                                 "the AudioFileNode (%s) node in the (%s) numbers node"
                                 , word, numbersNode.getPath()));
                     return;

@@ -17,7 +17,6 @@
 
 package org.onesec.raven.impl;
 
-import java.math.BigDecimal;
 import java.util.LinkedList;
 import java.util.List;
 import static org.weda.beans.ObjectUtils.*;
@@ -26,14 +25,11 @@ import static org.weda.beans.ObjectUtils.*;
  *
  * @author Mikhail Titov
  */
-public class NumberToDigitConverter
-{
-    public static List<String> getDigits(long number)
-    {
+public class NumberToDigitConverter {
+    public static List<String> getDigits(long number) {
         List<String> numbers = null;
         int sotNumber = 1;
-        while (number>0)
-        {
+        while (number>0) {
             if (numbers==null)
                 numbers = new LinkedList<String>();
             List<String> tempNums = new LinkedList<String>();
@@ -45,8 +41,7 @@ public class NumberToDigitConverter
             int ed=0;
             if (tempNum2>10 && tempNum2<20)
                 tempNums.add(""+tempNum2);
-            else
-            {
+            else {
                 long des = tempNum2/10*10;
                 if (des>0)
                     tempNums.add(""+des);
@@ -54,11 +49,9 @@ public class NumberToDigitConverter
                 if (ed>0)
                     tempNums.add(""+ed+(sotNumber==2 && ed<=2? "'" : ""));
             }
-            if (sotNumber==2)
-            {
+            if (sotNumber==2) {
                 String t = null;
-                switch(ed)
-                {
+                switch(ed) {
                     case 1: t = "тыс€ча"; break;
                     case 2:
                     case 3:
@@ -68,7 +61,6 @@ public class NumberToDigitConverter
                 tempNums.add(t);
             }
             numbers.addAll(0, tempNums);
-
             number /= 1000;
             ++sotNumber;
         }
@@ -76,16 +68,14 @@ public class NumberToDigitConverter
         return numbers;
     }
 
-    public static List<String> getCurrencyDigits(double amount)
-    {
+    public static List<String> getCurrencyDigits(double amount) {
         long rub = (long) amount;
         long kop = (long) (Math.round((amount - rub) * 100));
 
         List<String> res = null;
 
         List<String> rubDigits = getDigits(rub);
-        if (rubDigits!=null && !rubDigits.isEmpty())
-        {
+        if (rubDigits!=null && !rubDigits.isEmpty()) {
             String rubString = "рублей";
             String lastElem = rubDigits.get(rubDigits.size()-1);
             if ("1".equals(lastElem))
@@ -97,8 +87,7 @@ public class NumberToDigitConverter
         }
 
         List<String> kopDigits = getDigits(kop);
-        if (kopDigits!=null && !kopDigits.isEmpty())
-        {
+        if (kopDigits!=null && !kopDigits.isEmpty()) {
             String kopString = "копеек";
             int lastIndex = kopDigits.size()-1;
             String lastElem = kopDigits.get(lastIndex);

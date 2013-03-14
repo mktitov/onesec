@@ -17,6 +17,7 @@ package org.onesec.raven.ivr.actions;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import javax.script.Bindings;
@@ -59,6 +60,9 @@ public class SayNumberActionNode extends BaseNode implements IvrActionNode {
     @NotNull @Parameter(defaultValue="10") 
     private Integer pauseBetweenWords;
     
+    @NotNull @Parameter(defaultValue="100")
+    private Integer pauseBetweenNumbers;
+    
     private BindingSupportImpl bindingSupport;
 
     @Override
@@ -78,10 +82,10 @@ public class SayNumberActionNode extends BaseNode implements IvrActionNode {
     }
 
     public IvrAction createAction() {
-        return new SayNumberAction(this, numbersNode, pauseBetweenWords, resourceManager);
+        return new SayNumberAction(this, numbersNode, pauseBetweenWords, pauseBetweenNumbers, resourceManager);
     }
     
-    public Collection<Integer> getNumberSequence() {
+    public Collection<Long> getNumbersSequence() {
         List<Pattern> patterns = NodeUtils.getChildsOfType(this, Pattern.class);
         List<String> strNumbers = new LinkedList<String>();
         String _number = number;
@@ -96,15 +100,15 @@ public class SayNumberActionNode extends BaseNode implements IvrActionNode {
                 }
             }
         if (strNumbers.isEmpty())
-            return null;
-        List<Integer> numbers = new ArrayList<Integer>(strNumbers.size());
+            return Collections.EMPTY_LIST;
+        List<Long> numbers = new ArrayList<Long>(strNumbers.size());
         for (String strNumber: strNumbers) 
             try {
-                numbers.add(Integer.parseInt(strNumber));
+                numbers.add(Long.parseLong(strNumber));
             } catch (NumberFormatException e) {
                 if (isLogLevelEnabled(LogLevel.ERROR))
                     getLogger().error("Can't convert ({}) to integer");
-                return null;
+                return Collections.EMPTY_LIST;
             }
         return numbers;
     }
@@ -131,5 +135,13 @@ public class SayNumberActionNode extends BaseNode implements IvrActionNode {
 
     public void setPauseBetweenWords(Integer pauseBetweenWords) {
         this.pauseBetweenWords = pauseBetweenWords;
+    }
+
+    public Integer getPauseBetweenNumbers() {
+        return pauseBetweenNumbers;
+    }
+
+    public void setPauseBetweenNumbers(Integer pauseBetweenNumbers) {
+        this.pauseBetweenNumbers = pauseBetweenNumbers;
     }
 }

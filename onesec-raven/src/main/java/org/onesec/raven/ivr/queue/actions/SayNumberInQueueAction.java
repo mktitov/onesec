@@ -18,6 +18,7 @@
 package org.onesec.raven.ivr.queue.actions;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import javax.script.Bindings;
 import org.onesec.raven.impl.NumberToDigitConverter;
@@ -47,14 +48,14 @@ public class SayNumberInQueueAction extends AbstractSayNumberAction
             , Node numbersNode, long pauseBetweenWords, AudioFileNode preambleAudio
             , ResourceManager resourceManager)
     {
-        super(NAME, numbersNode, pauseBetweenWords, resourceManager);
+        super(NAME, numbersNode, pauseBetweenWords, 0, resourceManager);
         this.preambleAudio = preambleAudio;
         this.owner = owner;
         this.bindingSupport = bindingSupport;
     }
 
     @Override
-    protected List formWords(IvrEndpointConversation conversation)
+    protected List<List> formWords(IvrEndpointConversation conversation)
     {
         Bindings bindings = conversation.getConversationScenarioState().getBindings();
         QueuedCallStatus callStatus = (QueuedCallStatus) bindings.get(QueueCallAction.QUEUED_CALL_STATUS_BINDING);
@@ -75,7 +76,7 @@ public class SayNumberInQueueAction extends AbstractSayNumberAction
             words.add(preambleAudio);
             words.addAll(NumberToDigitConverter.getDigits(num));
             bindings.put(key, num);
-            return words;
+            return Arrays.asList(words);
         } finally {
             bindingSupport.reset();
         }
