@@ -13,16 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.onesec.raven.ivr.vmail;
+package org.onesec.raven.ivr.vmail.impl;
 
-import java.io.File;
+import java.util.Date;
+import javax.activation.DataSource;
+import org.onesec.raven.ivr.vmail.NewVMailMessage;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface VMailBoxDir {
-    public File getNewMessagesDir();
-    public File getSavedMessagesDir();
-    public File getTempDir();
+public class NewVMailMessageImpl extends VMailMessageImpl implements NewVMailMessage {
+    private final String vmailBoxNumber;
+
+    public NewVMailMessageImpl(String vmailBoxNumber, String senderPhoneNumber, Date messageDate, 
+            DataSource audioSource) 
+    {
+        super(senderPhoneNumber, messageDate, audioSource);
+        this.vmailBoxNumber = vmailBoxNumber;
+    }
+
+    public String getVMailBoxNumber(String phoneNumber) {
+        return vmailBoxNumber;
+    }
 }

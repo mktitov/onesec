@@ -38,8 +38,4 @@ public interface VMailBox {
      * Returns list of new messages. Never returns null
      */
     public List<StoredVMailMessage> getSavedMessages() throws Exception;
-    /**
-     * Adds new message to vmail box
-     */
-    public void addMessage(VMailMessage message) throws Exception;
 }

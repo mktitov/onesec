@@ -17,15 +17,14 @@ package org.onesec.raven.ivr.vmail.impl;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.List;
 import org.apache.commons.io.IOUtils;
-import org.onesec.raven.ivr.vmail.VMailMessage;
+import org.onesec.raven.ivr.vmail.NewVMailMessage;
+import org.onesec.raven.ivr.vmail.StoredVMailMessage;
 import org.onesec.raven.ivr.vmail.VMailBox;
 import org.onesec.raven.ivr.vmail.VMailBoxDir;
-import org.onesec.raven.ivr.vmail.StoredVMailMessage;
 import org.raven.annotations.NodeClass;
 import org.raven.tree.impl.BaseNode;
 
@@ -36,7 +35,7 @@ import org.raven.tree.impl.BaseNode;
 @NodeClass(parentNode=VMailManagerNode.class)
 public class VMailBoxNode extends BaseNode implements VMailBox {
     
-    private final static String DATE_PATTERN = "yyyyMMdd_HHmmss_SSS";
+    public final static String DATE_PATTERN = "yyyyMMdd_HHmmss_SSS";
     
     private VMailManagerNode getManager() {
         return (VMailManagerNode) getEffectiveParent();
@@ -66,14 +65,16 @@ public class VMailBoxNode extends BaseNode implements VMailBox {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    public void addMessage(VMailMessage message) throws Exception {
-        String filename = new SimpleDateFormat(DATE_PATTERN).format(message.getMessageDate())+"_"
+    public void addMessage(NewVMailMessage message) throws Exception {
+        String filename = new SimpleDateFormat(DATE_PATTERN).format(message.getMessageDate())+"-"
                           + message.getSenderPhoneNumber()+".wav";
+        File messFile = new File(getDir().getTempDir(), filename);
         InputStream in = message.getAudioSource().getInputStream();
         try {
-            FileOutputStream out = new FileOutputStream(getDir().getNewMessagesDir()+File.separator+filename);
+            FileOutputStream out = new FileOutputStream(messFile);
             try {
                 IOUtils.copy(in, out);
+                messFile.renameTo(new File(getDir().getNewMessagesDir(), filename));
             } finally {
                 IOUtils.closeQuietly(out);
             }

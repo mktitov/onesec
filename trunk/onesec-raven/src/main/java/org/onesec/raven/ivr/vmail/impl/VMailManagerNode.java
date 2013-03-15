@@ -39,7 +39,8 @@ import org.weda.annotations.constraints.NotNull;
 @NodeClass(childNodes=GroupNode.class)
 public class VMailManagerNode extends BaseNode implements VMailManager {
     public static final String NEW_MESSAGES_DIR = "new";
-    public static final String SAVED_MESSAGED_DIR = "saved";
+    public static final String SAVED_MESSAGES_DIR = "saved";
+    public static final String TEMP_MESSAGES_DIR = "temp";
     
     @NotNull @Parameter
     private String basePath;
@@ -83,7 +84,8 @@ public class VMailManagerNode extends BaseNode implements VMailManager {
     public VMailBoxDir getVMailBoxDir(VMailBoxNode vbox) throws Exception {
         return new VMailBoxDirImpl(
                 getOrCreatePath(mkPath(vbox.getId(), NEW_MESSAGES_DIR)),
-                getOrCreatePath(mkPath(vbox.getId(), SAVED_MESSAGED_DIR)));
+                getOrCreatePath(mkPath(vbox.getId(), SAVED_MESSAGES_DIR)),
+                getOrCreatePath(mkPath(vbox.getId(), TEMP_MESSAGES_DIR)));
     }
     
     private String mkPath(Object... elems) {

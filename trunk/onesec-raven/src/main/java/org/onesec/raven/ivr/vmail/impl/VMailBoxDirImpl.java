@@ -25,10 +25,12 @@ import org.onesec.raven.ivr.vmail.VMailBoxDir;
 public class VMailBoxDirImpl implements VMailBoxDir {
     private final File newMessagesDir;
     private final File savedMessagesDir;
+    private final File tempDir;
 
-    public VMailBoxDirImpl(File newMessagesDir, File savedMessagesDir) {
+    public VMailBoxDirImpl(File newMessagesDir, File savedMessagesDir, File tempDir) {
         this.newMessagesDir = newMessagesDir;
         this.savedMessagesDir = savedMessagesDir;
+        this.tempDir = tempDir;
     }
 
     public File getNewMessagesDir() {
@@ -37,5 +39,9 @@ public class VMailBoxDirImpl implements VMailBoxDir {
 
     public File getSavedMessagesDir() {
         return savedMessagesDir;
+    }
+
+    public File getTempDir() {
+        return tempDir;
     }
 }
