@@ -15,14 +15,24 @@
  */
 package org.onesec.raven.ivr.vmail;
 
-import java.io.File;
+import java.util.Date;
+import javax.activation.DataSource;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface VMailBoxDir {
-    public File getNewMessagesDir();
-    public File getSavedMessagesDir();
-    public File getTempDir();
+public interface VMailMessage {
+    /**
+     * Returns the sender phone number 
+     */
+    public String getSenderPhoneNumber();
+    /**
+     * Returns the message creation date
+     */
+    public Date getMessageDate();
+    /**
+     * Returns audio source of the message
+     */
+    public DataSource getAudioSource();    
 }
