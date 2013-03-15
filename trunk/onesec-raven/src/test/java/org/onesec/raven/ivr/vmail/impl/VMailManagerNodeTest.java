@@ -15,10 +15,13 @@
  */
 package org.onesec.raven.ivr.vmail.impl;
 
+import java.io.File;
+import org.apache.commons.io.FileUtils;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import org.onesec.raven.OnesecRavenTestCase;
+import org.onesec.raven.ivr.vmail.VMailBoxDir;
 import org.raven.tree.Node;
 import org.raven.tree.impl.GroupNode;
 
@@ -29,12 +32,23 @@ import org.raven.tree.impl.GroupNode;
 public class VMailManagerNodeTest extends OnesecRavenTestCase {
     
     private VMailManagerNode manager;
+    private File base = new File("target/vmailboxes");
     
     @Before
-    public void prepare() {
+    public void prepare() throws Exception {
+        if (base.exists())
+            FileUtils.deleteDirectory(base);
         manager = new VMailManagerNode();
         manager.setName("vmail manager");
         testsNode.addAndSaveChildren(manager);
+        manager.setBasePath(base.getPath());
+    }
+    
+    @Test
+    public void initBaseDirTest() {
+        assertFalse(base.exists());
+        assertTrue(manager.start());
+        assertTrue(base.exists());
     }
     
     @Test
@@ -89,6 +103,59 @@ public class VMailManagerNodeTest extends OnesecRavenTestCase {
         
         vbox.start();
         assertSame(vbox, manager.getVMailBox("111"));
+    }
+    
+    @Test
+    public void vmailBoxRemoveTest() {
+        GroupNode group = createGroup(manager, "group");
+        VMailBoxNode vbox = createVBox(group, "vbox", true);
+        VMailBoxNumber number = createVBoxNumber(vbox, "111", true);
+        assertTrue(manager.start());
+        assertSame(vbox, manager.getVMailBox("111"));
+        
+        group.removeChildren(vbox);
+        assertNull(manager.getVMailBox("111"));
+    }
+    
+    @Test
+    public void vmailBoxNumberRemoveTest() {
+        GroupNode group = createGroup(manager, "group");
+        VMailBoxNode vbox = createVBox(group, "vbox", true);
+        VMailBoxNumber number = createVBoxNumber(vbox, "111", true);
+        assertTrue(manager.start());
+        assertSame(vbox, manager.getVMailBox("111"));
+        
+        vbox.removeChildren(number);
+        assertNull(manager.getVMailBox("111"));
+    }
+    
+    @Test
+    public void vmailBoxNumberMoveTest() throws Exception {
+        GroupNode group = createGroup(manager, "group");
+        VMailBoxNode vbox = createVBox(group, "vbox", true);
+        VMailBoxNode vbox2 = createVBox(group, "vbox2", true);
+        VMailBoxNumber number = createVBoxNumber(vbox, "111", true);        
+        assertTrue(manager.start());
+        assertSame(vbox, manager.getVMailBox("111"));
+        
+        tree.move(number, vbox2, null);
+        assertSame(vbox2, manager.getVMailBox("111"));
+    }
+    
+    @Test
+    public void getVMailBoxDirTest() throws Exception {
+        VMailBoxNode vbox = createVBox(manager, "vbox", true);
+        assertTrue(manager.start());
+        VMailBoxDir vboxDir = manager.getVMailBoxDir(vbox);
+        assertNotNull(vboxDir);
+        assertNotNull(vboxDir.getNewMessagesDir());
+        assertNotNull(vboxDir.getSavedMessagesDir());
+        File newDir = new File(base.getAbsolutePath()+"/"+vbox.getId()+"/new");
+        assertTrue(newDir.exists());
+        assertEquals(newDir, vboxDir.getNewMessagesDir());
+        File savedDir = new File(base.getAbsolutePath()+"/"+vbox.getId()+"/saved");
+        assertTrue(savedDir.exists());
+        assertEquals(savedDir, vboxDir.getSavedMessagesDir());
     }
     
     private GroupNode createGroup(Node owner, String name) {

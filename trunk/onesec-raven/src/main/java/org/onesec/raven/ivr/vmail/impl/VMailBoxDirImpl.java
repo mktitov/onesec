@@ -13,34 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.onesec.raven.ivr.vmail;
+package org.onesec.raven.ivr.vmail.impl;
 
-import java.util.Date;
-import org.raven.ds.InputStreamSource;
+import java.io.File;
+import org.onesec.raven.ivr.vmail.VMailBoxDir;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface VMailMessage {
-    /**
-     * Returns the sender phone number 
-     */
-    public String getSenderPhoneNumber();
-    /**
-     * Returns the message creation date
-     */
-    public Date getMessageDate();
-    /**
-     * Returns audio source of the message
-     */
-    public InputStreamSource getAudioSource();
-    /**
-     * Saves the message
-     */
-    public void save();
-    /**
-     * Deletes message
-     */
-    public void delete();
+public class VMailBoxDirImpl implements VMailBoxDir {
+    private final File newMessagesDir;
+    private final File savedMessagesDir;
+
+    public VMailBoxDirImpl(File newMessagesDir, File savedMessagesDir) {
+        this.newMessagesDir = newMessagesDir;
+        this.savedMessagesDir = savedMessagesDir;
+    }
+
+    public File getNewMessagesDir() {
+        return newMessagesDir;
+    }
+
+    public File getSavedMessagesDir() {
+        return savedMessagesDir;
+    }
 }
