@@ -15,27 +15,13 @@
  */
 package org.onesec.raven.ivr.vmail;
 
-import java.util.List;
-
 /**
  *
  * @author Mikhail Titov
  */
-public interface VMailBox {
+public interface SavableStoredVMailMessage extends StoredVMailMessage {
     /**
-     * Returns count of new messages
+     * Saves the message
      */
-    public int getNewMessagesCount() throws Exception;
-    /**
-     * Returns list of new messages. Never returns null
-     */
-    public List<SavableStoredVMailMessage> getNewMessages() throws Exception;
-    /**
-     * Returns the count of saved messages
-     */
-    public int getSavedMessagesCount() throws Exception;
-    /**
-     * Returns list of new messages. Never returns null
-     */
-    public List<StoredVMailMessage> getSavedMessages() throws Exception;
+    public void save() throws Exception;
 }

@@ -21,11 +21,7 @@ package org.onesec.raven.ivr.vmail;
  */
 public interface StoredVMailMessage extends VMailMessage {
     /**
-     * Saves the message
-     */
-    public void save();
-    /**
      * Deletes message
      */
-    public void delete();
+    public void delete() throws Exception;
 }

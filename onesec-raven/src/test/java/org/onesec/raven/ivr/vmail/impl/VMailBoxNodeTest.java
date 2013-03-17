@@ -16,14 +16,19 @@
 package org.onesec.raven.ivr.vmail.impl;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 import javax.activation.FileDataSource;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.junit.Before;
 import org.junit.Test;
 import org.onesec.raven.OnesecRavenTestCase;
+import org.onesec.raven.ivr.vmail.SavableStoredVMailMessage;
+import org.onesec.raven.ivr.vmail.StoredVMailMessage;
 
 /**
  *
@@ -64,5 +69,81 @@ public class VMailBoxNodeTest extends OnesecRavenTestCase {
         File messFile = new File(manager.getVMailBoxDir(vbox).getNewMessagesDir()+File.separator+filename);
         assertTrue(messFile.exists());
         assertTrue(FileUtils.contentEquals(testFile, messFile));
+    }
+    
+    @Test
+    public void getNewMessagesCount() throws Exception {
+        assertEquals(0, vbox.getNewMessagesCount());
+        vbox.addMessage(new NewVMailMessageImpl("123", "222", new Date(), new FileDataSource(testFile)));
+        assertEquals(1, vbox.getNewMessagesCount());
+        vbox.addMessage(new NewVMailMessageImpl("123", "333", new Date(), new FileDataSource(testFile)));
+        assertEquals(2, vbox.getNewMessagesCount());
+    }
+    
+    @Test
+    public void getNewMessages() throws Exception {
+        assertTrue(vbox.getNewMessages().isEmpty());
+        Date messDate = new Date();
+        vbox.addMessage(new NewVMailMessageImpl("123", "333", messDate, new FileDataSource(testFile)));
+        assertEquals(1, vbox.getNewMessages().size());
+        List<SavableStoredVMailMessage> messages = vbox.getNewMessages();
+        SavableStoredVMailMessage mess = messages.get(0);
+        assertEquals(messDate, mess.getMessageDate());
+        assertEquals("333", mess.getSenderPhoneNumber());
+        assertTrue(IOUtils.contentEquals(new FileInputStream(testFile), mess.getAudioSource().getInputStream()));
+        
+        Thread.sleep(10);
+        vbox.addMessage(new NewVMailMessageImpl("123", "222", new Date(), new FileDataSource(testFile)));
+        Thread.sleep(10);
+        vbox.addMessage(new NewVMailMessageImpl("123", "111", new Date(), new FileDataSource(testFile)));
+        
+        messages = vbox.getNewMessages();
+        assertEquals(3, messages.size());
+        assertEquals("333", messages.get(0).getSenderPhoneNumber());
+        assertEquals("222", messages.get(1).getSenderPhoneNumber());
+        assertEquals("111", messages.get(2).getSenderPhoneNumber());
+    }
+    
+    @Test
+    public void saveNewMessageTest() throws Exception {
+        Date date = new Date();
+        vbox.addMessage(new NewVMailMessageImpl("123", "222", date, new FileDataSource(testFile)));
+        
+        vbox.getNewMessages().get(0).save();
+        String filename = new SimpleDateFormat(VMailBoxNode.DATE_PATTERN).format(date)+"-"+"222.wav";
+        File savedMessFile = new File(manager.getVMailBoxDir(vbox).getSavedMessagesDir()+File.separator+filename);
+        assertTrue(savedMessFile.exists());
+        assertTrue(FileUtils.contentEquals(testFile, savedMessFile));
+        assertEquals(0, vbox.getNewMessagesCount());
+        assertEquals(1, vbox.getSavedMessagesCount());
+    }
+    
+    @Test
+    public void deleteNewMessageTest() throws Exception {
+        vbox.addMessage(new NewVMailMessageImpl("123", "222", new Date(), new FileDataSource(testFile)));
+        assertEquals(1, vbox.getNewMessagesCount());
+        vbox.getNewMessages().get(0).delete();
+        assertEquals(0, vbox.getNewMessagesCount());
+    }
+
+    @Test
+    public void getSavedMessagesTest() throws Exception {
+        Date messDate = new Date();
+        vbox.addMessage(new NewVMailMessageImpl("123", "333", messDate, new FileDataSource(testFile)));
+        Thread.sleep(10);
+        vbox.addMessage(new NewVMailMessageImpl("123", "222", new Date(), new FileDataSource(testFile)));
+        Thread.sleep(10);
+        vbox.addMessage(new NewVMailMessageImpl("123", "111", new Date(), new FileDataSource(testFile)));
+        assertEquals(0, vbox.getSavedMessagesCount());
+        for (SavableStoredVMailMessage mess: vbox.getNewMessages())
+            mess.save();
+        assertEquals(3, vbox.getSavedMessagesCount());
+        List<StoredVMailMessage> messages = vbox.getSavedMessages();
+        StoredVMailMessage mess = messages.get(0);
+        assertEquals(messDate, mess.getMessageDate());
+        assertEquals("333", mess.getSenderPhoneNumber());
+        assertTrue(IOUtils.contentEquals(new FileInputStream(testFile), mess.getAudioSource().getInputStream()));
+        assertEquals("222", messages.get(1).getSenderPhoneNumber());
+        assertEquals("111", messages.get(2).getSenderPhoneNumber());
     }
 }
