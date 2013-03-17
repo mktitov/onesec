@@ -19,9 +19,14 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.LinkedList;
 import java.util.List;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.onesec.raven.ivr.vmail.NewVMailMessage;
+import org.onesec.raven.ivr.vmail.SavableStoredVMailMessage;
 import org.onesec.raven.ivr.vmail.StoredVMailMessage;
 import org.onesec.raven.ivr.vmail.VMailBox;
 import org.onesec.raven.ivr.vmail.VMailBoxDir;
@@ -53,8 +58,10 @@ public class VMailBoxNode extends BaseNode implements VMailBox {
         return getMessagesCount(getDir().getNewMessagesDir());
     }
 
-    public List<StoredVMailMessage> getNewMessages() throws Exception {
-        throw new UnsupportedOperationException("Not supported yet.");
+    public List<SavableStoredVMailMessage> getNewMessages() throws Exception {
+        List<SavableStoredVMailMessage> messages = new LinkedList<SavableStoredVMailMessage>();
+        getMessages(messages, true);
+        return messages;
     }
 
     public int getSavedMessagesCount() throws Exception {
@@ -62,7 +69,9 @@ public class VMailBoxNode extends BaseNode implements VMailBox {
     }
 
     public List<StoredVMailMessage> getSavedMessages() throws Exception {
-        throw new UnsupportedOperationException("Not supported yet.");
+        List<StoredVMailMessage> messages = new LinkedList<StoredVMailMessage>();
+        getMessages(messages, false);
+        return messages;
     }
 
     public void addMessage(NewVMailMessage message) throws Exception {
@@ -80,6 +89,21 @@ public class VMailBoxNode extends BaseNode implements VMailBox {
             }
         } finally {
             IOUtils.closeQuietly(in);
+        }
+    }
+    
+    private void getMessages(List messages, boolean isNew) throws Exception {
+        if (!isStarted())
+            return;
+        File[] files = isNew? getDir().getNewMessagesDir().listFiles() : getDir().getSavedMessagesDir().listFiles();
+        Arrays.sort(files);
+        for (File file: files) {
+            String[] elems = FilenameUtils.getBaseName(file.getName()).split("-");
+            Date date = new SimpleDateFormat(DATE_PATTERN).parse(elems[0]);
+            if (isNew)
+                messages.add(new SavableStoredVMailMessageImpl(getDir().getSavedMessagesDir(), file, elems[1], date));
+            else
+                messages.add(new StoredVMailMessageImpl(file, elems[1], date));
         }
     }
 }
