@@ -36,6 +36,7 @@ public interface IvrEndpointConversation extends ObjectDescription
     public final static String VARS_BINDING = "vars";
     public final static String NUMBER_BINDING = "number";
     public final static String CALLED_NUMBER_BINDING = "calledNumber";    
+    public final static String LAST_REDIRECTED_NUMBER = "lastRedirectedNumber";
 
     /**
      * Adds the listener to this conversation
@@ -73,6 +74,10 @@ public interface IvrEndpointConversation extends ObjectDescription
      * Returns the number (address) of the called side.
      */
     public String getCalledNumber();
+    /**
+     * Returns last redirected number
+     */
+    public String getLastRedirectedNumber();
     /**
      * Continues the conversation with passed in the parameter dtmf char
      * @param dtmfChar the dtmf char

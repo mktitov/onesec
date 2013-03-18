@@ -17,16 +17,24 @@ package org.onesec.raven.ivr.vmail.impl;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import org.onesec.raven.ivr.vmail.NewVMailMessage;
 import org.onesec.raven.ivr.vmail.VMailBox;
 import org.onesec.raven.ivr.vmail.VMailBoxDir;
 import org.onesec.raven.ivr.vmail.VMailManager;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
+import org.raven.ds.DataConsumer;
+import org.raven.ds.DataContext;
+import org.raven.ds.DataPipe;
+import org.raven.ds.DataSource;
+import org.raven.log.LogLevel;
 import org.raven.tree.Node;
+import org.raven.tree.NodeAttribute;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.GroupNode;
 import org.raven.util.NodeUtils;
@@ -37,13 +45,16 @@ import org.weda.annotations.constraints.NotNull;
  * @author Mikhail Titov
  */
 @NodeClass(childNodes=GroupNode.class)
-public class VMailManagerNode extends BaseNode implements VMailManager {
+public class VMailManagerNode extends BaseNode implements VMailManager, DataPipe {
     public static final String NEW_MESSAGES_DIR = "new";
     public static final String SAVED_MESSAGES_DIR = "saved";
     public static final String TEMP_MESSAGES_DIR = "temp";
     
     @NotNull @Parameter
     private String basePath;
+    
+    @NotNull @Parameter
+    private DataSource dataSource;
     
     private Map<String, VMailBoxNode> vmailBoxes;
     private File basePathFile;
@@ -75,6 +86,31 @@ public class VMailManagerNode extends BaseNode implements VMailManager {
     protected void doStop() throws Exception {
         super.doStop();
         vmailBoxes = null;
+    }
+
+    public void setData(DataSource dataSource, Object data, DataContext context) {
+        if (isStarted() && data instanceof NewVMailMessage) {
+            if (isLogLevelEnabled(LogLevel.DEBUG))
+                getLogger().debug("Received new voice mail message. "+data);
+            NewVMailMessage message = (NewVMailMessage) data;
+            VMailBoxNode vbox = vmailBoxes.get(message.getVMailBoxNumber());
+            if (vbox==null) {
+                if (isLogLevelEnabled(LogLevel.ERROR))
+                    getLogger().error("Voice mail box with number ({}) not found", message.getVMailBoxNumber());
+                return;
+            }
+            try {
+                vbox.addMessage(message);
+            } catch (Exception ex) {
+                if (isLogLevelEnabled(LogLevel.ERROR))
+                    getLogger().error(String.format("Error adding new message (%s) to voice mail box (%s)", 
+                            message, vbox.getPath()), ex);
+            }
+        }
+    }
+
+    public Object refereshData(Collection<NodeAttribute> sessionAttributes) {
+        throw new UnsupportedOperationException("Pull operation not supported by this data pipe");
     }
 
     public VMailBox getVMailBox(String phoneNumber) {
@@ -167,11 +203,31 @@ public class VMailManagerNode extends BaseNode implements VMailManager {
         return numbers;
     }
 
+    public DataSource getDataSource() {
+        return dataSource;
+    }
+
+    public void setDataSource(DataSource dataSource) {
+        this.dataSource = dataSource;
+    }
+
     public String getBasePath() {
         return basePath;
     }
 
     public void setBasePath(String basePath) {
         this.basePath = basePath;
+    }
+
+    public boolean getDataImmediate(DataConsumer dataConsumer, DataContext context) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public Boolean getStopProcessingOnError() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public Collection<NodeAttribute> generateAttributes() {
+        return null;
     }
 }

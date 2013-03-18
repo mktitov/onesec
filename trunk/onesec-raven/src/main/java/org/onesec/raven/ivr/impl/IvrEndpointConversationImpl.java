@@ -163,6 +163,11 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         return calledNumber;
     }
 
+    public String getLastRedirectedNumber() {
+        final CiscoCall _call = call;
+        return _call!=null? _call.getLastRedirectedAddress().getName() : null;
+    }
+
     public IvrEndpointConversationState getState() {
         return state;
     }
@@ -508,6 +513,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                     CONVERSATION_STATE_BINDING, conversationState, BindingScope.CONVERSATION);
             conversationState.setBinding(NUMBER_BINDING, callingNumber, BindingScope.CONVERSATION);
             conversationState.setBinding(CALLED_NUMBER_BINDING, calledNumber, BindingScope.CONVERSATION);
+            conversationState.setBinding(LAST_REDIRECTED_NUMBER, getLastRedirectedNumber(), BindingScope.CONVERSATION);
             if (additionalBindings!=null)
                 for (Map.Entry<String, Object> b: additionalBindings.entrySet())
                     conversationState.setBinding(b.getKey(), b.getValue(), BindingScope.CONVERSATION);
