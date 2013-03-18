@@ -15,6 +15,7 @@
  */
 package org.onesec.raven.ivr.vmail.impl;
 
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import javax.activation.DataSource;
 import org.onesec.raven.ivr.vmail.VMailMessage;
@@ -44,5 +45,11 @@ public class VMailMessageImpl implements VMailMessage {
 
     public DataSource getAudioSource() {
         return audioSource;
+    }
+
+    @Override
+    public String toString() {
+        return "VoiceMessage: senderPhoneNumber="+senderPhoneNumber+
+                "; messageDate="+new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
     }
 }

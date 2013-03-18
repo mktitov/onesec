@@ -16,12 +16,15 @@
 package org.onesec.raven.ivr.vmail.impl;
 
 import java.io.File;
+import java.util.Date;
+import javax.activation.FileDataSource;
 import org.apache.commons.io.FileUtils;
+import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.Test;
-import static org.junit.Assert.*;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.ivr.vmail.VMailBoxDir;
+import org.raven.test.PushDataSource;
 import org.raven.tree.Node;
 import org.raven.tree.impl.GroupNode;
 
@@ -29,19 +32,26 @@ import org.raven.tree.impl.GroupNode;
  *
  * @author Mikhail Titov
  */
-public class VMailManagerNodeTest extends OnesecRavenTestCase {
-    
+public class VMailManagerNodeTest extends OnesecRavenTestCase {  
     private VMailManagerNode manager;
     private File base = new File("target/vmailboxes");
+    private PushDataSource ds;
     
     @Before
     public void prepare() throws Exception {
         if (base.exists())
             FileUtils.deleteDirectory(base);
+        
+        ds = new PushDataSource();
+        ds.setName("ds");
+        testsNode.addAndSaveChildren(ds);
+        assertTrue(ds.start());
+        
         manager = new VMailManagerNode();
         manager.setName("vmail manager");
         testsNode.addAndSaveChildren(manager);
         manager.setBasePath(base.getPath());
+        manager.setDataSource(ds);
     }
     
     @Test
@@ -156,6 +166,22 @@ public class VMailManagerNodeTest extends OnesecRavenTestCase {
         File savedDir = new File(base.getAbsolutePath()+"/"+vbox.getId()+"/saved");
         assertTrue(savedDir.exists());
         assertEquals(savedDir, vboxDir.getSavedMessagesDir());
+    }
+    
+    @Test
+    public void pushNewMessageTest() throws Exception {
+        File testFile = new File("target/test_file");
+        if (!testFile.exists())
+            testFile.delete();
+        FileUtils.writeStringToFile(testFile, "1234");
+        
+        VMailBoxNode vbox = createVBox(manager, "vbox1", true);
+        createVBoxNumber(vbox, "111", true);
+        assertTrue(manager.start());
+        
+        assertEquals(0, vbox.getNewMessagesCount());
+        ds.pushData(new NewVMailMessageImpl("111", "222", new Date(), new FileDataSource(testFile)));
+        assertEquals(1, vbox.getNewMessagesCount());
     }
     
     private GroupNode createGroup(Node owner, String name) {

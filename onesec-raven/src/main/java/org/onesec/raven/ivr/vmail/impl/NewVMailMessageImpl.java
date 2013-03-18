@@ -33,7 +33,12 @@ public class NewVMailMessageImpl extends VMailMessageImpl implements NewVMailMes
         this.vmailBoxNumber = vmailBoxNumber;
     }
 
-    public String getVMailBoxNumber(String phoneNumber) {
+    public String getVMailBoxNumber() {
         return vmailBoxNumber;
+    }
+
+    @Override
+    public String toString() {
+        return super.toString()+"; vmailBoxNumber="+vmailBoxNumber;
     }
 }

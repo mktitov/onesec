@@ -13,12 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.onesec.raven.ivr.vmail;
+package org.onesec.raven.ivr.vmail.actions;
+
+import org.onesec.raven.ivr.vmail.VMailBox;
+import org.onesec.raven.ivr.vmail.VMailManager;
+import org.raven.tree.impl.BaseNode;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface NewVMailMessage extends VMailMessage {
-    public String getVMailBoxNumber();
+public class VMailManagerWrapper extends BaseNode implements VMailManager {
+    
+    private VMailManager manager;
+
+    public VMailManager getManager() {
+        return manager;
+    }
+
+    public void setManager(VMailManager manager) {
+        this.manager = manager;
+    }
+    
+    public VMailBox getVMailBox(String phoneNumber) {
+        return manager.getVMailBox(phoneNumber);
+    }
 }

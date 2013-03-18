@@ -24,4 +24,6 @@ public interface Constants {
     public final static String RESOURCE_BASE = "IVR/";
     public final static String SOUNDS_RESOURCES_BASE = RESOURCE_BASE+"sounds/";
     public final static String NUMBERS_FEMALE_RESOURCE = SOUNDS_RESOURCES_BASE + "numbers/female/";
+    public final static String VMAIL_BOX = "vmailBox";
+    public final static String VMAIL_BOX_NUMBER = "vmailBoxNumber";
 }
