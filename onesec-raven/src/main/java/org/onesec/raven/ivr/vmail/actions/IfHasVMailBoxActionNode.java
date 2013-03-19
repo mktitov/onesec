@@ -37,7 +37,7 @@ import org.weda.annotations.constraints.NotNull;
  *
  * @author Mikhail Titov
  */
-@NodeClass(parentNode=IvrConversationScenarioNode.class)
+@NodeClass(parentNode=IvrConversationScenarioNode.class, importChildTypesFromParent=true)
 public class IfHasVMailBoxActionNode extends BaseNode implements Constants {
     public enum VMailBoxType {CALLING_NUMBER, LAST_REDIRECT_NUMBER};
     

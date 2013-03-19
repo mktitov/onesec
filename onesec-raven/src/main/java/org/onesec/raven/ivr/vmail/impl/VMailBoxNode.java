@@ -31,7 +31,9 @@ import org.onesec.raven.ivr.vmail.StoredVMailMessage;
 import org.onesec.raven.ivr.vmail.VMailBox;
 import org.onesec.raven.ivr.vmail.VMailBoxDir;
 import org.raven.annotations.NodeClass;
+import org.raven.annotations.Parameter;
 import org.raven.tree.impl.BaseNode;
+import org.weda.annotations.constraints.NotNull;
 
 /**
  *
@@ -41,6 +43,17 @@ import org.raven.tree.impl.BaseNode;
 public class VMailBoxNode extends BaseNode implements VMailBox {
     
     public final static String DATE_PATTERN = "yyyyMMdd_HHmmss_SSS";
+    
+    @NotNull @Parameter(defaultValue="20")
+    private Integer maxMessageDuration;
+
+    public Integer getMaxMessageDuration() {
+        return maxMessageDuration;
+    }
+
+    public void setMaxMessageDuration(Integer maxMessageDuration) {
+        this.maxMessageDuration = maxMessageDuration;
+    }
     
     private VMailManagerNode getManager() {
         return (VMailManagerNode) getEffectiveParent();

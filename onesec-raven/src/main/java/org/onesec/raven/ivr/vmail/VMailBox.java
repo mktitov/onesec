@@ -23,6 +23,10 @@ import java.util.List;
  */
 public interface VMailBox {
     /**
+     * Max message duration in seconds
+     */
+    public Integer getMaxMessageDuration();
+    /**
      * Returns count of new messages
      */
     public int getNewMessagesCount() throws Exception;

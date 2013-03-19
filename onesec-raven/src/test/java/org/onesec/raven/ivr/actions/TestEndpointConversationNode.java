@@ -138,6 +138,10 @@ public class TestEndpointConversationNode extends BaseNode implements IvrEndpoin
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
+    public String getLastRedirectedNumber() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
     public void continueConversation(char dtmfChar) {
         throw new UnsupportedOperationException("Not supported yet.");
     }

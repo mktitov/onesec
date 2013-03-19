@@ -55,10 +55,12 @@ public class StartRecordingAction extends AsyncAction {
     private static CodecManager codecManager;
     
     private final StartRecordingActionNode actionNode;
+    private final boolean saveOnCancel;
 
-    public StartRecordingAction(StartRecordingActionNode owner) {
+    public StartRecordingAction(StartRecordingActionNode owner, boolean saveOnCancel) {
         super(NAME);
         this.actionNode = owner;
+        this.saveOnCancel = saveOnCancel;
     }
 
     @Override
@@ -166,7 +168,7 @@ public class StartRecordingAction extends AsyncAction {
             } finally {
                 conversationBindings.remove(RECORDER_BINDING);
             }
-            if (!cancel) 
+            if (!cancel || saveOnCancel) 
                 actionNode.sendDataToConsumers(tempFileManager.getDataSource(key), context);
         }
     }
