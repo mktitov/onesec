@@ -17,6 +17,7 @@
 
 package org.onesec.raven.impl;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import static org.weda.beans.ObjectUtils.*;
@@ -26,6 +27,7 @@ import static org.weda.beans.ObjectUtils.*;
  * @author Mikhail Titov
  */
 public class NumberToDigitConverter {
+    
     public static List<String> getDigits(long number) {
         List<String> numbers = null;
         int sotNumber = 1;
@@ -105,5 +107,25 @@ public class NumberToDigitConverter {
         }
 
         return res;
+    }
+    
+    public static List<List<String>> getDigitGroups(final long number, final List<List<String>> groups) {
+        if (number==0) return groups;
+        List<String> group = new ArrayList<String>(3);
+        groups.add(0, group);
+        long num = number - number/1000*1000;
+        long sot = addDigitToGroup(num/100*100, group);
+        num -= sot;
+        if (num<=20) addDigitToGroup(num, group);
+        else {
+            long des = addDigitToGroup(num/10*10, group);
+            addDigitToGroup(num-des, group);
+        }
+        return getDigitGroups(number/1000, groups);
+    }
+    
+    private static long addDigitToGroup(long num, List<String> group) {
+        if (num>0) group.add(Long.toString(num));
+        return num;
     }
 }

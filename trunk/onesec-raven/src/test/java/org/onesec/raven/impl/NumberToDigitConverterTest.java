@@ -18,6 +18,8 @@
 package org.onesec.raven.impl;
 
 import java.util.Collection;
+import java.util.LinkedList;
+import java.util.List;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -39,6 +41,39 @@ public class NumberToDigitConverterTest extends Assert
         long l = (long) d;
         assertEquals(195912l, l);
         assertEquals(12l, (long)(Math.round((d-l)*100)));
+    }
+    
+    @Test 
+    public void getDigitGroupsTest1() {
+        List<List<String>> groups = NumberToDigitConverter.getDigitGroups(121, new LinkedList<List<String>>());
+        assertNotNull(groups);
+        assertEquals(1, groups.size());
+        assertEquals(3, groups.get(0).size());
+        assertEquals("100", groups.get(0).get(0));
+        assertEquals("20", groups.get(0).get(1));
+        assertEquals("1", groups.get(0).get(2));
+    }
+
+    @Test 
+    public void getDigitGroupsTest2() {
+        List<List<String>> groups = NumberToDigitConverter.getDigitGroups(119, new LinkedList<List<String>>());
+        assertNotNull(groups);
+        assertEquals(1, groups.size());
+        assertEquals(2, groups.get(0).size());
+        assertEquals("100", groups.get(0).get(0));
+        assertEquals("19", groups.get(0).get(1));
+    }
+
+    @Test 
+    public void getDigitGroupsTest3() {
+        List<List<String>> groups = NumberToDigitConverter.getDigitGroups(20119, new LinkedList<List<String>>());
+        assertNotNull(groups);
+        assertEquals(2, groups.size());
+        assertEquals(1, groups.get(0).size());
+        assertEquals("20", groups.get(0).get(0));
+        assertEquals(2, groups.get(1).size());
+        assertEquals("100", groups.get(1).get(0));
+        assertEquals("19", groups.get(1).get(1));
     }
 
     @Test
