@@ -17,11 +17,13 @@
 
 package org.onesec.raven.ivr.actions;
 
+import javax.script.Bindings;
 import org.onesec.raven.ivr.IvrAction;
 import org.onesec.raven.ivr.IvrActionNode;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
+import org.raven.expr.impl.BindingSupportImpl;
 import org.raven.tree.impl.BaseNode;
 import org.weda.annotations.constraints.NotNull;
 
@@ -34,6 +36,20 @@ public class PauseActionNode extends BaseNode implements IvrActionNode
 {
     @NotNull @Parameter()
     private Long interval;
+    
+    private BindingSupportImpl bindingSupport;
+
+    @Override
+    protected void initFields() {
+        super.initFields();
+        bindingSupport = new BindingSupportImpl();
+    }
+
+    @Override
+    public void formExpressionBindings(Bindings bindings) {
+        super.formExpressionBindings(bindings);
+        bindingSupport.addTo(bindings);
+    }
 
     public Long getInterval() {
         return interval;
@@ -43,8 +59,12 @@ public class PauseActionNode extends BaseNode implements IvrActionNode
         this.interval = interval;
     }
 
-    public IvrAction createAction()
-    {
-        return new PauseAction(interval);
+    public IvrAction createAction() {
+        try {
+            bindingSupport.enableScriptExecution();
+            return new PauseAction(interval);
+        } finally {
+            bindingSupport.reset();
+        }
     }
 }

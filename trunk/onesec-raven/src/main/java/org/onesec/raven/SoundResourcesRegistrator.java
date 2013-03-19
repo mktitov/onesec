@@ -37,10 +37,13 @@ public class SoundResourcesRegistrator implements ResourceRegistrator, Constants
     
     private final static String[] names = new String[] {
         "hello_ru",
+        "beeps/phone_beep_ru",
         "status/current_status_ru",
         "status/press_1_to_change_status_ru",
         "status/status_available_ru",
         "status/status_unavailable_ru",
+        "vmail/male/greeting_ru",
+        "vmail/male/message_recorded_ru",
         "numbers/female/1'_ru",
         "numbers/female/100_ru",
         "numbers/female/10_ru",
@@ -87,11 +90,59 @@ public class SoundResourcesRegistrator implements ResourceRegistrator, Constants
         "numbers/female/рубл€_ru",
         "numbers/female/тыс€ч_ru",
         "numbers/female/тыс€ча_ru",
-        "numbers/female/тыс€чи_ru"        
+        "numbers/female/тыс€чи_ru",        
+        "numbers/male/1'_ru",
+        "numbers/male/1''_ru",
+        "numbers/male/100_ru",
+        "numbers/male/10_ru",
+        "numbers/male/11_ru",
+        "numbers/male/12_ru",
+        "numbers/male/13_ru",
+        "numbers/male/14_ru",
+        "numbers/male/15_ru",
+        "numbers/male/16_ru",
+        "numbers/male/17_ru",
+        "numbers/male/18_ru",
+        "numbers/male/19_ru",
+        "numbers/male/1_ru",
+        "numbers/male/2'_ru",
+        "numbers/male/200_ru",
+        "numbers/male/20_ru",
+        "numbers/male/2_ru",
+        "numbers/male/300_ru",
+        "numbers/male/30_ru",
+        "numbers/male/3_ru",
+        "numbers/male/400_ru",
+        "numbers/male/40_ru",
+        "numbers/male/4_ru",
+        "numbers/male/500_ru",
+        "numbers/male/50_ru",
+        "numbers/male/5_ru",
+        "numbers/male/600_ru",
+        "numbers/male/60_ru",
+        "numbers/male/6_ru",
+        "numbers/male/700_ru",
+        "numbers/male/70_ru",
+        "numbers/male/7_ru",
+        "numbers/male/800_ru",
+        "numbers/male/80_ru",
+        "numbers/male/8_ru",
+        "numbers/male/900_ru",
+        "numbers/male/90_ru",
+        "numbers/male/9_ru",
+        "numbers/male/копеек_ru",
+        "numbers/male/копейка_ru",
+        "numbers/male/копейки_ru",
+        "numbers/male/рублей_ru",
+        "numbers/male/рубль_ru",
+        "numbers/male/рубл€_ru",
+        "numbers/male/тыс€ч_ru",
+        "numbers/male/тыс€ча_ru",
+        "numbers/male/тыс€чи_ru"        
     };
 
     public void registerResources(ResourceManager resourceManager) {
-        for (String name: names) {
+        for (String name: names) 
             try {
                 ResInfo resInfo = new ResInfo(name);
                 if (!resourceManager.containsResource(resInfo.ravenResName, resInfo.locale)) {
@@ -115,7 +166,6 @@ public class SoundResourcesRegistrator implements ResourceRegistrator, Constants
                 if (logger.isErrorEnabled())
                     logger.error(String.format("Error registering resource (%s)", SOUNDS_RESOURCES_BASE+name), e);
             }
-        }
     }
     
     private AudioFileNode createFromRes(String resPath) {

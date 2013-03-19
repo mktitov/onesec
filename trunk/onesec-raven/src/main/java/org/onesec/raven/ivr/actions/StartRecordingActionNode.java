@@ -44,6 +44,10 @@ public class StartRecordingActionNode extends BaseNode implements IvrActionNode,
     private Integer noiseLevel;
     @NotNull @Parameter(defaultValue="2.0")
     private Double maxGainCoef;
+    
+    protected boolean saveOnCancel() {
+        return false;
+    }
 
     public Integer getNoiseLevel() {
         return noiseLevel;
@@ -74,7 +78,7 @@ public class StartRecordingActionNode extends BaseNode implements IvrActionNode,
     }
 
     public IvrAction createAction() {
-        return new StartRecordingAction(this);
+        return new StartRecordingAction(this, saveOnCancel());
     }
 
     public boolean getDataImmediate(DataConsumer dataConsumer, DataContext context) {
@@ -85,7 +89,7 @@ public class StartRecordingActionNode extends BaseNode implements IvrActionNode,
         return null;
     }
     
-    void sendDataToConsumers(Object data, DataContext context) {
+    protected void sendDataToConsumers(javax.activation.DataSource data, DataContext context) {
         DataSourceHelper.sendDataToConsumers(this, data, context);
     }
 }
