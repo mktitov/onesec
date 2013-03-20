@@ -24,7 +24,9 @@ import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import org.onesec.raven.OnesecRavenTestCase;
+import org.onesec.raven.impl.Genus;
 import org.onesec.raven.ivr.impl.AudioFileNode;
+import org.raven.conv.impl.ConversationScenarioStateImpl;
 import org.raven.sched.impl.ExecutorServiceNode;
 import org.raven.tree.Node;
 import org.raven.tree.Tree;
@@ -43,7 +45,7 @@ public class SayNumberActionTest extends OnesecRavenTestCase {
     
     @Before
     public void prepare() throws Exception {
-        ResourcesNode resources = (ResourcesNode) tree.getRootNode().getChildren(ResourcesNode.NAME);
+        ResourcesNode resources = (ResourcesNode) tree.getRootNode().getNode(ResourcesNode.NAME);
         resources.setDefaultLocale(new Locale("ru"));
         
         executor = new ExecutorServiceNode();
@@ -57,6 +59,7 @@ public class SayNumberActionTest extends OnesecRavenTestCase {
         conv.setName("endpoint");
         tree.getRootNode().addAndSaveChildren(conv);
         conv.setExecutorService(executor);
+        conv.setConversationScenarioState(new ConversationScenarioStateImpl());
 
 //        numbers = createNumbersNode(tree);
         
@@ -70,11 +73,12 @@ public class SayNumberActionTest extends OnesecRavenTestCase {
         conv.stop();
     }
     
-//    @Test
+    @Test
     public void withoutPatternsTest() throws Exception {
         conv.setFileName("target/number.wav");
         assertTrue(conv.start());
-        actionNode.setNumber("124");
+        actionNode.setNumber("21");
+        actionNode.setGenus(Genus.NEUTER);
         assertTrue(actionNode.start());
         SayNumberAction action = (SayNumberAction) actionNode.createAction();
         assertNotNull(action);
@@ -82,7 +86,7 @@ public class SayNumberActionTest extends OnesecRavenTestCase {
         Thread.sleep(10000);
     }
     
-    @Test
+//    @Test
     public void withPatternsTest() throws Exception {
         conv.setFileName("target/numbers.wav");
         assertTrue(conv.start());

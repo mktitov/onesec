@@ -22,6 +22,7 @@ import java.util.LinkedList;
 import java.util.List;
 import org.junit.Assert;
 import org.junit.Test;
+import static org.onesec.raven.impl.NumberToDigitConverter.*;
 
 /**
  *
@@ -69,17 +70,31 @@ public class NumberToDigitConverterTest extends Assert
         List<List<String>> groups = NumberToDigitConverter.getDigitGroups(20119, new LinkedList<List<String>>());
         assertNotNull(groups);
         assertEquals(2, groups.size());
-        assertEquals(1, groups.get(0).size());
-        assertEquals("20", groups.get(0).get(0));
-        assertEquals(2, groups.get(1).size());
-        assertEquals("100", groups.get(1).get(0));
-        assertEquals("19", groups.get(1).get(1));
+        assertEquals(1, groups.get(1).size());
+        assertEquals("20", groups.get(1).get(0));
+        assertEquals(2, groups.get(0).size());
+        assertEquals("100", groups.get(0).get(0));
+        assertEquals("19", groups.get(0).get(1));
+    }
+    
+    @Test
+    public void getDigitsWithGenus_1() {
+        assertArrayEquals(new Object[]{"1"}, getDigits(1, Genus.MALE).toArray());
+        assertArrayEquals(new Object[]{"1'"}, getDigits(1, Genus.FEMALE).toArray());
+        assertArrayEquals(new Object[]{"1''"}, getDigits(1, Genus.NEUTER).toArray());
+    }
+
+    @Test
+    public void getDigitsWithGenus_2() {
+        assertArrayEquals(new Object[]{"2"}, getDigits(2, Genus.MALE).toArray());
+        assertArrayEquals(new Object[]{"2'"}, getDigits(2, Genus.FEMALE).toArray());
+        assertArrayEquals(new Object[]{"2"}, getDigits(2, Genus.NEUTER).toArray());
     }
 
     @Test
     public void getDigitsTest()
     {
-        Collection<String> list = NumberToDigitConverter.getDigits(921);
+        Collection<String> list = NumberToDigitConverter.getDigits(921, Genus.MALE);
         assertNotNull(list);
         assertEquals(3, list.size());
         assertArrayEquals(new Object[]{"900", "20", "1"}, list.toArray());
@@ -88,14 +103,14 @@ public class NumberToDigitConverterTest extends Assert
     @Test
     public void getDigits_ZeroTest()
     {
-        Collection<String> list = NumberToDigitConverter.getDigits(0);
-        assertNull(list);
+        Collection<String> list = NumberToDigitConverter.getDigits(0, Genus.MALE);
+        assertTrue(list.isEmpty());
     }
 
     @Test
     public void getDigits_OneTest()
     {
-        Collection<String> list = NumberToDigitConverter.getDigits(1);
+        Collection<String> list = NumberToDigitConverter.getDigits(1, Genus.MALE);
         assertNotNull(list);
         assertArrayEquals(new Object[]{"1"}, list.toArray());
     }
@@ -103,7 +118,7 @@ public class NumberToDigitConverterTest extends Assert
     @Test
     public void getDigits_11Test()
     {
-        Collection<String> list = NumberToDigitConverter.getDigits(11);
+        Collection<String> list = NumberToDigitConverter.getDigits(11, Genus.MALE);
         assertNotNull(list);
         assertArrayEquals(new Object[]{"11"}, list.toArray());
     }
@@ -111,7 +126,7 @@ public class NumberToDigitConverterTest extends Assert
     @Test
     public void getDigits_19Test()
     {
-        Collection<String> list = NumberToDigitConverter.getDigits(19);
+        Collection<String> list = NumberToDigitConverter.getDigits(19, Genus.MALE);
         assertNotNull(list);
         assertArrayEquals(new Object[]{"19"}, list.toArray());
     }
@@ -119,7 +134,7 @@ public class NumberToDigitConverterTest extends Assert
     @Test
     public void getDigits_119Test()
     {
-        Collection<String> list = NumberToDigitConverter.getDigits(119);
+        Collection<String> list = NumberToDigitConverter.getDigits(119, Genus.MALE);
         assertNotNull(list);
         assertArrayEquals(new Object[]{"100", "19"}, list.toArray());
     }
@@ -127,7 +142,7 @@ public class NumberToDigitConverterTest extends Assert
     @Test
     public void getDigits_20Test()
     {
-        Collection<String> list = NumberToDigitConverter.getDigits(20);
+        Collection<String> list = NumberToDigitConverter.getDigits(20, Genus.MALE);
         assertNotNull(list);
         assertArrayEquals(new Object[]{"20"}, list.toArray());
     }
@@ -135,7 +150,7 @@ public class NumberToDigitConverterTest extends Assert
     @Test
     public void getDigits_90Test()
     {
-        Collection<String> list = NumberToDigitConverter.getDigits(90);
+        Collection<String> list = NumberToDigitConverter.getDigits(90, Genus.MALE);
         assertNotNull(list);
         assertArrayEquals(new Object[]{"90"}, list.toArray());
     }
@@ -143,7 +158,7 @@ public class NumberToDigitConverterTest extends Assert
     @Test
     public void getDigits_1000()
     {
-        Collection<String> list = NumberToDigitConverter.getDigits(1000);
+        Collection<String> list = NumberToDigitConverter.getDigits(1000, Genus.MALE);
         assertNotNull(list);
         assertArrayEquals(new Object[]{"1'", "тыс€ча"}, list.toArray());
     }
@@ -151,7 +166,7 @@ public class NumberToDigitConverterTest extends Assert
     @Test
     public void getDigits_22000()
     {
-        Collection<String> list = NumberToDigitConverter.getDigits(22000);
+        Collection<String> list = NumberToDigitConverter.getDigits(22000, Genus.MALE);
         assertNotNull(list);
         assertArrayEquals(new Object[]{"20", "2'", "тыс€чи"}, list.toArray());
     }
@@ -159,7 +174,7 @@ public class NumberToDigitConverterTest extends Assert
     @Test
     public void getDigits_33000()
     {
-        Collection<String> list = NumberToDigitConverter.getDigits(33000);
+        Collection<String> list = NumberToDigitConverter.getDigits(33000, Genus.MALE);
         assertNotNull(list);
         assertArrayEquals(new Object[]{"30", "3", "тыс€чи"}, list.toArray());
     }
@@ -167,7 +182,7 @@ public class NumberToDigitConverterTest extends Assert
     @Test
     public void getDigits_44000()
     {
-        Collection<String> list = NumberToDigitConverter.getDigits(44000);
+        Collection<String> list = NumberToDigitConverter.getDigits(44000, Genus.MALE);
         assertNotNull(list);
         assertArrayEquals(new Object[]{"40", "4", "тыс€чи"}, list.toArray());
     }
@@ -175,7 +190,7 @@ public class NumberToDigitConverterTest extends Assert
     @Test
     public void getDigits_55000()
     {
-        Collection<String> list = NumberToDigitConverter.getDigits(55000);
+        Collection<String> list = NumberToDigitConverter.getDigits(55000, Genus.MALE);
         assertNotNull(list);
         assertArrayEquals(new Object[]{"50", "5", "тыс€ч"}, list.toArray());
     }
@@ -183,7 +198,7 @@ public class NumberToDigitConverterTest extends Assert
     @Test
     public void getDigits_1001()
     {
-        Collection<String> list = NumberToDigitConverter.getDigits(1001);
+        Collection<String> list = NumberToDigitConverter.getDigits(1001, Genus.MALE);
         assertNotNull(list);
         assertArrayEquals(new Object[]{"1'", "тыс€ча", "1"}, list.toArray());
     }
@@ -191,7 +206,7 @@ public class NumberToDigitConverterTest extends Assert
     @Test
     public void getDigits_1011()
     {
-        Collection<String> list = NumberToDigitConverter.getDigits(1011);
+        Collection<String> list = NumberToDigitConverter.getDigits(1011, Genus.MALE);
         assertNotNull(list);
         assertArrayEquals(new Object[]{"1'", "тыс€ча", "11"}, list.toArray());
     }

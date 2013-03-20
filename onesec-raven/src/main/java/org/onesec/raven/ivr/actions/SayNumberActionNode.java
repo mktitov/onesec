@@ -22,6 +22,7 @@ import java.util.LinkedList;
 import java.util.List;
 import javax.script.Bindings;
 import org.onesec.raven.Constants;
+import org.onesec.raven.impl.Genus;
 import org.onesec.raven.ivr.IvrAction;
 import org.onesec.raven.ivr.IvrActionNode;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
@@ -54,7 +55,7 @@ public class SayNumberActionNode extends BaseNode implements IvrActionNode {
     
     @NotNull 
     @Parameter(valueHandlerType=ResourceReferenceValueHandlerFactory.TYPE, 
-               defaultValue=Constants.NUMBERS_FEMALE_RESOURCE)
+               defaultValue=Constants.NUMBERS_MALE_RESOURCE)
     private Node numbersNode;
     
     @NotNull @Parameter(defaultValue="10") 
@@ -62,6 +63,9 @@ public class SayNumberActionNode extends BaseNode implements IvrActionNode {
     
     @NotNull @Parameter(defaultValue="100")
     private Integer pauseBetweenNumbers;
+    
+    @NotNull @Parameter(defaultValue="MALE")
+    private Genus genus;
     
     private BindingSupportImpl bindingSupport;
 
@@ -82,7 +86,7 @@ public class SayNumberActionNode extends BaseNode implements IvrActionNode {
     }
 
     public IvrAction createAction() {
-        return new SayNumberAction(this, numbersNode, pauseBetweenWords, pauseBetweenNumbers, resourceManager);
+        return new SayNumberAction(this, numbersNode, genus, pauseBetweenWords, pauseBetweenNumbers, resourceManager);
     }
     
     public Collection<Long> getNumbersSequence() {
@@ -143,5 +147,13 @@ public class SayNumberActionNode extends BaseNode implements IvrActionNode {
 
     public void setPauseBetweenNumbers(Integer pauseBetweenNumbers) {
         this.pauseBetweenNumbers = pauseBetweenNumbers;
+    }
+
+    public Genus getGenus() {
+        return genus;
+    }
+
+    public void setGenus(Genus genus) {
+        this.genus = genus;
     }
 }

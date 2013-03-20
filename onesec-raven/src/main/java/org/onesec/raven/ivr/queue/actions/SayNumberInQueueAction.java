@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import javax.script.Bindings;
+import org.onesec.raven.impl.Genus;
 import org.onesec.raven.impl.NumberToDigitConverter;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.actions.AbstractSayNumberAction;
@@ -74,7 +75,7 @@ public class SayNumberInQueueAction extends AbstractSayNumberAction
                 return null;
             List words = new ArrayList();
             words.add(preambleAudio);
-            words.addAll(NumberToDigitConverter.getDigits(num));
+            words.addAll(NumberToDigitConverter.getDigits(num, Genus.MALE));
             bindings.put(key, num);
             return Arrays.asList(words);
         } finally {
