@@ -17,6 +17,7 @@ package org.onesec.raven.ivr.actions;
 
 import java.util.LinkedList;
 import java.util.List;
+import org.onesec.raven.impl.Genus;
 import org.onesec.raven.impl.NumberToDigitConverter;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.raven.tree.Node;
@@ -29,21 +30,23 @@ import org.raven.tree.ResourceManager;
 public class SayNumberAction extends AbstractSayNumberAction {
     public final static String NAME = "Say number action";
     private final SayNumberActionNode actionNode;
+    private final Genus genus;
 
-    public SayNumberAction(SayNumberActionNode owner, Node numbersNode, long pauseBetweenWords, 
+    public SayNumberAction(SayNumberActionNode owner, Node numbersNode, Genus genus, long pauseBetweenWords, 
         long pauseBetweenNumbers, ResourceManager resourceManager) 
     {
         super(NAME, numbersNode, pauseBetweenWords, pauseBetweenNumbers, resourceManager);
         this.actionNode = owner;
+        this.genus = genus;
     }
 
     @Override
     protected List<List> formWords(IvrEndpointConversation conversation) {
-        actionNode.getBindingSupport().enableScriptExecution();
+        actionNode.getBindingSupport().putAll(conversation.getConversationScenarioState().getBindings());
         try {
             List<List> res = new LinkedList<List>();
             for (Long number: actionNode.getNumbersSequence())
-                res.add(NumberToDigitConverter.getDigits(number));
+                res.add(NumberToDigitConverter.getDigits(number, genus));
             return res;
         } finally {
             actionNode.getBindingSupport().reset();

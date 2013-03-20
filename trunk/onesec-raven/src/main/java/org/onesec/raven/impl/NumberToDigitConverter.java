@@ -18,6 +18,8 @@
 package org.onesec.raven.impl;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import static org.weda.beans.ObjectUtils.*;
@@ -27,48 +29,55 @@ import static org.weda.beans.ObjectUtils.*;
  * @author Mikhail Titov
  */
 public class NumberToDigitConverter {
+    private static String[][] ORDER_NAMES = {
+        {},
+        {"тыс€ча", "тыс€чи", "тыс€ч"},
+        {"миллион", "миллиона", "миллионов"},
+        {"миллиард", "миллиарда", "миллиардов"}
+    };
+    private static Genus[] ORDER_GENUS = {null, Genus.FEMALE, Genus.MALE, Genus.MALE};
     
-    public static List<String> getDigits(long number) {
-        List<String> numbers = null;
-        int sotNumber = 1;
-        while (number>0) {
-            if (numbers==null)
-                numbers = new LinkedList<String>();
-            List<String> tempNums = new LinkedList<String>();
-            long tempNum = number-number/1000*1000;
-            long sot = tempNum/100*100;
-            if (sot>0)
-                tempNums.add(""+sot);
-            long tempNum2 = tempNum-sot;
-            int ed=0;
-            if (tempNum2>10 && tempNum2<20)
-                tempNums.add(""+tempNum2);
-            else {
-                long des = tempNum2/10*10;
-                if (des>0)
-                    tempNums.add(""+des);
-                ed = (int) (tempNum2 - des);
-                if (ed>0)
-                    tempNums.add(""+ed+(sotNumber==2 && ed<=2? "'" : ""));
-            }
-            if (sotNumber==2) {
-                String t = null;
-                switch(ed) {
-                    case 1: t = "тыс€ча"; break;
-                    case 2:
-                    case 3:
-                    case 4: t = "тыс€чи"; break;
-                    default: t = "тыс€ч";
-                }
-                tempNums.add(t);
-            }
-            numbers.addAll(0, tempNums);
-            number /= 1000;
-            ++sotNumber;
-        }
-
-        return numbers;
-    }
+//    public static List<String> getDigits(long number) {
+//        List<String> numbers = null;
+//        int sotNumber = 1;
+//        while (number>0) {
+//            if (numbers==null)
+//                numbers = new LinkedList<String>();
+//            List<String> tempNums = new LinkedList<String>();
+//            long tempNum = number-number/1000*1000;
+//            long sot = tempNum/100*100;
+//            if (sot>0)
+//                tempNums.add(""+sot);
+//            long tempNum2 = tempNum-sot;
+//            int ed=0;
+//            if (tempNum2>10 && tempNum2<20)
+//                tempNums.add(""+tempNum2);
+//            else {
+//                long des = tempNum2/10*10;
+//                if (des>0)
+//                    tempNums.add(""+des);
+//                ed = (int) (tempNum2 - des);
+//                if (ed>0)
+//                    tempNums.add(""+ed+(sotNumber==2 && ed<=2? "'" : ""));
+//            }
+//            if (sotNumber==2) {
+//                String t = null;
+//                switch(ed) {
+//                    case 1: t = "тыс€ча"; break;//миллион
+//                    case 2:                     
+//                    case 3:
+//                    case 4: t = "тыс€чи"; break;//миллиона
+//                    default: t = "тыс€ч";
+//                }
+//                tempNums.add(t);
+//            }
+//            numbers.addAll(0, tempNums);
+//            number /= 1000;
+//            ++sotNumber;
+//        }
+//
+//        return numbers;
+//    }
 
     public static List<String> getCurrencyDigits(double amount) {
         long rub = (long) amount;
@@ -76,7 +85,7 @@ public class NumberToDigitConverter {
 
         List<String> res = null;
 
-        List<String> rubDigits = getDigits(rub);
+        List<String> rubDigits = getDigits(rub, Genus.MALE);
         if (rubDigits!=null && !rubDigits.isEmpty()) {
             String rubString = "рублей";
             String lastElem = rubDigits.get(rubDigits.size()-1);
@@ -88,7 +97,7 @@ public class NumberToDigitConverter {
             res = rubDigits;
         }
 
-        List<String> kopDigits = getDigits(kop);
+        List<String> kopDigits = getDigits(kop, Genus.MALE);
         if (kopDigits!=null && !kopDigits.isEmpty()) {
             String kopString = "копеек";
             int lastIndex = kopDigits.size()-1;
@@ -109,10 +118,29 @@ public class NumberToDigitConverter {
         return res;
     }
     
+    public static List<String> getDigits(long number, Genus genus) {
+        List<List<String>> groups = getDigitGroups(number, new LinkedList<List<String>>());
+        LinkedList<String> digits = new LinkedList<String>();
+        Iterator<List<String>> it = groups.iterator();
+        for (int i=0; i<ORDER_NAMES.length && it.hasNext(); ++i) {
+            List<String> nums = it.next();
+            if (i>0 && !nums.isEmpty()) {
+                int num = Integer.parseInt(nums.get(nums.size()-1));
+                modifyGenus(nums, ORDER_GENUS[i]);
+                if (num==1) digits.add(0, ORDER_NAMES[i][0]);
+                else if (num<5) digits.add(0, ORDER_NAMES[i][1]);
+                else digits.add(0, ORDER_NAMES[i][2]);
+            }
+            if (i==0 && !nums.isEmpty()) modifyGenus(nums, genus);
+            digits.addAll(0, nums);
+        }
+        return digits.isEmpty()? Collections.EMPTY_LIST : digits;
+    }
+    
     public static List<List<String>> getDigitGroups(final long number, final List<List<String>> groups) {
         if (number==0) return groups;
         List<String> group = new ArrayList<String>(3);
-        groups.add(0, group);
+        groups.add(group);
         long num = number - number/1000*1000;
         long sot = addDigitToGroup(num/100*100, group);
         num -= sot;
@@ -127,5 +155,13 @@ public class NumberToDigitConverter {
     private static long addDigitToGroup(long num, List<String> group) {
         if (num>0) group.add(Long.toString(num));
         return num;
+    }
+    
+    private static void modifyGenus(List<String> nums, Genus genus) {
+        String lastNum = nums.get(nums.size()-1);
+        if ("1".equals(lastNum)) {
+            if (genus==Genus.FEMALE) nums.set(nums.size()-1, lastNum+"'");
+            else if (genus==Genus.NEUTER) nums.set(nums.size()-1, lastNum+"''");
+        } else if ("2".equals(lastNum) && genus==Genus.FEMALE) nums.set(nums.size()-1, lastNum+"'");
     }
 }
