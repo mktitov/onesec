@@ -24,7 +24,7 @@ import javax.script.Bindings;
 import org.onesec.raven.impl.Genus;
 import org.onesec.raven.impl.NumberToDigitConverter;
 import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.onesec.raven.ivr.actions.AbstractSayNumberAction;
+import org.onesec.raven.ivr.actions.AbstractSayWordsAction;
 import org.onesec.raven.ivr.impl.AudioFileNode;
 import org.onesec.raven.ivr.queue.QueuedCallStatus;
 import org.raven.RavenUtils;
@@ -36,7 +36,7 @@ import org.raven.tree.ResourceManager;
  *
  * @author Mikhail Titov
  */
-public class SayNumberInQueueAction extends AbstractSayNumberAction
+public class SayNumberInQueueAction extends AbstractSayWordsAction
 {
     public final static String LAST_SAYED_NUMBER = "lastSayedNumber";
     private final static String NAME = "Say number in queue action";
