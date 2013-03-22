@@ -28,7 +28,7 @@ import org.raven.tree.ResourceManager;
  *
  * @author Mikhail Titov
  */
-public class SayAmountAction extends AbstractSayNumberAction
+public class SayAmountAction extends AbstractSayWordsAction
 {
     public final static String NAME = "Say amount action";
     private final SayAmountActionNode actionNode;

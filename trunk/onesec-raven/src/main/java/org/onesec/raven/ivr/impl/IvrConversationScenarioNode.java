@@ -29,13 +29,14 @@ import org.raven.conv.impl.ConversationScenarioNode;
 import org.raven.conv.impl.GotoNode;
 import org.raven.expr.impl.IfNode;
 import org.raven.expr.impl.SwitchNode;
+import org.raven.tree.impl.GroupNode;
 
 /**
  *
  * @author Mikhail Titov
  */
 @NodeClass(childNodes={
-    IvrConversationScenarioPointNode.class, IfNode.class, SwitchNode.class, GotoNode.class,
+    IvrConversationScenarioPointNode.class, IfNode.class, SwitchNode.class, GotoNode.class, GroupNode.class,
     StopConversationActionNode.class, PlayAudioActionNode.class, PauseActionNode.class,
     TransferCallActionNode.class, DtmfProcessPointActionNode.class})
 public class IvrConversationScenarioNode extends ConversationScenarioNode

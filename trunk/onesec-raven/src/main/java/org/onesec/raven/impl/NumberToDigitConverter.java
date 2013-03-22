@@ -18,6 +18,7 @@
 package org.onesec.raven.impl;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -119,7 +120,13 @@ public class NumberToDigitConverter {
     }
     
     public static List<String> getDigits(long number, Genus genus) {
-        List<List<String>> groups = getDigitGroups(number, new LinkedList<List<String>>());
+        return getDigits(number, genus, false);
+    }
+
+    public static List<String> getDigits(long number, Genus genus, boolean enableZero) {
+        List<List<String>> groups = number==0 && enableZero? 
+                Arrays.asList(Arrays.asList("0")) :
+                getDigitGroups(number, new LinkedList<List<String>>());
         LinkedList<String> digits = new LinkedList<String>();
         Iterator<List<String>> it = groups.iterator();
         for (int i=0; i<ORDER_NAMES.length && it.hasNext(); ++i) {

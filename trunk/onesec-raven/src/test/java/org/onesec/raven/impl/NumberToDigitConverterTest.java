@@ -101,10 +101,11 @@ public class NumberToDigitConverterTest extends Assert
     }
 
     @Test
-    public void getDigits_ZeroTest()
-    {
+    public void getDigits_ZeroTest() {
         Collection<String> list = NumberToDigitConverter.getDigits(0, Genus.MALE);
         assertTrue(list.isEmpty());
+        list = NumberToDigitConverter.getDigits(0, Genus.MALE, true);
+        assertArrayEquals(new Object[]{"0"}, list.toArray());
     }
 
     @Test

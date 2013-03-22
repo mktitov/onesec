@@ -20,9 +20,9 @@ import java.util.Locale;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.junit.After;
+import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.Test;
-import static org.junit.Assert.*;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.impl.Genus;
 import org.onesec.raven.ivr.impl.AudioFileNode;
@@ -73,12 +73,26 @@ public class SayNumberActionTest extends OnesecRavenTestCase {
         conv.stop();
     }
     
-    @Test
+//    @Test
     public void withoutPatternsTest() throws Exception {
         conv.setFileName("target/number.wav");
         assertTrue(conv.start());
         actionNode.setNumber("21");
         actionNode.setGenus(Genus.NEUTER);
+        assertTrue(actionNode.start());
+        SayNumberAction action = (SayNumberAction) actionNode.createAction();
+        assertNotNull(action);
+        action.execute(conv);
+        Thread.sleep(10000);
+    }
+    
+    @Test
+    public void zeroTest() throws Exception {
+        conv.setFileName("target/zero.wav");
+        assertTrue(conv.start());
+        actionNode.setNumber("0");
+        actionNode.setEnableZero(Boolean.TRUE);
+        actionNode.setGenus(Genus.MALE);
         assertTrue(actionNode.start());
         SayNumberAction action = (SayNumberAction) actionNode.createAction();
         assertNotNull(action);

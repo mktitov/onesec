@@ -67,6 +67,9 @@ public class SayNumberActionNode extends BaseNode implements IvrActionNode {
     @NotNull @Parameter(defaultValue="MALE")
     private Genus genus;
     
+    @NotNull @Parameter(defaultValue="false")
+    private Boolean enableZero;
+    
     private BindingSupportImpl bindingSupport;
 
     @Override
@@ -86,7 +89,8 @@ public class SayNumberActionNode extends BaseNode implements IvrActionNode {
     }
 
     public IvrAction createAction() {
-        return new SayNumberAction(this, numbersNode, genus, pauseBetweenWords, pauseBetweenNumbers, resourceManager);
+        return new SayNumberAction(this, numbersNode, genus, pauseBetweenWords, pauseBetweenNumbers, 
+                enableZero, resourceManager);
     }
     
     public Collection<Long> getNumbersSequence() {
@@ -155,5 +159,13 @@ public class SayNumberActionNode extends BaseNode implements IvrActionNode {
 
     public void setGenus(Genus genus) {
         this.genus = genus;
+    }
+
+    public Boolean getEnableZero() {
+        return enableZero;
+    }
+
+    public void setEnableZero(Boolean enableZero) {
+        this.enableZero = enableZero;
     }
 }

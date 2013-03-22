@@ -29,20 +29,20 @@ import org.raven.tree.ResourceManager;
  *
  * @author Mikhail Titov
  */
-public abstract class AbstractSayNumberAction extends AsyncAction
+public abstract class AbstractSayWordsAction extends AsyncAction
 {
-    private final Node numbersNode;
+    private final Node wordsNode;
     private final long pauseBetweenWords;
-    private final long pauseBetweenNumbers;
+    private final long pauseBetweenWordsGroups;
     private final ResourceManager resourceManager;
 
-    public AbstractSayNumberAction(String actionName, Node numbersNode, long pauseBetweenWords, 
-        long pauseBetweenNumbers, ResourceManager resourceManager)
+    public AbstractSayWordsAction(String actionName, Node wordsNode, long pauseBetweenWords, 
+        long pauseBetweenWordsGroups, ResourceManager resourceManager)
     {
         super(actionName);
-        this.numbersNode = numbersNode;
+        this.wordsNode = wordsNode;
         this.pauseBetweenWords = pauseBetweenWords;
-        this.pauseBetweenNumbers = pauseBetweenNumbers;
+        this.pauseBetweenWordsGroups = pauseBetweenWordsGroups;
         this.resourceManager = resourceManager;
     }
 
@@ -61,15 +61,14 @@ public abstract class AbstractSayNumberAction extends AsyncAction
                 logger.warn("No number(s) to say");            
         } else
             for (List number: numbers) {
-                sayNumber(number);
-                TimeUnit.MILLISECONDS.sleep(pauseBetweenNumbers);
+                sayWords(number);
+                TimeUnit.MILLISECONDS.sleep(pauseBetweenWordsGroups);
             }
     }
     
-    private void sayNumber(List words) throws Exception {
+    private void sayWords(List words) throws Exception {
         if (words==null || words.isEmpty())
             return;
-        
         int i=0;
         AudioFileNode[] audioSources = new AudioFileNode[words.size()];
         for (Object word: words) {
@@ -77,13 +76,13 @@ public abstract class AbstractSayNumberAction extends AsyncAction
             if (word instanceof AudioFileNode)
                 audio = (AudioFileNode) word;
             else if (word instanceof String) {
-                Node child = resourceManager.getResource(numbersNode, (String)word, null);
+                Node child = resourceManager.getResource(wordsNode, (String)word, null);
                 if (!(child instanceof AudioFileNode)) {
                     if (logger.isErrorEnabled())
                         logger.error(String.format(
                                 "Can not say the number because of not found " +
                                 "the AudioFileNode (%s) node in the (%s) numbers node"
-                                , word, numbersNode.getPath()));
+                                , word, wordsNode.getPath()));
                     return;
                 } else
                     audio = (AudioFileNode) child;

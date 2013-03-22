@@ -27,17 +27,19 @@ import org.raven.tree.ResourceManager;
  *
  * @author Mikhail Titov
  */
-public class SayNumberAction extends AbstractSayNumberAction {
+public class SayNumberAction extends AbstractSayWordsAction {
     public final static String NAME = "Say number action";
     private final SayNumberActionNode actionNode;
     private final Genus genus;
+    private final boolean enableZero;
 
     public SayNumberAction(SayNumberActionNode owner, Node numbersNode, Genus genus, long pauseBetweenWords, 
-        long pauseBetweenNumbers, ResourceManager resourceManager) 
+        long pauseBetweenNumbers, boolean enableZero, ResourceManager resourceManager) 
     {
         super(NAME, numbersNode, pauseBetweenWords, pauseBetweenNumbers, resourceManager);
         this.actionNode = owner;
         this.genus = genus;
+        this.enableZero = enableZero;
     }
 
     @Override
@@ -46,7 +48,7 @@ public class SayNumberAction extends AbstractSayNumberAction {
         try {
             List<List> res = new LinkedList<List>();
             for (Long number: actionNode.getNumbersSequence())
-                res.add(NumberToDigitConverter.getDigits(number, genus));
+                res.add(NumberToDigitConverter.getDigits(number, genus, enableZero));
             return res;
         } finally {
             actionNode.getBindingSupport().reset();
