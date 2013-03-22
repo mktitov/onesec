@@ -165,7 +165,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
 
     public String getLastRedirectedNumber() {
         final CiscoCall _call = call;
-        return _call!=null? _call.getLastRedirectedAddress().getName() : null;
+        return _call!=null && _call.getLastRedirectedAddress()!=null? _call.getLastRedirectedAddress().getName() : null;
     }
 
     public IvrEndpointConversationState getState() {
@@ -497,9 +497,10 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 logger.debug(callLog("Conversation %s", initialized?"started":"restarted"));
             continueConversation(EMPTY_DTMF);
         } catch (Throwable e) {
+            if (logger.isErrorEnabled())
+                logger.error(callLog("Error starting conversation"), e);
             stopConversation(CompletionCode.OPPONENT_UNKNOWN_ERROR);
         }
-
     }
 
     private boolean initConversation() throws Exception {
