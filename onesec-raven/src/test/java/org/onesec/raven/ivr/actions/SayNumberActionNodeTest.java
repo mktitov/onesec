@@ -47,7 +47,7 @@ public class SayNumberActionNodeTest extends OnesecRavenTestCase {
     
     @Test
     public void withPatternsTest() {
-        actionNode.setNumber("9128672947");
+        actionNode.setNumber("9128672907");
         assertTrue(actionNode.start());
         RegexpPattern pattern = new RegexpPattern();
         pattern.setName("pattern1");
@@ -56,7 +56,23 @@ public class SayNumberActionNodeTest extends OnesecRavenTestCase {
         assertTrue(pattern.start());
         Collection<Long> nums = actionNode.getNumbersSequence();
         assertNotNull(nums);
-        assertArrayEquals(new Object[]{912l, 867l, 29l, 47l}, nums.toArray());
+        assertArrayEquals(new Object[]{912l, 867l, 29l, 7l}, nums.toArray());
+    }
+    
+    @Test
+    public void enableZeroTest() {
+        actionNode.setNumber("0007");
+        actionNode.setEnableZero(Boolean.TRUE);
+        assertTrue(actionNode.start());
+        RegexpPattern pattern = new RegexpPattern();
+        pattern.setName("pattern1");
+        actionNode.addAndSaveChildren(pattern);
+        pattern.setPattern("(\\d\\d)(\\d\\d)");
+        assertTrue(pattern.start());
+        Collection<Long> nums = actionNode.getNumbersSequence();
+        assertNotNull(nums);
+        assertArrayEquals(new Object[]{0l, 0l, 0l, 7l}, nums.toArray());
+        
     }
     
 }
