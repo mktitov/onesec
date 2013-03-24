@@ -112,7 +112,14 @@ public class SayNumberActionNode extends BaseNode implements IvrActionNode {
         List<Long> numbers = new ArrayList<Long>(strNumbers.size());
         for (String strNumber: strNumbers) 
             try {
-                numbers.add(Long.parseLong(strNumber));
+                int i=0;
+                if (enableZero)
+                    while (i<strNumber.length() && strNumber.charAt(i)=='0') {
+                        numbers.add(0l);
+                        ++i;
+                    }
+                if (i!=strNumber.length())
+                    numbers.add(Long.parseLong(strNumber));
             } catch (NumberFormatException e) {
                 if (isLogLevelEnabled(LogLevel.ERROR))
                     getLogger().error("Can't convert ({}) to integer");
