@@ -15,6 +15,7 @@
  */
 package org.onesec.raven.ivr.actions;
 
+import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import org.onesec.raven.impl.Genus;
@@ -33,7 +34,7 @@ public class SayNumberAction extends AbstractSayWordsAction {
     private final Genus genus;
     private final boolean enableZero;
 
-    public SayNumberAction(SayNumberActionNode owner, Node numbersNode, Genus genus, long pauseBetweenWords, 
+    public SayNumberAction(SayNumberActionNode owner, Collection<Node> numbersNode, Genus genus, long pauseBetweenWords, 
         long pauseBetweenNumbers, boolean enableZero, ResourceManager resourceManager) 
     {
         super(NAME, numbersNode, pauseBetweenWords, pauseBetweenNumbers, resourceManager);

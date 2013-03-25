@@ -74,7 +74,7 @@ public class PlayAudioFromSourceActionNodeTest extends OnesecRavenTestCase {
         
         replay(conv, state);
         
-        actionNode.getNodeAttribute("text").setValue("test");
+        actionNode.getAttr("text").setValue("test");
         ds.addDataPortion(new InputStreamSource() {
             public InputStream getInputStream() {
                 return null;
@@ -110,7 +110,7 @@ public class PlayAudioFromSourceActionNodeTest extends OnesecRavenTestCase {
         
         replay(conv, state, source);
         
-        actionNode.getNodeAttribute("text").setValue("'test'");
+        actionNode.getAttr("text").setValue("'test'");
         ds.addDataPortion(source);
         ds.setListener(new PushOnDemandDataSourceListener() {
             public void onGatherDataForConsumer(DataConsumer consumer, DataContext ctx) {

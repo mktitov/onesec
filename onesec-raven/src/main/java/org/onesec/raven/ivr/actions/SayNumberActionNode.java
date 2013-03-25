@@ -89,8 +89,9 @@ public class SayNumberActionNode extends BaseNode implements IvrActionNode {
     }
 
     public IvrAction createAction() {
-        return new SayNumberAction(this, numbersNode, genus, pauseBetweenWords, pauseBetweenNumbers, 
-                enableZero, resourceManager);
+        return new SayNumberAction(this, 
+                NodeUtils.getAttrValuesByPrefixAndType(this, "numbersNode", Node.class), 
+                genus, pauseBetweenWords, pauseBetweenNumbers, enableZero, resourceManager);
     }
     
     public Collection<Long> getNumbersSequence() {

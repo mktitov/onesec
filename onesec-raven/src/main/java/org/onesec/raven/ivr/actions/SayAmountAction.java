@@ -36,7 +36,7 @@ public class SayAmountAction extends AbstractSayWordsAction
     public SayAmountAction(SayAmountActionNode actionNode, Node numbersNode, long pauseBetweenWords, 
         ResourceManager resourceManager)
     {
-        super(NAME, numbersNode, pauseBetweenWords, 0, resourceManager);
+        super(NAME, Arrays.asList(numbersNode), pauseBetweenWords, 0, resourceManager);
         this.actionNode = actionNode;
     }
 
