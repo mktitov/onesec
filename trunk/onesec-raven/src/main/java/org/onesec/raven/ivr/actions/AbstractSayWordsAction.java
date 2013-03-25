@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr.actions;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.onesec.raven.ivr.IvrEndpointConversation;
@@ -31,16 +32,16 @@ import org.raven.tree.ResourceManager;
  */
 public abstract class AbstractSayWordsAction extends AsyncAction
 {
-    private final Node wordsNode;
+    private final Collection<Node> wordsNodes;
     private final long pauseBetweenWords;
     private final long pauseBetweenWordsGroups;
     private final ResourceManager resourceManager;
 
-    public AbstractSayWordsAction(String actionName, Node wordsNode, long pauseBetweenWords, 
+    public AbstractSayWordsAction(String actionName, Collection<Node> wordsNodes, long pauseBetweenWords, 
         long pauseBetweenWordsGroups, ResourceManager resourceManager)
     {
         super(actionName);
-        this.wordsNode = wordsNode;
+        this.wordsNodes = wordsNodes;
         this.pauseBetweenWords = pauseBetweenWords;
         this.pauseBetweenWordsGroups = pauseBetweenWordsGroups;
         this.resourceManager = resourceManager;
@@ -76,13 +77,13 @@ public abstract class AbstractSayWordsAction extends AsyncAction
             if (word instanceof AudioFileNode)
                 audio = (AudioFileNode) word;
             else if (word instanceof String) {
-                Node child = resourceManager.getResource(wordsNode, (String)word, null);
+                Node child = getAudioNode((String)word);
                 if (!(child instanceof AudioFileNode)) {
                     if (logger.isErrorEnabled())
                         logger.error(String.format(
                                 "Can not say the number because of not found " +
-                                "the AudioFileNode (%s) node in the (%s) numbers node"
-                                , word, wordsNode.getPath()));
+                                "the AudioFileNode (%s) node in nodes: %s"
+                                , word, wordsNodes));
                     return;
                 } else
                     audio = (AudioFileNode) child;
@@ -96,5 +97,13 @@ public abstract class AbstractSayWordsAction extends AsyncAction
                 return;
             TimeUnit.MILLISECONDS.sleep(pauseBetweenWords);
         }
+    }
+    
+    private Node getAudioNode(String word) {
+        for (Node words: wordsNodes) {
+            Node res = resourceManager.getResource(words, word, null);
+            if (res!=null) return res;
+        }
+        return null;
     }
 }

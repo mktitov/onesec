@@ -49,7 +49,7 @@ public class SayNumberInQueueAction extends AbstractSayWordsAction
             , Node numbersNode, long pauseBetweenWords, AudioFileNode preambleAudio
             , ResourceManager resourceManager)
     {
-        super(NAME, numbersNode, pauseBetweenWords, 0, resourceManager);
+        super(NAME, Arrays.asList(numbersNode), pauseBetweenWords, 0, resourceManager);
         this.preambleAudio = preambleAudio;
         this.owner = owner;
         this.bindingSupport = bindingSupport;

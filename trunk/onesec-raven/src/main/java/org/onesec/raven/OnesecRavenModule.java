@@ -28,6 +28,7 @@ import org.onesec.core.services.ProviderConfiguratorListeners;
 import org.onesec.raven.impl.StateToNodeLoggerImpl;
 import org.onesec.raven.ivr.*;
 import org.onesec.raven.ivr.impl.*;
+import org.raven.impl.NodeToStringConverter;
 import org.raven.tree.ResourceRegistrator;
 import org.raven.tree.TreeListener;
 import org.slf4j.Logger;
@@ -91,4 +92,9 @@ public class OnesecRavenModule
     public static void contributeResourceManager(Configuration<ResourceRegistrator> conf) {
         conf.add(new SoundResourcesRegistrator());
     }
+    
+    public static void contributeTypeConverter(Configuration conf) {
+        conf.add(new DataSourceToInputStreamSourceConverter());
+    }
+    
 }

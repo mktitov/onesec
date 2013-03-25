@@ -73,7 +73,7 @@ public class SayNumberActionTest extends OnesecRavenTestCase {
         conv.stop();
     }
     
-//    @Test
+    @Test
     public void withoutPatternsTest() throws Exception {
         conv.setFileName("target/number.wav");
         assertTrue(conv.start());
@@ -86,7 +86,7 @@ public class SayNumberActionTest extends OnesecRavenTestCase {
         Thread.sleep(10000);
     }
     
-    @Test
+//    @Test
     public void zeroTest() throws Exception {
         conv.setFileName("target/zero.wav");
         assertTrue(conv.start());
@@ -100,7 +100,7 @@ public class SayNumberActionTest extends OnesecRavenTestCase {
         Thread.sleep(10000);
     }
     
-//    @Test
+    @Test
     public void withPatternsTest() throws Exception {
         conv.setFileName("target/numbers.wav");
         assertTrue(conv.start());

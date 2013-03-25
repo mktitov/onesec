@@ -16,6 +16,7 @@
 package org.onesec.raven.ivr.actions;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import static org.raven.RavenUtils.*;
@@ -33,7 +34,7 @@ public class SayWordsAction extends AbstractSayWordsAction {
     private final SayWordsActionNode actionNode;
 
     public SayWordsAction(SayWordsActionNode actionNode, BindingSupportImpl actionNodeBindingSupport, 
-            Node wordsNode, long pauseBetweenWords, ResourceManager resourceManager) 
+            Collection<Node> wordsNode, long pauseBetweenWords, ResourceManager resourceManager) 
     {
         super(ACTION_NAME, wordsNode, pauseBetweenWords, 0, resourceManager);
         this.actionNodeBindingSupport = actionNodeBindingSupport;

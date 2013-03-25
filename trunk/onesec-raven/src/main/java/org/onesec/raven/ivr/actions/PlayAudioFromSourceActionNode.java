@@ -34,6 +34,6 @@ public class PlayAudioFromSourceActionNode extends DataSourceFieldValueGenerator
     }
 
     public IvrAction createAction() {
-        return new PlayAudioFromSourceAction(this);
+        return new PlayAudioFromSourceAction(this, converter);
     }
 }

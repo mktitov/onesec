@@ -25,6 +25,7 @@ import org.raven.ds.DataContext;
 import org.raven.ds.impl.DataContextImpl;
 import org.raven.expr.BindingSupport;
 import org.raven.log.LogLevel;
+import org.weda.services.TypeConverter;
 
 /**
  *
@@ -34,10 +35,12 @@ public class PlayAudioFromSourceAction extends AsyncAction {
     
     private final static String NAME = "Play audio from source";
     private final PlayAudioFromSourceActionNode owner;
+    private final TypeConverter converter;
 
-    public PlayAudioFromSourceAction(PlayAudioFromSourceActionNode owner) {
+    public PlayAudioFromSourceAction(PlayAudioFromSourceActionNode owner, TypeConverter converter) {
         super(NAME);
         this.owner = owner;
+        this.converter = converter;
     }
 
     @Override
@@ -50,13 +53,11 @@ public class PlayAudioFromSourceAction extends AsyncAction {
             DataContext context = (DataContext) bindings.get(BindingNames.DATA_CONTEXT_BINDING);
             if (context==null)
                 context = new DataContextImpl();
-            Object data = owner.getFieldValue(context);
-            if (!(data instanceof InputStreamSource)) {
+            InputStreamSource data = converter.convert(InputStreamSource.class, owner.getFieldValue(context), null);
+            if (data==null) {
                 if (owner.isLogLevelEnabled(LogLevel.ERROR))
-                    owner.getLogger().error("Received null or data of invalid type: "+data);
-                return;
-            }
-            IvrUtils.playAudioInAction(this, conversation, (InputStreamSource)data);
+                    owner.getLogger().error("Received null data");
+            } else IvrUtils.playAudioInAction(this, conversation, data);
         } finally {
             bindingSupport.reset();
         }

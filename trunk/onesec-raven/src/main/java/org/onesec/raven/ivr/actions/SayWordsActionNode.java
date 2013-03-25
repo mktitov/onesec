@@ -26,6 +26,7 @@ import org.raven.tree.Node;
 import org.raven.tree.ResourceManager;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.ResourceReferenceValueHandlerFactory;
+import org.raven.util.NodeUtils;
 import org.weda.annotations.constraints.NotNull;
 import org.weda.internal.annotations.Service;
 
@@ -54,7 +55,9 @@ public class SayWordsActionNode extends BaseNode implements IvrActionNode {
     private BindingSupportImpl bindingSupport;
 
     public IvrAction createAction() {
-        return new SayWordsAction(this, bindingSupport, wordsNode, pauseBetweenWords, resourceManager);
+        return new SayWordsAction(this, bindingSupport, 
+                NodeUtils.getAttrValuesByPrefixAndType(this, "wordsNode", Node.class), 
+                pauseBetweenWords, resourceManager);
     }
     
     @Override
