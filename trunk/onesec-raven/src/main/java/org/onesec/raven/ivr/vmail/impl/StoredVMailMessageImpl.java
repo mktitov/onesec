@@ -17,7 +17,6 @@ package org.onesec.raven.ivr.vmail.impl;
 
 import java.io.File;
 import java.util.Date;
-import javax.activation.DataSource;
 import javax.activation.FileDataSource;
 import org.apache.commons.io.FileUtils;
 import org.onesec.raven.ivr.vmail.StoredVMailMessage;

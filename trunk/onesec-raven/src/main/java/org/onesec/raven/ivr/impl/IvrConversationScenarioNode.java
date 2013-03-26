@@ -29,7 +29,9 @@ import org.raven.conv.impl.ConversationScenarioNode;
 import org.raven.conv.impl.GotoNode;
 import org.raven.expr.impl.IfNode;
 import org.raven.expr.impl.SwitchNode;
+import org.raven.tree.Node;
 import org.raven.tree.impl.GroupNode;
+import org.raven.tree.impl.GroupReferenceNode;
 
 /**
  *
@@ -37,13 +39,35 @@ import org.raven.tree.impl.GroupNode;
  */
 @NodeClass(childNodes={
     IvrConversationScenarioPointNode.class, IfNode.class, SwitchNode.class, GotoNode.class, GroupNode.class,
-    StopConversationActionNode.class, PlayAudioActionNode.class, PauseActionNode.class,
+    GroupReferenceNode.class, StopConversationActionNode.class, PlayAudioActionNode.class, PauseActionNode.class,
     TransferCallActionNode.class, DtmfProcessPointActionNode.class})
 public class IvrConversationScenarioNode extends ConversationScenarioNode
         implements IvrConversationScenario
 {
     @Parameter
     private String validDtmfs;
+
+    @Override
+    protected void doInit() throws Exception {
+        super.doInit();
+        initNodes(false);
+    }
+
+    @Override
+    protected void doStart() throws Exception {
+        super.doStart();
+        initNodes(true);
+    }
+
+    private void initNodes(boolean start) {
+        Node groupsNode = getNode(ActionGroupsNode.NAME);
+        if (groupsNode==null) {
+            groupsNode = new ActionGroupsNode();
+            addAndSaveChildren(groupsNode);
+            if (start)
+                groupsNode.start();
+        }
+    }
 
     public void setValidDtmfs(String validDtmfs)
     {
