@@ -16,7 +16,6 @@
 package org.onesec.raven;
 
 import java.io.InputStream;
-import java.util.Calendar;
 import java.util.Locale;
 import org.apache.commons.io.IOUtils;
 import org.onesec.raven.ivr.impl.AudioFileNode;
@@ -44,12 +43,17 @@ public class SoundResourcesRegistrator implements ResourceRegistrator, Constants
         "status/status_available_ru",
         "status/status_unavailable_ru",
         "vmail/male/greeting_ru",
+        "vmail/male/and_ru",
         "vmail/male/message_recorded_ru",
         "vmail/male/you_have_ru",
         "vmail/male/received_ru",
+        "vmail/male/no_messages_ru",
         "vmail/male/new_message1_ru",
         "vmail/male/new_message2_ru",
         "vmail/male/new_message3_ru",
+        "vmail/male/saved_message1_ru",
+        "vmail/male/saved_message2_ru",
+        "vmail/male/saved_message3_ru",
         "vmail/male/press_1_to_listen_new_messages_ru",
         "vmail/male/press_2_to_listen_saved_messages_ru",
         "vmail/male/new_message_from_number_ru",
@@ -60,6 +64,8 @@ public class SoundResourcesRegistrator implements ResourceRegistrator, Constants
         "vmail/male/press_3_to_replay_message_ru",
         "vmail/male/press_start_for_main_menu_ru",
         "vmail/male/1'_ru",
+        "vmail/male/_20_ru",
+        "vmail/male/_30_ru",
         "time words/male/года_ru",
         "time words/male/прошлого_ru",
         "time words/male/позавчера_ru",
