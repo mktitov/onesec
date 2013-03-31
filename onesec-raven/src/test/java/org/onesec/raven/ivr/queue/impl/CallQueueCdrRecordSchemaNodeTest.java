@@ -39,7 +39,7 @@ public class CallQueueCdrRecordSchemaNodeTest extends OnesecRavenTestCase
     {
         CallQueueCdrRecordSchemaNode schema = new CallQueueCdrRecordSchemaNode();
         schema.setName("schema");
-        tree.getRootNode().addAndSaveChildren(schema);
+        testsNode.addAndSaveChildren(schema);
 
         checkRecordDbExtension(schema);
         checkField(schema, ID, RecordSchemaFieldType.LONG);
@@ -78,12 +78,12 @@ public class CallQueueCdrRecordSchemaNodeTest extends OnesecRavenTestCase
         assertEquals(type, field.getFieldType());
 
         if (ID.equals(fieldName)) {
-            Node node = field.getChildren("id");
+            Node node = field.getNode("id");
             assertNotNull(node);
             assertTrue(node instanceof IdRecordFieldExtension);
         }
         DatabaseRecordFieldExtension dbExt =
-                (DatabaseRecordFieldExtension) field.getChildren("dbColumn");
+                (DatabaseRecordFieldExtension) field.getNode("dbColumn");
         assertNotNull(dbExt);
         assertEquals(RavenUtils.nameToDbName(fieldName), dbExt.getColumnName());
     }
