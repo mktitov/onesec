@@ -32,6 +32,7 @@ import org.onesec.raven.ivr.vmail.VMailBox;
 import org.onesec.raven.ivr.vmail.VMailBoxDir;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
+import org.raven.log.LogLevel;
 import org.raven.tree.impl.BaseNode;
 import org.weda.annotations.constraints.NotNull;
 
@@ -46,6 +47,9 @@ public class VMailBoxNode extends BaseNode implements VMailBox {
     
     @NotNull @Parameter(defaultValue="20")
     private Integer maxMessageDuration;
+    
+    @NotNull @Parameter(defaultValue="false")
+    private Boolean ignoreNewMessages;
 
     public Integer getMaxMessageDuration() {
         return maxMessageDuration;
@@ -88,20 +92,25 @@ public class VMailBoxNode extends BaseNode implements VMailBox {
     }
 
     public void addMessage(NewVMailMessage message) throws Exception {
-        String filename = new SimpleDateFormat(DATE_PATTERN).format(message.getMessageDate())+"-"
-                          + message.getSenderPhoneNumber()+".wav";
-        File messFile = new File(getDir().getTempDir(), filename);
-        InputStream in = message.getAudioSource().getInputStream();
-        try {
-            FileOutputStream out = new FileOutputStream(messFile);
+        if (ignoreNewMessages) {
+            if (isLogLevelEnabled(LogLevel.DEBUG))
+                getLogger().debug("Ignoring new incoming message because of ignoreNewMessage==true");
+        } else {
+            String filename = new SimpleDateFormat(DATE_PATTERN).format(message.getMessageDate())+"-"
+                              + message.getSenderPhoneNumber()+".wav";
+            File messFile = new File(getDir().getTempDir(), filename);
+            InputStream in = message.getAudioSource().getInputStream();
             try {
-                IOUtils.copy(in, out);
-                messFile.renameTo(new File(getDir().getNewMessagesDir(), filename));
+                FileOutputStream out = new FileOutputStream(messFile);
+                try {
+                    IOUtils.copy(in, out);
+                    messFile.renameTo(new File(getDir().getNewMessagesDir(), filename));
+                } finally {
+                    IOUtils.closeQuietly(out);
+                }
             } finally {
-                IOUtils.closeQuietly(out);
+                IOUtils.closeQuietly(in);
             }
-        } finally {
-            IOUtils.closeQuietly(in);
         }
     }
     
@@ -118,5 +127,13 @@ public class VMailBoxNode extends BaseNode implements VMailBox {
             else
                 messages.add(new StoredVMailMessageImpl(file, elems[1], date));
         }
+    }
+
+    public Boolean getIgnoreNewMessages() {
+        return ignoreNewMessages;
+    }
+
+    public void setIgnoreNewMessages(Boolean ignoreNewMessages) {
+        this.ignoreNewMessages = ignoreNewMessages;
     }
 }

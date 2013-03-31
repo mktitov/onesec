@@ -88,7 +88,7 @@ public class CallQueueCdrRecordSchemaNode extends RecordSchemaNode
     }
 
     private void generateFields() {
-        Node node = getRecordExtensionsNode().getChildren(DATABASE_TABLE_EXTENSION_NAME);
+        Node node = getRecordExtensionsNode().getNode(DATABASE_TABLE_EXTENSION_NAME);
         if (node==null) {
             DatabaseRecordExtension dbExtension = new DatabaseRecordExtension();
             dbExtension.setName(DATABASE_TABLE_EXTENSION_NAME);
@@ -122,7 +122,7 @@ public class CallQueueCdrRecordSchemaNode extends RecordSchemaNode
     }
 
     protected void createField(String name, String displayName, RecordSchemaFieldType fieldType) {
-        if (getChildren(name)!=null)
+        if (getNode(name)!=null)
             return;
         String format = RecordSchemaFieldType.TIMESTAMP.equals(fieldType)? datePattern : null;
         RecordSchemaFieldNode field = super.createField(name, fieldType, format);

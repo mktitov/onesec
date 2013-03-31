@@ -16,7 +16,9 @@
 package org.onesec.raven.ivr.vmail.impl;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Date;
+import javax.activation.DataSource;
 import javax.activation.FileDataSource;
 import org.apache.commons.io.FileUtils;
 import static org.junit.Assert.*;
@@ -24,8 +26,11 @@ import org.junit.Before;
 import org.junit.Test;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.ivr.vmail.VMailBoxDir;
+import org.raven.ds.Record;
+import org.raven.test.DataCollector;
 import org.raven.test.PushDataSource;
 import org.raven.tree.Node;
+import org.raven.tree.NodeError;
 import org.raven.tree.impl.GroupNode;
 
 /**
@@ -170,10 +175,7 @@ public class VMailManagerNodeTest extends OnesecRavenTestCase {
     
     @Test
     public void pushNewMessageTest() throws Exception {
-        File testFile = new File("target/test_file");
-        if (!testFile.exists())
-            testFile.delete();
-        FileUtils.writeStringToFile(testFile, "1234");
+        File testFile = createTestFile();
         
         VMailBoxNode vbox = createVBox(manager, "vbox1", true);
         createVBoxNumber(vbox, "111", true);
@@ -182,6 +184,31 @@ public class VMailManagerNodeTest extends OnesecRavenTestCase {
         assertEquals(0, vbox.getNewMessagesCount());
         ds.pushData(new NewVMailMessageImpl("111", "222", new Date(), new FileDataSource(testFile)));
         assertEquals(1, vbox.getNewMessagesCount());
+    }
+    
+    @Test
+    public void sendCdrTest() throws Exception {
+        DataCollector collector = createDataCollector();
+        VMailCdrRecordSchema schema = createRecordSchema();
+        manager.setRecordSchema(schema);
+        
+        VMailBoxNode vbox = createVBox(manager, "vbox1", true);
+        createVBoxNumber(vbox, "111", true);
+        assertTrue(manager.start());
+        
+        File testFile = createTestFile();
+        Date messageDate = new Date();
+        ds.pushData(new NewVMailMessageImpl("111", "222", messageDate, new FileDataSource(testFile)));
+        
+        assertEquals(1, collector.getDataListSize());
+        assertTrue(collector.getDataList().get(0) instanceof Record);
+        Record rec = (Record) collector.getDataList().get(0);
+        assertSame(vbox, rec.getTag(VMailManagerNode.VMAIL_BOX_TAG));
+        assertTrue(rec.getTag(VMailManagerNode.VMAIL_MESSAGE_TAG) instanceof DataSource);
+        assertEquals(new Long(vbox.getId()), rec.getValue(VMailCdrRecordSchema.VMAIL_BOX_ID));
+        assertEquals("111", rec.getValue(VMailCdrRecordSchema.VMAIL_BOX_NUMBER));
+        assertEquals("222", rec.getValue(VMailCdrRecordSchema.SENDER_PHONE_NUMBER));
+        assertEquals(messageDate, rec.getValue(VMailCdrRecordSchema.MESSAGE_DATE));
     }
     
     private GroupNode createGroup(Node owner, String name) {
@@ -208,6 +235,31 @@ public class VMailManagerNodeTest extends OnesecRavenTestCase {
         if (start)
             assertTrue(number.start());
         return number;
+    }
+
+    private File createTestFile() throws IOException {
+        File testFile = new File("target/test_file");
+        if (!testFile.exists())
+            testFile.delete();
+        FileUtils.writeStringToFile(testFile, "1234");
+        return testFile;
+    }
+
+    private DataCollector createDataCollector() throws NodeError {
+        DataCollector collector = new DataCollector();
+        collector.setName("collector");
+        testsNode.addAndSaveChildren(collector);
+        collector.setDataSource(manager);
+        assertTrue(collector.start());
+        return collector;
+    }
+
+    private VMailCdrRecordSchema createRecordSchema() throws NodeError {
+        VMailCdrRecordSchema schema = new VMailCdrRecordSchema();
+        schema.setName("schema");
+        testsNode.addAndSaveChildren(schema);
+        assertTrue(schema.start());
+        return schema;
     }
     
 }

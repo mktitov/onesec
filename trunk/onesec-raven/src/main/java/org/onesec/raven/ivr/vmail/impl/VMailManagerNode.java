@@ -22,17 +22,22 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import org.onesec.raven.Constants;
 import org.onesec.raven.ivr.vmail.NewVMailMessage;
 import org.onesec.raven.ivr.vmail.VMailBox;
 import org.onesec.raven.ivr.vmail.VMailBoxDir;
 import org.onesec.raven.ivr.vmail.VMailManager;
+import static org.raven.RavenUtils.*;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.ds.DataConsumer;
 import org.raven.ds.DataContext;
 import org.raven.ds.DataPipe;
 import org.raven.ds.DataSource;
+import org.raven.ds.Record;
+import org.raven.ds.RecordSchema;
+import org.raven.ds.impl.DataSourceHelper;
+import org.raven.ds.impl.RecordSchemaNode;
+import org.raven.ds.impl.RecordSchemaValueTypeHandlerFactory;
 import org.raven.log.LogLevel;
 import org.raven.tree.Node;
 import org.raven.tree.NodeAttribute;
@@ -50,12 +55,17 @@ public class VMailManagerNode extends BaseNode implements VMailManager, DataPipe
     public static final String NEW_MESSAGES_DIR = "new";
     public static final String SAVED_MESSAGES_DIR = "saved";
     public static final String TEMP_MESSAGES_DIR = "temp";
+    public static final String VMAIL_BOX_TAG = "vmailBox";
+    public static final String VMAIL_MESSAGE_TAG = "vmailMessage";
     
     @NotNull @Parameter
     private String basePath;
     
     @NotNull @Parameter
     private DataSource dataSource;
+    
+    @Parameter(valueHandlerType=RecordSchemaValueTypeHandlerFactory.TYPE)
+    private RecordSchemaNode recordSchema;
     
     private Map<String, VMailBoxNode> vmailBoxes;
     private File basePathFile;
@@ -102,11 +112,28 @@ public class VMailManagerNode extends BaseNode implements VMailManager, DataPipe
             }
             try {
                 vbox.addMessage(message);
+                createAndSendCdr(message, vbox, context);
             } catch (Exception ex) {
                 if (isLogLevelEnabled(LogLevel.ERROR))
                     getLogger().error(String.format("Error adding new message (%s) to voice mail box (%s)", 
                             message, vbox.getPath()), ex);
             }
+        }
+    }
+    
+    private void createAndSendCdr(NewVMailMessage message, VMailBoxNode vbox, DataContext context) throws Exception {
+        RecordSchema schema = recordSchema;
+        if (schema!=null) {
+            Record rec = schema.createRecord();
+            rec.setTag(VMAIL_BOX_TAG, vbox);
+            rec.setTag(VMAIL_MESSAGE_TAG, message.getAudioSource());
+            rec.setValues(asMap(
+                pair(VMailCdrRecordSchema.VMAIL_BOX_ID, (Object)vbox.getId()),
+                pair(VMailCdrRecordSchema.VMAIL_BOX_NUMBER, (Object)message.getVMailBoxNumber()),
+                pair(VMailCdrRecordSchema.SENDER_PHONE_NUMBER, (Object)message.getSenderPhoneNumber()),
+                pair(VMailCdrRecordSchema.MESSAGE_DATE, (Object)message.getMessageDate())
+            ));
+            DataSourceHelper.sendDataToConsumers(this, rec, context);
         }
     }
 
@@ -220,6 +247,14 @@ public class VMailManagerNode extends BaseNode implements VMailManager, DataPipe
         this.basePath = basePath;
     }
 
+    public RecordSchemaNode getRecordSchema() {
+        return recordSchema;
+    }
+
+    public void setRecordSchema(RecordSchemaNode recordSchema) {
+        this.recordSchema = recordSchema;
+    }
+
     public boolean getDataImmediate(DataConsumer dataConsumer, DataContext context) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
@@ -230,5 +265,5 @@ public class VMailManagerNode extends BaseNode implements VMailManager, DataPipe
 
     public Collection<NodeAttribute> generateAttributes() {
         return null;
-    }
+    }    
 }
