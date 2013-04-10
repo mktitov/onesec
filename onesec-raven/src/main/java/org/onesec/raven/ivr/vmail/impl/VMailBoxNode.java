@@ -19,10 +19,12 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.onesec.raven.ivr.vmail.NewVMailMessage;
@@ -32,16 +34,24 @@ import org.onesec.raven.ivr.vmail.VMailBox;
 import org.onesec.raven.ivr.vmail.VMailBoxDir;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
+import org.raven.ds.DataSourceViewableObject;
 import org.raven.log.LogLevel;
+import org.raven.table.Table;
+import org.raven.table.TableImpl;
+import org.raven.tree.NodeAttribute;
+import org.raven.tree.Viewable;
+import org.raven.tree.ViewableObject;
 import org.raven.tree.impl.BaseNode;
+import org.raven.tree.impl.ViewableObjectImpl;
 import org.weda.annotations.constraints.NotNull;
+import org.weda.internal.annotations.Message;
 
 /**
  *
  * @author Mikhail Titov
  */
 @NodeClass(parentNode=VMailManagerNode.class)
-public class VMailBoxNode extends BaseNode implements VMailBox {
+public class VMailBoxNode extends BaseNode implements VMailBox, Viewable {
     
     public final static String DATE_PATTERN = "yyyyMMdd_HHmmss_SSS";
     
@@ -50,6 +60,19 @@ public class VMailBoxNode extends BaseNode implements VMailBox {
     
     @NotNull @Parameter(defaultValue="false")
     private Boolean ignoreNewMessages;
+    
+    @NotNull @Parameter(defaultValue="7")
+    private Integer newMessagesLifeTime;
+    
+    @NotNull @Parameter(defaultValue="30")
+    private Integer savedMessagesLifeTime;
+    
+    @Message private static String newMessagesTitle;
+    @Message private static String savedMessagesTitle;
+    @Message private static String senderPhoneColumnName;
+    @Message private static String messageDateColumnName;
+    @Message private static String messageFileColumnName;
+    @Message private static String messageDatePattern;
 
     public Integer getMaxMessageDuration() {
         return maxMessageDuration;
@@ -129,11 +152,59 @@ public class VMailBoxNode extends BaseNode implements VMailBox {
         }
     }
 
+    public Map<String, NodeAttribute> getRefreshAttributes() throws Exception {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public List<ViewableObject> getViewableObjects(Map<String, NodeAttribute> refreshAttributes) throws Exception {
+        List<ViewableObject> vos = new ArrayList<ViewableObject>(6);
+        vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, "<br>"));
+        vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, "<b>"+newMessagesTitle+"</b>"));
+        vos.add(createTableForMessages(getNewMessages()));
+        vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, "<br>"));
+        vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, "<b>"+savedMessagesTitle+"</b>"));
+        vos.add(createTableForMessages(getSavedMessages()));
+        return vos;
+    }
+    
+    private ViewableObject createTableForMessages(List<? extends StoredVMailMessage> messages) {
+        TableImpl table = new TableImpl(new String[]{
+            senderPhoneColumnName, messageDateColumnName, messageFileColumnName});
+        SimpleDateFormat fmt = new SimpleDateFormat(messageDatePattern);
+        for (StoredVMailMessage mess: messages)
+            table.addRow(new Object[]{
+                mess.getSenderPhoneNumber(), 
+                fmt.format(mess.getMessageDate()),
+                new DataSourceViewableObject(mess.getAudioSource(), "audio/wav", this)
+            });
+        return new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, table);
+    }
+
+    public Boolean getAutoRefresh() {
+        return true;
+    }
+
     public Boolean getIgnoreNewMessages() {
         return ignoreNewMessages;
     }
 
     public void setIgnoreNewMessages(Boolean ignoreNewMessages) {
         this.ignoreNewMessages = ignoreNewMessages;
+    }
+
+    public Integer getNewMessagesLifeTime() {
+        return newMessagesLifeTime;
+    }
+
+    public void setNewMessagesLifeTime(Integer newMessagesLifeTime) {
+        this.newMessagesLifeTime = newMessagesLifeTime;
+    }
+
+    public Integer getSavedMessagesLifeTime() {
+        return savedMessagesLifeTime;
+    }
+
+    public void setSavedMessagesLifeTime(Integer savedMessagesLifeTime) {
+        this.savedMessagesLifeTime = savedMessagesLifeTime;
     }
 }

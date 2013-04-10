@@ -23,7 +23,7 @@
     <orderEntry type="library" name="Maven: javax.telephony:jtapi:1.4" level="project" />
     <orderEntry type="library" name="Maven: com.cisco:cisco-jtapi:6.1.4.1" level="project" />
     <orderEntry type="library" name="Maven: org.raven:raven-core:1.0-SNAPSHOT" level="project" />
-    <orderEntry type="library" name="Maven: org.productivity:syslog4j:0.9.29" level="project" />
+    <orderEntry type="library" name="Maven: org.productivity:syslog4j:0.9.44" level="project" />
     <orderEntry type="library" name="Maven: eu.medsea.mimeutil:mime-util:1.3" level="project" />
     <orderEntry type="library" name="Maven: commons-logging:commons-logging:1.1.1" level="project" />
     <orderEntry type="library" name="Maven: javax.mail:mail:1.4.3" level="project" />
@@ -38,24 +38,24 @@
     <orderEntry type="library" name="Maven: antlr:antlr:2.7.7" level="project" />
     <orderEntry type="library" name="Maven: org.weda:weda-core:1.0-SNAPSHOT" level="project" />
     <orderEntry type="library" name="Maven: org.weda:weda-internal-core:1.0-SNAPSHOT" level="project" />
-    <orderEntry type="library" name="Maven: com.h2database:h2:1.3.154" level="project" />
+    <orderEntry type="library" name="Maven: com.h2database:h2:1.3.163" level="project" />
     <orderEntry type="library" name="Maven: postgresql:postgresql:8.3-603.jdbc4" level="project" />
-    <orderEntry type="library" name="Maven: oracle:oracle:10.2.0.1" level="project" />
+    <orderEntry type="library" name="Maven: oracle:oracle:11.2.0.3" level="project" />
+    <orderEntry type="library" name="Maven: oracle:oracle-i18n:11.2.0.3" level="project" />
     <orderEntry type="library" name="Maven: org.jrobin:jrobin:1.5.9" level="project" />
     <orderEntry type="library" name="Maven: org.snmp4j:snmp4j:1.8.1" level="project" />
     <orderEntry type="library" name="Maven: commons-codec:commons-codec:1.4" level="project" />
     <orderEntry type="library" name="Maven: commons-lang:commons-lang:2.4" level="project" />
     <orderEntry type="library" name="Maven: commons-collections:commons-collections:3.2.1" level="project" />
     <orderEntry type="library" name="Maven: commons-vfs:commons-vfs:1.0" level="project" />
-    <orderEntry type="library" name="Maven: org.apache.poi:poi:3.7-beta3" level="project" />
-    <orderEntry type="library" name="Maven: org.apache.poi:poi-ooxml:3.7-beta3" level="project" />
-    <orderEntry type="library" name="Maven: org.apache.poi:poi-ooxml-schemas:3.7-beta3" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.poi:poi:3.8" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.poi:poi-ooxml:3.8" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.poi:poi-ooxml-schemas:3.8" level="project" />
     <orderEntry type="library" name="Maven: org.apache.xmlbeans:xmlbeans:2.3.0" level="project" />
     <orderEntry type="library" name="Maven: stax:stax-api:1.0.1" level="project" />
-    <orderEntry type="library" name="Maven: org.apache.geronimo.specs:geronimo-stax-api_1.0_spec:1.0" level="project" />
     <orderEntry type="library" name="Maven: dom4j:dom4j:1.6.1" level="project" />
     <orderEntry type="library" name="Maven: xml-apis:xml-apis:1.3.02" level="project" />
-    <orderEntry type="library" name="Maven: org.codehaus.groovy:groovy-all:1.7.4" level="project" />
+    <orderEntry type="library" name="Maven: org.codehaus.groovy:groovy-all:2.0.6" level="project" />
     <orderEntry type="library" name="Maven: commons-dbcp:commons-dbcp:1.2.2" level="project" />
     <orderEntry type="library" name="Maven: commons-pool:commons-pool:1.3" level="project" />
     <orderEntry type="library" name="Maven: opensymphony:quartz:1.6.0" level="project" />
@@ -68,10 +68,10 @@
     <orderEntry type="library" name="Maven: jfree:jcommon:1.0.12" level="project" />
     <orderEntry type="library" name="Maven: jfree:jfreechart:1.0.9" level="project" />
     <orderEntry type="library" name="Maven: eclipse:jdtcore:3.1.0" level="project" />
-    <orderEntry type="library" name="Maven: net.sf.jxls:jxls-core:1.0-RC-2" level="project" />
+    <orderEntry type="library" name="Maven: net.sf.jxls:jxls-core:1.0" level="project" />
     <orderEntry type="library" name="Maven: org.apache.commons:commons-jexl:2.0.1" level="project" />
     <orderEntry type="library" name="Maven: geronimo-spec:geronimo-spec-jta:1.0-M1" level="project" />
-    <orderEntry type="library" name="Maven: org.samba.jcifs:jcifs:1.3.3" level="project" />
+    <orderEntry type="library" name="Maven: org.samba.jcifs:jcifs:1.3.14-kohsuke-1" level="project" />
     <orderEntry type="library" name="Maven: org.apache.httpcomponents:httpclient:4.0.1" level="project" />
     <orderEntry type="library" name="Maven: org.apache.httpcomponents:httpcore:4.0.1" level="project" />
     <orderEntry type="library" name="Maven: net.sf.json-lib:json-lib:jdk15:2.3" level="project" />
@@ -82,8 +82,9 @@
     <orderEntry type="library" name="Maven: javax.media:jmf:2.1.1e" level="project" />
     <orderEntry type="library" name="Maven: javax.media:mp3plugin:1.0" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: junit:junit:4.8.1" level="project" />
-    <orderEntry type="library" name="Maven: org.easymock:easymock:3.0" level="project" />
-    <orderEntry type="library" name="Maven: cglib:cglib-nodep:2.2" level="project" />
+    <orderEntry type="library" name="Maven: com.logica:smpp:1.0" level="project" />
+    <orderEntry type="library" name="Maven: org.easymock:easymock:3.1" level="project" />
+    <orderEntry type="library" name="Maven: cglib:cglib-nodep:2.2.2" level="project" />
     <orderEntry type="library" name="Maven: org.objenesis:objenesis:1.2" level="project" />
   </component>
 </module>

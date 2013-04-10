@@ -22,7 +22,9 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import org.onesec.raven.ivr.vmail.NewVMailMessage;
+import org.onesec.raven.ivr.vmail.StoredVMailMessage;
 import org.onesec.raven.ivr.vmail.VMailBox;
 import org.onesec.raven.ivr.vmail.VMailBoxDir;
 import org.onesec.raven.ivr.vmail.VMailManager;
@@ -39,6 +41,9 @@ import org.raven.ds.impl.DataSourceHelper;
 import org.raven.ds.impl.RecordSchemaNode;
 import org.raven.ds.impl.RecordSchemaValueTypeHandlerFactory;
 import org.raven.log.LogLevel;
+import org.raven.sched.Schedulable;
+import org.raven.sched.Scheduler;
+import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
 import org.raven.tree.Node;
 import org.raven.tree.NodeAttribute;
 import org.raven.tree.impl.BaseNode;
@@ -51,7 +56,7 @@ import org.weda.annotations.constraints.NotNull;
  * @author Mikhail Titov
  */
 @NodeClass(childNodes=GroupNode.class)
-public class VMailManagerNode extends BaseNode implements VMailManager, DataPipe {
+public class VMailManagerNode extends BaseNode implements VMailManager, DataPipe, Schedulable {
     public static final String NEW_MESSAGES_DIR = "new";
     public static final String SAVED_MESSAGES_DIR = "saved";
     public static final String TEMP_MESSAGES_DIR = "temp";
@@ -66,6 +71,9 @@ public class VMailManagerNode extends BaseNode implements VMailManager, DataPipe
     
     @Parameter(valueHandlerType=RecordSchemaValueTypeHandlerFactory.TYPE)
     private RecordSchemaNode recordSchema;
+    
+    @NotNull @Parameter(valueHandlerType=SystemSchedulerValueHandlerFactory.TYPE)
+    private Scheduler cleanupScheduler;
     
     private Map<String, VMailBoxNode> vmailBoxes;
     private File basePathFile;
@@ -97,6 +105,35 @@ public class VMailManagerNode extends BaseNode implements VMailManager, DataPipe
     protected void doStop() throws Exception {
         super.doStop();
         vmailBoxes = null;
+    }
+    
+    public void executeScheduledJob(Scheduler scheduler) {
+        if (isLogLevelEnabled(LogLevel.DEBUG))
+            logger.debug("Cleaning up voice mail messages");
+        long curTime = System.currentTimeMillis();
+        for (VMailBoxNode vbox: NodeUtils.getEffectiveChildsOfType(this, VMailBoxNode.class)) {
+            try {
+                deleteMessageIfNeed(curTime, TimeUnit.DAYS.toMillis(vbox.getNewMessagesLifeTime()), 
+                        vbox.getNewMessages());
+                deleteMessageIfNeed(curTime, TimeUnit.DAYS.toMillis(vbox.getSavedMessagesLifeTime()), 
+                        vbox.getSavedMessages());
+            } catch (Exception e) {
+                if (isLogLevelEnabled(LogLevel.ERROR))
+                    getLogger().error(String.format("Error while deleting old messages from vbox (%s)", vbox), e);
+            }
+        }
+            
+    }
+    
+    private void deleteMessageIfNeed(long curTime, long addTime, List<? extends StoredVMailMessage> messages) {
+        for (StoredVMailMessage mess: messages)
+            try {
+                if (curTime > mess.getMessageDate().getTime()+addTime)
+                    mess.delete();
+            } catch (Exception e) {
+                if (isLogLevelEnabled(LogLevel.ERROR))
+                    getLogger().error(String.format("Can't delete vmail message (%s)", mess), e);
+            }
     }
 
     public void setData(DataSource dataSource, Object data, DataContext context) {
@@ -255,6 +292,14 @@ public class VMailManagerNode extends BaseNode implements VMailManager, DataPipe
         this.recordSchema = recordSchema;
     }
 
+    public Scheduler getCleanupScheduler() {
+        return cleanupScheduler;
+    }
+
+    public void setCleanupScheduler(Scheduler cleanupScheduler) {
+        this.cleanupScheduler = cleanupScheduler;
+    }
+
     public boolean getDataImmediate(DataConsumer dataConsumer, DataContext context) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
@@ -266,4 +311,5 @@ public class VMailManagerNode extends BaseNode implements VMailManager, DataPipe
     public Collection<NodeAttribute> generateAttributes() {
         return null;
     }    
+
 }

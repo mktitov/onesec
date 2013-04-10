@@ -17,6 +17,7 @@ package org.onesec.raven.ivr.vmail.impl;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Calendar;
 import java.util.Date;
 import javax.activation.DataSource;
 import javax.activation.FileDataSource;
@@ -25,6 +26,7 @@ import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.Test;
 import org.onesec.raven.OnesecRavenTestCase;
+import org.onesec.raven.TestSchedulerNode;
 import org.onesec.raven.ivr.vmail.VMailBoxDir;
 import org.raven.ds.Record;
 import org.raven.test.DataCollector;
@@ -52,11 +54,17 @@ public class VMailManagerNodeTest extends OnesecRavenTestCase {
         testsNode.addAndSaveChildren(ds);
         assertTrue(ds.start());
         
+        TestSchedulerNode scheduler = new TestSchedulerNode();
+        scheduler.setName("scheduler");
+        testsNode.addAndSaveChildren(scheduler);
+        assertTrue(scheduler.start());
+        
         manager = new VMailManagerNode();
         manager.setName("vmail manager");
         testsNode.addAndSaveChildren(manager);
         manager.setBasePath(base.getPath());
         manager.setDataSource(ds);
+        manager.setCleanupScheduler(scheduler);
     }
     
     @Test
@@ -209,6 +217,39 @@ public class VMailManagerNodeTest extends OnesecRavenTestCase {
         assertEquals("111", rec.getValue(VMailCdrRecordSchema.VMAIL_BOX_NUMBER));
         assertEquals("222", rec.getValue(VMailCdrRecordSchema.SENDER_PHONE_NUMBER));
         assertEquals(messageDate, rec.getValue(VMailCdrRecordSchema.MESSAGE_DATE));
+    }
+    
+    @Test
+    public void cleanupOldMessagesTest() throws Exception {
+        VMailBoxNode vbox = createVBox(manager, "vbox1", true);
+        createVBoxNumber(vbox, "111", true);
+        vbox.setNewMessagesLifeTime(1);
+        vbox.setSavedMessagesLifeTime(2);
+        assertTrue(manager.start());
+        
+        File testFile = createTestFile();
+        ds.pushData(new NewVMailMessageImpl("111", "222", new Date(), new FileDataSource(testFile)));
+        vbox.getNewMessages().get(0).save();
+        ds.pushData(new NewVMailMessageImpl("111", "333", minusDays(new Date(), 3), new FileDataSource(testFile)));
+        vbox.getNewMessages().get(0).save();
+        ds.pushData(new NewVMailMessageImpl("111", "333", new Date(), new FileDataSource(testFile)));
+        ds.pushData(new NewVMailMessageImpl("111", "444", minusDays(new Date(), 2), new FileDataSource(testFile)));
+        
+        assertEquals(2, vbox.getNewMessagesCount());
+        assertEquals(2, vbox.getSavedMessagesCount());
+        manager.executeScheduledJob(null);
+        assertEquals(1, vbox.getNewMessagesCount());
+        assertEquals(1, vbox.getSavedMessagesCount());
+        assertEquals("222", vbox.getSavedMessages().get(0).getSenderPhoneNumber());
+        assertEquals("333", vbox.getNewMessages().get(0).getSenderPhoneNumber());
+    }
+    
+    private Date minusDays(Date date, int days) {
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(date);
+        cal.add(Calendar.DATE, -days);
+        cal.add(Calendar.MINUTE, -1);
+        return cal.getTime();
     }
     
     private GroupNode createGroup(Node owner, String name) {
