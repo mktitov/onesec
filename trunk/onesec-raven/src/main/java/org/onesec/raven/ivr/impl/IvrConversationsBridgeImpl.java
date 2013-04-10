@@ -46,6 +46,7 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
     private boolean activated = false;
     private AtomicReference<IvrConversationsBridgeStatus> status;
     private final boolean passDtmf;
+//    private final ReentrantLock lock = new ReentrantLock();
 
     public IvrConversationsBridgeImpl(
             IvrEndpointConversation conv1, IvrEndpointConversation conv2, Node owner, String logPrefix, boolean passDtmf)
@@ -109,14 +110,16 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
         return createdTimestamp==o.createdTimestamp? 0 : (createdTimestamp>o.createdTimestamp? 1 : -1);
     }
 
-    public synchronized void activateBridge()
+    public void activateBridge()
     {
         if (owner.isLogLevelEnabled(LogLevel.DEBUG))
             owner.getLogger().debug(logMess("Activating bridge"));
-        activatingTimestamp.set(System.currentTimeMillis());
-        status.set(IvrConversationsBridgeStatus.ACTIVATING);
-        conn1 = new BridgeConnection(conv1, conv2);
-        conn2 = new BridgeConnection(conv2, conv1);
+        synchronized(this) {
+            activatingTimestamp.set(System.currentTimeMillis());
+            status.set(IvrConversationsBridgeStatus.ACTIVATING);
+            conn1 = new BridgeConnection(conv1, conv2);
+            conn2 = new BridgeConnection(conv2, conv1);
+        }
         conn1.init();
         conn2.init();
     }
@@ -141,8 +144,7 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    public synchronized void addBridgeListener(IvrConversationsBridgeListener listener)
-    {
+    public synchronized void addBridgeListener(IvrConversationsBridgeListener listener) {
         listeners.add(listener);
     }
 
@@ -203,7 +205,7 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
         private final IvrEndpointConversation conv2;
         private final AtomicReference<AudioStream> audioStream = new AtomicReference<AudioStream>();
         private AtomicReference<IncomingRtpStream> inRtp = new AtomicReference<IncomingRtpStream>();
-        private ConnectionState state = ConnectionState.INITIALIZING;
+        private volatile ConnectionState state = ConnectionState.INITIALIZING;
 
         public BridgeConnection(IvrEndpointConversation conv1, IvrEndpointConversation conv2) {
             this.conv1 = conv1;
