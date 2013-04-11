@@ -28,13 +28,21 @@ import org.onesec.raven.ivr.vmail.StoredVMailMessage;
 public class StoredVMailMessageImpl extends VMailMessageImpl implements StoredVMailMessage {
     
     protected final File messageFile;
+    protected final VMailBoxNode vmailBox;
 
-    public StoredVMailMessageImpl(File messageFile, String senderPhoneNumber, Date messageDate) {
+    public StoredVMailMessageImpl(VMailBoxNode vmailBox, File messageFile, String senderPhoneNumber, Date messageDate) {
         super(senderPhoneNumber, messageDate, new FileDataSource(messageFile));
+        this.vmailBox = vmailBox;
         this.messageFile = messageFile;
     }
 
     public void delete() throws Exception {
         FileUtils.forceDelete(messageFile);
+        afterDelete();
+    }
+    
+    protected void afterDelete() throws Exception {
+        if (vmailBox.getSavedMessagesCount()==0)
+            vmailBox.fireStatusEvent(VMailBoxStatusChannel.EventType.SBOX_BECAME_EMPTY);
     }
 }

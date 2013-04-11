@@ -27,14 +27,28 @@ import org.onesec.raven.ivr.vmail.SavableStoredVMailMessage;
 public class SavableStoredVMailMessageImpl extends StoredVMailMessageImpl implements SavableStoredVMailMessage {
     private final File savedMessagesDir;
 
-    public SavableStoredVMailMessageImpl(File savedMessagesDir, File messageFile, String senderPhoneNumber, Date messageDate) {
-        super(messageFile, senderPhoneNumber, messageDate);
+    public SavableStoredVMailMessageImpl(VMailBoxNode vmailBox, File savedMessagesDir, File messageFile, 
+            String senderPhoneNumber, Date messageDate) 
+    {
+        super(vmailBox, messageFile, senderPhoneNumber, messageDate);
         this.savedMessagesDir = savedMessagesDir;
     }
 
     public void save() throws Exception {
+        boolean sboxWasEmpty = vmailBox.getSavedMessagesCount()==0;
         if (!messageFile.renameTo(new File(savedMessagesDir, messageFile.getName())))
             throw new IOException(String.format(
                 "Error moving message (%s) to directory (%s)", messageFile, savedMessagesDir));
+        if (vmailBox.getNewMessagesCount()==0)
+            vmailBox.fireStatusEvent(VMailBoxStatusChannel.EventType.NBOX_BECAME_EMPTY);
+        if (sboxWasEmpty)
+            vmailBox.fireStatusEvent(VMailBoxStatusChannel.EventType.SBOX_BECAME_NON_EMPTY);
     }
+
+    @Override
+    protected void afterDelete() throws Exception {
+        if (vmailBox.getNewMessagesCount()==0)
+            vmailBox.fireStatusEvent(VMailBoxStatusChannel.EventType.NBOX_BECAME_EMPTY);
+    }
+    
 }

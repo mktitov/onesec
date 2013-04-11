@@ -75,6 +75,12 @@ public class VMailManagerNodeTest extends OnesecRavenTestCase {
     }
     
     @Test
+    public void initNodesTest() {
+        assertTrue(manager.start());
+        assertTrue(manager.getVBoxStatusChannel() instanceof VMailBoxStatusChannel);
+    }
+    
+    @Test
     public void initVMailBoxesMapTest() {
         GroupNode group = createGroup(manager, "group");
         VMailBoxNode vbox = createVBox(group, "vbox1", false);

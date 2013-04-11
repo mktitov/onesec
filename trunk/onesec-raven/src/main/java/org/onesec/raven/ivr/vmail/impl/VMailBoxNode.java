@@ -21,28 +21,32 @@ import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
+import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.vmail.NewVMailMessage;
 import org.onesec.raven.ivr.vmail.SavableStoredVMailMessage;
 import org.onesec.raven.ivr.vmail.StoredVMailMessage;
 import org.onesec.raven.ivr.vmail.VMailBox;
 import org.onesec.raven.ivr.vmail.VMailBoxDir;
+import org.onesec.raven.ivr.vmail.VMailMessage;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.ds.DataSourceViewableObject;
 import org.raven.log.LogLevel;
-import org.raven.table.Table;
 import org.raven.table.TableImpl;
 import org.raven.tree.NodeAttribute;
 import org.raven.tree.Viewable;
 import org.raven.tree.ViewableObject;
 import org.raven.tree.impl.BaseNode;
+import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
 import org.raven.tree.impl.ViewableObjectImpl;
+import org.raven.util.NodeUtils;
 import org.weda.annotations.constraints.NotNull;
 import org.weda.internal.annotations.Message;
 
@@ -67,6 +71,9 @@ public class VMailBoxNode extends BaseNode implements VMailBox, Viewable {
     @NotNull @Parameter(defaultValue="30")
     private Integer savedMessagesLifeTime;
     
+    @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
+    private AudioFile greeting;
+    
     @Message private static String newMessagesTitle;
     @Message private static String savedMessagesTitle;
     @Message private static String senderPhoneColumnName;
@@ -80,6 +87,24 @@ public class VMailBoxNode extends BaseNode implements VMailBox, Viewable {
 
     public void setMaxMessageDuration(Integer maxMessageDuration) {
         this.maxMessageDuration = maxMessageDuration;
+    }
+
+    public AudioFile getGreeting() {
+        return greeting;
+    }
+
+    public void setGreeting(AudioFile greeting) {
+        this.greeting = greeting;
+    }
+
+    public List<String> getOwners() {
+        List<VMailBoxNumber> numbers = NodeUtils.getChildsOfType(this, VMailBoxNumber.class);
+        if (numbers.isEmpty())
+            return Collections.EMPTY_LIST;
+        List<String> owners = new ArrayList<String>(numbers.size());
+        for (VMailBoxNumber number: numbers)
+            owners.add(number.getName());
+        return owners;
     }
     
     private VMailManagerNode getManager() {
@@ -119,15 +144,18 @@ public class VMailBoxNode extends BaseNode implements VMailBox, Viewable {
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 getLogger().debug("Ignoring new incoming message because of ignoreNewMessage==true");
         } else {
-            String filename = new SimpleDateFormat(DATE_PATTERN).format(message.getMessageDate())+"-"
-                              + message.getSenderPhoneNumber()+".wav";
+            String filename = createMessageFileName(message);
             File messFile = new File(getDir().getTempDir(), filename);
+            boolean boxWasEmpty = getNewMessagesCount()==0;
             InputStream in = message.getAudioSource().getInputStream();
             try {
                 FileOutputStream out = new FileOutputStream(messFile);
                 try {
                     IOUtils.copy(in, out);
                     messFile.renameTo(new File(getDir().getNewMessagesDir(), filename));
+                    if (boxWasEmpty)
+                        getManager().getVBoxStatusChannel().pushEvent(
+                                this, VMailBoxStatusChannel.EventType.NBOX_BECAME_NON_EMPTY);
                 } finally {
                     IOUtils.closeQuietly(out);
                 }
@@ -135,6 +163,15 @@ public class VMailBoxNode extends BaseNode implements VMailBox, Viewable {
                 IOUtils.closeQuietly(in);
             }
         }
+    }
+    
+    void fireStatusEvent(VMailBoxStatusChannel.EventType eventType) {
+        getManager().getVBoxStatusChannel().pushEvent(this, eventType);
+    }
+    
+    private String createMessageFileName(VMailMessage message) {
+        return new SimpleDateFormat(DATE_PATTERN).format(message.getMessageDate())+"-"
+                              + message.getSenderPhoneNumber()+".wav";
     }
     
     private void getMessages(List messages, boolean isNew) throws Exception {
@@ -146,9 +183,9 @@ public class VMailBoxNode extends BaseNode implements VMailBox, Viewable {
             String[] elems = FilenameUtils.getBaseName(file.getName()).split("-");
             Date date = new SimpleDateFormat(DATE_PATTERN).parse(elems[0]);
             if (isNew)
-                messages.add(new SavableStoredVMailMessageImpl(getDir().getSavedMessagesDir(), file, elems[1], date));
+                messages.add(new SavableStoredVMailMessageImpl(this, getDir().getSavedMessagesDir(), file, elems[1], date));
             else
-                messages.add(new StoredVMailMessageImpl(file, elems[1], date));
+                messages.add(new StoredVMailMessageImpl(this, file, elems[1], date));
         }
     }
 
@@ -175,7 +212,7 @@ public class VMailBoxNode extends BaseNode implements VMailBox, Viewable {
             table.addRow(new Object[]{
                 mess.getSenderPhoneNumber(), 
                 fmt.format(mess.getMessageDate()),
-                new DataSourceViewableObject(mess.getAudioSource(), "audio/wav", this)
+                new DataSourceViewableObject(mess.getAudioSource(), "audio/wav", this, createMessageFileName(mess))
             });
         return new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, table);
     }
