@@ -26,9 +26,6 @@ import org.onesec.raven.ivr.actions.PlayAudioActionNode;
 import java.io.FileInputStream;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import javax.telephony.Call;
 import org.easymock.IArgumentMatcher;
 import org.raven.tree.Node;
 import org.onesec.raven.ivr.IvrTerminalState;
@@ -36,7 +33,6 @@ import org.onesec.core.StateWaitResult;
 import org.onesec.core.provider.ProviderController;
 import org.onesec.core.provider.ProviderControllerState;
 import org.junit.Before;
-import org.junit.Test;
 import org.onesec.core.services.ProviderRegistry;
 import org.onesec.core.services.StateListenersCoordinator;
 import org.onesec.raven.OnesecRavenTestCase;
@@ -55,7 +51,6 @@ import org.raven.sched.impl.ExecutorServiceNode;
 import org.raven.tree.impl.ContainerNode;
 import static org.easymock.EasyMock.*;
 import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.onesec.raven.ivr.IvrEndpointException;
 import org.onesec.raven.ivr.SendMessageDirection;
 
 /**

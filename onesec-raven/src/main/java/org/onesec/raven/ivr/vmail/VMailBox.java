@@ -16,12 +16,21 @@
 package org.onesec.raven.ivr.vmail;
 
 import java.util.List;
+import org.onesec.raven.ivr.AudioFile;
 
 /**
  *
  * @author Mikhail Titov
  */
 public interface VMailBox {
+    /**
+     * Returns addresses (phone numbers) that owns this voice mail box
+     */
+    public List<String> getOwners();
+    /**
+     * Returns greeting for this voice mail box or null
+     */
+    public AudioFile getGreeting();
     /**
      * Max message duration in seconds
      */

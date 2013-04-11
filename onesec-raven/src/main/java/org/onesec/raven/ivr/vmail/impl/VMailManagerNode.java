@@ -77,11 +77,13 @@ public class VMailManagerNode extends BaseNode implements VMailManager, DataPipe
     
     private Map<String, VMailBoxNode> vmailBoxes;
     private File basePathFile;
+    private VMailBoxStatusChannel statusChannel;
 
     @Override
     protected void initFields() {
         super.initFields();
         vmailBoxes = null;
+        statusChannel = null;
     }
 
     @Override
@@ -95,9 +97,16 @@ public class VMailManagerNode extends BaseNode implements VMailManager, DataPipe
     }
 
     @Override
+    protected void doInit() throws Exception {
+        super.doInit();
+        initNodes(false);
+    }
+
+    @Override
     protected void doStart() throws Exception {
         super.doStart();
         basePathFile = getOrCreatePath(basePath);
+        initNodes(true);
         initVMailBoxes();
     }
 
@@ -105,6 +114,20 @@ public class VMailManagerNode extends BaseNode implements VMailManager, DataPipe
     protected void doStop() throws Exception {
         super.doStop();
         vmailBoxes = null;
+    }
+    
+    private void initNodes(boolean start) {
+        statusChannel = (VMailBoxStatusChannel) getNode(VMailBoxStatusChannel.NAME);
+        if (statusChannel==null) {
+            statusChannel = new VMailBoxStatusChannel();
+            addAndSaveChildren(statusChannel);
+            if (start)
+                statusChannel.start();
+        }
+    }
+    
+    public VMailBoxStatusChannel getVBoxStatusChannel() {
+        return statusChannel;
     }
     
     public void executeScheduledJob(Scheduler scheduler) {
