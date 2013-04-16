@@ -28,9 +28,10 @@ import org.onesec.core.services.ProviderConfiguratorListeners;
 import org.onesec.raven.impl.StateToNodeLoggerImpl;
 import org.onesec.raven.ivr.*;
 import org.onesec.raven.ivr.impl.*;
-import org.raven.impl.NodeToStringConverter;
+import org.raven.tree.ResourceDescriptor;
 import org.raven.tree.ResourceRegistrator;
 import org.raven.tree.TreeListener;
+import org.raven.tree.impl.ResourceDescriptorImpl;
 import org.slf4j.Logger;
 
 /**
@@ -95,6 +96,13 @@ public class OnesecRavenModule
     
     public static void contributeTypeConverter(Configuration conf) {
         conf.add(new DataSourceToInputStreamSourceConverter());
+        conf.add(new AudioFileToInputSourceConverter());
     }
     
+    public static void contributeTemplateNodeBuildersProvider(Configuration<ResourceDescriptor> conf) {
+        String base = "/org/onesec/templates/";
+        String vmail = "IVR/VMail/";
+        conf.add(new ResourceDescriptorImpl(base, vmail+"record_scenario.xml"));
+        conf.add(new ResourceDescriptorImpl(base, vmail+"listen_scenario.xml"));
+    }
 }

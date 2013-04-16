@@ -20,6 +20,7 @@ package org.onesec.raven.ivr.impl;
 import com.cisco.jtapi.extensions.*;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -834,11 +835,20 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                     return (CiscoConnection)con;
         return null;
     }
+    
+    private List<IvrEndpointConversationListener> cloneListeners() {
+        lock.readLock().lock();
+        try {
+            return listeners==null || listeners.isEmpty()? Collections.EMPTY_LIST : new ArrayList(listeners);
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
 
     private void fireEvent(final boolean conversationStartEvent, CompletionCode completionCode)
     {
-        final List<IvrEndpointConversationListener> _listeners = new ArrayList(listeners);
-        if ( _listeners!=null && ! _listeners.isEmpty()) {
+        final List<IvrEndpointConversationListener> _listeners = cloneListeners();
+        if ( !_listeners.isEmpty()) {
             final IvrEndpointConversationEvent event = conversationStartEvent?
                 new IvrEndpointConversationEventImpl(this) :
                 new IvrEndpointConversationStoppedEventImpl(this, completionCode);
@@ -857,12 +867,13 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     }
 
     private void fireTransferedEvent(String address) {
-        if (listeners!=null && !listeners.isEmpty()) {
+        final List<IvrEndpointConversationListener> _listeners = cloneListeners();
+        if ( !_listeners.isEmpty()) {
             final IvrEndpointConversationTransferedEvent event =
                     new IvrEndpointConversationTransferedEventImpl(this, address);
             executor.executeQuietly(new AbstractTask(owner, "Sending conversation transfered event") {
                 @Override public void doRun() throws Exception {
-                    for (IvrEndpointConversationListener listener: listeners)
+                    for (IvrEndpointConversationListener listener: _listeners)
                         listener.conversationTransfered(event);
                 }
             });
@@ -870,12 +881,13 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     }
 
     private void fireDtmfReceived(char dtmf) {
-        if (listeners!=null && !listeners.isEmpty()) {
+        final List<IvrEndpointConversationListener> _listeners = cloneListeners();
+        if ( !_listeners.isEmpty()) {
             final IvrDtmfReceivedConversationEventImpl event = 
                     new IvrDtmfReceivedConversationEventImpl(this, dtmf);
             executor.executeQuietly(new AbstractTask(owner, "Sending dtmf received event") {
                 @Override public void doRun() throws Exception {
-                    for (IvrEndpointConversationListener listener: listeners)
+                    for (IvrEndpointConversationListener listener: _listeners)
                         listener.dtmfReceived(event);
                 }
             });
@@ -883,17 +895,19 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     }
 
     private void fireIncomingRtpStartedEvent() {
-        if (listeners!=null && !listeners.isEmpty()) {
+        final List<IvrEndpointConversationListener> _listeners = cloneListeners();
+        if ( !_listeners.isEmpty()) {
             IvrIncomingRtpStartedEventImpl ev = new IvrIncomingRtpStartedEventImpl(this);
-            for (IvrEndpointConversationListener listener: listeners)
+            for (IvrEndpointConversationListener listener: _listeners)
                 listener.incomingRtpStarted(ev);
         }
     }
 
     private void fireOutgoingRtpStartedEvent() {
-        if (listeners!=null && !listeners.isEmpty()) {
+        final List<IvrEndpointConversationListener> _listeners = cloneListeners();
+        if ( !_listeners.isEmpty()) {
             IvrOutgoingRtpStartedEventImpl ev = new IvrOutgoingRtpStartedEventImpl(this);
-            for (IvrEndpointConversationListener listener: listeners)
+            for (IvrEndpointConversationListener listener: _listeners)
                 listener.outgoingRtpStarted(ev);
         }
     }

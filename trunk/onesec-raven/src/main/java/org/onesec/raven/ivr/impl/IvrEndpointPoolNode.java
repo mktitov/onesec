@@ -699,9 +699,8 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
 
     public void executeScheduledJob(Scheduler scheduler)
     {
-        if (useCase==UseCase.INCOMING_CALLS)
-            return;
-        try {
+        if (useCase==UseCase.INCOMING_CALLS) runWatchdogForIncomingCallsUseCase();
+        else  try {
             if (lock.writeLock().tryLock(500, TimeUnit.MILLISECONDS)) {
                 try {
                     loadAverage.addDuration(0);
@@ -738,6 +737,18 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
             if (isLogLevelEnabled(LogLevel.WARN))
                 warn("Wait for read lock was interrupted", ex);
         }
+    }
+    
+    private void runWatchdogForIncomingCallsUseCase() {
+        for (IvrEndpoint endpoint: NodeUtils.getChildsOfType(this, IvrEndpoint.class, false))
+            if (   !reservedEndpoints.contains(endpoint)
+                && (   (endpoint.isInitialized() && endpoint.isAutoStart())
+                    || (endpoint.isStarted() && endpoint.getEndpointState().getId()==IvrEndpointState.OUT_OF_SERVICE)))
+            {
+                if (endpoint.isStarted())
+                    endpoint.stop();
+                endpoint.start();
+            }
     }
     
     public void run()
