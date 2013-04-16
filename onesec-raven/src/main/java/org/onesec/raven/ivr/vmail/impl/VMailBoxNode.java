@@ -165,6 +165,13 @@ public class VMailBoxNode extends BaseNode implements VMailBox, Viewable {
         }
     }
     
+    public void refreshStatus() throws Exception {
+        fireStatusEvent(getNewMessagesCount()==0? VMailBoxStatusChannel.EventType.NBOX_BECAME_EMPTY 
+                : VMailBoxStatusChannel.EventType.NBOX_BECAME_NON_EMPTY);
+        fireStatusEvent(getSavedMessagesCount()==0? VMailBoxStatusChannel.EventType.SBOX_BECAME_EMPTY
+                : VMailBoxStatusChannel.EventType.SBOX_BECAME_NON_EMPTY);
+    }
+    
     void fireStatusEvent(VMailBoxStatusChannel.EventType eventType) {
         getManager().getVBoxStatusChannel().pushEvent(this, eventType);
     }
