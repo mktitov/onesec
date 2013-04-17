@@ -1,18 +1,39 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <nodes>
-  <node name="Record scenario" class="org.raven.template.impl.TemplateNode">
+  <node name="Recording scenario" class="org.raven.template.impl.TemplateNode">
     <attribute name="logLevel">
       <value><![CDATA[WARN]]></value>
     </attribute>
+    <attribute name="executeAfter" valueHandler="Script">
+      <value><![CDATA[vars.vmailManager.addUniqAttr('dataSource', newNodes[0].$startRecordNode, true)]]></value>
+    </attribute>
     <node name="Variables" class="org.raven.template.impl.TemplateVariablesNode">
+      <attribute name="temporaryFileManager" type="org.raven.tree.Node" required="true" valueHandler="TemporaryFileManager">
+        <description><![CDATA[Temporary file manager]]></description>
+      </attribute>
+      <attribute name="vmailManager" type="org.raven.tree.Node" required="true" valueHandler="NodeReference">
+        <description><![CDATA[Voice mail manager node]]></description>
+      </attribute>
     </node>
     <node name="Entry" class="org.raven.template.impl.TemplateEntry">
-      <node name="Сценарий записи" class="org.onesec.raven.ivr.impl.IvrConversationScenarioNode">
+      <node name="Recording scenario" class="org.onesec.raven.ivr.impl.IvrConversationScenarioNode">
         <attribute name="logLevel">
           <value><![CDATA[WARN]]></value>
         </attribute>
         <attribute name="validDtmfs">
           <value></value>
+        </attribute>
+        <attribute name="temporaryFileManager" type="org.raven.tree.Node" valueHandler="TemplateVariable">
+          <description><![CDATA[]]></description>
+          <value><![CDATA[/"Templates"/"test group of templates"/"Record scenario"/"Variables"/@temporaryFileManager]]></value>
+        </attribute>
+        <attribute name="vmailManager" type="org.raven.tree.Node" valueHandler="TemplateVariable">
+          <description><![CDATA[]]></description>
+          <value><![CDATA[/"Templates"/"test group of templates"/"Record scenario"/"Variables"/@vmailManager]]></value>
+        </attribute>
+        <attribute name="startRecordNode" type="org.raven.tree.Node" valueHandler="NodeReference">
+          <description><![CDATA[]]></description>
+          <value><![CDATA["if has vbox"/"record message"/"start record"/]]></value>
         </attribute>
         <node name="if has vbox" class="org.onesec.raven.ivr.vmail.actions.IfHasVMailBoxActionNode">
           <attribute name="logLevel">
@@ -22,7 +43,7 @@
             <value><![CDATA[LAST_REDIRECT_NUMBER]]></value>
           </attribute>
           <attribute name="vmailManager" valueHandler="NodeReference">
-            <value><![CDATA[../../VMail manager]]></value>
+            <value><![CDATA[]]></value>
           </attribute>
           <node name="play greeting" class="org.raven.expr.impl.SwitchNode">
             <attribute name="logLevel">
@@ -103,8 +124,8 @@
               <attribute name="maxGainCoef">
                 <value><![CDATA[2.0]]></value>
               </attribute>
-              <attribute name="temporaryFileManager" valueHandler="TemporaryFileManager">
-                <value><![CDATA[/"System"/"Temporary file managers"/"Default manager"/]]></value>
+              <attribute name="temporaryFileManager" valueHandler="NodeReference">
+                <value><![CDATA[]]></value>
               </attribute>
             </node>
             <node name="pause" class="org.onesec.raven.ivr.actions.PauseActionNode">
@@ -139,11 +160,6 @@
           </node>
         </node>
         <node name="stop" class="org.onesec.raven.ivr.actions.StopConversationActionNode">
-          <attribute name="logLevel">
-            <value><![CDATA[WARN]]></value>
-          </attribute>
-        </node>
-        <node name="Groups" class="org.onesec.raven.ivr.impl.ActionGroupsNode">
           <attribute name="logLevel">
             <value><![CDATA[WARN]]></value>
           </attribute>

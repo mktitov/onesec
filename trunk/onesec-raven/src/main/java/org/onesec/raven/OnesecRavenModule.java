@@ -100,9 +100,9 @@ public class OnesecRavenModule
     }
     
     public static void contributeTemplateNodeBuildersProvider(Configuration<ResourceDescriptor> conf) {
-        String base = "/org/onesec/templates/";
+        String base = "/org/onesec/raven/templates/";
         String vmail = "IVR/VMail/";
-        conf.add(new ResourceDescriptorImpl(base, vmail+"record_scenario.xml"));
-        conf.add(new ResourceDescriptorImpl(base, vmail+"listen_scenario.xml"));
+        conf.add(new ResourceDescriptorImpl(base, vmail+"Recording scenario.xml"));
+        conf.add(new ResourceDescriptorImpl(base, vmail+"Listening scenario.xml"));
     }
 }
