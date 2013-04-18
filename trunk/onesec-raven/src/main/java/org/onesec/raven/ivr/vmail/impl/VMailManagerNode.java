@@ -48,6 +48,7 @@ import org.raven.tree.Node;
 import org.raven.tree.NodeAttribute;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.GroupNode;
+import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
 import org.raven.util.NodeUtils;
 import org.weda.annotations.constraints.NotNull;
 
@@ -66,7 +67,7 @@ public class VMailManagerNode extends BaseNode implements VMailManager, DataPipe
     @NotNull @Parameter
     private String basePath;
     
-    @NotNull @Parameter
+    @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
     private DataSource dataSource;
     
     @Parameter(valueHandlerType=RecordSchemaValueTypeHandlerFactory.TYPE)

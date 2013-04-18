@@ -50,6 +50,6 @@ public class VMailMessageImpl implements VMailMessage {
     @Override
     public String toString() {
         return "VoiceMessage: senderPhoneNumber="+senderPhoneNumber+
-                "; messageDate="+new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
+                "; messageDate="+new SimpleDateFormat("dd.MM.yyyy HH:mm:ss").format(messageDate);
     }
 }
