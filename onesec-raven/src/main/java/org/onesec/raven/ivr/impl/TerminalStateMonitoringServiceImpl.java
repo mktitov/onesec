@@ -40,18 +40,28 @@ public class TerminalStateMonitoringServiceImpl implements TerminalStateMonitori
     private TerminalStateMonitoringServiceNode serviceNode = null;
 
     public void treeReloaded(Tree tree) {
+//        Node services = tree.getRootNode().getNode(SystemNode.NAME).getNode(ServicesNode.NAME);
+//        TerminalStateMonitoringServiceNode node = (TerminalStateMonitoringServiceNode) services.getNode(
+//                TerminalStateMonitoringServiceNode.NAME);
+//        if (node==null) {
+//            node = new TerminalStateMonitoringServiceNode();
+//            services.addAndSaveChildren(node);
+//            node.start();
+//        }
+//        serviceNode = node;
+    }
+
+    public void treeInitialized(Tree tree) { 
         Node services = tree.getRootNode().getNode(SystemNode.NAME).getNode(ServicesNode.NAME);
         TerminalStateMonitoringServiceNode node = (TerminalStateMonitoringServiceNode) services.getNode(
                 TerminalStateMonitoringServiceNode.NAME);
         if (node==null) {
             node = new TerminalStateMonitoringServiceNode();
             services.addAndSaveChildren(node);
-            node.start();
+//            node.start();
         }
         serviceNode = node;
     }
-
-    public void treeInitialized(Tree tree) { }
 
     public void addTerminal(IvrTerminal terminal) {
         terminals.put(terminal, terminal);
