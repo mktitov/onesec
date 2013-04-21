@@ -17,18 +17,18 @@
 
 package org.onesec.raven.ivr.impl;
 
-import org.raven.tree.Node;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.onesec.core.provider.ProviderControllerState;
+import static org.onesec.core.provider.ProviderControllerState.*;
+import org.onesec.raven.ivr.IvrTerminal;
 import org.onesec.raven.ivr.TerminalStateMonitoringService;
 import org.raven.log.LogLevel;
+import org.raven.tree.Node;
 import org.raven.tree.Tree;
 import org.raven.tree.impl.ServicesNode;
 import org.raven.tree.impl.SystemNode;
 import org.weda.beans.ObjectUtils;
-import static org.onesec.core.provider.ProviderControllerState.*;
-import org.onesec.raven.ivr.IvrTerminal;
 
 /**
  *
@@ -36,15 +36,14 @@ import org.onesec.raven.ivr.IvrTerminal;
  */
 public class TerminalStateMonitoringServiceImpl implements TerminalStateMonitoringService
 {
-    private final Set<IvrTerminal> terminals = new HashSet<IvrTerminal>();
+    private final Map<IvrTerminal, IvrTerminal> terminals = new ConcurrentHashMap<IvrTerminal, IvrTerminal>();
     private TerminalStateMonitoringServiceNode serviceNode = null;
 
-    public void treeReloaded(Tree tree)
-    {
-        Node services = tree.getRootNode().getChildren(SystemNode.NAME).getChildren(ServicesNode.NAME);
-        TerminalStateMonitoringServiceNode node = (TerminalStateMonitoringServiceNode) services.getChildren(
+    public void treeReloaded(Tree tree) {
+        Node services = tree.getRootNode().getNode(SystemNode.NAME).getNode(ServicesNode.NAME);
+        TerminalStateMonitoringServiceNode node = (TerminalStateMonitoringServiceNode) services.getNode(
                 TerminalStateMonitoringServiceNode.NAME);
-        if (node==null){
+        if (node==null) {
             node = new TerminalStateMonitoringServiceNode();
             services.addAndSaveChildren(node);
             node.start();
@@ -54,25 +53,23 @@ public class TerminalStateMonitoringServiceImpl implements TerminalStateMonitori
 
     public void treeInitialized(Tree tree) { }
 
-    public synchronized void addTerminal(IvrTerminal terminal)
-    {
-        terminals.add(terminal);
+    public void addTerminal(IvrTerminal terminal) {
+        terminals.put(terminal, terminal);
     }
 
     public void removeTerminal(IvrTerminal terminal) {
         terminals.remove(terminal);
     }
 
-    public synchronized void stateChanged(ProviderControllerState state)
-    {
+    public void stateChanged(ProviderControllerState state) {
         if (ObjectUtils.in(state.getId(), IN_SERVICE, OUT_OF_SERVICE, STOPED)) {
             if (serviceNode!=null && serviceNode.isLogLevelEnabled(LogLevel.DEBUG))
                 serviceNode.getLogger().debug("Received event ({}) from provider ({})"
                         , state.getIdName(), state.getObservableObject().getName());
             int fromAddr = state.getObservableObject().getFromNumber();
             int toAddr = state.getObservableObject().getToNumber();
-            for (IvrTerminal terminal: terminals) {
-                try{
+            for (IvrTerminal terminal: terminals.keySet()) 
+                try {
                     int addr = Integer.parseInt(terminal.getAddress());
                     if (addr>=fromAddr && addr<=toAddr) {
                         switch (state.getId()){
@@ -80,36 +77,32 @@ public class TerminalStateMonitoringServiceImpl implements TerminalStateMonitori
                             default: stopTerminal(terminal);
                         }
                     }
-                }catch(NumberFormatException e){
-                }
-            }
+                } catch (NumberFormatException e) { }
         }
     }
 
-    private void startTerminal(IvrTerminal term)
-    {
-        synchronized(term){
-            if (serviceNode!=null && serviceNode.isLogLevelEnabled(LogLevel.DEBUG))
-                serviceNode.getLogger().debug("Restarting terminal ({})", term.getPath());
-            if (term.getStatus().equals(Node.Status.STARTED))
-                term.stop();
-            if (term.isAutoStart())
-                term.start();
-            else if (serviceNode!=null && serviceNode.isLogLevelEnabled(LogLevel.WARN))
-                serviceNode.getLogger().warn(
-                        "Can't start terminal ({}) because of autoStart==false", term.getPath());
-
-        }
+    private void startTerminal(IvrTerminal term) {
+        TerminalStateMonitoringServiceNode _serviceNode = serviceNode;
+        if (_serviceNode != null) _serviceNode.startTerminal(term);
+//        if (serviceNode!=null && serviceNode.isLogLevelEnabled(LogLevel.DEBUG))
+//            serviceNode.getLogger().debug("Restarting terminal ({})", term.getPath());
+////        synchronized(term){
+//            if (term.isStarted()) term.stop();
+//            if (term.isAutoStart()) term.start();
+//            else if (serviceNode!=null && serviceNode.isLogLevelEnabled(LogLevel.WARN))
+//                serviceNode.getLogger().warn("Can't start terminal ({}) because of autoStart==false", term.getPath());        
+////        }
     }
 
-    private void stopTerminal(IvrTerminal term)
-    {
-        synchronized(term){
-            if (term.getStatus().equals(Node.Status.STARTED)) {
-                if (serviceNode!=null && serviceNode.isLogLevelEnabled(LogLevel.DEBUG))
-                    serviceNode.getLogger().debug("Stopping terminal ({})", term.getPath());
-                term.stop();
-            }
-        }
+    private void stopTerminal(IvrTerminal term) {
+        TerminalStateMonitoringServiceNode _serviceNode = serviceNode;
+        if (_serviceNode != null) _serviceNode.stopTerminal(term);
+////        synchronized(term){
+//            if (term.isStarted()) {
+//                if (serviceNode!=null && serviceNode.isLogLevelEnabled(LogLevel.DEBUG))
+//                    serviceNode.getLogger().debug("Stopping terminal ({})", term.getPath());
+//                term.stop();
+//            }
+////        }
     }
 }

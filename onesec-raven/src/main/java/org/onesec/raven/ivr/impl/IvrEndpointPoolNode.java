@@ -154,7 +154,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         super.initFields();
         lock = new ReentrantReadWriteLock();
         endpointReleased = lock.writeLock().newCondition();
-        busyEndpoints = new HashMap<Integer, RequestInfo>();
+        busyEndpoints = new ConcurrentHashMap<Integer, RequestInfo>();
         usageCounters = new ConcurrentHashMap<Integer, Long>();
         stopManagerTask = new AtomicBoolean(false);
         statusMessage = new AtomicReference<String>("");
@@ -283,8 +283,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
             ri.request.processRequest(null);
     }
 
-    private void processRequest() throws InterruptedException
-    {
+    private void processRequest() throws InterruptedException {
         try {
             try{
                 statusMessage.set("Waiting for request...");
@@ -537,17 +536,16 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                     , terminalPoolStatusColumnMessage, usageCountColumnMessage
                     , currentUsageTimeMessage, requesterNodeMessage, requesterStatusMessage});
         long totalUsageCount = 0;
-        lock.readLock().lock();
-        try {
+//        lock.readLock().lock();
+//        try {
             for (IvrEndpoint endpoint: NodeUtils.getChildsOfType(this, IvrEndpoint.class, false)) {
                 String name = getEndpointNodeStatus(endpoint);
                 String status = getEndpointState(endpoint);
-                String poolStatus = busyEndpoints.containsKey(endpoint.getId())? "BUSY" : "FREE";
-                poolStatus = String.format(
-                        STATUS_FORMAT, poolStatus.equals("BUSY")? "blue" : "green", poolStatus);
+                RequestInfo ri = busyEndpoints.get(endpoint.getId());
+                String poolStatus = ri!=null? "BUSY" : "FREE";
+                poolStatus = String.format(STATUS_FORMAT, ri!=null? "blue" : "green", poolStatus);
                 long counter = getEndpointUsageCount(endpoint);
                 totalUsageCount+=counter;
-                RequestInfo ri = busyEndpoints.get(endpoint.getId());
                 String currentUsageTime = null; String requester = null;
                 String requesterStatus = null;
                 if (ri!=null) {
@@ -559,57 +557,8 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                     name, status, poolStatus, counter, currentUsageTime, requester, requesterStatus});
                 
             }
-        } finally {
-            lock.readLock().unlock();
-        }
-//        Collection<Node> childs = getNodes();
-//        long totalUsageCount = 0;
-//        if (childs!=null && !childs.isEmpty()) {
-//            lock.readLock().lock();
-//            try
-//            {
-//                String statusFormat = "<span style=\"color: %s\"><b>%s</b></span>";
-//                for (Node child: childs)
-//                    if (child instanceof IvrEndpoint)
-//                    {
-//                        IvrEndpoint endpoint = (IvrEndpoint) child;
-//                        String name = endpoint.getName();
-//                        if (!Status.STARTED.equals(endpoint.getStatus()))
-//                            name = "<span style=\"color: yellow\">"+name+"</span>";
-////                        RtpAddress rtpAddress = endpoint.getRtpAddress();
-//                        RtpAddress rtpAddress = null;
-//                        Object port = rtpAddress==null? "" : rtpAddress.getPort();
-//                        String status = endpoint.getEndpointState().getIdName();
-//                        status = String.format(
-//                            statusFormat, status.equals("IN_SERVICE")? "green" : "blue", status);
-//                        String poolStatus = busyEndpoints.containsKey(endpoint.getId())
-//                                ? "BUSY" : "FREE";
-//                        poolStatus = String.format(
-//                                statusFormat, poolStatus.equals("BUSY")
-//                                    ? "blue" : "green", poolStatus);
-//                        Long counter = usageCounters.get(endpoint.getId());
-//                        String usageCount = counter==null? "0" : counter.toString();
-//                        if (counter!=null)
-//                            totalUsageCount+=counter;
-//                        RequestInfo ri = busyEndpoints.get(endpoint.getId());
-//                        String currentUsageTime = null; String requester = null;
-//                        String requesterStatus = null;
-//                        if (ri!=null)
-//                        {
-//                            currentUsageTime = ""+((System.currentTimeMillis()-ri.terminalUsageTime)/1000);
-//                            requester = ri.getTaskNode().getPath();
-//                            requesterStatus = ri.getStatusMessage();
-//                        }
-//
-//                        table.addRow(new Object[]{
-//                            name, port, status, poolStatus, usageCount, currentUsageTime, requester
-//                                    , requesterStatus});
-//                    }
-//            }
-//            finally
-//            {
-//                lock.readLock().unlock();
-//            }
+//        } finally {
+//            lock.readLock().unlock();
 //        }
         List<ViewableObject> vos = new ArrayList<ViewableObject>(5);
         vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, "<b>"+terminalsTableTitleMessage+"</b>"));
@@ -706,9 +655,12 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                     loadAverage.addDuration(0);
                     Collection<IvrEndpoint> endpoints = NodeUtils.getChildsOfType(this, IvrEndpoint.class, false);
                     int restartedEndpoints = 0;
+                    boolean hasFree = false;
                     for (IvrEndpoint endpoint: endpoints) 
                         if (!busyEndpoints.containsKey(endpoint.getId())) {
                             int state = endpoint.getEndpointState().getId();
+                            if (endpoint.isStarted() && state==IvrEndpointState.IN_SERVICE)
+                                hasFree = true;
                             if (   Status.INITIALIZED==endpoint.getStatus()
                                 || (   Status.STARTED==endpoint.getStatus()
                                     && (state!=IvrEndpointState.IN_SERVICE || endpoint.getActiveCallsCount()>0)))
@@ -724,10 +676,11 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                     if (restartedEndpoints>0) {
                         //giving some time for terminals to be IN_SERVICE
                         TimeUnit.SECONDS.sleep(5);
-                        endpointReleased.signal();
                         if (isLogLevelEnabled(LogLevel.INFO))
                             info("Watchdog task. Successfully restarted ({}) endpoints", restartedEndpoints);
                     }
+                    if (hasFree || restartedEndpoints>0)
+                        endpointReleased.signal();
                 } finally {
                     lock.writeLock().unlock();
                 }
@@ -751,8 +704,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
             }
     }
     
-    public void run()
-    {
+    public void run() {
         managerThreadStoped.set(false);
         try {
             if (isLogLevelEnabled(LogLevel.DEBUG))

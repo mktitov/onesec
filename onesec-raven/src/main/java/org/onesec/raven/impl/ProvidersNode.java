@@ -28,6 +28,7 @@ import org.raven.log.LogLevel;
 import org.raven.tree.Node;
 import org.raven.tree.Node.Status;
 import org.raven.tree.impl.BaseNode;
+import org.raven.util.NodeUtils;
 import org.weda.internal.annotations.Service;
 
 /**
@@ -44,126 +45,108 @@ public class ProvidersNode extends BaseNode
 
     public final static String NAME = "Providers";
 
-    public ProvidersNode()
-    {
+    public ProvidersNode() {
         super(NAME);
         setStartAfterChildrens(true);
     }
 
     @Override
-    protected void initFields()
-    {
+    protected void initFields() {
         super.initFields();
         lock = new ReentrantLock();
     }
 
     @Override
-    public void nodeStatusChanged(Node node, Status oldStatus, Status newStatus)
-    {
+    public void nodeStatusChanged(Node node, Status oldStatus, Status newStatus) {
         super.nodeStatusChanged(node, oldStatus, newStatus);
-        
         if (!getStatus().equals(Status.STARTED))
             return;
-        if (node instanceof ProviderConfiguration)
-        {
-            if (lock.tryLock())
-            {
-                try
-                {
+        if (node instanceof ProviderConfiguration) {
+            if (lock.tryLock()) {
+                try {
                     ProviderConfiguration configuration = (ProviderConfiguration) node;
-                    switch (newStatus)
-                    {
+                    switch (newStatus) {
                         case STARTED :
                             providerService.add(configuration);
                                 if (isLogLevelEnabled(LogLevel.INFO))
-                                    info(String.format(
-                                            "Provider configuration (%s) ADDED", node.getName()));
+                                    info(String.format("Provider configuration (%s) ADDED", node.getName()));
                             break;
                         case INITIALIZED :
-                            if (oldStatus.equals(Status.STARTED))
-                            {
+                            if (oldStatus.equals(Status.STARTED)) {
                                 providerService.remove(configuration);
                                 if (isLogLevelEnabled(LogLevel.INFO))
-                                    info(String.format(
-                                            "Provider configuration (%s) REMOVED", node.getName()));
+                                    info(String.format("Provider configuration (%s) REMOVED", node.getName()));
                             }
                             break;
                     }
-                }
-                finally
-                {
+                } finally {
                     lock.unlock();
                 }
-            }
-            else
-                error("Error aquiring lock on child nodes");
+            } else error("Error aquiring lock on child nodes");
         }
     }
 
     @Override
-    protected void doStart() throws Exception
-    {
+    protected void doStart() throws Exception {
         super.doStart();
         providerService.setProvidersNode(this);
         processProviderOperation(true);
     }
 
     @Override
-    protected void doStop() throws Exception
-    {
+    protected void doStop() throws Exception {
         super.doStop();
         processProviderOperation(false);
         providerService.setProvidersNode(null);
     }
 
-    public Collection<ProviderConfiguration> getProviders()
-    {
-        if (!getStatus().equals(Status.STARTED))
-            return null;
-
-        Collection<Node> childs = getEffectiveChildrens();
-        Collection<ProviderConfiguration> providers = null;
-        if (childs!=null && !childs.isEmpty())
-        {
-            providers = new ArrayList<ProviderConfiguration>(childs.size());
-            for (Node child: childs)
-                if (child instanceof ProviderConfiguration)
-                    providers.add((ProviderConfiguration) child);
-            
-        }
-
-        return providers==null || providers.isEmpty()? null : providers;
+    public Collection<ProviderConfiguration> getProviders() {
+        return isStarted()? NodeUtils.getEffectiveChildsOfType(this, ProviderConfiguration.class) : null;
+//        Collection<Node> childs = getEffectiveNodes();
+//        Collection<ProviderConfiguration> providers = null;
+//        if (childs!=null && !childs.isEmpty())
+//        {
+//            providers = new ArrayList<ProviderConfiguration>(childs.size());
+//            for (Node child: childs)
+//                if (child instanceof ProviderConfiguration)
+//                    providers.add((ProviderConfiguration) child);
+//            
+//        }
+//
+//        return providers==null || providers.isEmpty()? null : providers;
     }
 
-    private void processProviderOperation(boolean addOperation) throws Exception
-    {
-        if (lock.tryLock())
-        {
-            try
-            {
-                Collection<Node> childs = getSortedChildrens();
-                if (childs!=null && !childs.isEmpty())
-                    for (Node child: childs)
-                        if (   child.getStatus().equals(Status.STARTED)
-                            && child instanceof ProviderConfiguration)
-                        {
-                            if (addOperation)
-                                providerService.add((ProviderConfiguration) child);
-                            else
-                                providerService.remove((ProviderConfiguration) child);
-                            if (isLogLevelEnabled(LogLevel.INFO))
-                                info(String.format(
-                                        "Provider configuration (%s) %s"
-                                        , child.getName()
-                                        , addOperation? "ADDED" : "REMOVED"));
-                        }
-            }
-            finally
-            {
+    private void processProviderOperation(boolean addOperation) throws Exception {
+        if (lock.tryLock()) {
+            try {
+                for (ProviderConfiguration conf: NodeUtils.getChildsOfType(this, ProviderConfiguration.class)) {
+                    if (addOperation) providerService.add(conf);
+                    else providerService.remove(conf);
+                    if (isLogLevelEnabled(LogLevel.INFO))
+                        info(String.format("Provider configuration (%s) %s", conf.getName(), 
+                            addOperation? "ADDED" : "REMOVED"));
+                    
+                }
+//                Collection<Node> childs = getSortedChildrens();
+//                if (childs!=null && !childs.isEmpty())
+//                    for (Node child: childs)
+//                        if (   child.getStatus().equals(Status.STARTED)
+//                            && child instanceof ProviderConfiguration)
+//                        {
+//                            if (addOperation)
+//                                providerService.add((ProviderConfiguration) child);
+//                            else
+//                                providerService.remove((ProviderConfiguration) child);
+//                            if (isLogLevelEnabled(LogLevel.INFO))
+//                                info(String.format(
+//                                        "Provider configuration (%s) %s"
+//                                        , child.getName()
+//                                        , addOperation? "ADDED" : "REMOVED"));
+//                        }
+            } finally {
                 lock.unlock();
             }
-        }
-        else
+        } else
             throw new Exception("Error aquire lock on child nodes (provider configuration)");
     }
 }

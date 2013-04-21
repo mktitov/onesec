@@ -17,7 +17,8 @@
 
 package org.onesec.raven.ivr.impl;
 
-import org.raven.tree.Node;
+import static org.easymock.EasyMock.*;
+import org.junit.Before;
 import org.junit.Test;
 import org.onesec.core.impl.StateLogger;
 import org.onesec.core.provider.ProviderController;
@@ -27,20 +28,33 @@ import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.StateToNodeLogger;
 import org.onesec.raven.ivr.IvrMediaTerminal;
 import org.onesec.raven.ivr.TerminalStateMonitoringService;
-import org.raven.tree.Node.Status;
+import org.raven.test.InThreadExecutorService;
+import org.raven.tree.Node;
 import org.raven.tree.impl.ServicesNode;
 import org.raven.tree.impl.SystemNode;
-import static org.easymock.EasyMock.*;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class TerminalStateMonitoringServiceImplTest extends OnesecRavenTestCase
-{
+public class TerminalStateMonitoringServiceImplTest extends OnesecRavenTestCase {
+    
+    @Before
+    public void prepare() {
+        Node services = tree.getRootNode().getNode(SystemNode.NAME).getNode(ServicesNode.NAME);
+        TerminalStateMonitoringServiceNode node = (TerminalStateMonitoringServiceNode) services.getNode(
+                TerminalStateMonitoringServiceNode.NAME);
+        
+        InThreadExecutorService executor = new InThreadExecutorService();
+        executor.setName("executor");
+        testsNode.addAndSaveChildren(executor);
+        assertTrue(executor.start());
+        node.setExecutor(executor);
+        assertTrue(node.start());
+    }
+    
     @Test
-    public void startTerminalAndFilterTest()
-    {
+    public void startTerminalAndFilterTest() {
         IvrMediaTerminal term = createMock(IvrMediaTerminal.class);
         IvrMediaTerminal term2 = createMock(IvrMediaTerminal.class);
         IvrMediaTerminal term3 = createMock(IvrMediaTerminal.class);
@@ -48,7 +62,8 @@ public class TerminalStateMonitoringServiceImplTest extends OnesecRavenTestCase
         ProviderController controller = createMock(ProviderController.class);
 
         expect(term.getAddress()).andReturn("10");
-        expect(term.getStatus()).andReturn(Status.INITIALIZED);
+//        expect(term.getStatus()).andReturn(Status.INITIALIZED);
+        expect(term.isStarted()).andReturn(Boolean.FALSE);
         expect(term.isAutoStart()).andReturn(true);
         expect(term.start()).andReturn(Boolean.TRUE);
 
@@ -64,6 +79,7 @@ public class TerminalStateMonitoringServiceImplTest extends OnesecRavenTestCase
         replay(term, state, controller, term2, term3);
 
         TerminalStateMonitoringServiceImpl stateMon = new TerminalStateMonitoringServiceImpl();
+        stateMon.treeReloaded(tree);
         stateMon.addTerminal(term);
         stateMon.addTerminal(term2);
         stateMon.addTerminal(term3);
@@ -79,7 +95,7 @@ public class TerminalStateMonitoringServiceImplTest extends OnesecRavenTestCase
         ProviderController controller = createMock(ProviderController.class);
 
         expect(term.getAddress()).andReturn("10");
-        expect(term.getStatus()).andReturn(Status.STARTED);
+        expect(term.isStarted()).andReturn(Boolean.TRUE);
         expect(term.isAutoStart()).andReturn(true);
         term.stop();
         expect(term.start()).andReturn(Boolean.TRUE);
@@ -93,6 +109,7 @@ public class TerminalStateMonitoringServiceImplTest extends OnesecRavenTestCase
         replay(term, state, controller);
 
         TerminalStateMonitoringServiceImpl stateMon = new TerminalStateMonitoringServiceImpl();
+        stateMon.treeReloaded(tree);
         stateMon.addTerminal(term);
         stateMon.stateChanged(state);
 
@@ -100,13 +117,14 @@ public class TerminalStateMonitoringServiceImplTest extends OnesecRavenTestCase
     }
 
     @Test
-    public void stopStartedTerminalTest(){
+    public void stopStartedTerminalTest() {
         IvrMediaTerminal term = createMock(IvrMediaTerminal.class);
         ProviderControllerState state = createMock(ProviderControllerState.class);
         ProviderController controller = createMock(ProviderController.class);
 
         expect(term.getAddress()).andReturn("10");
-        expect(term.getStatus()).andReturn(Status.STARTED);
+//        expect(term.getStatus()).andReturn(Status.STARTED);
+        expect(term.isStarted()).andReturn(Boolean.TRUE);
         term.stop();
 
         expect(state.getId()).andReturn(ProviderControllerState.OUT_OF_SERVICE).atLeastOnce();
@@ -118,6 +136,7 @@ public class TerminalStateMonitoringServiceImplTest extends OnesecRavenTestCase
         replay(term, state, controller);
 
         TerminalStateMonitoringServiceImpl stateMon = new TerminalStateMonitoringServiceImpl();
+        stateMon.treeReloaded(tree);
         stateMon.addTerminal(term);
         stateMon.stateChanged(state);
 
@@ -131,7 +150,8 @@ public class TerminalStateMonitoringServiceImplTest extends OnesecRavenTestCase
         ProviderController controller = createMock(ProviderController.class);
 
         expect(term.getAddress()).andReturn("10");
-        expect(term.getStatus()).andReturn(Status.INITIALIZED);
+//        expect(term.getStatus()).andReturn(Status.INITIALIZED);
+        expect(term.isStarted()).andReturn(Boolean.FALSE);
 
         expect(state.getId()).andReturn(ProviderControllerState.OUT_OF_SERVICE).atLeastOnce();
         expect(state.getObservableObject()).andReturn(controller).atLeastOnce();
@@ -142,6 +162,7 @@ public class TerminalStateMonitoringServiceImplTest extends OnesecRavenTestCase
         replay(term, state, controller);
 
         TerminalStateMonitoringServiceImpl stateMon = new TerminalStateMonitoringServiceImpl();
+        stateMon.treeReloaded(tree);
         stateMon.addTerminal(term);
         stateMon.stateChanged(state);
 
@@ -149,18 +170,17 @@ public class TerminalStateMonitoringServiceImplTest extends OnesecRavenTestCase
     }
 
     @Test
-    public void serviceTest(){
+    public void serviceTest() {
         TerminalStateMonitoringService stateMon = registry.getService(TerminalStateMonitoringService.class);
         assertNotNull(stateMon);
-        Node serviceNode = tree.getRootNode().getChildren(SystemNode.NAME).getChildren(ServicesNode.NAME)
-                .getChildren(TerminalStateMonitoringServiceNode.NAME);
+        Node serviceNode = tree.getRootNode().getNode(SystemNode.NAME).getNode(ServicesNode.NAME)
+                .getNode(TerminalStateMonitoringServiceNode.NAME);
         assertNotNull(serviceNode);
         assertTrue(serviceNode instanceof TerminalStateMonitoringServiceNode);
     }
 
     @Test
-    public void stateListenerCoordinatorTest()
-    {
+    public void stateListenerCoordinatorTest() {
         StateListenersCoordinator listenersCoordinator = registry.getService(StateListenersCoordinator.class);
         assertNotNull(listenersCoordinator);
         

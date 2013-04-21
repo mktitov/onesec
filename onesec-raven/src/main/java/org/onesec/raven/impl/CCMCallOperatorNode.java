@@ -51,45 +51,38 @@ public class CCMCallOperatorNode extends BaseNode implements Viewable
     private ProvidersNode providersNode;
 
     @Override
-    protected void doInit() throws Exception
-    {
+    protected void doInit() throws Exception {
         super.doInit();
         generateNodes();
     }
 
     @Override
-    protected void doStart() throws Exception
-    {
+    protected void doStart() throws Exception {
         super.doStart();
         generateNodes();
         stateLogger.setLoggerNode(this);
     }
 
     @Override
-    protected void doStop() throws Exception
-    {
+    protected void doStop() throws Exception {
         super.doStop();
         stateLogger.setLoggerNode(null);
     }
 
-    private void generateNodes()
-    {
-        providersNode = (ProvidersNode) getChildren(ProvidersNode.NAME);
-        if (providersNode==null)
-        {
+    private void generateNodes() {
+        providersNode = (ProvidersNode) getNode(ProvidersNode.NAME);
+        if (providersNode == null) {
             providersNode = new ProvidersNode();
             this.addAndSaveChildren(providersNode);
             providersNode.start();
         }
     }
 
-    public ProvidersNode getProvidersNode()
-    {
+    public ProvidersNode getProvidersNode() {
         return providersNode;
     }
 
-    public Map<String, NodeAttribute> getRefreshAttributes() throws Exception
-    {
+    public Map<String, NodeAttribute> getRefreshAttributes() throws Exception {
         return null;
     }
 
@@ -97,14 +90,12 @@ public class CCMCallOperatorNode extends BaseNode implements Viewable
             throws Exception
     {
         Collection<ProviderController> controllers = providerRegistry.getProviderControllers();
-        TableImpl table = new TableImpl(
-                new String[]{"Provider name", "Provider status", "Error message"});
+        TableImpl table = new TableImpl(new String[]{"Provider name", "Provider status", "Numbers range", 
+            "Provider host", "Provider user", "Error message"});
         if (controllers!=null && !controllers.isEmpty())
-            for (ProviderController controller: controllers)
-            {
+            for (ProviderController controller: controllers) {
                 String color = null;
-                switch (controller.getState().getId())
-                {
+                switch (controller.getState().getId()) {
                     case ProviderControllerState.IN_SERVICE : color = "GREEN"; break;
                     case ProviderControllerState.CONNECTING : color = "BLUE"; break;
                     default: color = "RED";
@@ -112,11 +103,15 @@ public class CCMCallOperatorNode extends BaseNode implements Viewable
                 String state = String.format(
                         "<p style=\"text-align: left; color: %s; margin:0 0 0 0\"><b>%s</b></p>"
                         , color, controller.getState().getIdName());
+                String numbersRange = controller.getFromNumber()+"-"+controller.getToNumber();
                 table.addRow(new String[]{
-                    controller.getName(), state, controller.getState().getErrorMessage()});
+                    controller.getName(), 
+                    state, 
+                    controller.getFromNumber()+"-"+controller.getToNumber(),
+                    controller.getHost(), controller.getUser(),
+                    controller.getState().getErrorMessage()});
             }
-        return Arrays.asList(
-                (ViewableObject)new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, table));
+        return Arrays.asList((ViewableObject)new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, table));
     }
 
     public Boolean getAutoRefresh()

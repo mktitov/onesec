@@ -17,15 +17,14 @@
 
 package org.onesec.raven;
 
-import org.onesec.raven.impl.ProvidersNode;
 import org.onesec.core.services.ProviderConfigurator;
+import org.onesec.raven.impl.ProvidersNode;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface RavenProviderConfigurator extends ProviderConfigurator
-{
+public interface RavenProviderConfigurator extends ProviderConfigurator {
     public void setProvidersNode(ProvidersNode providersNode);
     public ProvidersNode getProvidersNode();
 }
