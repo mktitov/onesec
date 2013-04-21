@@ -41,24 +41,22 @@ public class ProviderControllerImpl implements ProviderController, ProviderObser
     public static final String OBJECT_NAME = "ProviderController";
     public final static Logger logger = LoggerFactory.getLogger(ProviderController.class);
     
-    private int id;
-    private int fromNumber;
-    private int toNumber;
-    private String user;
-    private String password;
-    private String host;
-    private String name;
+    private final int id;
+    private final int fromNumber;
+    private final int toNumber;
+    private final String user;
+    private final String password;
+    private final String host;
+    private final String name;
     
-    private ProviderControllerStateImpl state;
+    private final ProviderControllerStateImpl state;
     private Provider provider;
     private JtapiPeer jtapiPeer;
     
     private ExecutorService executor;
 
-    public ProviderControllerImpl(
-            StateListenersCoordinator stateListenersCoordinator
-            , int id, String name, int fromNumber, int toNumber
-            , String user, String password, String host) 
+    public ProviderControllerImpl(StateListenersCoordinator stateListenersCoordinator, int id, String name, 
+            int fromNumber, int toNumber, String user, String password, String host) 
     {
         this.id = id;
         this.name = name;
@@ -73,18 +71,15 @@ public class ProviderControllerImpl implements ProviderController, ProviderObser
         state.setState(ProviderControllerState.CONNECTING);
     }
 
-    public void setExecutor(ExecutorService executor)
-    {
+    public void setExecutor(ExecutorService executor) {
         this.executor = executor;
     }
 
-    public JtapiPeer getJtapiPeer()
-    {
+    public JtapiPeer getJtapiPeer() {
         return jtapiPeer;
     }
 
-    public void setJtapiPeer(JtapiPeer jtapiPeer)
-    {
+    public void setJtapiPeer(JtapiPeer jtapiPeer) {
         this.jtapiPeer = jtapiPeer;
     }
 
@@ -92,9 +87,8 @@ public class ProviderControllerImpl implements ProviderController, ProviderObser
         executor.execute(new ProviderConnector());
         return state;
     }
-    
+
     public void checkConnection() {
-        
     }
 
     public void shutdown()
@@ -182,12 +176,9 @@ public class ProviderControllerImpl implements ProviderController, ProviderObser
         return "Provider ("+name+"). "+message;
     }
 
-    private class ProviderConnector implements Runnable
-    {
-        public void run()
-        {
-            try
-            {
+    private class ProviderConnector implements Runnable {
+        public void run() {
+            try {
                 shutdown();
                 if (logger.isDebugEnabled())
                     logger.debug(getLogMessage("Connecting..."));
@@ -197,9 +188,7 @@ public class ProviderControllerImpl implements ProviderController, ProviderObser
                 provider.addObserver(ProviderControllerImpl.this);
                 if (logger.isDebugEnabled())
                     logger.debug(getLogMessage("Connected!"));
-            }
-            catch (Exception e)
-            {
+            } catch (Exception e) {
                 if (logger.isErrorEnabled())
                     logger.error(getLogMessage("Connection error."), e);
                 state.setState(ProviderControllerState.OUT_OF_SERVICE, e.getMessage(), e);
