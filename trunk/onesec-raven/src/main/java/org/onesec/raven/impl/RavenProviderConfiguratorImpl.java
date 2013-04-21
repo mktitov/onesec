@@ -32,17 +32,14 @@ import static org.onesec.core.provider.ProviderConfiguratorState.*;
  *
  * @author Mikhail Titov
  */
-public class RavenProviderConfiguratorImpl implements RavenProviderConfigurator
-{
+public class RavenProviderConfiguratorImpl implements RavenProviderConfigurator {
     public static final String RAVEN_PROVIDER_CONFIGURATOR = "Raven provider configurator";
     private final ProviderConfiguratorStateImpl state;
     private final Collection<ProviderConfiguratorListener> listeners;
     private ProvidersNode providersNode;
 
-    public RavenProviderConfiguratorImpl(ProviderConfiguratorListeners listeners)
-    {
+    public RavenProviderConfiguratorImpl(ProviderConfiguratorListeners listeners) {
         this.listeners = listeners.getListeners();
-
         state = new ProviderConfiguratorStateImpl(this);
         state.setState(STOPED);
     }
@@ -51,18 +48,15 @@ public class RavenProviderConfiguratorImpl implements RavenProviderConfigurator
         return state;
     }
 
-    public Collection<ProviderConfiguration> getAll()
-    {
-        return providersNode==null? null : providersNode.getProviders();
+    public Collection<ProviderConfiguration> getAll() {
+        return providersNode == null ? null : providersNode.getProviders();
     }
 
-    public void add(ProviderConfiguration configuration)
-    {
+    public void add(ProviderConfiguration configuration) {
         fireProviderEvent(FileProviderConfigurator.EventType.ADD, configuration);
     }
 
-    public void remove(ProviderConfiguration configuration)
-    {
+    public void remove(ProviderConfiguration configuration) {
         fireProviderEvent(FileProviderConfigurator.EventType.REMOVE, configuration);
     }
 

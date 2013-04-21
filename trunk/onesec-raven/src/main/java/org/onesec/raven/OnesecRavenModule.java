@@ -23,8 +23,8 @@ import org.apache.tapestry5.ioc.annotations.EagerLoad;
 import org.onesec.core.StateListenerConfiguration;
 import org.onesec.core.impl.StateListenerConfigurationImpl;
 import org.onesec.core.provider.ProviderControllerState;
-import org.onesec.raven.impl.RavenProviderConfiguratorImpl;
 import org.onesec.core.services.ProviderConfiguratorListeners;
+import org.onesec.raven.impl.RavenProviderConfiguratorImpl;
 import org.onesec.raven.impl.StateToNodeLoggerImpl;
 import org.onesec.raven.ivr.*;
 import org.onesec.raven.ivr.impl.*;
@@ -47,9 +47,7 @@ public class OnesecRavenModule
         binder.bind(OnesecSystemNodesInitializer.class, OnesecSystemNodesInitializerImpl.class);
     }
 
-    public RavenProviderConfigurator buildRavenProviderConfigurator(
-            ProviderConfiguratorListeners listeners)
-    {
+    public RavenProviderConfigurator buildRavenProviderConfigurator(ProviderConfiguratorListeners listeners) {
         return new RavenProviderConfiguratorImpl(listeners);
     }
     

@@ -87,7 +87,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         System.out.println("=>"+(99999/1000));
     }
 
-//    @Test
+    @Test
     public void simpleTest() throws InterruptedException {
         EndpointRequest req = createMock(EndpointRequest.class);
         expect(req.getOwner()).andReturn(requestOwner).anyTimes();
@@ -102,7 +102,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         TimeUnit.SECONDS.sleep(2);
     }
 
-//    @Test(timeout=25000)
+    @Test(timeout=25000)
     public void endpointRealeseTest() throws Exception
     {
         EndpointRequest req = createMock(EndpointRequest.class);
@@ -119,7 +119,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         verify(req);
     }
 
-//    @Test(timeout=25000)
+    @Test(timeout=25000)
     public void endpointTimeoutTest() throws Exception
     {
         EndpointRequest req = createMock(EndpointRequest.class);
@@ -145,7 +145,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         verify(req, req2);
     }
 
-//    @Test(timeout=25000)
+    @Test(timeout=25000)
     public void asyncTest() throws Exception {
         createEndpoint("88014");
 
@@ -171,7 +171,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         verify(req, req2);
     }
 
-//    @Test(timeout=20000)
+    @Test(timeout=20000)
     public void watchdogTest() throws Exception {
         EndpointRequest req = createMock(EndpointRequest.class);
 
@@ -190,7 +190,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         verify(req);
     }
 
-//    @Test
+    @Test
     public void priorityTest() throws InterruptedException {
         pool.setLogLevel(LogLevel.DEBUG);
         endpoint.stop();
@@ -241,7 +241,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         assertEquals("req4", order.get(3));
     }
 
-//    @Test
+    @Test
     public void auxiliaryPoolTest() throws Exception
     {
         IvrEndpointPoolNode pool2 = new IvrEndpointPoolNode();
@@ -276,7 +276,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         verify(req1, req2);
     }
 
-//    @Test
+    @Test
     public void addressRangesTest() throws Exception {
         pool.stop();
         TimeUnit.SECONDS.sleep(2);

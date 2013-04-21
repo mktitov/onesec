@@ -105,8 +105,7 @@ public abstract class AbstractEndpointNode extends BaseNode
     }
 
     @Override
-    protected void doStop() throws Exception
-    {
+    protected void doStop() throws Exception {
         super.doStop();
         CiscoJtapiTerminal terminal = term.getAndSet(null);
         if (terminal!=null) {
