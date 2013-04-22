@@ -14,7 +14,6 @@
  *  limitations under the License.
  *  under the License.
  */
-
 package org.onesec.raven.ivr.queue.actions;
 
 import org.junit.Before;
@@ -26,13 +25,12 @@ import org.onesec.raven.ivr.IvrAction;
  *
  * @author Mikhail Titov
  */
-public class QueueCallActionNodeTest extends OnesecRavenTestCase
-{
+public class QueueCallActionNodeTest extends OnesecRavenTestCase {
+
     private QueueCallActionNode actionNode;
 
     @Before
-    public void prepare()
-    {
+    public void prepare() {
         actionNode = new QueueCallActionNode();
         actionNode.setName("queue action");
         tree.getRootNode().addAndSaveChildren(actionNode);
@@ -43,12 +41,11 @@ public class QueueCallActionNodeTest extends OnesecRavenTestCase
     }
 
     @Test
-    public void createActionTest()
-    {
+    public void createActionTest() {
         IvrAction action = actionNode.createAction();
         assertNotNull(action);
         assertTrue(action instanceof QueueCallAction);
-        QueueCallAction queueAction = (QueueCallAction)action;
+        QueueCallAction queueAction = (QueueCallAction) action;
         assertTrue(queueAction.isContinueConversationOnReadyToCommutate());
         assertFalse(queueAction.isContinueConversationOnReject());
         assertEquals(10, queueAction.getPriority());
