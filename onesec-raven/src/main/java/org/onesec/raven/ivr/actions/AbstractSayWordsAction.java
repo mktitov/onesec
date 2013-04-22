@@ -58,8 +58,7 @@ public abstract class AbstractSayWordsAction extends AsyncAction
     {
         List<List> numbers = formWords(conversation);
         if (numbers==null || numbers.isEmpty()) {
-            if (logger.isWarnEnabled())
-                logger.warn("No number(s) to say");            
+            if (logger.isDebugEnabled()) logger.debug("No word(s) to say");            
         } else
             for (List number: numbers) {
                 sayWords(number);
@@ -81,7 +80,7 @@ public abstract class AbstractSayWordsAction extends AsyncAction
                 if (!(child instanceof AudioFileNode)) {
                     if (logger.isErrorEnabled())
                         logger.error(String.format(
-                                "Can not say the number because of not found " +
+                                "Can not say the word because of not found " +
                                 "the AudioFileNode (%s) node in nodes: %s"
                                 , word, wordsNodes));
                     return;

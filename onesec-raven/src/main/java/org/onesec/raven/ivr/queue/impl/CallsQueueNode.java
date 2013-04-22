@@ -158,10 +158,10 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask,
             queue.offer(request);
             if (queue.size()>1)
                 Collections.sort(queue, requestComparator);
-            if (queue.size()>maxQueueSize){
+            if (queue.size()>maxQueueSize) {
                 CallQueueRequestController rejReq = queue.removeLast();
                 executor.executeQuietly(new RejectTask(this, rejReq, "queue size was exceeded"));
-            }else {
+            } else {
                 request.fireCallQueuedEvent();
                 fireQueueNumberChangedEvents();
             }
@@ -441,7 +441,7 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask,
     {
         int lastElement = Math.min(maxQueueSize, queue.size());
         int pos = 1;
-        for (CallQueueRequestController req: queue){
+        for (CallQueueRequestController req: queue) {
             if (pos>lastElement)
                 break;
             req.setPositionInQueue(pos);
