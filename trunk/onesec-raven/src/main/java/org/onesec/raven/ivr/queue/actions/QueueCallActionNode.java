@@ -19,6 +19,7 @@ package org.onesec.raven.ivr.queue.actions;
 import java.util.Collection;
 import org.onesec.raven.ivr.IvrAction;
 import org.onesec.raven.ivr.IvrActionNode;
+import org.onesec.raven.ivr.actions.AbstractActionNode;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.onesec.raven.ivr.queue.CallQueueRequest;
 import org.onesec.raven.ivr.queue.CallQueueRequestSender;
@@ -30,7 +31,6 @@ import org.raven.ds.DataSource;
 import org.raven.ds.impl.DataContextImpl;
 import org.raven.ds.impl.DataSourceHelper;
 import org.raven.tree.NodeAttribute;
-import org.raven.tree.impl.BaseNode;
 import org.weda.annotations.constraints.NotNull;
 
 /**
@@ -38,7 +38,7 @@ import org.weda.annotations.constraints.NotNull;
  * @author Mikhail Titov
  */
 @NodeClass(parentNode=IvrConversationScenarioNode.class)
-public class QueueCallActionNode extends BaseNode implements IvrActionNode, DataSource, CallQueueRequestSender
+public class QueueCallActionNode extends AbstractActionNode implements IvrActionNode, DataSource, CallQueueRequestSender
 {
     @NotNull @Parameter(defaultValue="true")
     private Boolean continueConversationOnReadyToCommutate;
@@ -57,9 +57,8 @@ public class QueueCallActionNode extends BaseNode implements IvrActionNode, Data
 
     @Parameter()
     private String queueId;
-
-    public IvrAction createAction()
-    {
+    
+    public IvrAction doCreateAction() {
         return new QueueCallAction(this, continueConversationOnReadyToCommutate, continueConversationOnReject
                 , priority, queueId, playOperatorGreeting, operatorPhoneNumbers);
     }
