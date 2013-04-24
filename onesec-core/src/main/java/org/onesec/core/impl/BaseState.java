@@ -18,6 +18,7 @@
 package org.onesec.core.impl;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -104,11 +105,14 @@ public class BaseState<T extends State, O extends ObjectDescription> implements 
     }
 
     private void fireStateChangedEvent() {
+        List<StateListener> _listeners = null;
         synchronized(listenersLock) {
-        if (listeners!=null)
-            for (StateListener listener: listeners)
-                listener.stateChanged(this);
+            if (listeners!=null && !listeners.isEmpty()) 
+                _listeners = new ArrayList<StateListener>(listeners);
         }
+        if (_listeners!=null)
+            for (StateListener listener: _listeners)
+                listener.stateChanged(this);
     }
     
     private StateWaitResult<T> waitForState(int[] states, long stateCounter, long timeout) {
