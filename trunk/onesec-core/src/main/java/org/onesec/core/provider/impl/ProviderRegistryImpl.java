@@ -59,7 +59,7 @@ public class ProviderRegistryImpl implements ProviderRegistry, RegistryShutdownL
     {
         this.stateListenersCoordinator = stateListenersCoordinator;
         this.log = log;
-        executor.scheduleWithFixedDelay(new ReconnectProviderTask(), 5, 5, TimeUnit.MINUTES);
+        executor.scheduleWithFixedDelay(new ReconnectProviderTask(), 5, 1, TimeUnit.MINUTES);
         jtapiPeer = JtapiPeerFactory.getJtapiPeer(null);
     }
     
@@ -140,15 +140,15 @@ public class ProviderRegistryImpl implements ProviderRegistry, RegistryShutdownL
     }
     
     private class ReconnectProviderTask implements Runnable {
-
         public void run() {
-            for (ProviderController controller: controllers.values()) 
-                if (controller.getState().getId()==ProviderControllerState.OUT_OF_SERVICE){
+            for (ProviderController controller: controllers.values()) {
+                int id = controller.getState().getId();
+                if (id==ProviderControllerState.OUT_OF_SERVICE || id==ProviderControllerState.STOPED) {
                     log.info("Reinitializing provider controller. "+controller.getName());
                     controller.connect();
                 }
+            }
         }
-        
     }
 
     public void registryDidShutdown() {
