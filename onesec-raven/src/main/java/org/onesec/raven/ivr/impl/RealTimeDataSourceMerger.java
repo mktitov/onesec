@@ -31,25 +31,26 @@ import javax.media.protocol.PushBufferStream;
 import org.onesec.raven.impl.RingQueue;
 import org.onesec.raven.ivr.CodecManager;
 import org.onesec.raven.ivr.CodecManagerException;
-import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.ExecutorServiceException;
 import org.raven.sched.Task;
 import org.raven.tree.Node;
+import org.raven.tree.impl.LoggerHelper;
+import static java.lang.Math.*;
 
 /**
  *
  * @author Mikhail Titov
  */
-    public class RealTimeDataSourceMerger extends PushBufferDataSource {
+public class RealTimeDataSourceMerger extends PushBufferDataSource {
     private final static ContentDescriptor CONTENT_DESCRIPTOR = 
             new ContentDescriptor(ContentDescriptor.RAW);
     private final static AudioFormat FORMAT = new AudioFormat(AudioFormat.LINEAR, 8000d, 8, 1, -1
             , 0, 8, 16000.0, byte[].class);
     
+    private final LoggerHelper logger;
     private final CodecManager codecManager;
     private final Node owner;
-    private final String logPrefix;
     private final ExecutorService executor;
     private final int noiseLevel;
     private final double maxGainCoef;
@@ -67,10 +68,10 @@ import org.raven.tree.Node;
     {
         this.codecManager = codecManager;
         this.owner = owner;
-        this.logPrefix = logPrefix;
         this.executor = executor;
         this.noiseLevel = noiseLevel;
         this.maxGainCoef = maxGainCoef;
+        this.logger = new LoggerHelper(owner, (logPrefix==null?"":logPrefix)+"Merger. ");
     }
 
     
@@ -108,8 +109,8 @@ import org.raven.tree.Node;
                 }
                 executor.execute((Task)streams[0]);
             } catch (ExecutorServiceException ex) {
-                if (owner.isLogLevelEnabled(LogLevel.ERROR))
-                    owner.getLogger().error(logMess("Error executing STREAM task"), ex);
+                if (logger.isErrorEnabled())
+                    logger.error("Error executing STREAM task", ex);
                 throw new IOException(ex);
             }
     }
@@ -159,9 +160,9 @@ import org.raven.tree.Node;
         return DURATION_UNKNOWN;
     }
     
-    String logMess(String mess, Object... args) {
-        return (logPrefix==null? "" : logPrefix)+"Merger. "+String.format(mess, args);
-    }
+//    String logMess(String mess, Object... args) {
+//        return (logPrefix==null? "" : logPrefix)+"Merger. "+String.format(mess, args);
+//    }
     
     private class Stream implements PushBufferStream, Task {
         
@@ -219,8 +220,8 @@ import org.raven.tree.Node;
 
         public void run() {
             try {
-                if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                    owner.getLogger().debug(logMess("Merger task executed"));
+                if (logger.isDebugEnabled())
+                    logger.debug("Merger task executed");
                 long startTime = System.currentTimeMillis();
                 long packetNumber = 0;
                 while (!stopped) {
@@ -232,7 +233,6 @@ import org.raven.tree.Node;
                     long expectedPacketNumber = timeDiff/TICK_INTERVAL;
                     long correction = timeDiff % TICK_INTERVAL;
                     long sleepTime = (packetNumber-expectedPacketNumber) * TICK_INTERVAL - correction;
-//                    System.out.println(">>> SLEEP TIME: "+sleepTime);
                     if (sleepTime>0)
                         TimeUnit.MILLISECONDS.sleep(sleepTime);
                 }
@@ -249,7 +249,7 @@ import org.raven.tree.Node;
             while (handler!=null && handlersCount>0) {
                 Arrays.fill(workData, 0);
                 Buffer buffer = handler.peek();
-                int len = BUFFER_SIZE; int offset = 0; int max=0;
+                int len = BUFFER_SIZE; int offset = 0; int max=0; int processedBuffers = 0;
                 while (buffer!=null && len>0) {
                     int buflen = buffer.getLength();
                     if (buffer.isDiscard()) {
@@ -260,17 +260,18 @@ import org.raven.tree.Node;
                         int bufOffset = buffer.getOffset();
                         int bytesToRead = Math.min(len, buflen);
                         for (int i=bufOffset; i<bufOffset+bytesToRead; ++i) {
-                            int val = bufdata[i] & 0x00FF;
-                            int diff = Math.abs(val-127);
+                            int val = (bufdata[i] & 0x00FF) - 127;
+                            int diff = abs(val);
                             if (diff>max) 
                                 max = diff;
-                            workData[offset++] = (bufdata[i] & 0x00FF);
+                            workData[offset++] = val;
                         }
                         if (bytesToRead==buflen || buffer.isEOM()) {
                             handler.pop();
                             if (buffer.isEOM()) 
                                 decHandlersBy++;
                             buffer = handler.peek();
+                            ++processedBuffers;
                         } else {
                             buffer.setOffset(bufOffset+bytesToRead);
                             buffer.setLength(buflen-bytesToRead);
@@ -278,18 +279,20 @@ import org.raven.tree.Node;
                         len-=bytesToRead;
                     }
                 }
-                if (max>=noiseLevel) {
+                if (max>noiseLevel) {
                     ++buffersCount;
                     for (int i=0; i<offset; ++i)
                         data[i]+=workData[i];
                     if (offset>maxlen)
                         maxlen=offset;
                 }
-//                if (!handler.isAlive() && handler.nextHandler!=null) {
-//                    if (prevHandler==null) firstHandler = handler.nextHandler;
-//                    else prevHandler.nextHandler = handler.nextHandler;
-//                } else
-//                    prevHandler = handler;
+                if (handler.nextHandler!=null && !handler.isAlive()) {
+                    if (logger.isDebugEnabled())
+                        logger.debug("Data source handler removed");
+                    if (prevHandler==null) firstHandler = handler.nextHandler;
+                    else prevHandler.nextHandler = handler.nextHandler;
+                } else
+                    prevHandler = handler;
                 handler = handler.nextHandler;
             }
             swapBuffers(maxlen, buffersCount);
@@ -310,20 +313,20 @@ import org.raven.tree.Node;
             if (buffersCount==0)
                 Arrays.fill(byteData, (byte)127);
             else  {
-                int min=255; int max=0;
+                int min=0; int max=0;
                 for (int i=0; i<len; i++) {
                     int val = (int) (data[i]/buffersCount);
                     data[i] = val;
                     if (min>val) min = val;
                     if (max<val) max = val;
                 }
-                max = Math.max(max, 255-min);
-                double koef = max>0? 255./max : 1.;
-                koef = Math.min(koef, maxGainCoef);
+                max = max(max, abs(min));
+                double koef = max>0? 127./max : 1.;
+                koef = min(koef, maxGainCoef);
                 for (int i=0; i<len; ++i) {
                     if (koef>1.01) 
-                        data[i] = (int) (koef*(data[i]-127)+127);
-                    byteData[i] = (byte) data[i];
+                        data[i] = (int) (koef*data[i]);
+                    byteData[i] = (byte) (data[i]+127);
                 }
             }
         }
@@ -338,8 +341,7 @@ import org.raven.tree.Node;
         private final AtomicInteger bytesCount = new AtomicInteger(0);
 
         public DataSourceHandler(PushBufferDataSource datasource) throws CodecManagerException {
-            this.datasource = new TranscoderDataSource(codecManager, datasource, 
-                    FORMAT, owner, logMess(""));
+            this.datasource = new TranscoderDataSource(codecManager, datasource, FORMAT, logger);
         }
         
         public void init() throws IOException {
@@ -359,7 +361,7 @@ import org.raven.tree.Node;
         }
         
         public boolean isAlive() {
-            return alive.get();
+            return alive.get() || buffers.hasElement();
         }
 
         public void transferData(PushBufferStream stream) {
@@ -370,11 +372,11 @@ import org.raven.tree.Node;
                 if (data!=null)
                     bytesCount.addAndGet(data.length);
                 buffers.push(buffer);
-                if (buffer.isEOM() || stream.endOfStream())
+                if (buffer.isEOM())
                     alive.compareAndSet(true, false);
             } catch (IOException e) {
-                if (owner.isLogLevelEnabled(LogLevel.ERROR))
-                    owner.getLogger().error(logMess("DataSourceHandler. Buffer reading error"), e);
+                if (logger.isErrorEnabled())
+                    logger.error("DataSourceHandler. Buffer reading error", e);
             }
         }
     }

@@ -28,6 +28,7 @@ import org.raven.conv.ConversationScenarioState;
 import org.raven.sched.ExecutorService;
 import org.raven.tree.Node;
 import org.raven.tree.impl.BaseNode;
+import org.raven.tree.impl.LoggerHelper;
 import org.weda.annotations.constraints.NotNull;
 import org.weda.internal.annotations.Service;
 
@@ -59,7 +60,7 @@ public class TestEndpointConversationNode extends BaseNode implements IvrEndpoin
         super.doStart();
         audioStream = new ConcatDataSource(
                 FileTypeDescriptor.WAVE, executorService, codecManager, Codec.LINEAR, 240, 5, 5
-                , this, bufferCache);
+                , this, bufferCache, new LoggerHelper(this, null));
         audioStream.start();
 //        player = Manager.createPlayer(audioStream);
         operationController = JMFHelper.writeToFile(audioStream, fileName);

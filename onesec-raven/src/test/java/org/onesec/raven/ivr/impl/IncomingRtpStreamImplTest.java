@@ -30,6 +30,7 @@ import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.IncomingRtpStream;
 import org.onesec.raven.ivr.IncomingRtpStreamDataSourceListener;
 import static org.easymock.EasyMock.*;
+import org.raven.tree.impl.LoggerHelper;
 
 /**
  *
@@ -196,7 +197,7 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
             this.filename = filename;
             this.codec = codec;
             ds = new ConcatDataSource(FileTypeDescriptor.WAVE, executor, codecManager, codec, 240
-                    , 0, 0, manager, registry.getService(BufferCache.class));
+                    , 0, 0, manager, registry.getService(BufferCache.class), new LoggerHelper(manager, null));
             ds.start();
             writeControl = JMFHelper.writeToFile(ds, filename);
         }

@@ -27,6 +27,8 @@ import org.onesec.raven.ivr.CodecManager;
 import org.onesec.raven.ivr.CodecManagerException;
 import org.raven.log.LogLevel;
 import org.raven.tree.Node;
+import org.raven.tree.impl.LoggerHelper;
+import org.slf4j.Logger;
 
 /**
  *
@@ -40,20 +42,23 @@ public class TranscoderDataSource extends PushBufferDataSource {
     private final AtomicBoolean connected = new AtomicBoolean();
     private final CodecManager codecManager;
     private final PushBufferStream sourceStream;
-    private final Node owner;
-    private final String logPrefix;
+//    private final Node owner;
+//    private final String logPrefix;
+    private final Logger logger;
 
     public TranscoderDataSource(CodecManager codecManager, PushBufferDataSource source
-            , AudioFormat outputFormat, Node owner, String logPrefix) 
+            , AudioFormat outputFormat, LoggerHelper logger) 
             throws CodecManagerException 
     {
-        this.owner = owner;
-        this.logPrefix = logPrefix;
+//        this.logger = new LoggerHelper(owner, (logPrefix==null?"":logPrefix)+"Transcoder. ");
+        this.logger = new LoggerHelper(logger, "Transcoder. ");
+//        this.owner = owner;
+//        this.logPrefix = logPrefix;
         this.source = source;
         this.outputFormat = outputFormat;
         this.codecManager = codecManager;
         this.sourceStream = source.getStreams()[0];
-        this.streams = new TranscoderDataStream[]{new TranscoderDataStream(sourceStream, owner, this)};
+        this.streams = new TranscoderDataStream[]{new TranscoderDataStream(sourceStream, logger)};
     }
     
     @Override
@@ -71,25 +76,25 @@ public class TranscoderDataSource extends PushBufferDataSource {
         if (connected.compareAndSet(false, true)) {
             source.connect();
             try {
-                if (owner.isLogLevelEnabled(LogLevel.DEBUG)) {
-                    owner.getLogger().debug(logMess("Initializing "));
-                    owner.getLogger().debug(logMess("Input format: "+sourceStream.getFormat()));
-                    owner.getLogger().debug(logMess("Output format: "+outputFormat));
-                    owner.getLogger().debug(logMess("Codec chain"));
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Initializing ");
+                    logger.debug("Input format: "+sourceStream.getFormat());
+                    logger.debug("Output format: "+outputFormat);
+                    logger.debug("Codec chain");
                 }
                 CodecConfig[] codecChain = codecManager.buildCodecChain(
                         (AudioFormat)sourceStream.getFormat(), outputFormat);
-                if (owner.isLogLevelEnabled(LogLevel.DEBUG)) {
+                if (logger.isDebugEnabled()) {
                     for (int i=0; i<codecChain.length; i++) {
-                        owner.getLogger().debug(logMess("[%s] Codec: %s", i, codecChain[i].getCodec()));
-                        owner.getLogger().debug(logMess("[%s] in : %s", i, codecChain[i].getInputFormat()));
-                        owner.getLogger().debug(logMess("[%s] out: %s", i, codecChain[i].getOutputFormat()));
+                        logger.debug("[{}] Codec: {}", i, codecChain[i].getCodec());
+                        logger.debug("[{}] in : {}", i, codecChain[i].getInputFormat());
+                        logger.debug("[{}] out: {}", i, codecChain[i].getOutputFormat());
                     }
                 }
                 streams[0].init(codecChain, outputFormat);
             } catch (CodecManagerException ex) {
-                if (owner.isLogLevelEnabled(LogLevel.ERROR))
-                    owner.getLogger().error(logMess("Transcoder initializing error"), ex);
+                if (logger.isErrorEnabled())
+                    logger.error("Transcoder initializing error", ex);
                 throw new IOException(ex);
             }
         }
@@ -125,7 +130,7 @@ public class TranscoderDataSource extends PushBufferDataSource {
         return DURATION_UNKNOWN;
     }
     
-    String logMess(String mess, Object... args) {
-        return (logPrefix==null? "" : logPrefix)+"Transcoder. "+String.format(mess, args);
-    }
+//    String logMess(String mess, Object... args) {
+//        return (logPrefix==null? "" : logPrefix)+"Transcoder. "+String.format(mess, args);
+//    }
 }
