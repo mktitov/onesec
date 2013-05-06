@@ -244,15 +244,12 @@ import org.raven.tree.Node;
         private void mergeAndTranssmit() {
             Arrays.fill(data, 0);
             DataSourceHandler handler = firstHandler;
-            int decHandlersBy = 0;
-            int maxlen = 0;
-            int buffersCount = 0;
+            DataSourceHandler prevHandler = null;
+            int decHandlersBy = 0; int maxlen = 0; int buffersCount = 0;
             while (handler!=null && handlersCount>0) {
                 Arrays.fill(workData, 0);
                 Buffer buffer = handler.peek();
-                int len = BUFFER_SIZE;
-                int offset = 0;
-                int max=0;
+                int len = BUFFER_SIZE; int offset = 0; int max=0;
                 while (buffer!=null && len>0) {
                     int buflen = buffer.getLength();
                     if (buffer.isDiscard()) {
@@ -262,9 +259,6 @@ import org.raven.tree.Node;
                         byte[] bufdata = (byte[]) buffer.getData();
                         int bufOffset = buffer.getOffset();
                         int bytesToRead = Math.min(len, buflen);
-//                        System.out.println(String.format(
-//                                "### processing buffer: len=%d, offset=%d, bytesToRead: %d"
-//                                , buflen, bufOffset, bytesToRead));
                         for (int i=bufOffset; i<bufOffset+bytesToRead; ++i) {
                             int val = bufdata[i] & 0x00FF;
                             int diff = Math.abs(val-127);
@@ -272,11 +266,9 @@ import org.raven.tree.Node;
                                 max = diff;
                             workData[offset++] = (bufdata[i] & 0x00FF);
                         }
-//                            data[offset++] += (byte) (bufdata[i]/handlersCount);
-//                            data[offset] = add(data[offset++], bufdata[i]);
                         if (bytesToRead==buflen || buffer.isEOM()) {
                             handler.pop();
-                            if (buffer.isEOM())
+                            if (buffer.isEOM()) 
                                 decHandlersBy++;
                             buffer = handler.peek();
                         } else {
@@ -292,9 +284,12 @@ import org.raven.tree.Node;
                         data[i]+=workData[i];
                     if (offset>maxlen)
                         maxlen=offset;
-                } 
-//                else 
-//                    System.out.println("!!! DROPPED !!!");
+                }
+//                if (!handler.isAlive() && handler.nextHandler!=null) {
+//                    if (prevHandler==null) firstHandler = handler.nextHandler;
+//                    else prevHandler.nextHandler = handler.nextHandler;
+//                } else
+//                    prevHandler = handler;
                 handler = handler.nextHandler;
             }
             swapBuffers(maxlen, buffersCount);
@@ -305,7 +300,6 @@ import org.raven.tree.Node;
             buf.setData(byteData);
             buf.setOffset(0);
             buf.setLength(maxlen==0? BUFFER_SIZE : maxlen);
-//            System.out.println("maxlen: "+maxlen);
             bufferToTranssmit = buf;
             BufferTransferHandler _transferHandler = transferHandler;
             if (_transferHandler!=null)
@@ -323,40 +317,22 @@ import org.raven.tree.Node;
                     if (min>val) min = val;
                     if (max<val) max = val;
                 }
-//                System.out.println("min: "+min+"; max: "+max);
                 max = Math.max(max, 255-min);
-//                System.out.println("max max: "+max);
                 double koef = max>0? 255./max : 1.;
-//                System.out.println("koef: "+koef);
                 koef = Math.min(koef, maxGainCoef);
                 for (int i=0; i<len; ++i) {
-                    if (koef>1.01) {
-//                        System.out.println("before: "+data[i]);
+                    if (koef>1.01) 
                         data[i] = (int) (koef*(data[i]-127)+127);
-//                        System.out.println("after: "+data[i]);
-                    }
                     byteData[i] = (byte) data[i];
                 }
             }
         }
-        
-        private int add(int x, byte y) {
-            return (x & 0x00FF)+(y & 0x00FF);
-//            return (ix + iy/handlersCount);
-        }
-        
-//        private byte add(byte x, byte y) {
-//            byte a, b;
-//            do {
-//                a = (byte) (x & y); b = (byte) (x ^ y); x = (byte) (a << (byte)1); y = b;
-//            } while(a>0);
-//            return b;
-//        }
     }
     
     private class DataSourceHandler implements BufferTransferHandler {
         private final PushBufferDataSource datasource;
         private final RingQueue<Buffer> buffers = new RingQueue<Buffer>(20);
+        private final AtomicBoolean alive = new AtomicBoolean(true);
         
         private volatile DataSourceHandler nextHandler;
         private final AtomicInteger bytesCount = new AtomicInteger(0);
@@ -381,6 +357,10 @@ import org.raven.tree.Node;
         public Buffer pop() {
             return buffers.pop();
         }
+        
+        public boolean isAlive() {
+            return alive.get();
+        }
 
         public void transferData(PushBufferStream stream) {
             try {
@@ -390,6 +370,8 @@ import org.raven.tree.Node;
                 if (data!=null)
                     bytesCount.addAndGet(data.length);
                 buffers.push(buffer);
+                if (buffer.isEOM() || stream.endOfStream())
+                    alive.compareAndSet(true, false);
             } catch (IOException e) {
                 if (owner.isLogLevelEnabled(LogLevel.ERROR))
                     owner.getLogger().error(logMess("DataSourceHandler. Buffer reading error"), e);
