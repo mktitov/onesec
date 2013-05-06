@@ -36,6 +36,7 @@ import org.onesec.raven.ivr.*;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.tree.Node;
+import org.raven.tree.impl.LoggerHelper;
 import org.slf4j.Logger;
 
 /**
@@ -123,7 +124,7 @@ public class BufferCacheImpl implements BufferCache
                 PullToPushConverterDataSource converter = new PullToPushConverterDataSource(
                         parser, executor, requester);
                 transcoder = new TranscoderDataSource(
-                        codecManager, converter, codec.getAudioFormat(), requester, null);
+                        codecManager, converter, codec.getAudioFormat(), new LoggerHelper(requester, null));
                 transcoder.connect();
                 PacketSizeControl packetSizeControl =
                         (PacketSizeControl) transcoder.getControl(PacketSizeControl.class.getName());

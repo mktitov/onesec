@@ -39,6 +39,7 @@ import org.junit.Test;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.ivr.*;
 import org.raven.sched.impl.ExecutorServiceNode;
+import org.raven.tree.impl.LoggerHelper;
 
 /**
  *
@@ -81,7 +82,7 @@ public class OutgoingRtpStreamImplTest extends OnesecRavenTestCase implements Re
 
         ConcatDataSource audioSource = new ConcatDataSource(FileTypeDescriptor.WAVE, executor
                 , codecManager, Codec.G711_MU_LAW, 240, 5, 5, manager
-                , registry.getService(BufferCache.class));
+                , registry.getService(BufferCache.class), new LoggerHelper(manager, null));
 
         OutgoingRtpStream sendStream = manager.getOutgoingRtpStream(manager);
 //        Player player = Manager.createPlayer(new MediaLocator("rtp://"+localAddress.getHostAddress()+":1234/audio/1"));

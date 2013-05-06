@@ -27,6 +27,7 @@ import javax.media.protocol.PushBufferStream;
 import org.onesec.raven.ivr.CodecConfig;
 import org.raven.log.LogLevel;
 import org.raven.tree.Node;
+import org.slf4j.Logger;
 
 /**
  *
@@ -40,8 +41,9 @@ public class TranscoderDataStream implements PushBufferStream, BufferTransferHan
             new ContentDescriptor(ContentDescriptor.RAW);
     
     private final PushBufferStream sourceStream;
-    private final TranscoderDataSource owner;
-    private final Node node;
+//    private final TranscoderDataSource owner;
+    private final Logger logger;
+//    private final Node node;
     private CodecState[] codecs;
     private Format outFormat;
     private BufferTransferHandler transferHandler;
@@ -52,10 +54,11 @@ public class TranscoderDataStream implements PushBufferStream, BufferTransferHan
     private long outputBuffersCount = 0;
     private long processingTime = 0;
 
-    public TranscoderDataStream(PushBufferStream sourceStream, Node node, TranscoderDataSource owner) {
+    public TranscoderDataStream(PushBufferStream sourceStream, Logger logger) {
         this.sourceStream = sourceStream;
-        this.owner = owner;
-        this.node = node;
+        this.logger = logger;
+//        this.owner = owner;
+//        this.node = node;
     }
     
     void init(CodecConfig[] codecChain, Format outputFormat) {
@@ -126,8 +129,8 @@ public class TranscoderDataStream implements PushBufferStream, BufferTransferHan
             processBufferByCodec(buf, 0);
             processingTime += System.nanoTime()-cycleStartTs;
 //            String.format
-            if (buf.isEOM() && node.isLogLevelEnabled(LogLevel.DEBUG))
-                node.getLogger().debug(owner.logMess(
+            if (buf.isEOM() && logger.isDebugEnabled())
+                logger.debug(String.format(
                         "Source processed. inputBuffersCount: %s; outputBuffersCount: %s; "
                         + "average cycle time: %.4f ms, %s ns"
                         , buffersCount, outputBuffersCount, (double)processingTime/1e9/buffersCount

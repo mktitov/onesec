@@ -51,6 +51,7 @@ import org.raven.sched.impl.AbstractTask;
 import org.raven.sched.impl.ExecutorServiceNode;
 import org.raven.test.DataCollector;
 import org.raven.tree.Node;
+import org.raven.tree.impl.LoggerHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -160,7 +161,7 @@ public class StartRecordingActionTest extends OnesecRavenTestCase {
                             TestInputStreamSource source = new TestInputStreamSource("src/test/wav/test.wav");
                             ConcatDataSource dataSource = new ConcatDataSource(
                                     FileTypeDescriptor.WAVE, executor, codecManager, Codec.G711_MU_LAW, 240, 5
-                                    , 5, actionNode, bufferCache);
+                                    , 5, actionNode, bufferCache, new LoggerHelper(actionNode, null));
                             IncomingRtpStreamDataSourceListener listener = (IncomingRtpStreamDataSourceListener) arg;
                             dataSource.start();
                             dataSource.addSource(source);

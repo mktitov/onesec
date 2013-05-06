@@ -421,8 +421,9 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 if (isAllLogicalConnectionEstablished()) {
                     audioStream = new ConcatDataSource(
                             FileTypeDescriptor.WAVE, executor, codecManager, codec, packetSize, 0
-                            , maxSendAheadPacketsCount, owner, bufferCache);
-                    audioStream.setLogPrefix(callId+" : ");
+                            , maxSendAheadPacketsCount, owner, bufferCache
+                            , new LoggerHelper(logger, callId+" : "));
+//                    audioStream.setLogPrefix(callId+" : ");
                     audioStreamJustCreated.set(true);
                     outRtp.open(remoteAddress, remotePort, audioStream);
                     outRtp.start();

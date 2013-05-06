@@ -36,6 +36,7 @@ import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.Task;
 import org.raven.tree.Node;
+import org.raven.tree.impl.LoggerHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 /**
@@ -75,7 +76,7 @@ public class ConcatDataSourceTest extends EasyMock
 
         ConcatDataSource dataSource = new ConcatDataSource(
                 FileTypeDescriptor.WAVE, executorService, codecManager, Codec.G711_MU_LAW, 240, 5
-                , 5, owner, bufferCache);
+                , 5, owner, bufferCache, new LoggerHelper(owner, null));
 
         dataSource.start();
         JMFHelper.OperationController control = JMFHelper.writeToFile(dataSource, "target/iss_test.wav");
@@ -113,7 +114,7 @@ public class ConcatDataSourceTest extends EasyMock
 
         ConcatDataSource dataSource = new ConcatDataSource(
                 FileTypeDescriptor.WAVE, executorService, codecManager, Codec.G711_MU_LAW, 240, 5
-                , 5, owner, bufferCache);
+                , 5, owner, bufferCache, new LoggerHelper(owner, null));
 
         dataSource.start();
         JMFHelper.OperationController control  = JMFHelper.writeToFile(

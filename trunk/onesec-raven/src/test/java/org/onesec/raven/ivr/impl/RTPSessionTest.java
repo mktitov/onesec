@@ -55,6 +55,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static org.easymock.EasyMock.*;
 import org.onesec.raven.ivr.CodecManager;
+import org.raven.tree.impl.LoggerHelper;
 
 /**
  *
@@ -109,7 +110,7 @@ public class RTPSessionTest extends EasyMock implements ReceiveStreamListener, S
 
         ConcatDataSource dataSource = new ConcatDataSource(
                 FileTypeDescriptor.WAVE, executorService, codecManager, Codec.G711_MU_LAW, 240, 5
-                , 0, owner, bufferCache);
+                , 0, owner, bufferCache, new LoggerHelper(owner, null));
 
 //        RTPSession session = new RTPSession("127.0.0.1", 1234, dataSource);
         
@@ -168,7 +169,7 @@ public class RTPSessionTest extends EasyMock implements ReceiveStreamListener, S
 
         ConcatDataSource dataSource = new ConcatDataSource(
                 FileTypeDescriptor.WAVE, executorService, codecManager, Codec.G711_MU_LAW, 240, 5, 5
-                , owner, bufferCache);
+                , owner, bufferCache, new LoggerHelper(owner, null));
 
         dataSource.addSource(source1);
 //        dataSource.addSource(source2);

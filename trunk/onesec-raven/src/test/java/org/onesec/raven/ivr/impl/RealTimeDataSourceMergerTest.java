@@ -35,6 +35,7 @@ import org.raven.sched.ExecutorService;
 import org.raven.sched.ExecutorServiceException;
 import org.raven.sched.Task;
 import org.raven.tree.Node;
+import org.raven.tree.impl.LoggerHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -110,7 +111,7 @@ public class RealTimeDataSourceMergerTest extends Assert {
         verify(executor, owner);
     }
     
-    @Test
+//    @Test
     public void mergeTwoStreams() throws Exception {
         trainMocks();
         replay(executor, owner);
@@ -147,20 +148,21 @@ public class RealTimeDataSourceMergerTest extends Assert {
         verify(executor, owner);
     }
     
-//    @Test
+    @Test
     public void dynamicAddStream2() throws Exception {
         trainMocks();
         replay(executor, owner);
         
         PushBufferDataSource ds = createDataSourceFromFile("src/test/wav/test2.wav");
         TranscoderDataSource tds1 = new TranscoderDataSource(codecManager, ds
-                , Codec.G729.getAudioFormat(), owner, null);
+                , Codec.G729.getAudioFormat(), new LoggerHelper(owner, null));
         RealTimeDataSourceMerger merger = new RealTimeDataSourceMerger(codecManager, owner, null
-                , executor, 0, 3);
-        merger.addDataSource(tds1);
+                , executor, 0, 10);
+//        merger.addDataSource(tds1);
+        merger.addDataSource(ds);
         merger.addDataSource(createDataSourceFromFile("src/test/wav/test.wav"));
         merger.connect();
-        JMFHelper.OperationController controller = JMFHelper.writeToFile(merger, "target/merger_3_sources.wav");
+        JMFHelper.OperationController controller = JMFHelper.writeToFile(merger, "target/merger_3_1_sources.wav");
         TimeUnit.MILLISECONDS.sleep(1000);
         merger.addDataSource(createDataSourceFromFile("src/test/wav/greeting.wav"));
         TimeUnit.SECONDS.sleep(4);
@@ -203,6 +205,8 @@ public class RealTimeDataSourceMergerTest extends Assert {
         executor.execute(executeTask(owner));
         expectLastCall().atLeastOnce();
         expect(owner.getLogger()).andReturn(logger).anyTimes();
+        expect(owner.getLogLevel()).andReturn(LogLevel.TRACE).anyTimes();
+        expect(owner.getName()).andReturn("owner").anyTimes();
         expect(owner.isLogLevelEnabled(anyObject(LogLevel.class))).andReturn(Boolean.TRUE).anyTimes();
     }
     

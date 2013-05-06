@@ -28,9 +28,9 @@ import javax.media.protocol.BufferTransferHandler;
 import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.PushBufferStream;
 import org.onesec.raven.ivr.Codec;
-import org.raven.log.LogLevel;
 import org.raven.sched.Task;
 import org.raven.tree.Node;
+import org.raven.tree.impl.LoggerHelper;
 
 /**
  *
@@ -42,6 +42,7 @@ public class ConcatDataStream implements PushBufferStream, Task
     public static int MAX_SILENCE_BUFFER_COUNT = 1500;
     public static final int MAX_TIME_SKEW = 300;
 
+    private final LoggerHelper logger;
     private final Buffer silentBuffer;
     private final Queue<Buffer> bufferQueue;
     private final ConcatDataSource dataSource;
@@ -55,15 +56,16 @@ public class ConcatDataStream implements PushBufferStream, Task
     private long packetNumber;
     private long sleepTime;
     private AtomicInteger silencePacketCount = new AtomicInteger(0);
-    private String logPrefix;
+//    private String logPrefix;
     private AtomicReference<ConcatDataSource.SourceProcessor> sourceInfo = 
             new AtomicReference<ConcatDataSource.SourceProcessor>();
     private AtomicInteger emptyQueueEvents = new AtomicInteger(0);
 
     public ConcatDataStream(
             Queue<Buffer> bufferQueue, ConcatDataSource dataSource, Node owner
-            , int packetSize, Codec codec, int maxSendAheadPacketsCount, Buffer silentBuffer)
+            , int packetSize, Codec codec, int maxSendAheadPacketsCount, Buffer silentBuffer, LoggerHelper logger)
     {
+        this.logger = logger;
         this.bufferQueue = bufferQueue;
         this.dataSource = dataSource;
         this.contentDescriptor = new ContentDescriptor(dataSource.getContentType());
@@ -82,14 +84,14 @@ public class ConcatDataStream implements PushBufferStream, Task
         sourceInfo.compareAndSet(source, null);
     }
 
-    public String getLogPrefix() {
-        return logPrefix;
-    }
-
-    public void setLogPrefix(String logPrefix) {
-        this.logPrefix = logPrefix;
-    }
-
+//    public String getLogPrefix() {
+//        return logPrefix;
+//    }
+//
+//    public void setLogPrefix(String logPrefix) {
+//        this.logPrefix = logPrefix;
+//    }
+//
     public Format getFormat() {
         return dataSource.getFormat();
     }
@@ -140,7 +142,7 @@ public class ConcatDataStream implements PushBufferStream, Task
     }
 
     public String getStatusMessage() {
-        return String.format(logMess(
+        return String.format(logger.logMess(
                 "Transfering buffers to rtp session. Action: %s. packetCount: %s; sleepTime: %s"
                 , action, packetNumber, sleepTime));
     }
@@ -152,9 +154,9 @@ public class ConcatDataStream implements PushBufferStream, Task
             long startTime = System.currentTimeMillis();
             packetNumber = 0;
             ConcatDataSource.SourceProcessor si = null;
-            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                owner.getLogger().debug(logMess("Concat stream started with time quant %s ms", packetLength));
-            boolean debugEnabled = owner.isLogLevelEnabled(LogLevel.DEBUG);
+            if (logger.isDebugEnabled())
+                logger.debug("Concat stream started with time quant {} ms", packetLength);
+            boolean debugEnabled = logger.isDebugEnabled();
             long prevTime = System.currentTimeMillis();
             long maxTransferTime = 0;
             long droppedPacketCount = 0;
@@ -193,7 +195,7 @@ public class ConcatDataStream implements PushBufferStream, Task
                     emptyBufferEventCount = expectedPacketNumber - packetNumber;
                     if (si!=null && debugEnabled && curTime-prevTime>30000) {
                         prevTime = curTime;
-                        owner.getLogger().debug(logMess(
+                        logger.debug(String.format(
                                 "Empty buffers events count: %s; "
                                 + "avgTransferTime: %s; maxTransferTime: %s; buffers size: %s; "
                                 + " dropped packets count: %s"
@@ -206,16 +208,15 @@ public class ConcatDataStream implements PushBufferStream, Task
                     if (sleepTime>0)
                         TimeUnit.MILLISECONDS.sleep(sleepTime);
                 } catch (InterruptedException ex) {
-                    if (owner.isLogLevelEnabled(LogLevel.ERROR))
-                        owner.getLogger().error(logMess(
-                                "Transfer buffers to rtp session task was interrupted"), ex);
+                    if (logger.isErrorEnabled())
+                        logger.error("Transfer buffers to rtp session task was interrupted", ex);
                     Thread.currentThread().interrupt();
                     break;
                 }
             }
-            if (owner.isLogLevelEnabled(LogLevel.DEBUG)) {
-                owner.getLogger().debug(logMess("Transfer buffers to rtp session task was finished"));
-                owner.getLogger().debug(logMess(
+            if (debugEnabled) {
+                logger.debug("Transfer buffers to rtp session task was finished");
+                logger.debug(String.format(
                         "Empty buffers events count: %s; "
                         + "avgTransferTime: %s; maxTransferTime: %s; buffers size: %s; "
                         + " dropped packets count: %s"
@@ -227,9 +228,9 @@ public class ConcatDataStream implements PushBufferStream, Task
         }
     }
 
-    private String logMess(String mess, Object... args) {
-        return dataSource.logMess(mess, args);
-    }
+//    private String logMess(String mess, Object... args) {
+//        return dataSource.logMess(mess, args);
+//    }
     
     private class SourceInfo {
         private long expectedSourceBufferNumber = 0;

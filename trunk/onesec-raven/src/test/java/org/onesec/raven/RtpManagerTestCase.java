@@ -27,6 +27,7 @@ import org.onesec.raven.ivr.impl.RtpStreamManagerNode;
 import org.onesec.raven.ivr.impl.TestInputStreamSource;
 import org.raven.log.LogLevel;
 import org.raven.sched.impl.ExecutorServiceNode;
+import org.raven.tree.impl.LoggerHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -82,7 +83,7 @@ public class RtpManagerTestCase extends OnesecRavenTestCase
 
         final ConcatDataSource audioSource =
                 new ConcatDataSource(FileTypeDescriptor.WAVE, executor, codecManager, codec, 240, 5
-                , 5, manager, registry.getService(BufferCache.class));
+                , 5, manager, registry.getService(BufferCache.class), new LoggerHelper(manager, null));
         final OutgoingRtpStream sendStream = manager.getOutgoingRtpStream(manager);
         sendStream.open(host, port, audioSource);
         Thread runner = new Thread(){
