@@ -21,7 +21,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.media.Buffer;
 import javax.media.Format;
 import javax.media.Time;
-import javax.media.format.AudioFormat;
 import javax.media.protocol.BufferTransferHandler;
 import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.PushBufferDataSource;
@@ -40,8 +39,16 @@ import org.raven.tree.impl.LoggerHelper;
  */
 public class RealTimeConferenceMixer extends AbstractRealTimeMixer {
 
-    public RealTimeConferenceMixer(CodecManager codecManager, Node owner, LoggerHelper logger, ExecutorService executor, int noiseLevel, double maxGainCoef) {
+    public RealTimeConferenceMixer(CodecManager codecManager, Node owner, LoggerHelper logger, 
+        ExecutorService executor, int noiseLevel, double maxGainCoef) 
+    {
         super(codecManager, owner, logger, executor, noiseLevel, maxGainCoef);
+    }
+    
+    public ConferenceMixerSession addDataSource(PushBufferDataSource ds) throws CodecManagerException, IOException {
+        Handler handler = new Handler(ds);
+        addDataSourceHandler(handler);
+        return handler;
     }
 
     @Override
@@ -56,8 +63,8 @@ public class RealTimeConferenceMixer extends AbstractRealTimeMixer {
     }
     
     private static class BufferData {
-        private final int[] selfData;
         private final int[] data;
+        private final byte[] byteData;
         private final int len;
         private final int streamsCount;
         private final int bufferSize;
@@ -66,12 +73,15 @@ public class RealTimeConferenceMixer extends AbstractRealTimeMixer {
         public BufferData(int[] selfData, int[] data, int len, int streamsCount, int bufferSize, 
                 double maxGainCoef) 
         {
-            this.selfData = selfData==null? null : Arrays.copyOf(selfData, len);
             this.data = Arrays.copyOf(data, len);
             this.len = len;
-            this.streamsCount = streamsCount;
+            if (selfData!=null)
+                for (int i=0; i<len; ++i)
+                    data[i]-=selfData[i];
+            this.streamsCount = streamsCount - (selfData==null? 0:1);
             this.bufferSize = bufferSize;
             this.maxGainCoef = maxGainCoef;
+            this.byteData = new byte[len];
         }
     }
     
@@ -148,7 +158,7 @@ public class RealTimeConferenceMixer extends AbstractRealTimeMixer {
         }
         
         public void processConferenceAudioData(BufferData data) {
-            
+            ((HandlerStream)streams[0]).setAudioData(data);
         }
     }
     
@@ -168,7 +178,11 @@ public class RealTimeConferenceMixer extends AbstractRealTimeMixer {
         }
 
         public void read(Buffer buffer) throws IOException {
-            
+            BufferData a = audioData;
+            if (a!=null) 
+                createBuffer(buffer, a.data, a.byteData, a.len, a.streamsCount, a.maxGainCoef, a.bufferSize);
+            else 
+                buffer.setDiscard(true);
         }
 
         public void setTransferHandler(BufferTransferHandler transferHandler) {

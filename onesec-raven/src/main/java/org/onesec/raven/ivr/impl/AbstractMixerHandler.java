@@ -23,6 +23,7 @@ import javax.media.format.AudioFormat;
 import javax.media.protocol.BufferTransferHandler;
 import javax.media.protocol.PushBufferDataSource;
 import javax.media.protocol.PushBufferStream;
+import org.onesec.raven.Queue;
 import org.onesec.raven.impl.RingQueue;
 import org.onesec.raven.ivr.CodecManager;
 import org.onesec.raven.ivr.CodecManagerException;
@@ -34,10 +35,10 @@ import org.raven.tree.impl.LoggerHelper;
  * @author Mikhail Titov
  */
 public abstract class AbstractMixerHandler implements MixerHandler, BufferTransferHandler {
-    private final PushBufferDataSource datasource;
-    private final RingQueue<Buffer> buffers = new RingQueue<Buffer>(32);
-    private final AtomicBoolean alive = new AtomicBoolean(true);
+    private volatile DataHandler dataHandler;
     private final LoggerHelper logger;
+    private final CodecManager codecManager;
+    private final AudioFormat format;
 
     private volatile MixerHandler nextHandler;
     private final AtomicInteger bytesCount = new AtomicInteger(0);
@@ -46,27 +47,39 @@ public abstract class AbstractMixerHandler implements MixerHandler, BufferTransf
             LoggerHelper logger) throws CodecManagerException 
     {
         this.logger = logger;
-        this.datasource = new TranscoderDataSource(codecManager, datasource, format, logger);
+        this.codecManager = codecManager;
+        this.format = format;
+        this.dataHandler = new DataHandler(datasource);
     }
     
     public void init() throws IOException {
-        datasource.getStreams()[0].setTransferHandler(this);
-        datasource.connect();
-        datasource.start();
+        DataHandler _dataHandler = dataHandler;
+        if (_dataHandler!=null)
+            _dataHandler.init();
     }
+    
+//    protected void replaceDataSource(PushBufferDataSource datasource) {
+//        DataSource
+//    }
 
     public boolean isAlive() {
-        return alive.get() || buffers.hasElement();
+        DataHandler _dataHandler = dataHandler;
+        return _dataHandler!=null && _dataHandler.isAlive();
     }
 
-    public Buffer peek() {
-//        return bytesCount.get()>1200? buffers.peek() : null;
-        return buffers.peek();
+    public Queue getQueue() {
+        DataHandler _dataHandler = dataHandler;
+        return _dataHandler==null? null : _dataHandler.buffers;
     }
 
-    public Buffer pop() {
-        return buffers.pop();
-    }
+//    public Buffer peek() {
+////        return bytesCount.get()>1200? buffers.peek() : null;
+//        return buffers.peek();
+//    }
+//
+//    public Buffer pop() {
+//        return buffers.pop();
+//    }
 
     public MixerHandler getNextHandler() {
         return nextHandler;
@@ -77,22 +90,47 @@ public abstract class AbstractMixerHandler implements MixerHandler, BufferTransf
     }
 
     public PushBufferDataSource getDataSource() {
-        return datasource;
+        DataHandler _dataHandler = dataHandler;
+        return _dataHandler==null? null : _dataHandler.datasource;
     }
 
     public void transferData(PushBufferStream stream) {
-        try {
-            Buffer buffer = new Buffer();
-            stream.read(buffer);
-            byte[] data = (byte[]) buffer.getData();
-            if (data!=null)
-                bytesCount.addAndGet(data.length);
-            buffers.push(buffer);
-            if (buffer.isEOM())
-                alive.compareAndSet(true, false);
-        } catch (IOException e) {
-            if (logger.isErrorEnabled())
-                logger.error("DataSourceHandler. Buffer reading error", e);
+    }
+    
+    private class DataHandler implements BufferTransferHandler {
+        private final RingQueue<Buffer> buffers = new RingQueue<Buffer>(32);
+        private final AtomicBoolean alive = new AtomicBoolean(true);
+        private final PushBufferDataSource datasource;
+
+        public DataHandler(PushBufferDataSource datasource) throws CodecManagerException {
+            this.datasource = new TranscoderDataSource(codecManager, datasource, format, logger);
+        }
+        
+        public void init() throws IOException {
+            datasource.getStreams()[0].setTransferHandler(this);
+            datasource.connect();
+            datasource.start();
+        }
+        
+        public boolean isAlive() {
+            return alive.get() || buffers.hasElement();
+        }
+
+        public void transferData(PushBufferStream stream) {
+            try {
+                PushBufferDataSource ds = datasource;
+                Buffer buffer = new Buffer();
+                stream.read(buffer);
+                byte[] data = (byte[]) buffer.getData();
+                if (data!=null)
+                    bytesCount.addAndGet(data.length);
+                buffers.push(buffer);
+                if (buffer.isEOM())
+                    alive.compareAndSet(true, false);
+            } catch (IOException e) {
+                if (logger.isErrorEnabled())
+                    logger.error("DataSourceHandler. Buffer reading error", e);
+            }
         }
     }
 }

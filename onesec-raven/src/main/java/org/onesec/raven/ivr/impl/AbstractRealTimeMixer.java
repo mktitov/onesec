@@ -28,6 +28,7 @@ import javax.media.protocol.BufferTransferHandler;
 import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.PushBufferDataSource;
 import javax.media.protocol.PushBufferStream;
+import org.onesec.raven.Queue;
 import org.onesec.raven.ivr.CodecManager;
 import org.onesec.raven.ivr.MixerHandler;
 import org.raven.sched.ExecutorService;
@@ -103,7 +104,9 @@ public abstract class AbstractRealTimeMixer<H extends MixerHandler<H>> extends P
             try {
                 MixerHandler handler = firstHandler;
                 while (handler!=null) {
-                    handler.getDataSource().connect();
+                    PushBufferDataSource ds = handler.getDataSource();
+                    if (ds!=null)
+                        ds.connect();
                     handler = handler.getNextHandler();
                 }
                 executor.execute((Task)streams[0]);
@@ -120,7 +123,9 @@ public abstract class AbstractRealTimeMixer<H extends MixerHandler<H>> extends P
         stopped = true;
         MixerHandler handler = firstHandler;
         while (handler!=null) {
-            handler.getDataSource().disconnect();
+            PushBufferDataSource ds = handler.getDataSource();
+            if (ds!=null)
+                ds.disconnect();
             handler = handler.getNextHandler();
         }
         connected.set(false);
@@ -131,7 +136,9 @@ public abstract class AbstractRealTimeMixer<H extends MixerHandler<H>> extends P
             return;
         MixerHandler handler = firstHandler;
         while (handler!=null) {
-            handler.getDataSource().start();
+            PushBufferDataSource ds = handler.getDataSource();
+            if (ds!=null)
+                ds.start();
             handler = handler.getNextHandler();
         }
     }
@@ -142,7 +149,9 @@ public abstract class AbstractRealTimeMixer<H extends MixerHandler<H>> extends P
             return;
         MixerHandler handler = firstHandler;
         while (handler!=null) {
-            handler.getDataSource().stop();
+            PushBufferDataSource ds = handler.getDataSource();
+            if (ds!=null)
+                ds.stop();
             handler = handler.getNextHandler();
         }
     }
@@ -288,14 +297,17 @@ public abstract class AbstractRealTimeMixer<H extends MixerHandler<H>> extends P
         }
                        
         private int processHandlerBuffer(MixerHandler handler) {
+            Queue<Buffer> bufferQueue = handler.getQueue();
+            if (bufferQueue==null)
+                return 0;
             Arrays.fill(workData, 0);
-            Buffer buffer = handler.peek();
+            Buffer buffer = bufferQueue.peek();
             int len = BUFFER_SIZE; int offset = 0; int max=0;
             while (buffer!=null && len>0) {
                 int buflen = buffer.getLength();
                 if (buffer.isDiscard()) {
-                    handler.pop();
-                    buffer = handler.peek();
+                    bufferQueue.pop();
+                    buffer = bufferQueue.peek();
                 } else {
                     byte[] bufdata = (byte[]) buffer.getData();
                     int bufOffset = buffer.getOffset();
@@ -306,8 +318,8 @@ public abstract class AbstractRealTimeMixer<H extends MixerHandler<H>> extends P
                         workData[offset++] = val;
                     }
                     if (bytesToRead==buflen || buffer.isEOM()) {
-                        handler.pop();
-                        buffer = handler.peek();
+                        bufferQueue.pop();
+                        buffer = bufferQueue.peek();
                     } else {
                         buffer.setOffset(bufOffset+bytesToRead);
                         buffer.setLength(buflen-bytesToRead);
