@@ -463,7 +463,7 @@ public class CallRecorderNode extends BaseNode
         
         private final IvrConversationsBridge bridge;
         private final long recordingStartTime = System.currentTimeMillis();
-        private final RealTimeDataSourceMerger merger;
+        private final RealTimeMixer merger;
         private final AudioFileWriterDataSource fileWriter;
         private final File file;
         private final RecordSchemaNode schema;
@@ -481,7 +481,7 @@ public class CallRecorderNode extends BaseNode
             this.file = file;
             this.schema = schema;
             this.context = context;
-            merger = new RealTimeDataSourceMerger(codecManager, CallRecorderNode.this
+            merger = new RealTimeMixer(codecManager, CallRecorderNode.this
                     , logMess(bridge, ""), executor, noiseLevel, maxGainCoef);
             fileWriter = new AudioFileWriterDataSource(CallRecorderNode.this, file, merger, codecManager
                     , FileTypeDescriptor.WAVE, logMess(bridge, ""));
