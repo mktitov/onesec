@@ -28,7 +28,7 @@ import org.onesec.raven.ivr.IncomingRtpStreamDataSourceListener;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.RtpStreamException;
 import org.onesec.raven.ivr.impl.AudioFileWriterDataSource;
-import org.onesec.raven.ivr.impl.RealTimeDataSourceMerger;
+import org.onesec.raven.ivr.impl.RealTimeMixer;
 import org.raven.BindingNames;
 import org.raven.RavenUtils;
 import org.raven.cache.TemporaryFileManager;
@@ -101,7 +101,7 @@ public class StartRecordingAction extends AsyncAction {
         private final DataContext context;
         private final TemporaryFileManager tempFileManager;
         private final IncomingRtpStream inRtp;
-        private final RealTimeDataSourceMerger merger;
+        private final RealTimeMixer merger;
         private final AudioFileWriterDataSource writer;
         private final Node loggerNode;
         private final String key;
@@ -122,7 +122,7 @@ public class StartRecordingAction extends AsyncAction {
             this.conversation = conversation;
             String logPrefix = logMess("");
             File file = tempFileManager.createFile(actionNode, key, "audio/wav");
-            merger = new RealTimeDataSourceMerger(codecManager, loggerNode, logPrefix
+            merger = new RealTimeMixer(codecManager, loggerNode, logPrefix
                     , conversation.getExecutorService()
                     , actionNode.getNoiseLevel(), actionNode.getMaxGainCoef());
             writer = new AudioFileWriterDataSource(loggerNode, file, merger, codecManager

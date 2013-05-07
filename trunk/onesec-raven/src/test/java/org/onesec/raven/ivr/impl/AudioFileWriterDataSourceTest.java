@@ -74,7 +74,7 @@ public class AudioFileWriterDataSourceTest {
         trainMocks();
         replay(executor, owner);
         
-        RealTimeDataSourceMerger merger = new RealTimeDataSourceMerger(codecManager, owner, null, executor, 3, 3);
+        RealTimeMixer merger = new RealTimeMixer(codecManager, owner, null, executor, 3, 3);
         merger.addDataSource(createDataSourceFromFile("src/test/wav/test2.wav"));
         merger.addDataSource(createDataSourceFromFile("src/test/wav/test.wav"));
         
