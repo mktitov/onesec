@@ -13,17 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.onesec.raven.ivr;
-
-import javax.media.protocol.PushBufferDataSource;
+package org.onesec.raven;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface ConferenceMixerSession {
-    public boolean stopSession();
-    public PushBufferDataSource getConferenceAudioSource();
-    public void stopParticipantAudio();
-    public void replaceParticipantAudio(PushBufferDataSource audioSource);
+public interface Queue<E> {
+    public boolean push(E element);
+    public boolean hasElement();
+    public E peek();
+    public E pop();
 }

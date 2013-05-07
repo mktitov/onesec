@@ -15,11 +15,13 @@
  */
 package org.onesec.raven.impl;
 
+import org.onesec.raven.Queue;
+
 /**
  * Goal: Optimized queue for one thread write another read.
  * @author Mikhail Titov
  */
-public class RingQueue<E>  {
+public class RingQueue<E> implements Queue<E> {
     
     private final E[] data;
     private final long maxSize;
