@@ -25,8 +25,8 @@ import javax.media.format.AudioFormat;
 import javax.media.protocol.BufferTransferHandler;
 import javax.media.protocol.PushBufferDataSource;
 import javax.media.protocol.PushBufferStream;
-import org.onesec.raven.Queue;
-import org.onesec.raven.impl.RingQueue;
+import org.onesec.raven.RingQueue;
+import org.onesec.raven.impl.RingQueueImpl;
 import org.onesec.raven.ivr.CodecManager;
 import org.onesec.raven.ivr.CodecManagerException;
 import org.onesec.raven.ivr.MixerHandler;
@@ -54,13 +54,7 @@ public abstract class AbstractMixerHandler implements MixerHandler, BufferTransf
         this.dataHandler = new DataHandler(datasource);
         this.dataHandler.init();
     }
-    
-//    public void init() throws IOException {
-//        DataHandler _dataHandler = dataHandler;
-//        if (_dataHandler!=null)
-//            _dataHandler.init();
-//    }
-    
+        
     protected void replaceDataSource(PushBufferDataSource datasource) throws Exception {
         DataHandler oldHandler = dataHandler;
         if (datasource!=null) {
@@ -73,12 +67,36 @@ public abstract class AbstractMixerHandler implements MixerHandler, BufferTransf
             oldHandler.stop();
     }
 
+    public void connect() throws IOException {
+        DataHandler _dataHandler = dataHandler;
+        if (_dataHandler!=null)
+            _dataHandler.datasource.connect();
+    }
+
+    public void disconnect() {
+        DataHandler _dataHandler = dataHandler;
+        if (_dataHandler!=null)
+            _dataHandler.datasource.disconnect();
+    }
+
+    public void start() throws IOException {
+        DataHandler _dataHandler = dataHandler;
+        if (_dataHandler!=null)
+            _dataHandler.datasource.start();
+    }
+
+    public void stop() throws IOException {
+        DataHandler _dataHandler = dataHandler;
+        if (_dataHandler!=null)
+            _dataHandler.datasource.stop();
+    }
+
     public boolean isAlive() {
         DataHandler _dataHandler = dataHandler;
         return _dataHandler!=null && _dataHandler.isAlive();
     }
 
-    public Queue getQueue() {
+    public RingQueue getQueue() {
         DataHandler _dataHandler = dataHandler;
         return _dataHandler==null? null : _dataHandler.buffers;
     }
@@ -109,7 +127,7 @@ public abstract class AbstractMixerHandler implements MixerHandler, BufferTransf
     }
     
     private class DataHandler implements BufferTransferHandler {
-        private final RingQueue<Buffer> buffers = new RingQueue<Buffer>(32);
+        private final RingQueueImpl<Buffer> buffers = new RingQueueImpl<Buffer>(32);
         private final AtomicBoolean alive = new AtomicBoolean(true);
         private final PushBufferDataSource datasource;
 

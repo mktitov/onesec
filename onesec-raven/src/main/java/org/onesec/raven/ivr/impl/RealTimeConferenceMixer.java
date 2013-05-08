@@ -54,11 +54,11 @@ public class RealTimeConferenceMixer extends AbstractRealTimeMixer {
     protected void applyBufferToHandlers(MixerHandler firstHandler, int[] data, int len, int streamsCount, 
         double maxGainCoef, int bufferSize) 
     {
-        Handler handler = (Handler)firstHandler;
-        while (handler!=null) {
-            if (!handler.isSessionStopped())
-                handler.applyMergedBuffer(data, len, streamsCount, maxGainCoef, bufferSize);
-        }
+//        Handler handler = (Handler)firstHandler;
+//        while (handler!=null) {
+//            if (!handler.isSessionStopped())
+//                handler.applyMergedBuffer(data, len, streamsCount, maxGainCoef, bufferSize);
+//        }
     }
     
     private static class BufferData {
@@ -107,6 +107,12 @@ public class RealTimeConferenceMixer extends AbstractRealTimeMixer {
         }
 
         @Override
+        public void stop() throws IOException {
+            super.stop();
+            conferenceAudio.stop();
+        }
+
+        @Override
         public boolean isAlive() {
             return super.isAlive() || !sessionStopped.get();
         }
@@ -149,8 +155,12 @@ public class RealTimeConferenceMixer extends AbstractRealTimeMixer {
 
         @Override public void connect() throws IOException { }
         @Override public void disconnect() { }
+        
         @Override public void start() throws IOException { }
-        @Override public void stop() throws IOException { }
+        
+        @Override public void stop() throws IOException { 
+            ((HandlerStream)streams[0]).stop();
+        }
 
         @Override public Object getControl(String paramString) {
             return null;
@@ -172,24 +182,39 @@ public class RealTimeConferenceMixer extends AbstractRealTimeMixer {
     private class HandlerStream implements PushBufferStream {
         private volatile BufferTransferHandler transferHandler;
         private volatile BufferData audioData;
+        private AtomicBoolean stopped = new AtomicBoolean();
 
         public Format getFormat() {
             return FORMAT;
         }
         
+        public void stop() {
+            if (stopped.compareAndSet(false, true)) 
+                informTransferHandler();
+        }
+        
         public void setAudioData(BufferData data) {
             this.audioData = data;
+            informTransferHandler();
+        }
+        
+        private void informTransferHandler() {
             BufferTransferHandler _transferHandler = transferHandler;
             if (_transferHandler!=null)
                 _transferHandler.transferData(this);
         }
 
         public void read(Buffer buffer) throws IOException {
-            BufferData a = audioData;
-            if (a!=null) 
-                createBuffer(buffer, a.data, a.byteData, a.len, a.streamsCount, a.maxGainCoef, a.bufferSize);
-            else 
-                buffer.setDiscard(true);
+            if (stopped.get()) {
+                buffer.setLength(0);
+                buffer.setEOM(true);
+            } else {
+                BufferData a = audioData;
+                if (a!=null) 
+                    createBuffer(buffer, a.data, a.byteData, a.len, a.streamsCount, a.maxGainCoef, a.bufferSize);
+                else 
+                    buffer.setDiscard(true);
+            }
         }
 
         public void setTransferHandler(BufferTransferHandler transferHandler) {

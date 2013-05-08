@@ -33,7 +33,7 @@ public class RingQueueTest extends Assert {
     
     @Test
     public void test() {
-        RingQueue queue = new RingQueue(4);
+        RingQueueImpl queue = new RingQueueImpl(4);
         assertFalse(queue.hasElement());
         assertNull(queue.peek());
         assertNull(queue.pop());
@@ -48,7 +48,7 @@ public class RingQueueTest extends Assert {
     
     @Test
     public void overflowTest() {
-        RingQueue queue = new RingQueue(1);
+        RingQueueImpl queue = new RingQueueImpl(1);
         assertTrue(queue.push("test"));
         assertFalse(queue.push("test2"));
         assertEquals("test", queue.pop());

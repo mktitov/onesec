@@ -15,9 +15,10 @@
  */
 package org.onesec.raven.ivr;
 
+import java.io.IOException;
 import javax.media.Buffer;
 import javax.media.protocol.PushBufferDataSource;
-import org.onesec.raven.Queue;
+import org.onesec.raven.RingQueue;
 
 /**
  *
@@ -26,7 +27,7 @@ import org.onesec.raven.Queue;
 public interface MixerHandler<H extends MixerHandler> {
 //    public void init() throws IOException;
     public boolean isAlive();
-    public Queue<Buffer> getQueue();
+    public RingQueue<Buffer> getQueue();
 //    public Buffer peek();
 //    public Buffer pop();
     public H getNextHandler();
@@ -34,4 +35,8 @@ public interface MixerHandler<H extends MixerHandler> {
     public void applyProcessingBuffer(int[] buffer);
     public void applyMergedBuffer(int[] data, int len, int streamsCount, double maxGainCoef, int bufferSize);
     public PushBufferDataSource getDataSource();
+    public void connect() throws IOException;
+    public void disconnect();
+    public void start() throws IOException;
+    public void stop() throws IOException;
 }

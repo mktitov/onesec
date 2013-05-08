@@ -48,10 +48,7 @@ public class TranscoderDataSource extends PushBufferDataSource {
             , AudioFormat outputFormat, LoggerHelper logger) 
             throws CodecManagerException 
     {
-//        this.logger = new LoggerHelper(owner, (logPrefix==null?"":logPrefix)+"Transcoder. ");
         this.logger = new LoggerHelper(logger, "Transcoder. ");
-//        this.owner = owner;
-//        this.logPrefix = logPrefix;
         this.source = source;
         this.outputFormat = outputFormat;
         this.codecManager = codecManager;

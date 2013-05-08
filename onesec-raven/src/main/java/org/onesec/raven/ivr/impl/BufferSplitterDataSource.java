@@ -19,10 +19,14 @@ import java.io.IOException;
 import javax.media.Buffer;
 import javax.media.Format;
 import javax.media.Time;
+import javax.media.format.AudioFormat;
 import javax.media.protocol.BufferTransferHandler;
 import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.PushBufferDataSource;
 import javax.media.protocol.PushBufferStream;
+import org.onesec.raven.ivr.CodecManager;
+import org.onesec.raven.ivr.CodecManagerException;
+import org.raven.tree.impl.LoggerHelper;
 
 /**
  *
@@ -32,11 +36,15 @@ public class BufferSplitterDataSource extends PushBufferDataSource {
     
     private final PushBufferDataSource source;
     private final PushBufferStream[] streams;
+    public final static AudioFormat FORMAT = new AudioFormat(AudioFormat.LINEAR, 8000d, 8, 1, -1
+            , 0, 8, 16000.0, byte[].class);
 
-    public BufferSplitterDataSource(PushBufferDataSource source, int bufferSize) {
-        this.source = source;
-        streams = new PushBufferStream[]{new Stream(source.getStreams()[0], bufferSize)};
-        source.getStreams()[0].setTransferHandler((BufferTransferHandler)streams[0]);
+    public BufferSplitterDataSource(PushBufferDataSource source, int bufferSize, 
+            CodecManager codecManager, LoggerHelper logger) throws CodecManagerException 
+    {
+        this.source = new TranscoderDataSource(codecManager, source, FORMAT, logger);
+        streams = new PushBufferStream[]{new Stream(this.source.getStreams()[0], bufferSize)};
+        this.source.getStreams()[0].setTransferHandler((BufferTransferHandler)streams[0]);
     }
 
     @Override
@@ -140,7 +148,7 @@ public class BufferSplitterDataSource extends PushBufferDataSource {
                 while (pos<len) {
                     int clen = Math.min(bufferSize, len-pos);
                     byte[] newData = new byte[clen];
-                    System.out.println(String.format("source len: %d, pos: %d, len: %d", len, pos, clen));
+//                    System.out.println(String.format("source len: %d, pos: %d, len: %d", len, pos, clen));
                     System.arraycopy(data, pos, newData, 0, clen);
                     buffer = new Buffer();
                     buffer.setData(newData);

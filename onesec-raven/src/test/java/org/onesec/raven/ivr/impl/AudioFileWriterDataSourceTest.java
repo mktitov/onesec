@@ -33,6 +33,7 @@ import org.raven.sched.ExecutorService;
 import org.raven.sched.ExecutorServiceException;
 import org.raven.sched.Task;
 import org.raven.tree.Node;
+import org.raven.tree.impl.LoggerHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +42,8 @@ import org.slf4j.LoggerFactory;
  * @author Mikhail Titov
  */
 public class AudioFileWriterDataSourceTest {
-    private static Logger logger = LoggerFactory.getLogger(ContainerParserDataSource.class);
+    private final static Logger logger = LoggerFactory.getLogger(ContainerParserDataSource.class);
+    private final static LoggerHelper loggerHelper = new LoggerHelper(LogLevel.TRACE, "Logger", null, logger);
     private static volatile int tasksFinished;
     private CodecManager codecManager;
     private Node owner;
@@ -59,9 +61,8 @@ public class AudioFileWriterDataSourceTest {
         replay(executor, owner);
         PushBufferDataSource ds = createDataSourceFromFile("src/test/wav/test2.wav");
         
-        AudioFileWriterDataSource writer = new AudioFileWriterDataSource(owner
-                , new File("target/mux_test.wav"), ds, codecManager, FileTypeDescriptor.WAVE
-                , null);
+        AudioFileWriterDataSource writer = new AudioFileWriterDataSource(
+                new File("target/mux_test.wav"), ds, codecManager, FileTypeDescriptor.WAVE, loggerHelper);
         writer.start();
         TimeUnit.SECONDS.sleep(10);
         writer.stop();
@@ -78,9 +79,9 @@ public class AudioFileWriterDataSourceTest {
         merger.addDataSource(createDataSourceFromFile("src/test/wav/test2.wav"));
         merger.addDataSource(createDataSourceFromFile("src/test/wav/test.wav"));
         
-        AudioFileWriterDataSource writer = new AudioFileWriterDataSource(owner
-                , new File("target/mux_with_merger_test.wav"), merger, codecManager, FileTypeDescriptor.WAVE
-                , null);
+        AudioFileWriterDataSource writer = new AudioFileWriterDataSource(
+                new File("target/mux_with_merger_test.wav"), merger, codecManager, FileTypeDescriptor.WAVE
+                , loggerHelper);
         writer.start();
         TimeUnit.SECONDS.sleep(4);
         writer.stop();
