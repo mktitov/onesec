@@ -19,7 +19,7 @@ package org.onesec.raven;
  *
  * @author Mikhail Titov
  */
-public interface Queue<E> {
+public interface RingQueue<E> {
     public boolean push(E element);
     public boolean hasElement();
     public E peek();

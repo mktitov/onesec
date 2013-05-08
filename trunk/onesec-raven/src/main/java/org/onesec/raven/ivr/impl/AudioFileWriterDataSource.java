@@ -27,30 +27,31 @@ import javax.media.protocol.*;
 import org.onesec.raven.ivr.CodecManager;
 import org.raven.log.LogLevel;
 import org.raven.tree.Node;
+import org.raven.tree.impl.LoggerHelper;
 
 /**
  *
  * @author Mikhail Titov
  */
 public class AudioFileWriterDataSource {
-    private final Node owner;
+//    private final Node owner;
+    private final LoggerHelper logger;
     private final File file;
     private final PushBufferDataSource dataSource;
-    private final String logPrefix;
+//    private final String logPrefix;
     private final Multiplexer mux;
     private boolean firstBuffer = true;
     private RandomAccessFile out;
     private final AtomicBoolean fileClosed = new AtomicBoolean(false);
     private final AtomicBoolean muxClosed = new AtomicBoolean(false);
 
-    public AudioFileWriterDataSource(Node owner, File file, PushBufferDataSource dataSource
-            , CodecManager codecManager, String contentType, String logPrefix) 
+    public AudioFileWriterDataSource(File file, PushBufferDataSource dataSource
+            , CodecManager codecManager, String contentType, LoggerHelper logger) 
         throws FileWriterDataSourceException 
     {
-        this.owner = owner;
+        this.logger = new LoggerHelper(logger, "Audio file writer. ");
         this.file = file;
         this.dataSource = dataSource;
-        this.logPrefix = logPrefix;
         mux = codecManager.buildMultiplexer(contentType);
         if (mux==null) 
             throw new FileWriterDataSourceException(String.format(
@@ -71,8 +72,8 @@ public class AudioFileWriterDataSource {
         try {
             dataSource.stop();
         } catch (IOException ex) {
-            if (owner.isLogLevelEnabled(LogLevel.ERROR))
-                owner.getLogger().error(logMess("Error stopping data source"), ex);
+            if (logger.isErrorEnabled())
+                logger.error("Error stopping data source", ex);
         }
         dataSource.disconnect();
     }
@@ -93,13 +94,13 @@ public class AudioFileWriterDataSource {
             return;
         if (out==null)
             return;
-        if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-            owner.getLogger().debug(logMess("Closing file (%s)", file));
+        if (logger.isDebugEnabled())
+            logger.debug("Closing file ({})", file);
         try {
             out.close();
         } catch (IOException ex) {
-            if (owner.isLogLevelEnabled(LogLevel.ERROR))
-                owner.getLogger().error(logMess("Error while closing file (%s)", file));
+            if (logger.isErrorEnabled())
+                logger.error("Error while closing file ({})", file);
         }
     }
     
@@ -108,34 +109,30 @@ public class AudioFileWriterDataSource {
             return;
         try {
             if (mux!=null && mux.getDataOutput()!=null) {
-                if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                    owner.getLogger().debug(logMess("Closing mux"));
+                if (logger.isDebugEnabled())
+                    logger.debug("Closing mux");
                 mux.close();
                 mux.getDataOutput().stop();
                 mux.getDataOutput().disconnect();
             }
         } catch (IOException e) {
-            if (owner.isLogLevelEnabled(LogLevel.ERROR))
-                owner.getLogger().error(logMess("Error while closing mux"), e);
+            if (logger.isErrorEnabled())
+                logger.error("Error while closing mux", e);
         }
     }
     
     private void processError(Exception error) {
         out = null;
         dataSource.getStreams()[0].setTransferHandler(null);
-        if (owner.isLogLevelEnabled(LogLevel.ERROR))
-            owner.getLogger().error(logMess("Error writing data to file (%s)", file), error);
+        if (logger.isErrorEnabled())
+            logger.error("Error writing data to file ({})", file, error);
         closeMux();
         closeFile();
     }
     
-    private String logMess(String mess, Object... args) {
-        return (logPrefix==null? "" : logPrefix)+"Audio file writer. "+String.format(mess, args);
-    }
-
     private void initMux(Buffer buffer) {
-        if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-            owner.getLogger().debug(logMess("Initializing multiplexer"));
+        if (logger.isDebugEnabled())
+            logger.debug("Initializing multiplexer");
         Format fmt = mux.setInputFormat(buffer.getFormat(), 0);
         try {
             if (fmt==null) 
@@ -151,11 +148,9 @@ public class AudioFileWriterDataSource {
     }
     
     private class MuxTransferHandler implements SourceTransferHandler, Seekable {
-        
-
         public MuxTransferHandler() throws FileNotFoundException {
-            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                owner.getLogger().debug(logMess("Creating file (%s)", file));
+            if (logger.isDebugEnabled())
+                logger.debug("Creating file ({})", file);
             out = new RandomAccessFile(file, "rw");
         }
 

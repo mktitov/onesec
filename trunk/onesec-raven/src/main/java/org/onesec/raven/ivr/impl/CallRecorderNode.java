@@ -52,6 +52,7 @@ import org.raven.tree.NodeAttribute;
 import org.raven.tree.Viewable;
 import org.raven.tree.ViewableObject;
 import org.raven.tree.impl.BaseNode;
+import org.raven.tree.impl.LoggerHelper;
 import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
 import org.raven.tree.impl.ViewableObjectImpl;
 import org.weda.annotations.constraints.NotNull;
@@ -468,6 +469,7 @@ public class CallRecorderNode extends BaseNode
         private final File file;
         private final RecordSchemaNode schema;
         private final DataContext context;
+        private final LoggerHelper logger;
         
         private volatile boolean stopped = false;
         private volatile IncomingRtpStream inRtp1;
@@ -481,10 +483,10 @@ public class CallRecorderNode extends BaseNode
             this.file = file;
             this.schema = schema;
             this.context = context;
+            this.logger = new LoggerHelper(CallRecorderNode.this, bridge.toString()+"Recorder. ");
             merger = new RealTimeMixer(codecManager, CallRecorderNode.this
-                    , logMess(bridge, ""), executor, noiseLevel, maxGainCoef);
-            fileWriter = new AudioFileWriterDataSource(CallRecorderNode.this, file, merger, codecManager
-                    , FileTypeDescriptor.WAVE, logMess(bridge, ""));
+                    , logger.getPrefix(), executor, noiseLevel, maxGainCoef);
+            fileWriter = new AudioFileWriterDataSource(file, merger, codecManager, FileTypeDescriptor.WAVE, logger);
         }
         
         public synchronized void startRecording() {
@@ -498,8 +500,8 @@ public class CallRecorderNode extends BaseNode
                 fileWriter.start();
             } catch (Exception ex) {
                 stopped = true;
-                if (isLogLevelEnabled(LogLevel.ERROR))
-                    getLogger().error(logMess(bridge, "Error starting writing to file (%s)", file), ex);
+                if (logger.isErrorEnabled())
+                    logger.error(String.format("Error starting writing to file (%s)", file), ex);
                 fileWriter.stop();
             }
         }
@@ -541,8 +543,8 @@ public class CallRecorderNode extends BaseNode
                 }
             } catch (RtpStreamException e) {
                 stopped = true;
-                if (isLogLevelEnabled(LogLevel.ERROR))
-                    getLogger().error(logMess(bridge, "Error handling stream substitution"), e);
+                if (logger.isErrorEnabled())
+                    logger.error("Error handling stream substitution", e);
                 fileWriter.stop();
             }
         }
@@ -553,8 +555,8 @@ public class CallRecorderNode extends BaseNode
                     merger.addDataSource((PushBufferDataSource)dataSource);
             } catch (Exception e) {
                 stopped = true;
-                if (isLogLevelEnabled(LogLevel.ERROR))
-                    getLogger().error(logMess(bridge, "Error starting writing to file (%s)", file), e);
+                if (logger.isErrorEnabled())
+                    logger.error(String.format("Error starting writing to file (%s)", file), e);
                 fileWriter.stop();
             }
         }

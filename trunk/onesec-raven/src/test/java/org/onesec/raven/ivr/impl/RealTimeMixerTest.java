@@ -15,7 +15,6 @@
  */
 package org.onesec.raven.ivr.impl;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import javax.media.protocol.FileTypeDescriptor;
@@ -45,6 +44,7 @@ import org.slf4j.LoggerFactory;
  */
 public class RealTimeMixerTest extends Assert {
     private static Logger logger = LoggerFactory.getLogger(ContainerParserDataSource.class);
+    private static LoggerHelper loggerHelper = new LoggerHelper(LogLevel.TRACE, "Mixer logger", null, logger);
     private static volatile int tasksFinished;
     private CodecManager codecManager;
     private Node owner;
@@ -100,7 +100,8 @@ public class RealTimeMixerTest extends Assert {
         
         RealTimeMixer merger = new RealTimeMixer(codecManager, owner, null
                 , executor, 0, 3);
-        merger.addDataSource(new BufferSplitterDataSource(createDataSourceFromFile("src/test/wav/test2.wav"), 240));
+        merger.addDataSource(new BufferSplitterDataSource(
+                createDataSourceFromFile("src/test/wav/test2.wav"), 240, codecManager, loggerHelper));
         merger.connect();
         JMFHelper.OperationController controller = JMFHelper.writeToFile(merger, "target/merger_1l_source.wav");
         TimeUnit.SECONDS.sleep(4);
@@ -136,8 +137,9 @@ public class RealTimeMixerTest extends Assert {
         RealTimeMixer merger = new RealTimeMixer(codecManager, owner, null
                 , executor, 0, 3);
         PushBufferDataSource ds = createDataSourceFromFile("src/test/wav/test2.wav");
-        merger.addDataSource(new BufferSplitterDataSource(ds, 160));
-        merger.addDataSource(new BufferSplitterDataSource(createDataSourceFromFile("src/test/wav/test.wav"), 160));
+        merger.addDataSource(new BufferSplitterDataSource(ds, 160, codecManager, loggerHelper));
+        merger.addDataSource(new BufferSplitterDataSource(
+                createDataSourceFromFile("src/test/wav/test.wav"), 160, codecManager, loggerHelper));
         merger.connect();
         JMFHelper.OperationController controller = JMFHelper.writeToFile(merger, "target/merger_2l_sources.wav");
         TimeUnit.SECONDS.sleep(4);
@@ -157,7 +159,7 @@ public class RealTimeMixerTest extends Assert {
                 , Codec.G729.getAudioFormat(), new LoggerHelper(owner, null));
         RealTimeMixer merger = new RealTimeMixer(codecManager, owner, null
                 , executor, 0, 10);
-//        merger.addDataSource(tds1);
+        merger.addDataSource(tds1);
         merger.addDataSource(ds);
         merger.addDataSource(createDataSourceFromFile("src/test/wav/test.wav"));
         merger.connect();
@@ -189,12 +191,12 @@ public class RealTimeMixerTest extends Assert {
         verify(executor, owner);
     }
     
-    private PushBufferDataSource createDataSourceFromFile(String filename) throws FileNotFoundException {
+    private PushBufferDataSource createDataSourceFromFile(String filename) throws Exception {
         InputStreamSource source = new TestInputStreamSource(filename);
         IssDataSource dataSource = new IssDataSource(source, FileTypeDescriptor.WAVE);
         ContainerParserDataSource parser = new ContainerParserDataSource(codecManager, dataSource);
         PullToPushConverterDataSource conv = new PullToPushConverterDataSource(parser, executor, owner);
-        return new BufferSplitterDataSource(conv, 160);
+        return new BufferSplitterDataSource(conv, 160, codecManager, loggerHelper);
     }
     
     private void trainMocks() throws ExecutorServiceException {
@@ -226,5 +228,4 @@ public class RealTimeMixerTest extends Assert {
         });
         return null;
     }
-    
 }

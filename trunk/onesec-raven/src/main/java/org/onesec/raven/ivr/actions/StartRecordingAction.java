@@ -40,6 +40,7 @@ import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.impl.AbstractTask;
 import org.raven.tree.Node;
+import org.raven.tree.impl.LoggerHelper;
 import org.weda.internal.annotations.Service;
 
 /**
@@ -125,8 +126,8 @@ public class StartRecordingAction extends AsyncAction {
             merger = new RealTimeMixer(codecManager, loggerNode, logPrefix
                     , conversation.getExecutorService()
                     , actionNode.getNoiseLevel(), actionNode.getMaxGainCoef());
-            writer = new AudioFileWriterDataSource(loggerNode, file, merger, codecManager
-                    , FileTypeDescriptor.WAVE, logPrefix);
+            writer = new AudioFileWriterDataSource(file, merger, codecManager
+                    , FileTypeDescriptor.WAVE, new LoggerHelper(loggerNode, logPrefix));
         }
         
         public void init() throws RtpStreamException {
