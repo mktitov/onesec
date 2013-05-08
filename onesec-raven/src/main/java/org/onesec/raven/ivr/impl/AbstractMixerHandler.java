@@ -18,6 +18,8 @@ package org.onesec.raven.ivr.impl;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.media.Buffer;
 import javax.media.format.AudioFormat;
 import javax.media.protocol.BufferTransferHandler;
@@ -44,23 +46,32 @@ public abstract class AbstractMixerHandler implements MixerHandler, BufferTransf
     private final AtomicInteger bytesCount = new AtomicInteger(0);
 
     public AbstractMixerHandler(CodecManager codecManager, PushBufferDataSource datasource, AudioFormat format, 
-            LoggerHelper logger) throws CodecManagerException 
+            LoggerHelper logger) throws CodecManagerException, IOException 
     {
         this.logger = logger;
         this.codecManager = codecManager;
         this.format = format;
         this.dataHandler = new DataHandler(datasource);
+        this.dataHandler.init();
     }
     
-    public void init() throws IOException {
-        DataHandler _dataHandler = dataHandler;
-        if (_dataHandler!=null)
-            _dataHandler.init();
-    }
-    
-//    protected void replaceDataSource(PushBufferDataSource datasource) {
-//        DataSource
+//    public void init() throws IOException {
+//        DataHandler _dataHandler = dataHandler;
+//        if (_dataHandler!=null)
+//            _dataHandler.init();
 //    }
+    
+    protected void replaceDataSource(PushBufferDataSource datasource) throws Exception {
+        DataHandler oldHandler = dataHandler;
+        if (datasource!=null) {
+            DataHandler newHandler = new DataHandler(datasource);
+            newHandler.init();
+            this.dataHandler = newHandler;
+        } else
+            this.dataHandler = null;
+        if (oldHandler!=null)
+            oldHandler.stop();
+    }
 
     public boolean isAlive() {
         DataHandler _dataHandler = dataHandler;
@@ -110,6 +121,17 @@ public abstract class AbstractMixerHandler implements MixerHandler, BufferTransf
             datasource.getStreams()[0].setTransferHandler(this);
             datasource.connect();
             datasource.start();
+        }
+        
+        public void stop() {
+            datasource.getStreams()[0].setTransferHandler(null);
+            datasource.disconnect();
+            try {
+                datasource.stop();
+            } catch (IOException ex) {
+                if (logger.isErrorEnabled())
+                    logger.error("Data handler stopping error", ex);
+            }
         }
         
         public boolean isAlive() {

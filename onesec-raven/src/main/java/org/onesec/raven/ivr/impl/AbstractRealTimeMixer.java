@@ -74,7 +74,7 @@ public abstract class AbstractRealTimeMixer<H extends MixerHandler<H>> extends P
     }
     
     protected void addDataSourceHandler(H handler) throws IOException {
-        handler.init();
+//        handler.init();
         synchronized(this) {
             if (firstHandler==null)
                 firstHandler=handler;

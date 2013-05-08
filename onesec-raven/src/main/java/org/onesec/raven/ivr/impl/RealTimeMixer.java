@@ -15,10 +15,8 @@
  */
 package org.onesec.raven.ivr.impl;
 
-import java.io.IOException;
 import javax.media.protocol.PushBufferDataSource;
 import org.onesec.raven.ivr.CodecManager;
-import org.onesec.raven.ivr.CodecManagerException;
 import org.onesec.raven.ivr.MixerHandler;
 import org.raven.sched.ExecutorService;
 import org.raven.tree.Node;
@@ -43,12 +41,12 @@ public class RealTimeMixer extends AbstractRealTimeMixer {
     {
     }
     
-    public void addDataSource(PushBufferDataSource dataSource) throws IOException, CodecManagerException {
+    public void addDataSource(PushBufferDataSource dataSource) throws Exception {
         addDataSourceHandler(new Handler(dataSource));
     }    
     
     private class Handler extends AbstractMixerHandler {
-        public Handler(PushBufferDataSource datasource) throws CodecManagerException {
+        public Handler(PushBufferDataSource datasource) throws Exception {
             super(codecManager, datasource, FORMAT, logger);
         }
 

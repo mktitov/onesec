@@ -152,8 +152,8 @@ public class BufferSplitterDataSource extends PushBufferDataSource {
                         buffer.setEOM(true);
                     if (transferHandler!=null)
                         transferHandler.transferData(this);
-//                    Thread.sleep(bufferSize/8);
-                    Thread.sleep(10);
+                    Thread.sleep(bufferSize/8);
+//                    Thread.sleep(10);
                 }
             } catch (Throwable e) {
                 e.printStackTrace();

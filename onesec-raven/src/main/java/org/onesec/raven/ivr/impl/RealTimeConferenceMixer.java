@@ -26,7 +26,6 @@ import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.PushBufferDataSource;
 import javax.media.protocol.PushBufferStream;
 import org.onesec.raven.ivr.CodecManager;
-import org.onesec.raven.ivr.CodecManagerException;
 import org.onesec.raven.ivr.ConferenceMixerSession;
 import org.onesec.raven.ivr.MixerHandler;
 import org.raven.sched.ExecutorService;
@@ -45,7 +44,7 @@ public class RealTimeConferenceMixer extends AbstractRealTimeMixer {
         super(codecManager, owner, logger, executor, noiseLevel, maxGainCoef);
     }
     
-    public ConferenceMixerSession addDataSource(PushBufferDataSource ds) throws CodecManagerException, IOException {
+    public ConferenceMixerSession addDataSource(PushBufferDataSource ds) throws Exception {
         Handler handler = new Handler(ds);
         addDataSourceHandler(handler);
         return handler;
@@ -91,12 +90,20 @@ public class RealTimeConferenceMixer extends AbstractRealTimeMixer {
         private final AtomicBoolean sessionStopped = new AtomicBoolean();
         private final HandlerDataSource conferenceAudio = new HandlerDataSource();
 
-        public Handler(PushBufferDataSource datasource) throws CodecManagerException {
+        public Handler(PushBufferDataSource datasource) throws Exception {
             super(codecManager, datasource, FORMAT, logger);
         }
         
         public boolean isSessionStopped() {
             return sessionStopped.get();
+        }
+
+        public void replaceParticipantAudio(PushBufferDataSource audioSource) throws Exception {
+            replaceDataSource(audioSource);
+        }
+
+        public void stopParticipantAudio() throws Exception {
+            replaceDataSource(null);
         }
 
         @Override
