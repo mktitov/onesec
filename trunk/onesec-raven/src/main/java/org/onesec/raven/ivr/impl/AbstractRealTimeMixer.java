@@ -290,8 +290,11 @@ public abstract class AbstractRealTimeMixer<H extends MixerHandler<H>> extends P
                        
         private int processHandlerBuffer(MixerHandler handler) {
             RingQueue<Buffer> bufferQueue = handler.getQueue();
-            if (bufferQueue==null)
+            if (bufferQueue==null) {
+                logger.debug("EMPTY buffer queue!");
+                handler.applyProcessingBuffer(null);
                 return 0;
+            }
             Arrays.fill(workData, 0);
             Buffer buffer = bufferQueue.peek();
             int len = BUFFER_SIZE; int offset = 0; int max=0;

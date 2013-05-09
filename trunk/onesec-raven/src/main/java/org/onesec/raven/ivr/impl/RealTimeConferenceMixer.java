@@ -18,6 +18,8 @@ package org.onesec.raven.ivr.impl;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.media.Buffer;
 import javax.media.Format;
 import javax.media.Time;
@@ -37,6 +39,7 @@ import org.raven.tree.impl.LoggerHelper;
  * @author Mikhail Titov
  */
 public class RealTimeConferenceMixer extends AbstractRealTimeMixer {
+    private static final byte[] EMPTY_BUFFER = new byte[BUFFER_SIZE];
 
     public RealTimeConferenceMixer(CodecManager codecManager, Node owner, LoggerHelper logger, 
         ExecutorService executor, int noiseLevel, double maxGainCoef) 
@@ -44,21 +47,22 @@ public class RealTimeConferenceMixer extends AbstractRealTimeMixer {
         super(codecManager, owner, logger, executor, noiseLevel, maxGainCoef);
     }
     
-    public ConferenceMixerSession addDataSource(PushBufferDataSource ds) throws Exception {
-        Handler handler = new Handler(ds);
+    public ConferenceMixerSession addParticipant(String name, PushBufferDataSource ds) throws Exception {
+        Handler handler = new Handler(name, ds, logger);
         addDataSourceHandler(handler);
         return handler;
     }
 
     @Override
-    protected void applyBufferToHandlers(MixerHandler firstHandler, int[] data, int len, int streamsCount, 
+    protected void applyBufferToHandlers(MixerHandler firstHandler, final int[] data, int len, int streamsCount, 
         double maxGainCoef, int bufferSize) 
     {
-//        Handler handler = (Handler)firstHandler;
-//        while (handler!=null) {
-//            if (!handler.isSessionStopped())
-//                handler.applyMergedBuffer(data, len, streamsCount, maxGainCoef, bufferSize);
-//        }
+        Handler handler = (Handler)firstHandler;
+        while (handler!=null) {
+            if (!handler.isSessionStopped())
+                handler.applyMergedBuffer(data, len, streamsCount, maxGainCoef, bufferSize);
+            handler = (Handler) handler.getNextHandler();
+        }
     }
     
     private static class BufferData {
@@ -69,18 +73,20 @@ public class RealTimeConferenceMixer extends AbstractRealTimeMixer {
         private final int bufferSize;
         private final double maxGainCoef;
 
-        public BufferData(int[] selfData, int[] data, int len, int streamsCount, int bufferSize, 
-                double maxGainCoef) 
+        public BufferData(final int[] selfData, final int[] data, int len, int streamsCount, int bufferSize, 
+                double maxGainCoef, boolean debug) 
         {
-            this.data = Arrays.copyOf(data, len);
+//            if (debug)
+//                System.out.println(String.format("selfData: %s", selfData==null? "null" : "not null"));
+            this.data = Arrays.copyOf(data, bufferSize);
             this.len = len;
             if (selfData!=null)
                 for (int i=0; i<len; ++i)
-                    data[i]-=selfData[i];
+                    this.data[i]-=selfData[i];
             this.streamsCount = streamsCount - (selfData==null? 0:1);
             this.bufferSize = bufferSize;
             this.maxGainCoef = maxGainCoef;
-            this.byteData = new byte[len];
+            this.byteData = new byte[bufferSize];
         }
     }
     
@@ -89,9 +95,14 @@ public class RealTimeConferenceMixer extends AbstractRealTimeMixer {
         private volatile boolean hasData = false;
         private final AtomicBoolean sessionStopped = new AtomicBoolean();
         private final HandlerDataSource conferenceAudio = new HandlerDataSource();
+        private final String name;
+        private volatile boolean muted = false;
 
-        public Handler(PushBufferDataSource datasource) throws Exception {
-            super(codecManager, datasource, FORMAT, logger);
+        public Handler(String name, PushBufferDataSource datasource, LoggerHelper logger) throws Exception {
+            super(codecManager, datasource, FORMAT, new LoggerHelper(logger, "["+name+"]. "));
+            this.name = name;
+            if (this.logger.isDebugEnabled())
+                this.logger.debug("Connected");
         }
         
         public boolean isSessionStopped() {
@@ -99,11 +110,21 @@ public class RealTimeConferenceMixer extends AbstractRealTimeMixer {
         }
 
         public void replaceParticipantAudio(PushBufferDataSource audioSource) throws Exception {
+            if (logger.isDebugEnabled())
+                logger.debug("Unmuting...");
             replaceDataSource(audioSource);
+            muted = audioSource==null;
+            if (logger.isDebugEnabled())
+                logger.debug("Unmuted");
         }
 
         public void stopParticipantAudio() throws Exception {
+            if (logger.isDebugEnabled())
+                logger.debug("Muting...");
             replaceDataSource(null);
+            muted = true;
+            if (logger.isDebugEnabled())
+                logger.debug("Muted...");
         }
 
         @Override
@@ -117,7 +138,7 @@ public class RealTimeConferenceMixer extends AbstractRealTimeMixer {
             return super.isAlive() || !sessionStopped.get();
         }
 
-        public void applyProcessingBuffer(int[] buffer) {
+        public void applyProcessingBuffer(final int[] buffer) {
             if (buffer==null) 
                 hasData = false;
             else {
@@ -126,9 +147,15 @@ public class RealTimeConferenceMixer extends AbstractRealTimeMixer {
             }
         }
 
-        public void applyMergedBuffer(int[] data, int len, int streamsCount, double maxGainCoef, int bufferSize) {
+        public void applyMergedBuffer(final int[] data, int len, int streamsCount, double maxGainCoef, int bufferSize) {
+//            if (name.equals("P2")) try {
+//                Thread.sleep(1);
+//            } catch (InterruptedException ex) {
+//            }
+//                logger.debug(String.format("len: %s; bufferSize: %s; streamsCount: %s; mutted: %s; hasData: %s", 
+//                    len, bufferSize, streamsCount, muted, hasData));
             conferenceAudio.processConferenceAudioData(new BufferData(
-                    hasData? selfData:null, data, len, streamsCount, bufferSize, maxGainCoef));
+                    hasData && !muted? selfData:null, data, len, streamsCount, bufferSize, maxGainCoef, false));
         }
 
         public boolean stopSession() {
@@ -208,6 +235,9 @@ public class RealTimeConferenceMixer extends AbstractRealTimeMixer {
             if (stopped.get()) {
                 buffer.setLength(0);
                 buffer.setEOM(true);
+                buffer.setData(EMPTY_BUFFER);
+                buffer.setOffset(0);
+                buffer.setFormat(FORMAT);
             } else {
                 BufferData a = audioData;
                 if (a!=null) 

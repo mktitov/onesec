@@ -25,8 +25,6 @@ import javax.media.Format;
 import javax.media.Multiplexer;
 import javax.media.protocol.*;
 import org.onesec.raven.ivr.CodecManager;
-import org.raven.log.LogLevel;
-import org.raven.tree.Node;
 import org.raven.tree.impl.LoggerHelper;
 
 /**
@@ -156,6 +154,7 @@ public class AudioFileWriterDataSource {
 
         public void transferData(PushSourceStream sourceStream) {
             int dataLen = sourceStream.getMinimumTransferSize();
+//            System.out.println("dataLen: "+dataLen);
             if (dataLen>0) {
                 byte[] data = new byte[dataLen];
                 try {
@@ -201,6 +200,7 @@ public class AudioFileWriterDataSource {
                 sourceStream.read(buffer);
                 if (buffer.isDiscard())
                     return;
+//                System.out.println(">> processing buffer");
                 if (firstBuffer) {
                     initMux(buffer);
 //                    createFile();
