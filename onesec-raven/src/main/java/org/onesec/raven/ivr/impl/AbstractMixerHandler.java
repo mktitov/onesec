@@ -18,8 +18,6 @@ package org.onesec.raven.ivr.impl;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.media.Buffer;
 import javax.media.format.AudioFormat;
 import javax.media.protocol.BufferTransferHandler;
@@ -36,9 +34,9 @@ import org.raven.tree.impl.LoggerHelper;
  *
  * @author Mikhail Titov
  */
-public abstract class AbstractMixerHandler implements MixerHandler, BufferTransferHandler {
+public abstract class AbstractMixerHandler implements MixerHandler {
     private volatile DataHandler dataHandler;
-    private final LoggerHelper logger;
+    protected final LoggerHelper logger;
     private final CodecManager codecManager;
     private final AudioFormat format;
 

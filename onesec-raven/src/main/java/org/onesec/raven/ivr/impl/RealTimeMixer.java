@@ -47,7 +47,7 @@ public class RealTimeMixer extends AbstractRealTimeMixer {
     
     private class Handler extends AbstractMixerHandler {
         public Handler(PushBufferDataSource datasource) throws Exception {
-            super(codecManager, datasource, FORMAT, logger);
+            super(codecManager, datasource, FORMAT, RealTimeMixer.this.logger);
         }
 
         public void applyProcessingBuffer(int[] buffer) {}

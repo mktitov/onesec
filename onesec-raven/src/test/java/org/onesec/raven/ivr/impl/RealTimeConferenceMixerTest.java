@@ -35,7 +35,6 @@ import static org.easymock.EasyMock.*;
 import org.easymock.IArgumentMatcher;
 import org.junit.After;
 import org.junit.Test;
-import org.onesec.raven.JMFHelper;
 import org.onesec.raven.ivr.ConferenceMixerSession;
 import org.raven.sched.Task;
 
@@ -61,7 +60,7 @@ public class RealTimeConferenceMixerTest {
         fileWriters = new ArrayList<AudioFileWriterDataSource>();
         trainMocks();
         replay(executor, owner);
-        conf = new RealTimeConferenceMixer(codecManager, owner, loggerHelper, executor, 0, 10);
+        conf = new RealTimeConferenceMixer(codecManager, owner, loggerHelper, executor, 0, 1);
     }
     
     @After
@@ -71,21 +70,30 @@ public class RealTimeConferenceMixerTest {
         verify(executor, owner);
     }
 
-    @Test
+//    @Test
     public void threeParticipantsTest() throws Exception {
-        conf.connect();
-//        writeToFile(conf.addDataSource(createDataSourceFromFile("part_1.wav")), "conf_p1.wav");
-//        writeToFile(conf.addDataSource(createDataSourceFromFile("part_2.wav")), "conf_p2.wav");
-//        writeToFile(conf.addDataSource(createDataSourceFromFile("part_3.wav")), "conf_p3.wav");        
-        conf.addDataSource(createDataSourceFromFile("part_1.wav"));
-//        conf.addDataSource(createDataSourceFromFile("part_2.wav"));
-//        conf.addDataSource(createDataSourceFromFile("part_3.wav"));
-        JMFHelper.OperationController controller = JMFHelper.writeToFile(conf, "target/conf_all.wav");
-//        writeToFile(conf, "conf_all.wav");
-        startFileWriters();
+        writeToFile(conf, "conf_all.wav");
+        writeToFile(conf.addParticipant("P1", createDataSourceFromFile("part_1.wav")), "conf_p1.wav");
+        Thread.sleep(1000);
+        writeToFile(conf.addParticipant("P2", createDataSourceFromFile("part_2.wav")), "conf_p2.wav");
+        Thread.sleep(1000);
+        writeToFile(conf.addParticipant("P3", createDataSourceFromFile("part_3.wav")), "conf_p3.wav");        
         Thread.sleep(7000);
-        controller.stop();
         conf.disconnect();
+    }
+    
+    @Test
+    public void muteUnmuteTest() throws Exception {
+        writeToFile(conf, "conf_all_1.wav");
+        ConferenceMixerSession sess = writeToFile(conf.addParticipant("P1", createDataSourceFromFile("part_1.wav")), 
+            "conf_p1_1.wav");
+        Thread.sleep(1000);
+        writeToFile(conf.addParticipant("P2", createDataSourceFromFile("part_2.wav")), "conf_p2_2.wav");
+        Thread.sleep(1000);
+        sess.stopParticipantAudio();
+        Thread.sleep(3000);
+        sess.replaceParticipantAudio(createDataSourceFromFile("part_1.wav"));
+        Thread.sleep(7000);
     }
     
     private PushBufferDataSource createDataSourceFromFile(String filename) throws Exception {
@@ -99,7 +107,7 @@ public class RealTimeConferenceMixerTest {
     private void writeToFile(PushBufferDataSource ds, String filename) throws Exception {
         AudioFileWriterDataSource writer = new AudioFileWriterDataSource(
                 new File("target/"+filename), ds, codecManager, FileTypeDescriptor.WAVE, loggerHelper);
-//        writer.start();
+        writer.start();
         fileWriters.add(writer);
 //        fileWriteControllers.add(JMFHelper.writeToFile(ds, "target/"+filename));
     }
