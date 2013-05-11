@@ -165,7 +165,7 @@ public abstract class AbstractRealTimeMixer<H extends MixerHandler<H>> extends P
         if (streamsCount==0) Arrays.fill(byteData, (byte)127);
         else  {
             double koef = maxGainCoef;
-            if (koef>1.01) {
+            if (koef>1.01 || streamsCount>1) {
                 int max=0;
                 for (int i=0; i<len; i++) {
                     data[i] = data[i]/streamsCount;
@@ -173,6 +173,7 @@ public abstract class AbstractRealTimeMixer<H extends MixerHandler<H>> extends P
                 }
                 koef = min(max>0? 127./max : 1., maxGainCoef);
             }
+            koef = min(maxGainCoef, koef);
             for (int i=0; i<len; ++i) {
                 if (koef>1.01) 
                     data[i] = (int) (koef*data[i]);
@@ -291,7 +292,7 @@ public abstract class AbstractRealTimeMixer<H extends MixerHandler<H>> extends P
         private int processHandlerBuffer(MixerHandler handler) {
             RingQueue<Buffer> bufferQueue = handler.getQueue();
             if (bufferQueue==null) {
-                logger.debug("EMPTY buffer queue!");
+//                logger.debug("EMPTY buffer queue!");
                 handler.applyProcessingBuffer(null);
                 return 0;
             }

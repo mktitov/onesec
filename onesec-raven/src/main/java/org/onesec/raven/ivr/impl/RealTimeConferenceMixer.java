@@ -232,6 +232,7 @@ public class RealTimeConferenceMixer extends AbstractRealTimeMixer {
         }
 
         public void read(Buffer buffer) throws IOException {
+//            logger.debug("READING buffer");
             if (stopped.get()) {
                 buffer.setLength(0);
                 buffer.setEOM(true);
