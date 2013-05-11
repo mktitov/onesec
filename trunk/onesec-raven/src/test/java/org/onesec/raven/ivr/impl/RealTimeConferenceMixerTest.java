@@ -71,7 +71,18 @@ public class RealTimeConferenceMixerTest {
     }
 
 //    @Test
+    public void test() throws Exception {
+        conf.connect();
+        conf.start();
+        writeToFile(conf, "conf_all.wav");
+        writeToFile(conf.addParticipant("P1", createDataSourceFromFile("part_1.wav")), "conf_p1.wav");
+        Thread.sleep(6000);
+    }
+    
+//    @Test
     public void threeParticipantsTest() throws Exception {
+        conf.connect();
+        conf.start();
         writeToFile(conf, "conf_all.wav");
         writeToFile(conf.addParticipant("P1", createDataSourceFromFile("part_1.wav")), "conf_p1.wav");
         Thread.sleep(1000);
@@ -84,11 +95,14 @@ public class RealTimeConferenceMixerTest {
     
     @Test
     public void muteUnmuteTest() throws Exception {
+        conf.connect();
+        conf.start();
         writeToFile(conf, "conf_all_1.wav");
         ConferenceMixerSession sess = writeToFile(conf.addParticipant("P1", createDataSourceFromFile("part_1.wav")), 
             "conf_p1_1.wav");
         Thread.sleep(1000);
-        writeToFile(conf.addParticipant("P2", createDataSourceFromFile("part_2.wav")), "conf_p2_2.wav");
+        writeToFile(conf.addParticipant("P3", createDataSourceFromFile("part_3.wav")), "conf_p3_1.wav");
+        writeToFile(conf.addParticipant("P2", createDataSourceFromFile("part_2.wav")), "conf_p2_1.wav");
         Thread.sleep(1000);
         sess.stopParticipantAudio();
         Thread.sleep(3000);
@@ -105,8 +119,10 @@ public class RealTimeConferenceMixerTest {
     }
     
     private void writeToFile(PushBufferDataSource ds, String filename) throws Exception {
+        File file = new File("target/"+filename);
+        if (file.exists()) file.delete();
         AudioFileWriterDataSource writer = new AudioFileWriterDataSource(
-                new File("target/"+filename), ds, codecManager, FileTypeDescriptor.WAVE, loggerHelper);
+                file, ds, codecManager, FileTypeDescriptor.WAVE, loggerHelper);
         writer.start();
         fileWriters.add(writer);
 //        fileWriteControllers.add(JMFHelper.writeToFile(ds, "target/"+filename));
