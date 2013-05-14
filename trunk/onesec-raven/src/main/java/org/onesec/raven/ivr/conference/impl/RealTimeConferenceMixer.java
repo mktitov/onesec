@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.onesec.raven.ivr.impl;
+package org.onesec.raven.ivr.conference.impl;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -30,6 +30,8 @@ import javax.media.protocol.PushBufferStream;
 import org.onesec.raven.ivr.CodecManager;
 import org.onesec.raven.ivr.ConferenceMixerSession;
 import org.onesec.raven.ivr.MixerHandler;
+import org.onesec.raven.ivr.impl.AbstractMixerHandler;
+import org.onesec.raven.ivr.impl.AbstractRealTimeMixer;
 import org.raven.sched.ExecutorService;
 import org.raven.tree.Node;
 import org.raven.tree.impl.LoggerHelper;
@@ -148,12 +150,6 @@ public class RealTimeConferenceMixer extends AbstractRealTimeMixer {
         }
 
         public void applyMergedBuffer(final int[] data, int len, int streamsCount, double maxGainCoef, int bufferSize) {
-//            if (name.equals("P2")) try {
-//                Thread.sleep(1);
-//            } catch (InterruptedException ex) {
-//            }
-//                logger.debug(String.format("len: %s; bufferSize: %s; streamsCount: %s; mutted: %s; hasData: %s", 
-//                    len, bufferSize, streamsCount, muted, hasData));
             conferenceAudio.processConferenceAudioData(new BufferData(
                     hasData && !muted? selfData:null, data, len, streamsCount, bufferSize, maxGainCoef, false));
         }

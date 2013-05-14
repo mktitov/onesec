@@ -13,8 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.onesec.raven.ivr.impl;
+package org.onesec.raven.ivr.conference.impl;
 
+import org.onesec.raven.ivr.conference.impl.RealTimeConferenceMixer;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,6 +37,13 @@ import org.easymock.IArgumentMatcher;
 import org.junit.After;
 import org.junit.Test;
 import org.onesec.raven.ivr.ConferenceMixerSession;
+import org.onesec.raven.ivr.impl.AudioFileWriterDataSource;
+import org.onesec.raven.ivr.impl.BufferSplitterDataSource;
+import org.onesec.raven.ivr.impl.CodecManagerImpl;
+import org.onesec.raven.ivr.impl.ContainerParserDataSource;
+import org.onesec.raven.ivr.impl.IssDataSource;
+import org.onesec.raven.ivr.impl.PullToPushConverterDataSource;
+import org.onesec.raven.ivr.impl.TestInputStreamSource;
 import org.raven.sched.Task;
 
 /**
