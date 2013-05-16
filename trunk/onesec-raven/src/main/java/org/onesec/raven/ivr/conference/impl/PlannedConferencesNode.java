@@ -13,18 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.onesec.raven.ivr.conference;
+package org.onesec.raven.ivr.conference.impl;
 
-import java.util.Date;
-import org.onesec.raven.ivr.IvrEndpointConversation;
+import org.raven.annotations.NodeClass;
+import org.raven.tree.impl.ContainerNode;
+import org.raven.tree.impl.InvisibleNode;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface ConferenceManager {
-    Conference createConference(String name, Date fromDate, Date toDate, int channelCount, 
-            ConferenceInitiator initiator) throws ConferenceException;
-    void removeConference(int conferenceId) throws ConferenceException;
-    public ConferenceSession join(IvrEndpointConversation conversation, String conferenceId, String accessCode);
+@NodeClass(parentNode=InvisibleNode.class)
+public class PlannedConferencesNode extends ContainerNode {
+    public final static String NAME = "Planned";
+
+    public PlannedConferencesNode() {
+        super(NAME);
+    }
+    
 }

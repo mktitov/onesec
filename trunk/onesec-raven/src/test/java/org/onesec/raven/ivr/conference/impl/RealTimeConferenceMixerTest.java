@@ -36,7 +36,7 @@ import static org.easymock.EasyMock.*;
 import org.easymock.IArgumentMatcher;
 import org.junit.After;
 import org.junit.Test;
-import org.onesec.raven.ivr.ConferenceMixerSession;
+import org.onesec.raven.ivr.conference.ConferenceMixerSession;
 import org.onesec.raven.ivr.impl.AudioFileWriterDataSource;
 import org.onesec.raven.ivr.impl.BufferSplitterDataSource;
 import org.onesec.raven.ivr.impl.CodecManagerImpl;
