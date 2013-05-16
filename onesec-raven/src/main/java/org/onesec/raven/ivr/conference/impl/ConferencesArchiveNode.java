@@ -13,17 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.onesec.raven.ivr;
+package org.onesec.raven.ivr.conference.impl;
 
-import javax.media.protocol.PushBufferDataSource;
+import org.raven.tree.impl.ContainerNode;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface ConferenceMixerSession {
-    public boolean stopSession();
-    public PushBufferDataSource getConferenceAudioSource();
-    public void stopParticipantAudio() throws Exception;
-    public void replaceParticipantAudio(PushBufferDataSource audioSource) throws Exception;
+public class ConferencesArchiveNode extends ContainerNode {
+    public final static String NAME = "Archive";
+
+    public ConferencesArchiveNode() {
+        super(NAME);
+    }
 }

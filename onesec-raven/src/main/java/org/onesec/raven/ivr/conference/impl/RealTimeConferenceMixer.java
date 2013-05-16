@@ -28,7 +28,7 @@ import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.PushBufferDataSource;
 import javax.media.protocol.PushBufferStream;
 import org.onesec.raven.ivr.CodecManager;
-import org.onesec.raven.ivr.ConferenceMixerSession;
+import org.onesec.raven.ivr.conference.ConferenceMixerSession;
 import org.onesec.raven.ivr.MixerHandler;
 import org.onesec.raven.ivr.impl.AbstractMixerHandler;
 import org.onesec.raven.ivr.impl.AbstractRealTimeMixer;

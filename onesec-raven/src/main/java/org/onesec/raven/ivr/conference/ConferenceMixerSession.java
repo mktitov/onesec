@@ -15,16 +15,15 @@
  */
 package org.onesec.raven.ivr.conference;
 
-import java.util.Date;
-import org.onesec.raven.ivr.IvrEndpointConversation;
+import javax.media.protocol.PushBufferDataSource;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface ConferenceManager {
-    Conference createConference(String name, Date fromDate, Date toDate, int channelCount, 
-            ConferenceInitiator initiator) throws ConferenceException;
-    void removeConference(int conferenceId) throws ConferenceException;
-    public ConferenceSession join(IvrEndpointConversation conversation, String conferenceId, String accessCode);
+public interface ConferenceMixerSession {
+    public boolean stopSession();
+    public PushBufferDataSource getConferenceAudioSource();
+    public void stopParticipantAudio() throws Exception;
+    public void replaceParticipantAudio(PushBufferDataSource audioSource) throws Exception;
 }

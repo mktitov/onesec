@@ -16,7 +16,6 @@
 package org.onesec.raven.ivr.conference;
 
 import java.util.Date;
-import java.util.List;
 
 /**
  *
@@ -24,30 +23,29 @@ import java.util.List;
  */
 public interface Conference {
     int getId();
-    Integer getAccessCode();
+    String getAccessCode();
     String getConferenceName();
     Date getStartTime();
     Date getEndTime();
     Integer getChannelsCount();
-    List<Participant> getParticipants();
-    void addParticipant(Participant participant);
-    void removeParticipant(Participant participant);
+//    List<Participant> getParticipants();
+//    void addParticipant(Participant participant);
+//    void removeParticipant(Participant participant);
     
-    Boolean isCallbackAllowed();
+    Boolean getCallbackAllowed();
     void setCallbackAllowed(Boolean value);
     
-    Boolean isInviteAllowed();
-    void setInviteAllowed(Boolean value);
+//    Boolean isInviteAllowed();
+//    void setInviteAllowed(Boolean value);
     
-    Boolean isManualJoinAllowed();
+    Boolean getManualJoinAllowed();
     void setManualJoinAllowed(Boolean value);
     
-    Boolean isJoinUnregisteredParticipantAllowed();
+    Boolean getJoinUnregisteredParticipantAllowed();
     void setJoinUnregisteredParticipantAllowed(Boolean value);
     
-    Boolean isRecordConference();
+    Boolean getRecordConference();
     void setRecordConference(Boolean value);    
     
-    void update();
-    
+    void update();    
 }
