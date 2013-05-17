@@ -20,8 +20,8 @@ package org.onesec.raven.ivr.conference;
  * @author Mikhail Titov
  */
 public interface ConferenceSession {
-    public void start();
+    public void start() throws Exception;
     public void stop();
     public void mute();
-    public void unmute();
+    public void unmute() throws Exception;
 }

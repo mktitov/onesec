@@ -49,8 +49,10 @@ public abstract class AbstractMixerHandler implements MixerHandler {
         this.logger = logger;
         this.codecManager = codecManager;
         this.format = format;
-        this.dataHandler = new DataHandler(datasource);
-        this.dataHandler.init();
+        if (datasource!=null) {
+            this.dataHandler = new DataHandler(datasource);
+            this.dataHandler.init();
+        }
     }
         
     protected void replaceDataSource(PushBufferDataSource datasource) throws Exception {

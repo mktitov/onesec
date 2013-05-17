@@ -26,5 +26,5 @@ public interface ConferenceManager {
     Conference createConference(String name, Date fromDate, Date toDate, int channelCount, 
             ConferenceInitiator initiator) throws ConferenceException;
     void removeConference(int conferenceId) throws ConferenceException;
-    public ConferenceSession join(IvrEndpointConversation conversation, String conferenceId, String accessCode);
+    public ConferenceSession join(IvrEndpointConversation conversation, String conferenceId, String accessCode) throws Exception;
 }
