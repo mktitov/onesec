@@ -16,27 +16,50 @@
 package org.onesec.raven.ivr.conference.impl;
 
 import fj.data.List;
+import java.io.IOException;
 import static java.lang.Math.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import javax.media.protocol.DataSource;
+import javax.media.protocol.PushBufferDataSource;
+import org.onesec.raven.ivr.CodecManager;
+import org.onesec.raven.ivr.IncomingRtpStream;
+import org.onesec.raven.ivr.IncomingRtpStreamDataSourceListener;
+import org.onesec.raven.ivr.IvrDtmfReceivedConversationEvent;
 import org.onesec.raven.ivr.IvrEndpointConversation;
+import org.onesec.raven.ivr.IvrEndpointConversationEvent;
+import org.onesec.raven.ivr.IvrEndpointConversationListener;
+import org.onesec.raven.ivr.IvrEndpointConversationState;
+import org.onesec.raven.ivr.IvrEndpointConversationStoppedEvent;
+import org.onesec.raven.ivr.IvrEndpointConversationTransferedEvent;
+import org.onesec.raven.ivr.IvrIncomingRtpStartedEvent;
+import org.onesec.raven.ivr.IvrOutgoingRtpStartedEvent;
+import org.onesec.raven.ivr.RtpStreamException;
 import org.onesec.raven.ivr.conference.Conference;
 import org.onesec.raven.ivr.conference.ConferenceException;
 import org.onesec.raven.ivr.conference.ConferenceInitiator;
 import org.onesec.raven.ivr.conference.ConferenceManager;
+import org.onesec.raven.ivr.conference.ConferenceMixerSession;
 import org.onesec.raven.ivr.conference.ConferenceSession;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.log.LogLevel;
+import org.raven.sched.ExecutorService;
+import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
 import org.raven.tree.impl.BaseNode;
+import org.raven.tree.impl.LoggerHelper;
 import org.raven.util.NodeUtils;
 import org.weda.annotations.constraints.NotNull;
+import org.weda.internal.annotations.Service;
 /**
  *
  * @author Mikhail Titov
@@ -44,6 +67,9 @@ import org.weda.annotations.constraints.NotNull;
 @NodeClass
 public class ConferenceManagerNode extends BaseNode implements ConferenceManager {
     private static final int LOCK_TIMEOUT = 1000;
+    
+    @Service
+    private CodecManager codecManager;
     
     @NotNull @Parameter
     private Integer channelsCount;
@@ -60,11 +86,19 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
     @NotNull @Parameter(defaultValue="5")
     private Integer accessCodeLength;
     
+    @NotNull @Parameter(valueHandlerType=SystemSchedulerValueHandlerFactory.TYPE)
+    private ExecutorService executor;
+    
+    @NotNull @Parameter(defaultValue="0")
+    private Integer noiseLevel;
+    
+    @NotNull @Parameter(defaultValue="3")
+    private Integer maxGainCoef;
+    
     private Lock lock;
     private PlannedConferencesNode plannedNode;
     private ConferencesArchiveNode archiveNode;
     private AtomicReference<ConferenceNode> processingConference;
-    private Map<Integer, ConferenceController> conferences;
 
     @Override
     protected void initFields() {
@@ -83,6 +117,12 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
     protected void doStart() throws Exception {
         super.doStart();
         initNodes(true);
+    }
+
+    @Override
+    protected void doStop() throws Exception {
+        super.doStop();
+        
     }
     
     private void initNodes(boolean start) {
@@ -155,6 +195,13 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
                         conf.getChannelsCount(), conf);
             }
         });
+    }
+
+    public ConferenceSession join(IvrEndpointConversation conversation, String conferenceId, String accessCode) 
+            throws Exception 
+    {
+//        plannedNode.getN
+        return null;
     }
     
     private<T> T executeInLock(Task<T> task) throws ConferenceException {
@@ -250,6 +297,30 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
         this.accessCodeLength = accessCodeLength;
     }
 
+    public ExecutorService getExecutor() {
+        return executor;
+    }
+
+    public void setExecutor(ExecutorService executor) {
+        this.executor = executor;
+    }
+
+    public Integer getNoiseLevel() {
+        return noiseLevel;
+    }
+
+    public void setNoiseLevel(Integer noiseLevel) {
+        this.noiseLevel = noiseLevel;
+    }
+
+    public Integer getMaxGainCoef() {
+        return maxGainCoef;
+    }
+
+    public void setMaxGainCoef(Integer maxGainCoef) {
+        this.maxGainCoef = maxGainCoef;
+    }
+
     private void checkDates(Date fromDate, Date toDate) throws ConferenceException {
         final Date curDate = new Date();
         if (fromDate.after(toDate)) 
@@ -301,43 +372,5 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
         public T run() throws Exception;
     }
     
-    private class ConferenceController {
-        private final ConferenceNode conferenceNode;
-        private final RealTimeConferenceMixer mixer;
-        private final List<ConferenceSessionImpl> sessions;
-    }
-    
-    private enum SessionStatus {INITIALIZED, STARTED, STOPPED};
-    
-    private class ConferenceSessionImpl implements ConferenceSession {
-        private final IvrEndpointConversation conversation;
-        private final RealTimeConferenceMixer mixer;
-        private final AtomicBoolean started = new AtomicBoolean();
-        private final AtomicReference<SessionStatus> status = 
-                new AtomicReference<SessionStatus>(SessionStatus.INITIALIZED);
 
-        public ConferenceSessionImpl(IvrEndpointConversation conversation, RealTimeConferenceMixer mixer) {
-            this.conversation = conversation;
-            this.mixer = mixer;
-        }
-        
-        public void start() {
-            if (status.compareAndSet(SessionStatus.INITIALIZED, SessionStatus.STARTED)) {
-                
-            }
-        }
-        public void stop() {
-            if (started.get()) {
-                throw new UnsupportedOperationException("Not supported yet.");
-            }
-        }
-        public void mute() {
-            if (started.get()) {
-            }
-        }
-        public void unmute() {
-            if (started.get()) {
-            }
-        }
-    }
 }

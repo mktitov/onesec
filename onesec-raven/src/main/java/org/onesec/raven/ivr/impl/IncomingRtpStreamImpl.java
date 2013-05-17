@@ -149,7 +149,7 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
     public boolean addDataSourceListener(IncomingRtpStreamDataSourceListener listener, AudioFormat format)
         throws RtpStreamException
     {
-        try{
+        try {
             if (lock.tryLock(100, TimeUnit.MILLISECONDS)){
                 try{
                     if (status==Status.CLOSED)
@@ -169,7 +169,7 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
                     owner.getLogger().error(logMess("Error adding listener. Lock wait timeout"));
                 throw new RtpStreamException("Error adding listener. Lock wait timeout");
             }
-        }catch(InterruptedException e){
+        } catch(InterruptedException e) {
             if (owner.isLogLevelEnabled(LogLevel.ERROR))
                 owner.getLogger().error(logMess("Error adding listener"), e);
             throw new RtpStreamException("Error adding listener to the IncomingRtpStream", e);

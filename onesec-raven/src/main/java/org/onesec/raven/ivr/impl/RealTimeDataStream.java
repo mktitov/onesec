@@ -57,7 +57,7 @@ public class RealTimeDataStream implements PushBufferStream, BufferTransferHandl
     }
     
     public void disconnect() {
-        System.out.println("!! disconnecting !!");
+//        System.out.println("!! disconnecting !!");
         transferHandler = null;
     }
 
