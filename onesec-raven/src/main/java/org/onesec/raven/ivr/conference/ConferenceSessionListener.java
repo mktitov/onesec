@@ -15,17 +15,16 @@
  */
 package org.onesec.raven.ivr.conference;
 
-import java.util.Date;
-import org.onesec.raven.ivr.IvrEndpointConversation;
-
 /**
  *
  * @author Mikhail Titov
  */
-public interface ConferenceManager {
-    Conference createConference(String name, Date fromDate, Date toDate, int channelCount, 
-            ConferenceInitiator initiator) throws ConferenceException;
-    void removeConference(int conferenceId) throws ConferenceException;
-    public void join(IvrEndpointConversation conversation, String conferenceId, String accessCode, 
-            ConferenceSessionListener listener);
+public interface ConferenceSessionListener {
+    public void sessionCreated(ConferenceSession session);
+    public void sessionCreationError();
+    public void conferenceStopped();
+    public void conferenceNotActive();
+    public void invalidConferenceId(String conferenceId);
+    public void invalidAccessCode();
+    
 }
