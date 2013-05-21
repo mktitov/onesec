@@ -163,7 +163,7 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
             throw new ConferenceException(ConferenceException.NOT_ENOUGH_CHANNELS);
     }
     
-    public void checkConferenceNode(final ConferenceNode conf) throws ConferenceException {
+    public void checkConferenceNode(final Conference conf) throws ConferenceException {
         if (!isStarted()) throw new ConferenceException(ConferenceException.CONFERENCE_MANAGER_STOPPED);
         else if (processingConference.get()==conf) return;
         else executeInLock(new Tell() {

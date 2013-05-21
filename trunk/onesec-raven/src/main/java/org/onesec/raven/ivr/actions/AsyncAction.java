@@ -21,7 +21,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.onesec.raven.ivr.IvrActionException;
 import org.onesec.raven.ivr.IvrActionStatus;
 import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorServiceException;
 import org.raven.sched.Task;
 import org.raven.tree.Node;
@@ -91,8 +90,7 @@ public abstract class AsyncAction extends AbstractAction implements Task
                 if (logger.isErrorEnabled())
                     logger.error("Execution error", ex);
             }
-        }
-        finally {
+        } finally {
             setStatus(IvrActionStatus.EXECUTED);
         }
     }

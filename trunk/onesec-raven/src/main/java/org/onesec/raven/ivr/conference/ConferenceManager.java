@@ -28,4 +28,5 @@ public interface ConferenceManager {
     void removeConference(int conferenceId) throws ConferenceException;
     public void join(IvrEndpointConversation conversation, String conferenceId, String accessCode, 
             ConferenceSessionListener listener);
+    public void checkConferenceNode(final Conference conf) throws ConferenceException;
 }
