@@ -19,13 +19,12 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Set;
-import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.media.protocol.DataSource;
 import javax.media.protocol.PushBufferDataSource;
 import org.onesec.raven.ivr.CodecManager;
@@ -42,6 +41,7 @@ import org.onesec.raven.ivr.IvrIncomingRtpStartedEvent;
 import org.onesec.raven.ivr.IvrOutgoingRtpStartedEvent;
 import org.onesec.raven.ivr.RtpStreamException;
 import org.onesec.raven.ivr.conference.Conference;
+import org.onesec.raven.ivr.conference.ConferenceManager;
 import org.onesec.raven.ivr.conference.ConferenceMixerSession;
 import org.onesec.raven.ivr.conference.ConferenceSession;
 import org.onesec.raven.ivr.conference.ConferenceSessionListener;
@@ -97,17 +97,17 @@ public class ConferenceNode extends BaseNode implements Conference {
     @NotNull @Parameter(valueHandlerType=SystemSchedulerValueHandlerFactory.TYPE)
     private ExecutorService executor;
     
-    @NotNull @Parameter(defaultValue="0")
+    @NotNull @Parameter
     private Integer noiseLevel;
     
-    @NotNull @Parameter(defaultValue="3")
+    @NotNull @Parameter
     private Integer maxGainCoef;
     
     
     private AtomicMarkableReference<ConferenceController> controller;
     
-    private ConferenceManagerNode getManager() {
-        return (ConferenceManagerNode) getParent().getParent();
+    private ConferenceManager getManager() {
+        return (ConferenceManager) getParent().getParent();
     }
 
     @Override
@@ -138,7 +138,9 @@ public class ConferenceNode extends BaseNode implements Conference {
     public void join(final IvrEndpointConversation conversation, final String accessCode, 
             final ConferenceSessionListener listener)
     {
-        if (!isStarted()) sendConferenceNotActive(listener);
+        long curTime = System.currentTimeMillis();
+        if (!isStarted() || curTime<getStartTime().getTime() || curTime>getEndTime().getTime()) 
+            sendConferenceNotActive(listener);
         else {
             if (!this.accessCode.equals(accessCode))
                 executor.executeQuietly(new AbstractTask(this, "Pushing 'invalid access code' to conversation") {
@@ -173,8 +175,16 @@ public class ConferenceNode extends BaseNode implements Conference {
             try {
                 _controller = new ConferenceController(this, codecManager, executor, channelsCount, 
                         channelsCount);
-                if (!controller.compareAndSet(null, _controller, true, true)) 
-                    _controller.stop();
+                if (!controller.compareAndSet(null, _controller, true, true)) _controller.stop();
+                else {
+                    final ConferenceController finalController = _controller;
+                    executor.executeQuietly(getEndTime().getTime()-System.currentTimeMillis(), 
+                        new AbstractTask(this, "Stop conference task") {
+                            @Override public void doRun() throws Exception {
+                                finalController.stop();
+                            }
+                        });
+                }
             } catch (Throwable e) {
                 if (isLogLevelEnabled(LogLevel.ERROR)) 
                     getLogger().error("Conference creating error", e);
@@ -314,15 +324,18 @@ public class ConferenceNode extends BaseNode implements Conference {
     }
     
     private class ConferenceController {
-        private final ConferenceNode conferenceNode;
         private final RealTimeConferenceMixer mixer;
-        private final Set<ConferenceSessionImpl> sessions = new ConcurrentSkipListSet<ConferenceSessionImpl>();
+        private final Map<Integer, ConferenceSessionImpl> sessions = 
+                new ConcurrentHashMap<Integer, ConferenceSessionImpl>();
         private final LoggerHelper logger;
+        private final ExecutorService executor;
+        private final AtomicBoolean stopped = new AtomicBoolean();
+        private final AtomicInteger idGenerator = new AtomicInteger();
 
         public ConferenceController(ConferenceNode conferenceNode, CodecManager codecManager, 
                 ExecutorService executor, int noiseLevel, double maxGainCoef) throws IOException 
         {
-            this.conferenceNode = conferenceNode;
+            this.executor = executor;
             this.logger = new LoggerHelper(conferenceNode, "Conference. ");
             mixer = new RealTimeConferenceMixer(codecManager, conferenceNode, logger, executor, noiseLevel, 
                     maxGainCoef);
@@ -332,8 +345,9 @@ public class ConferenceNode extends BaseNode implements Conference {
         
         public void join(IvrEndpointConversation conv, final ConferenceSessionListener listener) {
             try {
-                final ConferenceSessionImpl session = new ConferenceSessionImpl(this, conv, mixer, logger, listener);
-                sessions.add(session);
+                final Integer id = idGenerator.incrementAndGet();
+                final ConferenceSessionImpl session = new ConferenceSessionImpl(this, id, conv, mixer, logger, listener);
+                sessions.put(id, session);
                 executor.executeQuietly(new AbstractTask(ConferenceNode.this, "Pushing 'conference session created' to the conversation") {
                     @Override public void doRun() throws Exception {
                         listener.sessionCreated(session);
@@ -351,16 +365,21 @@ public class ConferenceNode extends BaseNode implements Conference {
         }
         
         public void removeSession(ConferenceSessionImpl session) {
-            sessions.remove(session);
+            if (!stopped.get())
+                sessions.remove(session.id);
         }
         
         public void stop() {
-            executor.executeQuietly(new AbstractTask(ConferenceNode.this, "Stopping conference controller") {
-                @Override public void doRun() throws Exception {
-                    for (ConferenceSessionImpl session: sessions) 
-                        session.stop();
-                }
-            });
+            if (stopped.compareAndSet(false, true))
+                executor.executeQuietly(new AbstractTask(ConferenceNode.this, "Stopping conference controller") {
+                    @Override public void doRun() throws Exception {
+                        for (ConferenceSessionImpl session: sessions.values()) {
+                            session.stop();
+                            session.sessionListener.conferenceStopped();
+                        }
+                        sessions.clear();
+                    }
+                });
         }
     }
     
@@ -377,15 +396,17 @@ public class ConferenceNode extends BaseNode implements Conference {
         private final LoggerHelper logger;
         private final ConferenceController controller;
         private final ConferenceSessionListener sessionListener;
+        private final Integer id;
 
-        public ConferenceSessionImpl(ConferenceController controller, IvrEndpointConversation conversation, 
+        public ConferenceSessionImpl(ConferenceController controller, Integer id, IvrEndpointConversation conversation, 
                 RealTimeConferenceMixer mixer, LoggerHelper logger, ConferenceSessionListener listener) 
                 throws Exception 
         {
+            this.id = id;
             this.controller = controller;
             this.conversation = conversation;
             this.sessionListener = listener;
-            this.logger = new LoggerHelper(logger, "["+conversation.getCallingNumber()+"]. ");
+            this.logger = new LoggerHelper(logger, "["+id+", "+conversation.getCallingNumber()+"]. ");
             this.mixerSession = mixer.addParticipant(conversation.getCallingNumber(), null);
         }
         
@@ -406,7 +427,7 @@ public class ConferenceNode extends BaseNode implements Conference {
             }
         }
         
-        private void stopMixerSession() {
+        private void stopMixerSession() {            
             mixerSession.stopSession();
             controller.removeSession(this);
             if (logger.isDebugEnabled())
