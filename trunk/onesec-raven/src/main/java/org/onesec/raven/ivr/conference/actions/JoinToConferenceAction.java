@@ -15,10 +15,13 @@
  */
 package org.onesec.raven.ivr.conference.actions;
 
+import javax.script.Bindings;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.actions.AsyncAction;
 import org.onesec.raven.ivr.conference.ConferenceManager;
+import org.raven.conv.BindingScope;
 import org.raven.conv.ConversationScenarioState;
+import org.raven.sched.ExecutorService;
 
 /**
  *
@@ -26,19 +29,39 @@ import org.raven.conv.ConversationScenarioState;
  */
 public class JoinToConferenceAction extends AsyncAction {
     public final static String NAME = "Join to conference action";
+    public final static String CONFERENCE_STATE_BINDING = "conferenceState";
+    public final static String CONFERENCE_ID_BINDING = "conferenceId";
+    public final static String CONFERENCE_ACCESS_CODE_BINDING = "conferenceAccessCode";
+    
     private final ConferenceManager conferenceManager;
     private final Boolean autoConnect;
+    private final Boolean autoUnmute;
 
-    public JoinToConferenceAction(ConferenceManager conferenceManager, Boolean autoConnect) {
+    public JoinToConferenceAction(ConferenceManager conferenceManager, Boolean autoConnect, Boolean autoUnmute) {
         super(NAME);
         this.conferenceManager = conferenceManager;
         this.autoConnect = autoConnect;
+        this.autoUnmute = autoUnmute;
     }
 
     @Override
     protected void doExecute(IvrEndpointConversation conversation) throws Exception {
-        ConversationScenarioState state = conversation.getConversationScenarioState();
-        
+        ConversationScenarioState conversationState = conversation.getConversationScenarioState();
+        Bindings bindings = conversationState.getBindings();
+        String conferenceId = (String) bindings.get(CONFERENCE_ID_BINDING);
+        String conferenceAccessCode = (String) bindings.get(CONFERENCE_ACCESS_CODE_BINDING);
+        ConferenceSessionState state = (ConferenceSessionState) conversationState.getBindings().get(
+                CONFERENCE_STATE_BINDING);
+        if (state==null) {
+            state = new ConferenceSessionState(conversation);
+            conversationState.setBinding(CONFERENCE_STATE_BINDING, state, BindingScope.POINT);
+            conferenceManager.join(conversation, conferenceId, conferenceAccessCode, state);
+        } else {
+            if (autoConnect && state.getStatus()==ConferenceSessionStatus.JOINED)
+                state.connect();
+            if (autoUnmute && state.getStatus()==ConferenceSessionStatus.CONNECTED)
+                state.unmute();
+        }
     }
 
     public boolean isFlowControlAction() {

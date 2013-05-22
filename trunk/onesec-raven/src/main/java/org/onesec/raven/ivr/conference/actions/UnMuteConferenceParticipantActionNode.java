@@ -13,15 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.onesec.raven.ivr.conference;
+package org.onesec.raven.ivr.conference.actions;
+
+import org.onesec.raven.ivr.IvrAction;
+import org.onesec.raven.ivr.actions.AbstractActionNode;
+import org.raven.annotations.NodeClass;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface ConferenceSession {
-    public void start();
-    public void stop();
-    public void mute();
-    public void unmute() throws Exception;
+@NodeClass(parentNode=ConferenceEventHandlerNode.class)
+public class UnMuteConferenceParticipantActionNode extends AbstractActionNode {
+    
+    @Override
+    protected IvrAction doCreateAction() {
+        return new UnMuteConferenceParticipantAction();
+    }
 }

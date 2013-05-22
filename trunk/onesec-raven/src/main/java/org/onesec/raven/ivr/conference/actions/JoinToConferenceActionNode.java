@@ -33,10 +33,13 @@ public class JoinToConferenceActionNode extends AbstractActionNode {
     
     @NotNull @Parameter(defaultValue="true")
     private Boolean autoConnect;
-
+    
+    @NotNull @Parameter(defaultValue="true")
+    private Boolean autoUnmute;
+    
     @Override
     protected IvrAction doCreateAction() {
-        return new JoinToConferenceAction(conferenceManager, autoConnect);
+        return new JoinToConferenceAction(conferenceManager, autoConnect, autoUnmute);
     }
 
     public ConferenceManagerNode getConferenceManager() {
@@ -53,5 +56,13 @@ public class JoinToConferenceActionNode extends AbstractActionNode {
 
     public void setAutoConnect(Boolean autoConnect) {
         this.autoConnect = autoConnect;
+    }
+
+    public Boolean getAutoUnmute() {
+        return autoUnmute;
+    }
+
+    public void setAutoUnmute(Boolean autoUnmute) {
+        this.autoUnmute = autoUnmute;
     }
 }

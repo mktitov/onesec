@@ -22,82 +22,126 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.conference.ConferenceSession;
 import org.onesec.raven.ivr.conference.ConferenceSessionListener;
+import static org.onesec.raven.ivr.conference.actions.ConferenceSessionStatus.*;
+import org.raven.conv.BindingScope;
+import org.raven.sched.ExecutorService;
+import org.raven.sched.impl.AbstractTask;
+import org.raven.tree.Node;
 import org.raven.tree.impl.LoggerHelper;
-
 /**
  *
  * @author Mikhail Titov
  */
 public class ConferenceSessionState implements ConferenceSessionListener {
     
-    public enum Status {JOINING, JOINED, CONNECTED, REJECTED_DUE_ERROR, REJECTED_DUE_INVALID_ID, STOPPED};
+    private final static Map<ConferenceSessionStatus, EnumSet<ConferenceSessionStatus>> allowedTransitions;
     
-    private final static Map<Status, EnumSet<Status>> allowedTransitions;
-    
-    private final AtomicReference<Status> status = 
-            new AtomicReference<ConferenceSessionState.Status>(Status.JOINING);
+    private final AtomicReference<ConferenceSessionStatus> status = 
+            new AtomicReference<ConferenceSessionStatus>(ConferenceSessionStatus.JOINING);
     private final IvrEndpointConversation conversation;
     private final LoggerHelper logger;
+    private final ExecutorService executor;
+    private final Node owner;
     private volatile ConferenceSession session;
     
     static {
-        allowedTransitions = new EnumMap<Status, EnumSet<Status>>(Status.class);
-        allowedTransitions.put(Status.JOINING, EnumSet.of(
-                Status.JOINED, Status.REJECTED_DUE_ERROR, Status.REJECTED_DUE_INVALID_ID, Status.STOPPED));
-        allowedTransitions.put(Status.JOINED, EnumSet.of(
-                Status.CONNECTED, Status.STOPPED));
-        allowedTransitions.put(Status.CONNECTED, EnumSet.of(
-                Status.STOPPED));
+        allowedTransitions = new EnumMap<ConferenceSessionStatus, EnumSet<ConferenceSessionStatus>>(ConferenceSessionStatus.class);
+        allowedTransitions.put(JOINING, EnumSet.of(JOINED, REJECTED_DUE_ERROR, REJECTED_DUE_INVALID_ID, STOPPED));
+        allowedTransitions.put(JOINED, EnumSet.of(CONNECTED, STOPPED));
+        allowedTransitions.put(CONNECTED, EnumSet.of(STOPPED, REJECTED_DUE_ERROR));
     }
 
-    public ConferenceSessionState(IvrEndpointConversation conversation, LoggerHelper logger) {
+    public ConferenceSessionState(IvrEndpointConversation conversation) 
+    {
         this.conversation = conversation;
-        this.logger = logger;
+        this.owner = conversation.getOwner();
+        this.executor = conversation.getExecutorService();
+        this.logger = new LoggerHelper(owner.getLogLevel(), owner.getName(), "Conference state. ", 
+                conversation.getLogger());
     }
     
-    
-    private synchronized void makeTransition(Status newStatus) {
-        EnumSet<Status> allowedStatuses = allowedTransitions.get(status.get());
+    private boolean makeTransition(ConferenceSessionStatus newStatus) {
+        EnumSet<ConferenceSessionStatus> allowedStatuses = allowedTransitions.get(status.get());
         if (allowedStatuses==null || !allowedStatuses.contains(newStatus)) {
             if (logger.isWarnEnabled())
                 logger.warn(String.format("Not allowed transition from %s to %s. Allowed transitions are: ", 
                         status.get(), newStatus, allowedStatuses));
+            return false;
         } else {
-            switch(newStatus) {
-                
-            }
+            status.set(newStatus);
+            return true;
         }
-            
     }
 
-    public void sessionCreated(ConferenceSession session) {
-        status.set(Status.JOINED);
-        this.session = session;
-        conversation.continueConversation(IvrEndpointConversation.EMPTY_DTMF);
+    public synchronized void sessionCreated(ConferenceSession session) {
+        if (makeTransition(JOINED)) {
+            this.session = session;
+            continueConversation();
+        }
     }
 
-    public void sessionCreationError() {
-        status.set(Status.REJECTED_DUE_ERROR);
-        conversation.continueConversation(IvrEndpointConversation.EMPTY_DTMF);
+    public synchronized void sessionCreationError() {
+        if (makeTransition(REJECTED_DUE_ERROR))
+            continueConversation();
     }
 
-    public void conferenceStopped() {
-        status.set(Status.STOPPED);
-        conversation.continueConversation(IvrEndpointConversation.EMPTY_DTMF);
+    public synchronized void conferenceStopped() {
+        if (makeTransition(STOPPED))
+            continueConversation();
     }
 
-    public void conferenceNotActive() {
-        status.set(Status.REJECTED_DUE_ERROR);
-        conversation.continueConversation(IvrEndpointConversation.EMPTY_DTMF);
+    public synchronized void conferenceNotActive() {
+        if (makeTransition(REJECTED_DUE_ERROR))
+            continueConversation();
     }
 
-    public void invalidConferenceId(String conferenceId) {
-        status.set(Status.REJECTED_DUE_INVALID_ID);
-        conversation.continueConversation(IvrEndpointConversation.EMPTY_DTMF);
+    public synchronized void invalidConferenceId(String conferenceId) {
+        if (makeTransition(REJECTED_DUE_INVALID_ID))
+            continueConversation();
     }
 
-    public void invalidAccessCode() {
-        status.set(Status.REJECTED_DUE_INVALID_ID);
-        conversation.continueConversation(IvrEndpointConversation.EMPTY_DTMF);
+    public synchronized void invalidAccessCode() {
+        if (makeTransition(REJECTED_DUE_INVALID_ID))
+            continueConversation();
+    }
+    
+    private void continueConversation() {
+        executor.executeQuietly(new AbstractTask(owner, "Conference state. Sending continue conversation event") {
+            @Override public void doRun() throws Exception {
+                conversation.continueConversation(IvrEndpointConversation.EMPTY_DTMF);
+            }
+        });
+    }
+
+    public ConferenceSession getSession() {
+        return session;
+    }
+    
+    public ConferenceSessionStatus getStatus() {
+        return status.get();
+    }
+    
+    public synchronized void connect() {
+        if (makeTransition(CONNECTED)) {
+            conversation.getConversationScenarioState().setBinding(
+                    IvrEndpointConversation.DISABLE_AUDIO_STREAM_RESET, true, BindingScope.POINT);
+            session.start();
+            continueConversation();
+        }
+    }
+    
+    public void mute() {
+        if (status.get()==CONNECTED) 
+            session.mute();
+    }
+    
+    public void unmute() {
+        if (status.get()==CONNECTED) 
+            try {
+                session.unmute();
+            } catch (Exception ex) {
+                if (logger.isErrorEnabled())
+                    logger.error("Unmuting error", ex);
+            }
     }
 }
