@@ -38,6 +38,7 @@ import javax.telephony.media.MediaTerminalConnection;
 import org.onesec.core.provider.ProviderController;
 import org.onesec.core.services.ProviderRegistry;
 import org.onesec.core.services.StateListenersCoordinator;
+import static org.onesec.raven.impl.CCMUtils.*;
 import org.onesec.raven.ivr.*;
 import static org.onesec.raven.ivr.IvrEndpointConversationState.*;
 import org.onesec.raven.ivr.actions.ContinueConversationAction;
@@ -51,10 +52,10 @@ import org.raven.sched.ExecutorService;
 import org.raven.sched.impl.AbstractTask;
 import org.raven.tree.Node;
 import org.raven.tree.Tree;
+import org.raven.tree.impl.LoggerHelper;
+import org.slf4j.Logger;
 import org.weda.beans.ObjectUtils;
 import org.weda.internal.annotations.Service;
-import static org.onesec.raven.impl.CCMUtils.*;
-import org.raven.tree.impl.LoggerHelper;
 
 /**
  *
@@ -731,6 +732,10 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
 
     public Node getOwner() {
         return owner;
+    }
+
+    public Logger getLogger() {
+        return logger;
     }
 
     public ExecutorService getExecutorService() {

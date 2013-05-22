@@ -21,6 +21,7 @@ import org.onesec.core.ObjectDescription;
 import org.raven.conv.ConversationScenarioState;
 import org.raven.sched.ExecutorService;
 import org.raven.tree.Node;
+import org.slf4j.Logger;
 
 /**
  *
@@ -54,6 +55,10 @@ public interface IvrEndpointConversation extends ObjectDescription
      * Returns the node owned by this conversation.
      */
     public Node getOwner();
+    /**
+     * Returns the conversation logger
+     */
+    public Logger getLogger();
     /**
      * Returns the executor service
      */

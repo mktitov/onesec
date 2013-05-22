@@ -13,15 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.onesec.raven.ivr.conference;
+package org.onesec.raven.ivr.conference.actions;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface ConferenceSession {
-    public void start();
-    public void stop();
-    public void mute();
-    public void unmute() throws Exception;
+public enum ConferenceSessionStatus {
+    JOINING, JOINED, CONNECTED, REJECTED_DUE_ERROR, REJECTED_DUE_INVALID_ID, STOPPED
 }

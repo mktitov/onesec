@@ -410,7 +410,7 @@ public class ConferenceNode extends BaseNode implements Conference {
             this.mixerSession = mixer.addParticipant(conversation.getCallingNumber(), null);
         }
         
-        public void start() throws Exception {
+        public void start() {
             if (status.compareAndSet(SessionStatus.INITIALIZED, SessionStatus.STARTED)) {
                 conversation.getAudioStream().addSource(mixerSession.getConferenceAudioSource());
                 if (logger.isDebugEnabled()) {

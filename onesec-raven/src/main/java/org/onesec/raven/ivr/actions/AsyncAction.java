@@ -34,7 +34,7 @@ import org.slf4j.Logger;
 public abstract class AsyncAction extends AbstractAction implements Task
 {
     protected IvrEndpointConversation conversation;
-    protected Logger logger;
+    protected LoggerHelper logger;
     private final AtomicBoolean cancelRequest;
 
     public AsyncAction(String actionName)
@@ -70,7 +70,7 @@ public abstract class AsyncAction extends AbstractAction implements Task
     }
     
     //for tests purposes
-    public void setLogger(Logger logger) {
+    public void setLogger(LoggerHelper logger) {
         this.logger = logger;
     }
 

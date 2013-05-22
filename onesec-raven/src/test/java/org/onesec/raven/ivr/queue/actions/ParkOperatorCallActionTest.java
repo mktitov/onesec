@@ -27,6 +27,7 @@ import org.onesec.raven.ivr.queue.CommutationManagerCall;
 import org.raven.conv.BindingScope;
 import org.raven.conv.ConversationScenarioState;
 import org.raven.log.LogLevel;
+import org.raven.tree.impl.LoggerHelper;
 /**
  *
  * @author Mikhail Titov
@@ -78,7 +79,7 @@ public class ParkOperatorCallActionTest extends OnesecRavenTestCase {
         replay(conv, state, bindings, controller, abonConv, abonState);
         
         ParkOperatorCallAction action = (ParkOperatorCallAction) actionNode.createAction();
-        action.setLogger(actionNode.getLogger());
+        action.setLogger(new LoggerHelper(actionNode, null));
         action.doExecute(conv);
         verify(conv, state, bindings, controller, abonConv, abonState);
     }
