@@ -23,7 +23,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import org.onesec.raven.ivr.CodecManager;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.conference.Conference;
 import org.onesec.raven.ivr.conference.ConferenceException;
@@ -39,7 +38,6 @@ import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
 import org.raven.tree.impl.BaseNode;
 import org.raven.util.NodeUtils;
 import org.weda.annotations.constraints.NotNull;
-import org.weda.internal.annotations.Service;
 /**
  *
  * @author Mikhail Titov
