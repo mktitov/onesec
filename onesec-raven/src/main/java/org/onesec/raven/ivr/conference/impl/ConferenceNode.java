@@ -427,11 +427,16 @@ public class ConferenceNode extends BaseNode implements Conference {
             }
         }
         
-        private void stopMixerSession() {            
-            mixerSession.stopSession();
-            controller.removeSession(this);
-            if (logger.isDebugEnabled())
-                logger.debug("Disconnected");
+        private void stopMixerSession() {
+            try {
+                mixerSession.stopSession();
+                controller.removeSession(this);
+                if (logger.isDebugEnabled())
+                    logger.debug("Disconnected");
+            } catch (Exception e) {
+                if (logger.isErrorEnabled())
+                    logger.error("Error sopping mixer session", e);
+            }
         }
         
         public void mute() {

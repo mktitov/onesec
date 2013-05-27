@@ -68,6 +68,8 @@ public class ConferenceSessionState implements ConferenceSessionListener {
                         status.get(), newStatus, allowedStatuses));
             return false;
         } else {
+            if (logger.isDebugEnabled())
+                logger.debug(String.format("Status changed from (%s) to (%s)", status.get(), newStatus));
             status.set(newStatus);
             return true;
         }
