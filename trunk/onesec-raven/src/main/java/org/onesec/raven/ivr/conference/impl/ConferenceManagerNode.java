@@ -177,6 +177,7 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
     {        
         try {
             ConferenceNode conference = (ConferenceNode) plannedNode.getNodeById(Integer.parseInt(conferenceId));
+            conference.join(conversation, accessCode, listener);
         } catch (NumberFormatException e) {
             executor.executeQuietly(new AbstractTask(this, "Pushing message 'invalid conference id' to conversation") {
                 @Override public void doRun() throws Exception {

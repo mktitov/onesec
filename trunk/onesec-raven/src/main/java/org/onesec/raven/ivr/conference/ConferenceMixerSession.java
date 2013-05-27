@@ -22,7 +22,7 @@ import javax.media.protocol.PushBufferDataSource;
  * @author Mikhail Titov
  */
 public interface ConferenceMixerSession {
-    public boolean stopSession();
+    public boolean stopSession() throws Exception;
     public PushBufferDataSource getConferenceAudioSource();
     public void stopParticipantAudio() throws Exception;
     public void replaceParticipantAudio(PushBufferDataSource audioSource) throws Exception;

@@ -30,32 +30,39 @@ import org.raven.sched.ExecutorService;
 public class JoinToConferenceAction extends AsyncAction {
     public final static String NAME = "Join to conference action";
     public final static String CONFERENCE_STATE_BINDING = "conferenceState";
-    public final static String CONFERENCE_ID_BINDING = "conferenceId";
-    public final static String CONFERENCE_ACCESS_CODE_BINDING = "conferenceAccessCode";
+//    public final static String CONFERENCE_ID_BINDING = "conferenceId";
+//    public final static String CONFERENCE_ACCESS_CODE_BINDING = "conferenceAccessCode";
     
     private final ConferenceManager conferenceManager;
     private final Boolean autoConnect;
     private final Boolean autoUnmute;
+    private final String conferenceId;
+    private final String accessCode;
 
-    public JoinToConferenceAction(ConferenceManager conferenceManager, Boolean autoConnect, Boolean autoUnmute) {
+    public JoinToConferenceAction(ConferenceManager conferenceManager, Boolean autoConnect, 
+            Boolean autoUnmute, String conferenceId, String accessCode) {
         super(NAME);
         this.conferenceManager = conferenceManager;
         this.autoConnect = autoConnect;
         this.autoUnmute = autoUnmute;
+        this.conferenceId = conferenceId;
+        this.accessCode = accessCode;
     }
 
     @Override
     protected void doExecute(IvrEndpointConversation conversation) throws Exception {
         ConversationScenarioState conversationState = conversation.getConversationScenarioState();
         Bindings bindings = conversationState.getBindings();
-        String conferenceId = (String) bindings.get(CONFERENCE_ID_BINDING);
-        String conferenceAccessCode = (String) bindings.get(CONFERENCE_ACCESS_CODE_BINDING);
+//        String conferenceId = (String) bindings.get(CONFERENCE_ID_BINDING);
+//        String conferenceAccessCode = (String) bindings.get(CONFERENCE_ACCESS_CODE_BINDING);
         ConferenceSessionState state = (ConferenceSessionState) conversationState.getBindings().get(
                 CONFERENCE_STATE_BINDING);
         if (state==null) {
+            if (logger.isDebugEnabled())
+                logger.debug("Connectiong to conference...");
             state = new ConferenceSessionState(conversation);
             conversationState.setBinding(CONFERENCE_STATE_BINDING, state, BindingScope.POINT);
-            conferenceManager.join(conversation, conferenceId, conferenceAccessCode, state);
+            conferenceManager.join(conversation, conferenceId, accessCode, state);
         } else {
             if (autoConnect && state.getStatus()==ConferenceSessionStatus.JOINED)
                 state.connect();

@@ -154,8 +154,12 @@ public class RealTimeConferenceMixer extends AbstractRealTimeMixer {
                     hasData && !muted? selfData:null, data, len, streamsCount, bufferSize, maxGainCoef, false));
         }
 
-        public boolean stopSession() {
-            return sessionStopped.compareAndSet(false, true);
+        public boolean stopSession() throws Exception {
+            if (sessionStopped.compareAndSet(false, true)) {
+                stop();
+                return true;
+            } else 
+                return false;
         }
 
         public PushBufferDataSource getConferenceAudioSource() {
