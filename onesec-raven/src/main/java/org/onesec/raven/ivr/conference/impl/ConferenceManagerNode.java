@@ -16,6 +16,7 @@
 package org.onesec.raven.ivr.conference.impl;
 
 import fj.data.List;
+import java.io.File;
 import static java.lang.Math.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -70,16 +71,21 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
     @NotNull @Parameter(defaultValue="3")
     private Integer maxGainCoef;
     
+    @NotNull @Parameter
+    private String recordingStoragePath;
+    
     private Lock lock;
     private PlannedConferencesNode plannedNode;
     private ConferencesArchiveNode archiveNode;
     private AtomicReference<ConferenceNode> processingConference;
+    private File recordingStorageFile;
 
     @Override
     protected void initFields() {
         super.initFields();
         lock = new ReentrantLock();
         processingConference = new AtomicReference<ConferenceNode>();
+        recordingStorageFile = null;
     }
 
     @Override
@@ -92,6 +98,7 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
     protected void doStart() throws Exception {
         super.doStart();
         initNodes(true);
+        recordingStorageFile = getOrCreatePath(recordingStoragePath);
     }
 
     @Override
@@ -113,6 +120,25 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
             addAndSaveChildren(plannedNode);
             if (start) plannedNode.start();
         }
+    }
+    
+    private File getOrCreatePath(String path) throws Exception {
+        File file = new File(path);
+        if (!file.exists()) {
+            if (file.mkdirs())
+                throw new Exception(String.format(
+                        "Error creating directory (%s)", file.getAbsolutePath()));
+        } else if (!file.isDirectory())
+                throw new Exception(String.format(
+                        "Path (%s) exists but it is not a directory", file.getAbsolutePath()));
+        return file;
+    }
+
+    public File getRecordingPath(Conference conference) throws Exception {
+        if (!isStarted())
+            throw new Exception("Conference manager not started");
+        SimpleDateFormat fmt = new SimpleDateFormat("yyyy/MM/dd/"+conference.getId()+"/");
+        return getOrCreatePath(recordingStorageFile.getAbsolutePath()+"/"+fmt.format(conference.getStartTime()));
     }
     
     public PlannedConferencesNode getPlannedConferencesNode() {
@@ -302,6 +328,14 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
 
     public void setMaxGainCoef(Integer maxGainCoef) {
         this.maxGainCoef = maxGainCoef;
+    }
+
+    public String getRecordingStoragePath() {
+        return recordingStoragePath;
+    }
+
+    public void setRecordingStoragePath(String recordingStoragePath) {
+        this.recordingStoragePath = recordingStoragePath;
     }
 
     private void checkDates(Date fromDate, Date toDate) throws ConferenceException {

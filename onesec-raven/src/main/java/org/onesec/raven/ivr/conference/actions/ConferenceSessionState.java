@@ -48,7 +48,9 @@ public class ConferenceSessionState implements ConferenceSessionListener {
         allowedTransitions = new EnumMap<ConferenceSessionStatus, EnumSet<ConferenceSessionStatus>>(ConferenceSessionStatus.class);
         allowedTransitions.put(JOINING, EnumSet.of(JOINED, REJECTED_DUE_ERROR, REJECTED_DUE_INVALID_ID, STOPPED));
         allowedTransitions.put(JOINED, EnumSet.of(CONNECTED, STOPPED));
-        allowedTransitions.put(CONNECTED, EnumSet.of(STOPPED, REJECTED_DUE_ERROR));
+        allowedTransitions.put(CONNECTED, EnumSet.of(MUTED, UNMUTED, STOPPED, REJECTED_DUE_ERROR));
+        allowedTransitions.put(MUTED, EnumSet.of(UNMUTED, STOPPED, REJECTED_DUE_ERROR));
+        allowedTransitions.put(UNMUTED, EnumSet.of(MUTED, STOPPED, REJECTED_DUE_ERROR));
     }
 
     public ConferenceSessionState(IvrEndpointConversation conversation) 
@@ -133,12 +135,12 @@ public class ConferenceSessionState implements ConferenceSessionListener {
     }
     
     public void mute() {
-        if (status.get()==CONNECTED) 
+        if (makeTransition(MUTED)) 
             session.mute();
     }
     
     public void unmute() {
-        if (status.get()==CONNECTED) 
+        if (makeTransition(UNMUTED)) 
             try {
                 session.unmute();
             } catch (Exception ex) {

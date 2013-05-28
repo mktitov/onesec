@@ -151,10 +151,10 @@ public class ConferenceManagerRealTest extends OnesecRavenTestCase {
         scenario.setLogLevel(LogLevel.TRACE);
         assertTrue(scenario.start());
         createJoinToConferenceAction();
-        ConferenceEventHandlerNode onConnectedHandler = createConnectedEventHandler();
+//        ConferenceEventHandlerNode onConnectedHandler = createConnectedEventHandler();
         createOnStopEventHandler();
-        createMuteAction(onConnectedHandler);
-        createUnmuteAction(onConnectedHandler);
+        createMuteAction(createEventHandler(ConferenceSessionStatus.UNMUTED));
+        createUnmuteAction(createEventHandler(ConferenceSessionStatus.MUTED));
         createPauseActionNode(scenario, 60000l);
         createGotoNode(scenario, scenario);
     }
@@ -180,14 +180,17 @@ public class ConferenceManagerRealTest extends OnesecRavenTestCase {
         return handler;
     }
     
-    private ConferenceEventHandlerNode createOnStopEventHandler() {
+    private ConferenceEventHandlerNode createEventHandler(ConferenceSessionStatus eventType) {
         ConferenceEventHandlerNode handler = new ConferenceEventHandlerNode();
-        handler.setName("on stopped");
+        handler.setName(eventType.toString());
         scenario.addAndSaveChildren(handler);
-        handler.setEventType(ConferenceSessionStatus.STOPPED);
+        handler.setEventType(eventType);
         assertTrue(handler.start());
-        createStopConversationAction(handler);
         return handler;
+    }
+    
+    private void createOnStopEventHandler() {
+        createStopConversationAction(createEventHandler(ConferenceSessionStatus.STOPPED));
     }
     
     private void createMuteAction(Node owner) {

@@ -15,6 +15,7 @@
  */
 package org.onesec.raven.ivr.conference.impl;
 
+import java.io.File;
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -26,7 +27,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.media.protocol.DataSource;
+import javax.media.protocol.FileTypeDescriptor;
 import javax.media.protocol.PushBufferDataSource;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.onesec.raven.ivr.CodecManager;
 import org.onesec.raven.ivr.IncomingRtpStream;
 import org.onesec.raven.ivr.IncomingRtpStreamDataSourceListener;
@@ -45,6 +49,7 @@ import org.onesec.raven.ivr.conference.ConferenceManager;
 import org.onesec.raven.ivr.conference.ConferenceMixerSession;
 import org.onesec.raven.ivr.conference.ConferenceSession;
 import org.onesec.raven.ivr.conference.ConferenceSessionListener;
+import org.onesec.raven.ivr.impl.AudioFileWriterDataSource;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.log.LogLevel;
@@ -105,6 +110,7 @@ public class ConferenceNode extends BaseNode implements Conference {
     
     
     private AtomicMarkableReference<ConferenceController> controller;
+    private ConferenceRecordingsNode recordingsNode;
     
     private ConferenceManager getManager() {
         return (ConferenceManager) getParent().getParent();
@@ -116,9 +122,26 @@ public class ConferenceNode extends BaseNode implements Conference {
         controller = new AtomicMarkableReference<ConferenceController>(null, false);
     }
     
+    private void initNodes(boolean start) {
+        recordingsNode = (ConferenceRecordingsNode) getNode(ConferenceRecordingsNode.NAME);
+        if (recordingsNode==null) {
+            recordingsNode = new ConferenceRecordingsNode();
+            addAndSaveChildren(recordingsNode);
+            if (start) 
+                recordingsNode.start();            
+        }
+    }
+
+    @Override
+    protected void doInit() throws Exception {
+        super.doInit();
+        initNodes(false);
+    }
+    
     @Override
     protected void doStart() throws Exception {
         super.doStart();
+        initNodes(true);
         getManager().checkConferenceNode(this);
         controller.set(null, true);
     }
@@ -323,6 +346,17 @@ public class ConferenceNode extends BaseNode implements Conference {
         return new SimpleDateFormat(DATE_PATTERN).format(date);
     }
     
+    private synchronized ConferenceRecordingNode createRecordingNode() {
+        int i = recordingsNode.getNodesCount()+1;
+        while (recordingsNode.getNode(""+i)!=null)
+            ++i;        
+        ConferenceRecordingNode node = new ConferenceRecordingNode();
+        node.setName(""+i);
+        recordingsNode.addAndSaveChildren(node);
+        node.start();
+        return node;
+    }
+    
     private class ConferenceController {
         private final RealTimeConferenceMixer mixer;
         private final Map<Integer, ConferenceSessionImpl> sessions = 
@@ -347,6 +381,7 @@ public class ConferenceNode extends BaseNode implements Conference {
             try {
                 final Integer id = idGenerator.incrementAndGet();
                 final ConferenceSessionImpl session = new ConferenceSessionImpl(this, id, conv, mixer, logger, listener);
+                conv.addConversationListener(session);
                 sessions.put(id, session);
                 executor.executeQuietly(new AbstractTask(ConferenceNode.this, "Pushing 'conference session created' to the conversation") {
                     @Override public void doRun() throws Exception {
@@ -407,7 +442,7 @@ public class ConferenceNode extends BaseNode implements Conference {
             this.conversation = conversation;
             this.sessionListener = listener;
             this.logger = new LoggerHelper(logger, "["+id+", "+conversation.getCallingNumber()+"]. ");
-            this.mixerSession = mixer.addParticipant(conversation.getCallingNumber(), null);
+            this.mixerSession = mixer.addParticipant(+id+", "+conversation.getCallingNumber(), null);
         }
         
         public void start() {
@@ -497,5 +532,33 @@ public class ConferenceNode extends BaseNode implements Conference {
 
             public void streamClosing(IncomingRtpStream stream) { }
         }
+        
     }    
+    
+    private class Recorder {
+        private final long startTime = System.currentTimeMillis();
+        private final ConferenceRecordingNode recordingNode;
+        private final AudioFileWriterDataSource fileWriter;
+        private final LoggerHelper logger;
+        
+        public Recorder(PushBufferDataSource ds, LoggerHelper logger, CodecManager codecManager) throws Exception {
+            recordingNode = createRecordingNode();
+            File path = getManager().getRecordingPath(ConferenceNode.this);
+            String filename = String.format("%s/%s_%s_%s.wav",
+                    path.getAbsolutePath(),
+                    ConferenceNode.this.getId(),
+                    recordingNode.getName(),
+                    new SimpleDateFormat("yyyyMMdd_HHmmss"));
+            this.logger = new LoggerHelper(logger, "Recorder. ");
+            if (this.logger.isDebugEnabled())
+                this.logger.debug("Starting record the conference to file ({})", filename);
+            fileWriter = new AudioFileWriterDataSource(
+                    new File(filename), ds, codecManager, FileTypeDescriptor.WAVE, this.logger);
+            fileWriter.start();
+        }
+
+        public void stop() {
+            fileWriter.stop();
+        }
+    }
 }
