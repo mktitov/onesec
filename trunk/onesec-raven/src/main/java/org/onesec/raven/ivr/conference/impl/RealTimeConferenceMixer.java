@@ -156,6 +156,8 @@ public class RealTimeConferenceMixer extends AbstractRealTimeMixer {
 
         public boolean stopSession() throws Exception {
             if (sessionStopped.compareAndSet(false, true)) {
+                if (logger.isDebugEnabled())
+                    logger.debug("Stopping mixer session");
                 stop();
                 return true;
             } else 

@@ -13,12 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.onesec.raven.ivr.conference.actions;
+package org.onesec.raven.ivr.conference.impl;
+
+import org.raven.tree.impl.BaseNode;
 
 /**
  *
  * @author Mikhail Titov
  */
-public enum ConferenceSessionStatus {
-    JOINING, JOINED, CONNECTED, MUTED, UNMUTED, REJECTED_DUE_ERROR, REJECTED_DUE_INVALID_ID, STOPPED
+public class ConferenceRecordingsNode extends BaseNode {
+    public final static String NAME = "Recordings";
+
+    public ConferenceRecordingsNode() {
+        super(NAME);
+    }
 }
