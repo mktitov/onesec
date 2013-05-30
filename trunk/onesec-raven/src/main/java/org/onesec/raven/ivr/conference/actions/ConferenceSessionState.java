@@ -46,7 +46,8 @@ public class ConferenceSessionState implements ConferenceSessionListener {
     
     static {
         allowedTransitions = new EnumMap<ConferenceSessionStatus, EnumSet<ConferenceSessionStatus>>(ConferenceSessionStatus.class);
-        allowedTransitions.put(JOINING, EnumSet.of(JOINED, REJECTED_DUE_ERROR, REJECTED_DUE_INVALID_ID, STOPPED));
+        allowedTransitions.put(JOINING, EnumSet.of(JOINED, REJECTED_DUE_ERROR, REJECTED_DUE_INVALID_ID, 
+                REJECTED_DUE_TOO_MANY_PARTICIPANTS, STOPPED));
         allowedTransitions.put(JOINED, EnumSet.of(CONNECTED, STOPPED));
         allowedTransitions.put(CONNECTED, EnumSet.of(MUTED, UNMUTED, STOPPED, REJECTED_DUE_ERROR));
         allowedTransitions.put(MUTED, EnumSet.of(UNMUTED, STOPPED, REJECTED_DUE_ERROR));
@@ -106,6 +107,11 @@ public class ConferenceSessionState implements ConferenceSessionListener {
 
     public synchronized void invalidAccessCode() {
         if (makeTransition(REJECTED_DUE_INVALID_ID))
+            continueConversation();
+    }
+
+    public void tooManyParticipants() {
+        if (makeTransition(ConferenceSessionStatus.REJECTED_DUE_TOO_MANY_PARTICIPANTS))
             continueConversation();
     }
     

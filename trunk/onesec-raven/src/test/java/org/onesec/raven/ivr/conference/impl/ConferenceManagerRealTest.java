@@ -25,6 +25,7 @@ import org.onesec.core.services.ProviderRegistry;
 import org.onesec.core.services.StateListenersCoordinator;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.StateToNodeLogger;
+import org.onesec.raven.TestSchedulerNode;
 import org.onesec.raven.impl.CCMCallOperatorNode;
 import org.onesec.raven.impl.ProviderNode;
 import org.onesec.raven.ivr.IvrEndpointConversation;
@@ -67,10 +68,16 @@ public class ConferenceManagerRealTest extends OnesecRavenTestCase {
     private ConferenceManagerNode manager;
     private Conference conference;
     private IvrMultichannelEndpointNode endpoint;
+    private TestSchedulerNode scheduler;
 
     
     @Before
     public void prepare() throws Exception {
+        scheduler = new TestSchedulerNode();
+        scheduler.setName("scheduler");
+        testsNode.addAndSaveChildren(scheduler);
+        assertTrue(scheduler.start());
+        
         rtpManager = new RtpStreamManagerNode();
         rtpManager.setName("rtpManager");
         testsNode.addAndSaveChildren(rtpManager);
@@ -128,7 +135,7 @@ public class ConferenceManagerRealTest extends OnesecRavenTestCase {
     
     @Test
     public void test() throws InterruptedException {
-        Thread.sleep(5*60*1000);
+        Thread.sleep(3*60*1000);
     }
     
     private void createConferenceManager() throws ConferenceException {
@@ -137,8 +144,12 @@ public class ConferenceManagerRealTest extends OnesecRavenTestCase {
         testsNode.addAndSaveChildren(manager);
         manager.setChannelsCount(10);
         manager.setExecutor(executor);
+        manager.setRecordingStoragePath("target/conferences_recordings");
+        manager.setNoiseLevel(2);
+        manager.setArchiveScheduler(scheduler);
         assertTrue(manager.start());
-        conference = manager.createConference("test", addToCur(5), addToCur(60*5), 10, null);        
+        conference = manager.createConference("test", addToCur(5), addToCur(60*2), 10, null);
+        conference.setRecordConference(Boolean.TRUE);
         manager.setLogLevel(LogLevel.TRACE);
         ((BaseNode)conference).setLogLevel(LogLevel.TRACE);
     }

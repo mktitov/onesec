@@ -16,7 +16,9 @@
 package org.onesec.raven.ivr.conference.impl;
 
 import fj.data.List;
+import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import static org.easymock.EasyMock.*;
 import org.easymock.IMocksControl;
@@ -24,29 +26,57 @@ import org.junit.After;
 import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.Test;
+import org.onesec.raven.OnesecRavenTestCase;
+import org.onesec.raven.TestSchedulerNode;
 import org.onesec.raven.ivr.conference.Conference;
 import org.onesec.raven.ivr.conference.ConferenceException;
 import static org.onesec.raven.ivr.conference.ConferenceException.*;
 import org.onesec.raven.ivr.conference.ConferenceInitiator;
 import static org.onesec.raven.ivr.conference.impl.ConferenceManagerNode.*;
+import org.raven.test.DataCollector;
+import org.raven.test.InThreadExecutorService;
 import org.raven.test.RavenCoreTestCase;
 import org.raven.tree.Node;
 /**
  *
  * @author Mikhail Titov
  */
-public class ConferenceManagerNodeTest extends RavenCoreTestCase {
+public class ConferenceManagerNodeTest extends OnesecRavenTestCase {
     private static List<Conference> emptyList = List.nil();
     private IMocksControl mocks;
     private ConferenceManagerNode manager;
+    private TestSchedulerNode scheduler;
+    private InThreadExecutorService executor;
+    private DataCollector collector;
     
     @Before
     public void prepare() {
+        executor = new InThreadExecutorService();
+        executor.setName("executor");
+        testsNode.addAndSaveChildren(executor);
+        assertTrue(executor.start());
+        
+        scheduler = new TestSchedulerNode();
+        scheduler.setName("scheduler");
+        testsNode.addAndSaveChildren(scheduler);
+        assertTrue(scheduler.start());
+        
         mocks = null;
+        
         manager = new ConferenceManagerNode();
         manager.setName("Conference manager");
         testsNode.addAndSaveChildren(manager);
         manager.setChannelsCount(10);
+        manager.setArchiveScheduler(scheduler);
+        manager.setRecordingStoragePath("target/conference_manager");
+        manager.setExecutor(executor);
+        
+        collector = new DataCollector();
+        collector.setName("data collector");
+        testsNode.addAndSaveChildren(collector);
+        collector.setDataSource(manager);
+        assertTrue(collector.start());
+        
     }
     
     @After
@@ -156,7 +186,7 @@ public class ConferenceManagerNodeTest extends RavenCoreTestCase {
         checkCreateConferenceException(NULL_TO_DATE, "name", new Date(), null, 0, null);
         checkCreateConferenceException(INVALID_CHANNELS_COUNT, "name", new Date(), new Date(), 0, null);
         checkCreateConferenceException(FROM_DATE_AFTER_TO_DATE, "name", new Date(), new Date(System.currentTimeMillis()-1000), 10, null);
-        checkCreateConferenceException(DATE_AFTER_CURRENT_DATE, "name", new Date(System.currentTimeMillis()-1000), new Date(), 10, null);
+        checkCreateConferenceException(DATE_AFTER_CURRENT_DATE, "name", new Date(System.currentTimeMillis()-1000), new Date(System.currentTimeMillis()-100), 10, null);
         Date fd = new Date(System.currentTimeMillis()+10000);
         checkCreateConferenceException(CONFERENCE_TO_LONG, "name", fd, new Date(fd.getTime()+61*1000), 10, null);
         fd = new Date(System.currentTimeMillis()+TimeUnit.DAYS.toMillis(2));
@@ -207,6 +237,37 @@ public class ConferenceManagerNodeTest extends RavenCoreTestCase {
         conf3.setStartTime(new Date(time+61000));
         conf3.setEndTime(new Date(time+121000));
         assertTrue(conf3.start());
+    }
+    
+    @Test
+    public void archiveConferenceTest() throws InterruptedException {
+        manager.setChannelsCount(10);
+        manager.setMinChannelsPerConference(5);
+        assertTrue(manager.start());
+        Date fd = new Date(System.currentTimeMillis()-5000);
+        Date td = new Date(System.currentTimeMillis()+1000);
+        ConferenceNode conference = createConferenceNode("c1", fd, td, 5);
+        assertTrue(conference.start());
+        
+        manager.executeScheduledJob(scheduler);
+        assertTrue(collector.getDataList().isEmpty());
+        
+        Thread.sleep(1010);
+        manager.executeScheduledJob(scheduler);
+        assertEquals(1, collector.getDataListSize());
+        assertTrue(collector.getDataList().get(0) instanceof Map);
+        Map<String, Object> event = (Map<String, Object>) collector.getDataList().get(0);
+        assertEquals(CONFERENCE_ARCHIVED_EVENT, event.get(EVENT_TYPE_FIELD));
+        assertSame(conference, event.get(CONFERENCE_FIELD));
+        assertNull(manager.getPlannedConferencesNode().getNode(conference.getName()));
+        assertSame(conference, manager.getConferencesArchiveNode().getNodeByPath(
+                new SimpleDateFormat("yyyy/MM/dd/").format(conference.getStartTime())+conference.getName()));
+    }
+    
+    @Test
+    public void oneMinuteLeftAttrTest() {
+        assertTrue(manager.start());
+        assertNotNull(manager.getOneMinuteLeftAudio());
     }
     
     private Conference createConference() {

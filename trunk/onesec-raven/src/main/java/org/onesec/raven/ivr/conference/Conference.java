@@ -47,5 +47,8 @@ public interface Conference {
     Boolean getRecordConference();
     void setRecordConference(Boolean value);    
     
+    public Integer getAutoStopRecorderAfter();
+    public void setAutoStopRecorderAfter(Integer autoStopRecorderAfter); 
+    
     void update();    
 }

@@ -19,24 +19,43 @@ import fj.data.List;
 import java.io.File;
 import static java.lang.Math.*;
 import java.text.SimpleDateFormat;
+import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import org.onesec.raven.Constants;
+import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.conference.Conference;
 import org.onesec.raven.ivr.conference.ConferenceException;
 import org.onesec.raven.ivr.conference.ConferenceInitiator;
 import org.onesec.raven.ivr.conference.ConferenceManager;
 import org.onesec.raven.ivr.conference.ConferenceSessionListener;
+import org.onesec.raven.ivr.impl.AudioFileNode;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
+import org.raven.ds.DataConsumer;
+import org.raven.ds.DataContext;
+import org.raven.ds.DataSource;
+import org.raven.ds.impl.DataContextImpl;
+import org.raven.ds.impl.DataSourceHelper;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
+import org.raven.sched.Schedulable;
+import org.raven.sched.Scheduler;
 import org.raven.sched.impl.AbstractTask;
 import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
+import org.raven.tree.Node;
+import org.raven.tree.NodeAttribute;
+import org.raven.tree.TreeException;
 import org.raven.tree.impl.BaseNode;
+import org.raven.tree.impl.ContainerNode;
+import org.raven.tree.impl.ResourceReferenceValueHandlerFactory;
 import org.raven.util.NodeUtils;
 import org.weda.annotations.constraints.NotNull;
 /**
@@ -44,8 +63,11 @@ import org.weda.annotations.constraints.NotNull;
  * @author Mikhail Titov
  */
 @NodeClass
-public class ConferenceManagerNode extends BaseNode implements ConferenceManager {
+public class ConferenceManagerNode extends BaseNode implements ConferenceManager, Schedulable, DataSource {
     private static final int LOCK_TIMEOUT = 1000;
+    public static final String EVENT_TYPE_FIELD = "eventType";
+    public static final String CONFERENCE_FIELD = "conference";
+    public static final String CONFERENCE_ARCHIVED_EVENT = "CONFERENCE_ARCHIVED";
     
     @NotNull @Parameter
     private Integer channelsCount;
@@ -74,17 +96,26 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
     @NotNull @Parameter
     private String recordingStoragePath;
     
+    @NotNull @Parameter
+    private Scheduler archiveScheduler;
+    
+    @Parameter(valueHandlerType=ResourceReferenceValueHandlerFactory.TYPE,
+            defaultValue=Constants.CONFERENCE_STOP_AFTER_1MIN)
+    private AudioFile oneMinuteLeftAudio;
+    
     private Lock lock;
     private PlannedConferencesNode plannedNode;
     private ConferencesArchiveNode archiveNode;
     private AtomicReference<ConferenceNode> processingConference;
     private File recordingStorageFile;
+    private AtomicBoolean scheduling;
 
     @Override
     protected void initFields() {
         super.initFields();
         lock = new ReentrantLock();
         processingConference = new AtomicReference<ConferenceNode>();
+        scheduling = new AtomicBoolean();
         recordingStorageFile = null;
     }
 
@@ -121,11 +152,59 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
             if (start) plannedNode.start();
         }
     }
+
+    public void executeScheduledJob(Scheduler scheduler) {
+        if (!scheduling.compareAndSet(false, true))
+            return;
+        try {
+            final long curTime = System.currentTimeMillis();
+            for (ConferenceNode conf: NodeUtils.getChildsOfType(plannedNode, ConferenceNode.class))
+                if (conf.getEndTime().getTime()<curTime && !conf.isActive())
+                    archiveConference(conf);
+        } finally {
+            scheduling.compareAndSet(true, false);
+        }
+    }
+    
+    private void archiveConference(ConferenceNode conf) {
+        if (isLogLevelEnabled(LogLevel.DEBUG))
+            getLogger().debug(String.format(
+                    "Archiving conference: name=(%s); node=(%s)", conf.getConferenceName(), conf));
+        String[] path = new SimpleDateFormat("yyyy MM dd").format(conf.getStartTime()).split(" ");
+        Node container = getOrCreateArchivePath(archiveNode, path, 0);
+        try {
+            tree.move(conf, container, null);
+            sendConferenceArchived(conf);
+        } catch (TreeException ex) {
+            if (isLogLevelEnabled(LogLevel.ERROR))
+                getLogger().error(String.format("Conference (%s, %s) archiving error", conf.getName(), conf), ex);
+        }
+    }
+    
+    private void sendConferenceArchived(ConferenceNode conf) {
+        Map<String, Object> event = new HashMap<String, Object>();
+        event.put(EVENT_TYPE_FIELD, CONFERENCE_ARCHIVED_EVENT);
+        event.put(CONFERENCE_FIELD, conf);
+        DataSourceHelper.sendDataToConsumers(executor, this, event, new DataContextImpl());
+    }
+    
+    private Node getOrCreateArchivePath(final Node owner, final String[] path, final int pos) {
+        if (pos==path.length) return owner;
+        else {
+            Node child = owner.getNode(path[pos]);
+            if (child==null) {
+                child = new ContainerNode(path[pos]);
+                owner.addAndSaveChildren(child);
+                child.start();
+            }
+            return getOrCreateArchivePath(child, path, pos+1);
+        }
+    }
     
     private File getOrCreatePath(String path) throws Exception {
         File file = new File(path);
         if (!file.exists()) {
-            if (file.mkdirs())
+            if (!file.mkdirs())
                 throw new Exception(String.format(
                         "Error creating directory (%s)", file.getAbsolutePath()));
         } else if (!file.isDirectory())
@@ -338,11 +417,27 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
         this.recordingStoragePath = recordingStoragePath;
     }
 
+    public Scheduler getArchiveScheduler() {
+        return archiveScheduler;
+    }
+
+    public void setArchiveScheduler(Scheduler archiveScheduler) {
+        this.archiveScheduler = archiveScheduler;
+    }
+
+    public AudioFile getOneMinuteLeftAudio() {
+        return oneMinuteLeftAudio;
+    }
+
+    public void setOneMinuteLeftAudio(AudioFile oneMinuteLeftAudio) {
+        this.oneMinuteLeftAudio = oneMinuteLeftAudio;
+    }
+
     private void checkDates(Date fromDate, Date toDate) throws ConferenceException {
         final Date curDate = new Date();
         if (fromDate.after(toDate)) 
             throw new ConferenceException(ConferenceException.FROM_DATE_AFTER_TO_DATE);
-        if (curDate.after(fromDate))
+        if (curDate.after(toDate))
             throw new ConferenceException(ConferenceException.DATE_AFTER_CURRENT_DATE);
         if (toDate.getTime()-fromDate.getTime() > maxConferenceDuration*60*1000)
             throw new ConferenceException(ConferenceException.CONFERENCE_TO_LONG);
@@ -377,6 +472,18 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
         for (int i=0; i<numOfDigits; ++i)
             buf.append((int)(random()*10));
         return buf.toString();
+    }
+
+    public boolean getDataImmediate(DataConsumer dataConsumer, DataContext context) {
+        throw new UnsupportedOperationException("Pull operation not supported by this dataSource");
+    }
+
+    public Boolean getStopProcessingOnError() {
+        return false;
+    }
+
+    public Collection<NodeAttribute> generateAttributes() {
+        return null;
     }
     
     private interface Task<T>{}

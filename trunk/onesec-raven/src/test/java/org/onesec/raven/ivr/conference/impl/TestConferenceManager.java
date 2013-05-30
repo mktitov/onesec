@@ -15,7 +15,9 @@
  */
 package org.onesec.raven.ivr.conference.impl;
 
+import java.io.File;
 import java.util.Date;
+import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.conference.Conference;
 import org.onesec.raven.ivr.conference.ConferenceException;
@@ -59,6 +61,14 @@ public class TestConferenceManager extends BaseNode implements ConferenceManager
     }
 
     public void checkConferenceNode(Conference conf) throws ConferenceException {
+    }
+
+    public File getRecordingPath(Conference conference) throws Exception {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public AudioFile getOneMinuteLeftAudio() {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
     
 }

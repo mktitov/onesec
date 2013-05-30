@@ -29,8 +29,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import javax.media.protocol.DataSource;
 import javax.media.protocol.FileTypeDescriptor;
 import javax.media.protocol.PushBufferDataSource;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.FilenameUtils;
+import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.CodecManager;
 import org.onesec.raven.ivr.IncomingRtpStream;
 import org.onesec.raven.ivr.IncomingRtpStreamDataSourceListener;
@@ -44,18 +43,26 @@ import org.onesec.raven.ivr.IvrEndpointConversationTransferedEvent;
 import org.onesec.raven.ivr.IvrIncomingRtpStartedEvent;
 import org.onesec.raven.ivr.IvrOutgoingRtpStartedEvent;
 import org.onesec.raven.ivr.RtpStreamException;
+import org.onesec.raven.ivr.actions.PlayAudioAction;
 import org.onesec.raven.ivr.conference.Conference;
 import org.onesec.raven.ivr.conference.ConferenceManager;
 import org.onesec.raven.ivr.conference.ConferenceMixerSession;
 import org.onesec.raven.ivr.conference.ConferenceSession;
 import org.onesec.raven.ivr.conference.ConferenceSessionListener;
+import org.onesec.raven.ivr.impl.AsyncPushBufferDataSource;
+import org.onesec.raven.ivr.impl.AudioFileInputStreamSource;
 import org.onesec.raven.ivr.impl.AudioFileWriterDataSource;
+import org.onesec.raven.ivr.impl.BufferSplitterDataSource;
+import org.onesec.raven.ivr.impl.ContainerParserDataSource;
+import org.onesec.raven.ivr.impl.IssDataSource;
+import org.onesec.raven.ivr.impl.PullToPushConverterDataSource;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.impl.AbstractTask;
 import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
+import org.raven.tree.Node;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.LoggerHelper;
 import org.weda.annotations.constraints.NotNull;
@@ -108,6 +115,12 @@ public class ConferenceNode extends BaseNode implements Conference {
     @NotNull @Parameter
     private Integer maxGainCoef;
     
+    @NotNull @Parameter(defaultValue="30")
+    private Integer autoStopRecorderAfter;
+    
+    @NotNull @Parameter(defaultValue="60")
+    private Integer autoStopControllerAfter;
+    
     
     private AtomicMarkableReference<ConferenceController> controller;
     private ConferenceRecordingsNode recordingsNode;
@@ -158,6 +171,10 @@ public class ConferenceNode extends BaseNode implements Conference {
             _controller.stop();
     }
     
+    public boolean isActive() {
+        return controller.getReference()!=null;
+    }
+       
     public void join(final IvrEndpointConversation conversation, final String accessCode, 
             final ConferenceSessionListener listener)
     {
@@ -192,21 +209,27 @@ public class ConferenceNode extends BaseNode implements Conference {
     private ConferenceController getOrCreateConferenceController() {
         boolean[] holder = new boolean[1];
         ConferenceController _controller = controller.get(holder);
-        if (holder[0] && _controller!=null)
+        if (holder[0] && _controller!=null && _controller.isActive())
             return _controller;
         synchronized(this) {
             try {
-                _controller = new ConferenceController(this, codecManager, executor, channelsCount, 
+                _controller = new ConferenceController(this, codecManager, executor, noiseLevel, 
+                        maxGainCoef, recordConference, autoStopRecorderAfter, autoStopControllerAfter, 
                         channelsCount);
                 if (!controller.compareAndSet(null, _controller, true, true)) _controller.stop();
                 else {
                     final ConferenceController finalController = _controller;
-                    executor.executeQuietly(getEndTime().getTime()-System.currentTimeMillis(), 
+                    final long curTime = System.currentTimeMillis();
+                    executor.executeQuietly(getEndTime().getTime()-curTime, 
                         new AbstractTask(this, "Stop conference task") {
                             @Override public void doRun() throws Exception {
                                 finalController.stop();
                             }
                         });
+                    final long delay = (getEndTime().getTime()-60000)-curTime;
+                    AudioFile audio = getManager().getOneMinuteLeftAudio();
+                    if (delay>0 && audio!=null)
+                        executor.executeQuietly(delay, new PlayAudioTask(finalController, audio, codecManager));
                 }
             } catch (Throwable e) {
                 if (isLogLevelEnabled(LogLevel.ERROR)) 
@@ -328,6 +351,22 @@ public class ConferenceNode extends BaseNode implements Conference {
         this.recordConference = recordConference;
     }
 
+    public Integer getAutoStopRecorderAfter() {
+        return autoStopRecorderAfter;
+    }
+
+    public void setAutoStopRecorderAfter(Integer autoStopRecorderAfter) {
+        this.autoStopRecorderAfter = autoStopRecorderAfter;
+    }
+
+    public Integer getAutoStopControllerAfter() {
+        return autoStopControllerAfter;
+    }
+
+    public void setAutoStopControllerAfter(Integer autoStopControllerAfter) {
+        this.autoStopControllerAfter = autoStopControllerAfter;
+    }
+
     public void update() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
@@ -357,6 +396,34 @@ public class ConferenceNode extends BaseNode implements Conference {
         return node;
     }
     
+    private class PlayAudioTask extends AbstractTask {
+        private final ConferenceController conferenceController;
+        private final AudioFile audio;
+        private final CodecManager codecManager;
+
+        public PlayAudioTask(ConferenceController conferenceController, AudioFile audio, CodecManager codecManager) {
+            super(ConferenceNode.this, "Play audio in conference");
+            this.conferenceController = conferenceController;
+            this.audio = audio;
+            this.codecManager = codecManager;
+        }
+
+        @Override
+        public void doRun() throws Exception {
+            if (conferenceController.isActive()) {
+                AudioFileInputStreamSource stream = new AudioFileInputStreamSource(audio, ConferenceNode.this);
+                IssDataSource dataSource = new IssDataSource(stream, FileTypeDescriptor.WAVE);
+                ContainerParserDataSource parser = new ContainerParserDataSource(codecManager, dataSource);
+                PullToPushConverterDataSource conv = new PullToPushConverterDataSource(
+                        parser, executor, ConferenceNode.this);
+                BufferSplitterDataSource source = new BufferSplitterDataSource(conv, 160, codecManager, 
+                        new LoggerHelper(ConferenceNode.this, conferenceController.logger.getPrefix()));
+                conferenceController.getMixer().playAudio("1 min left", source);
+            }
+        }
+        
+    }
+    
     private class ConferenceController {
         private final RealTimeConferenceMixer mixer;
         private final Map<Integer, ConferenceSessionImpl> sessions = 
@@ -365,56 +432,180 @@ public class ConferenceNode extends BaseNode implements Conference {
         private final ExecutorService executor;
         private final AtomicBoolean stopped = new AtomicBoolean();
         private final AtomicInteger idGenerator = new AtomicInteger();
+        private final boolean recordConference;
+        private final AtomicReference<Recorder> recorder = new AtomicReference<Recorder>();
+        private final CodecManager codecManager;
+        private final int stopRecorderAfter;
+        private final int stopControllerAfter;
+        private final int channelsCount;
 
         public ConferenceController(ConferenceNode conferenceNode, CodecManager codecManager, 
-                ExecutorService executor, int noiseLevel, double maxGainCoef) throws IOException 
+                ExecutorService executor, int noiseLevel, double maxGainCoef, boolean recordConference, 
+                int stopRecorderAfter, int stopControllerAfter, int channelsCount) 
+            throws IOException 
         {
             this.executor = executor;
+            this.codecManager = codecManager;
             this.logger = new LoggerHelper(conferenceNode, "Conference. ");
             mixer = new RealTimeConferenceMixer(codecManager, conferenceNode, logger, executor, noiseLevel, 
                     maxGainCoef);
             mixer.connect();
             mixer.start();
+            this.recordConference = recordConference;
+            this.stopRecorderAfter = stopRecorderAfter;
+            this.stopControllerAfter = stopControllerAfter;
+            this.channelsCount = channelsCount;
+        }
+
+        public RealTimeConferenceMixer getMixer() {
+            return mixer;
         }
         
-        public void join(IvrEndpointConversation conv, final ConferenceSessionListener listener) {
+        public boolean isActive() {
+            return !stopped.get();
+        }
+        
+        public synchronized void join(IvrEndpointConversation conv, final ConferenceSessionListener listener) {
             try {
-                final Integer id = idGenerator.incrementAndGet();
-                final ConferenceSessionImpl session = new ConferenceSessionImpl(this, id, conv, mixer, logger, listener);
-                conv.addConversationListener(session);
-                sessions.put(id, session);
-                executor.executeQuietly(new AbstractTask(ConferenceNode.this, "Pushing 'conference session created' to the conversation") {
-                    @Override public void doRun() throws Exception {
-                        listener.sessionCreated(session);
-                    }
-                });
+                if (stopped.get())
+                    sendConferenceNotActive(listener);
+                else if (sessions.size()>=channelsCount)
+                    sendTooManyParticipants(listener);
+                else {
+                    final Integer id = idGenerator.incrementAndGet();
+                    final ConferenceSessionImpl session = new ConferenceSessionImpl(this, id, conv, mixer, 
+                            logger, listener);
+                    conv.addConversationListener(session);
+                    sessions.put(id, session);
+                    sendConferenceCreated(listener, session);
+                    startRecording();
+                }
             } catch (Exception ex) {
                 if (logger.isErrorEnabled())
                     logger.error("Error creating session for conversation: "+conv, ex);
-                executor.executeQuietly(new AbstractTask(ConferenceNode.this, "Pushing 'session creation error' to conference") {
-                    @Override public void doRun() throws Exception {
-                        listener.sessionCreationError();
+                sendError(listener);
+            }
+        }
+        
+        private void startRecording() {
+            if (!recordConference || recorder.get()!=null)
+                return;
+            synchronized(recorder) {
+                if (recorder.get()==null) {
+                    try {
+                        recorder.set(new Recorder(mixer, logger, codecManager));
+                    } catch (Exception e) {
+                        if (logger.isErrorEnabled())
+                            logger.error("Conference recorder creation error", e);
                     }
-                });
+                }
             }
         }
         
         public void removeSession(ConferenceSessionImpl session) {
-            if (!stopped.get())
+            if (!stopped.get()) {
                 sessions.remove(session.id);
+                Recorder _recorder = recorder.get();
+                if (sessions.isEmpty()) {
+                    if (stopControllerAfter>0)
+                        executor.executeQuietly(stopControllerAfter*1000, new StopControllerTask(
+                                idGenerator.get()));
+                    if (stopRecorderAfter>0 && _recorder!=null)
+                        executor.executeQuietly(stopRecorderAfter*1000, new StopRecorderTask(
+                                _recorder, idGenerator.get()));
+                }
+            }
         }
         
-        public void stop() {
-            if (stopped.compareAndSet(false, true))
+        public synchronized void stop() {
+            if (stopped.compareAndSet(false, true)) {
                 executor.executeQuietly(new AbstractTask(ConferenceNode.this, "Stopping conference controller") {
                     @Override public void doRun() throws Exception {
+                        Recorder _recorder = recorder.getAndSet(null);
+                        if (_recorder!=null)
+                            _recorder.stop();
                         for (ConferenceSessionImpl session: sessions.values()) {
                             session.stop();
                             session.sessionListener.conferenceStopped();
                         }
                         sessions.clear();
+                        if (logger.isDebugEnabled())
+                            logger.debug("Conference controller stopped");
                     }
                 });
+            }
+        }
+        
+        private void sendTooManyParticipants(final ConferenceSessionListener listener) {
+            executor.executeQuietly(new AbstractTask(ConferenceNode.this, "Pushing 'too many participants' in conference") {
+                @Override public void doRun() throws Exception {
+                    listener.tooManyParticipants();
+                }
+            });
+        }
+
+        private void sendConferenceNotActive(final ConferenceSessionListener listener) {
+            executor.executeQuietly(new AbstractTask(ConferenceNode.this, "Pushing 'conference not active'") {
+                @Override public void doRun() throws Exception {
+                    listener.conferenceNotActive();
+                }
+            });
+        }
+
+        private void sendConferenceCreated(final ConferenceSessionListener listener, final ConferenceSessionImpl session) {
+            executor.executeQuietly(new AbstractTask(ConferenceNode.this, "Pushing 'conference session created' to the conversation") {
+                @Override public void doRun() throws Exception {
+                    listener.sessionCreated(session);
+                }
+            });
+        }
+
+        private void sendError(final ConferenceSessionListener listener) {
+            executor.executeQuietly(new AbstractTask(ConferenceNode.this, "Pushing 'session creation error' to conference") {
+                @Override public void doRun() throws Exception {
+                    listener.sessionCreationError();
+                }
+            });
+        }
+        
+        private class StopControllerTask extends AbstractTask {
+            private final int lastId;
+
+            public StopControllerTask(int lastId) {
+                super(ConferenceNode.this, "Stop controller task (no participants)");
+                this.lastId = lastId;
+            }
+
+            @Override
+            public void doRun() throws Exception {
+                if (lastId==idGenerator.get() && sessions.isEmpty()) {
+                    if (logger.isDebugEnabled())
+                        logger.debug("Stopping recorder because of no participants in conference "
+                                + "more than {} seconds", stopRecorderAfter);
+                    stop();
+                }
+            }
+        }
+        
+        private class StopRecorderTask extends AbstractTask {
+            private final Recorder lastRecorder;
+            private final int lastId;
+
+            public StopRecorderTask(Recorder recorder, int lastId) {
+                super(ConferenceNode.this, "Stop recorder task (no participants)");
+                this.lastRecorder = recorder;
+                this.lastId = lastId;
+            }
+
+            @Override
+            public void doRun() throws Exception {
+                if (lastId==idGenerator.get() && sessions.isEmpty() && recorder.compareAndSet(lastRecorder, null)) {
+                    if (logger.isDebugEnabled())
+                        logger.debug("Stopping recorder because of no participants in conference "
+                                + "more than {} seconds", stopRecorderAfter);
+                    lastRecorder.stop();
+                }
+            }
         }
     }
     
@@ -540,25 +731,38 @@ public class ConferenceNode extends BaseNode implements Conference {
         private final ConferenceRecordingNode recordingNode;
         private final AudioFileWriterDataSource fileWriter;
         private final LoggerHelper logger;
+        private final AtomicBoolean stopped = new AtomicBoolean();
         
         public Recorder(PushBufferDataSource ds, LoggerHelper logger, CodecManager codecManager) throws Exception {
             recordingNode = createRecordingNode();
             File path = getManager().getRecordingPath(ConferenceNode.this);
+            Date startDate = new Date(startTime);
             String filename = String.format("%s/%s_%s_%s.wav",
                     path.getAbsolutePath(),
                     ConferenceNode.this.getId(),
                     recordingNode.getName(),
-                    new SimpleDateFormat("yyyyMMdd_HHmmss"));
-            this.logger = new LoggerHelper(logger, "Recorder. ");
+                    new SimpleDateFormat("yyyyMMdd_HHmmss").format(startDate));
+            this.logger = new LoggerHelper(recordingNode, logger.getPrefix()+"Recorder. ");
             if (this.logger.isDebugEnabled())
                 this.logger.debug("Starting record the conference to file ({})", filename);
+            AsyncPushBufferDataSource asyncDs = new AsyncPushBufferDataSource(ds, executor, 32, 
+                    ConferenceNode.this, logger, false);
+            recordingNode.setRecordingFile(filename);
+            recordingNode.setRecordingStartTime(formatDate(startDate));
             fileWriter = new AudioFileWriterDataSource(
-                    new File(filename), ds, codecManager, FileTypeDescriptor.WAVE, this.logger);
+                    new File(filename), asyncDs, codecManager, FileTypeDescriptor.WAVE, this.logger);
             fileWriter.start();
         }
 
         public void stop() {
-            fileWriter.stop();
+            if (stopped.compareAndSet(false, true)) {
+                fileWriter.stop();
+                long curDate = System.currentTimeMillis();
+                recordingNode.setRecordingDuration((int)(curDate - startTime)/1000);
+                recordingNode.setRecordingEndTime(formatDate(new Date(curDate)));
+                if (logger.isDebugEnabled())
+                    logger.debug("Recorder stopped");
+            }
         }
     }
 }
