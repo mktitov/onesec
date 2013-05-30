@@ -36,14 +36,16 @@ public class BufferSplitterDataSource extends PushBufferDataSource {
     
     private final PushBufferDataSource source;
     private final PushBufferStream[] streams;
+    private final LoggerHelper logger;
     public final static AudioFormat FORMAT = new AudioFormat(AudioFormat.LINEAR, 8000d, 8, 1, -1
             , 0, 8, 16000.0, byte[].class);
 
-    public BufferSplitterDataSource(PushBufferDataSource source, int bufferSize, 
+    public BufferSplitterDataSource(PushBufferDataSource source, int maxBufferSize, 
             CodecManager codecManager, LoggerHelper logger) throws CodecManagerException 
     {
         this.source = new TranscoderDataSource(codecManager, source, FORMAT, logger);
-        streams = new PushBufferStream[]{new Stream(this.source.getStreams()[0], bufferSize)};
+        this.logger = new LoggerHelper(logger, "Buffer Splitter. ");
+        this.streams = new PushBufferStream[]{new Stream(this.source.getStreams()[0], maxBufferSize)};
         this.source.getStreams()[0].setTransferHandler((BufferTransferHandler)streams[0]);
     }
 
@@ -96,12 +98,12 @@ public class BufferSplitterDataSource extends PushBufferDataSource {
         
         private volatile BufferTransferHandler transferHandler;
         private final PushBufferStream sourceStream;
-        private final int bufferSize;
+        private final int maxBufferSize;
         private volatile Buffer buffer;
 
         public Stream(PushBufferStream sourceStream, int bufferSize) {
             this.sourceStream = sourceStream;
-            this.bufferSize = bufferSize;
+            this.maxBufferSize = bufferSize;
         }
 
         public Format getFormat() {
@@ -146,7 +148,7 @@ public class BufferSplitterDataSource extends PushBufferDataSource {
                 int len = sourceBuf.getLength();
                 int pos = 0;
                 while (pos<len) {
-                    int clen = Math.min(bufferSize, len-pos);
+                    int clen = Math.min(maxBufferSize, len-pos);
                     byte[] newData = new byte[clen];
 //                    System.out.println(String.format("source len: %d, pos: %d, len: %d", len, pos, clen));
                     System.arraycopy(data, pos, newData, 0, clen);
@@ -160,11 +162,12 @@ public class BufferSplitterDataSource extends PushBufferDataSource {
                         buffer.setEOM(true);
                     if (transferHandler!=null)
                         transferHandler.transferData(this);
-                    Thread.sleep(bufferSize/8);
+                    Thread.sleep(clen/8);
 //                    Thread.sleep(10);
                 }
             } catch (Throwable e) {
-                e.printStackTrace();
+                if (logger.isErrorEnabled()) 
+                    logger.error("Transfer data error", e);
             }
         }
         

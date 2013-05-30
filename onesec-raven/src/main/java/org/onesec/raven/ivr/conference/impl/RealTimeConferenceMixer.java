@@ -23,11 +23,13 @@ import java.util.logging.Logger;
 import javax.media.Buffer;
 import javax.media.Format;
 import javax.media.Time;
+import javax.media.format.AudioFormat;
 import javax.media.protocol.BufferTransferHandler;
 import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.PushBufferDataSource;
 import javax.media.protocol.PushBufferStream;
 import org.onesec.raven.ivr.CodecManager;
+import org.onesec.raven.ivr.CodecManagerException;
 import org.onesec.raven.ivr.conference.ConferenceMixerSession;
 import org.onesec.raven.ivr.MixerHandler;
 import org.onesec.raven.ivr.impl.AbstractMixerHandler;
@@ -54,17 +56,27 @@ public class RealTimeConferenceMixer extends AbstractRealTimeMixer {
         addDataSourceHandler(handler);
         return handler;
     }
+    
+    public void playAudio(String name, PushBufferDataSource audioSource) throws Exception {
+        addDataSourceHandler(new PlayAudioHandler(audioSource, logger));
+    }
 
     @Override
     protected void applyBufferToHandlers(MixerHandler firstHandler, final int[] data, int len, int streamsCount, 
         double maxGainCoef, int bufferSize) 
     {
-        Handler handler = (Handler)firstHandler;
+        MixerHandler handler = (Handler)firstHandler;
         while (handler!=null) {
-            if (!handler.isSessionStopped())
+            if (handler instanceof Handler && !((Handler)handler).isSessionStopped())
                 handler.applyMergedBuffer(data, len, streamsCount, maxGainCoef, bufferSize);
-            handler = (Handler) handler.getNextHandler();
+            handler = handler.getNextHandler();
         }
+//        Handler handler = (Handler)firstHandler;
+//        while (handler!=null) {
+//            if (!handler.isSessionStopped())
+//                handler.applyMergedBuffer(data, len, streamsCount, maxGainCoef, bufferSize);
+//            handler = (Handler) handler.getNextHandler();
+//        }
     }
     
     private static class BufferData {
@@ -90,6 +102,16 @@ public class RealTimeConferenceMixer extends AbstractRealTimeMixer {
             this.maxGainCoef = maxGainCoef;
             this.byteData = new byte[bufferSize];
         }
+    }
+    
+    class PlayAudioHandler extends AbstractMixerHandler {
+
+        public PlayAudioHandler(PushBufferDataSource datasource, LoggerHelper logger) throws CodecManagerException, IOException {
+            super(codecManager, datasource, FORMAT, new LoggerHelper(logger, "Audio player"));
+        }
+
+        public void applyProcessingBuffer(int[] buffer) { }
+        public void applyMergedBuffer(int[] data, int len, int streamsCount, double maxGainCoef, int bufferSize) { }
     }
     
     class Handler extends AbstractMixerHandler implements ConferenceMixerSession {

@@ -17,6 +17,7 @@ package org.onesec.raven.ivr.conference;
 
 import java.io.File;
 import java.util.Date;
+import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 
 /**
@@ -31,4 +32,5 @@ public interface ConferenceManager {
             ConferenceSessionListener listener);
     void checkConferenceNode(final Conference conf) throws ConferenceException;
     public File getRecordingPath(Conference conference) throws Exception;
+    public AudioFile getOneMinuteLeftAudio();
 }

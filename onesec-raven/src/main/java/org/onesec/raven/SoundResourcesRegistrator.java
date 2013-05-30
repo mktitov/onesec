@@ -66,6 +66,7 @@ public class SoundResourcesRegistrator implements ResourceRegistrator, Constants
         "vmail/male/1'_ru",
         "vmail/male/_20_ru",
         "vmail/male/_30_ru",
+        "conference/male/stop_after_1min_ru",
         "time words/male/года_ru",
         "time words/male/прошлого_ru",
         "time words/male/позавчера_ru",

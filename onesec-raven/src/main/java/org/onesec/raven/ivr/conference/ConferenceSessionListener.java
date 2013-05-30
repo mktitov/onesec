@@ -22,6 +22,7 @@ package org.onesec.raven.ivr.conference;
 public interface ConferenceSessionListener {
     public void sessionCreated(ConferenceSession session);
     public void sessionCreationError();
+    public void tooManyParticipants();
     public void conferenceStopped();
     public void conferenceNotActive();
     public void invalidConferenceId(String conferenceId);
