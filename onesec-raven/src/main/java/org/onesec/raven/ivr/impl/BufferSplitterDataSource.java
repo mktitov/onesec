@@ -16,6 +16,7 @@
 package org.onesec.raven.ivr.impl;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import javax.media.Buffer;
 import javax.media.Format;
 import javax.media.Time;
@@ -26,6 +27,9 @@ import javax.media.protocol.PushBufferDataSource;
 import javax.media.protocol.PushBufferStream;
 import org.onesec.raven.ivr.CodecManager;
 import org.onesec.raven.ivr.CodecManagerException;
+import org.raven.sched.ExecutorService;
+import org.raven.sched.impl.AbstractTask;
+import org.raven.tree.Node;
 import org.raven.tree.impl.LoggerHelper;
 
 /**
@@ -37,16 +41,30 @@ public class BufferSplitterDataSource extends PushBufferDataSource {
     private final PushBufferDataSource source;
     private final PushBufferStream[] streams;
     private final LoggerHelper logger;
+    private final BufferCacheListener bufferCacheListener;
+    private final ExecutorService executor;
+    private final Node owner;
     public final static AudioFormat FORMAT = new AudioFormat(AudioFormat.LINEAR, 8000d, 8, 1, -1
             , 0, 8, 16000.0, byte[].class);
 
     public BufferSplitterDataSource(PushBufferDataSource source, int maxBufferSize, 
             CodecManager codecManager, LoggerHelper logger) throws CodecManagerException 
     {
+        this(source, maxBufferSize, codecManager, logger, null, null, null);
+    }
+
+    public BufferSplitterDataSource(PushBufferDataSource source, int maxBufferSize, 
+            CodecManager codecManager, LoggerHelper logger, BufferCacheListener bufferCacheListener,
+            ExecutorService executor, Node owner) 
+        throws CodecManagerException 
+    {
         this.source = new TranscoderDataSource(codecManager, source, FORMAT, logger);
         this.logger = new LoggerHelper(logger, "Buffer Splitter. ");
         this.streams = new PushBufferStream[]{new Stream(this.source.getStreams()[0], maxBufferSize)};
         this.source.getStreams()[0].setTransferHandler((BufferTransferHandler)streams[0]);
+        this.bufferCacheListener = bufferCacheListener;
+        this.executor = executor;
+        this.owner = owner;
     }
 
     @Override
@@ -99,6 +117,7 @@ public class BufferSplitterDataSource extends PushBufferDataSource {
         private volatile BufferTransferHandler transferHandler;
         private final PushBufferStream sourceStream;
         private final int maxBufferSize;
+        private final ArrayList<Buffer> buffers = bufferCacheListener==null? null : new ArrayList<Buffer>(512);
         private volatile Buffer buffer;
 
         public Stream(PushBufferStream sourceStream, int bufferSize) {
@@ -150,7 +169,6 @@ public class BufferSplitterDataSource extends PushBufferDataSource {
                 while (pos<len) {
                     int clen = Math.min(maxBufferSize, len-pos);
                     byte[] newData = new byte[clen];
-//                    System.out.println(String.format("source len: %d, pos: %d, len: %d", len, pos, clen));
                     System.arraycopy(data, pos, newData, 0, clen);
                     buffer = new Buffer();
                     buffer.setData(newData);
@@ -158,12 +176,16 @@ public class BufferSplitterDataSource extends PushBufferDataSource {
                     buffer.setOffset(0);
                     buffer.setLength(clen);
                     pos+=clen;
-                    if (pos>=len && sourceBuf.isEOM())
+                    if (bufferCacheListener!=null)
+                        buffers.add(buffer);
+                    if (pos>=len && sourceBuf.isEOM()) {
                         buffer.setEOM(true);
+                        if (bufferCacheListener!=null)
+                            sendCachedBuffersToListener();
+                    }
                     if (transferHandler!=null)
                         transferHandler.transferData(this);
                     Thread.sleep(clen/8);
-//                    Thread.sleep(10);
                 }
             } catch (Throwable e) {
                 if (logger.isErrorEnabled()) 
@@ -171,6 +193,12 @@ public class BufferSplitterDataSource extends PushBufferDataSource {
             }
         }
         
+        private void sendCachedBuffersToListener() {
+            executor.executeQuietly(new AbstractTask(owner, "Sending buffers to listener") {
+                @Override public void doRun() throws Exception {
+                    bufferCacheListener.buffersCached(buffers.toArray(new Buffer[buffers.size()]));
+                }
+            });
+        }
     }
-    
 }
