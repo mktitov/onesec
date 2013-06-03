@@ -60,11 +60,11 @@ public class BufferSplitterDataSource extends PushBufferDataSource {
     {
         this.source = new TranscoderDataSource(codecManager, source, FORMAT, logger);
         this.logger = new LoggerHelper(logger, "Buffer Splitter. ");
-        this.streams = new PushBufferStream[]{new Stream(this.source.getStreams()[0], maxBufferSize)};
-        this.source.getStreams()[0].setTransferHandler((BufferTransferHandler)streams[0]);
         this.bufferCacheListener = bufferCacheListener;
         this.executor = executor;
         this.owner = owner;
+        this.streams = new PushBufferStream[]{new Stream(this.source.getStreams()[0], maxBufferSize)};
+        this.source.getStreams()[0].setTransferHandler((BufferTransferHandler)streams[0]);
     }
 
     @Override
@@ -166,7 +166,7 @@ public class BufferSplitterDataSource extends PushBufferDataSource {
                 byte[] data = (byte[]) sourceBuf.getData();
                 int len = sourceBuf.getLength();
                 int pos = 0;
-                while (pos<len) {
+                while (pos<=len) {
                     int clen = Math.min(maxBufferSize, len-pos);
                     byte[] newData = new byte[clen];
                     System.arraycopy(data, pos, newData, 0, clen);
@@ -175,7 +175,7 @@ public class BufferSplitterDataSource extends PushBufferDataSource {
                     buffer.setFormat(sourceBuf.getFormat());
                     buffer.setOffset(0);
                     buffer.setLength(clen);
-                    pos+=clen;
+                    pos += clen==0? 1 : clen;
                     if (bufferCacheListener!=null)
                         buffers.add(buffer);
                     if (pos>=len && sourceBuf.isEOM()) {
