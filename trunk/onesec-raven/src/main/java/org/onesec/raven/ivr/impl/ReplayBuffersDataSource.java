@@ -38,7 +38,7 @@ import org.raven.tree.impl.LoggerHelper;
  */
 public class ReplayBuffersDataSource extends PushBufferDataSource {
     private enum Status {INITIALIZED, CONNECTED, STARTED};
-    private final AtomicReference<Status> status = new AtomicReference<Status>();
+    private final AtomicReference<Status> status = new AtomicReference<Status>(Status.INITIALIZED);
     private final LoggerHelper logger;
     private final PushBufferStream[] streams;
 

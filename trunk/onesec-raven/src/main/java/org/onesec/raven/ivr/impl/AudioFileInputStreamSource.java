@@ -41,20 +41,15 @@ public class AudioFileInputStreamSource implements InputStreamSource
 
     public InputStream getInputStream()
     {
-        if (!Node.Status.STARTED.equals(fileNode.getStatus()))
-        {
+        if (!fileNode.isStarted()) {
             if (owner.isLogLevelEnabled(LogLevel.WARN))
                 owner.getLogger().warn(String.format(
                         "Can not extract audio stream from the (%s) because of node was not started"
                         , fileNode.getPath()));
             return null;
-        }
-        try
-        {
+        } try {
             return fileNode.getAudioFile().getDataStream();
-        }
-        catch (DataFileException ex)
-        {
+        } catch (DataFileException ex) {
             if (owner.isLogLevelEnabled(LogLevel.ERROR))
                 owner.getLogger().error(
                     String.format(
