@@ -159,6 +159,7 @@ public abstract class AbstractRealTimeMixer<H extends MixerHandler<H>> extends P
     @Override public Time getDuration() {
         return DURATION_UNKNOWN;
     }    
+    
     public static Buffer createBuffer(Buffer buf, int[] data, byte[] byteData, int len, int streamsCount, 
             double maxGainCoef, int bufferSize) 
     {
@@ -274,7 +275,7 @@ public abstract class AbstractRealTimeMixer<H extends MixerHandler<H>> extends P
                 }
                 if (handler.getNextHandler()!=null && !handler.isAlive()) {
                     if (logger.isDebugEnabled())
-                        logger.debug("Data source handler removed");
+                        logger.debug("Data source handler removed: "+handler.toString());
                     if (prevHandler==null) firstHandler = handler.getNextHandler();
                     else prevHandler.setNextHandler(handler.getNextHandler());
                 } else

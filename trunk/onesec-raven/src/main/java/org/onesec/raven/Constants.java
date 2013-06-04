@@ -27,6 +27,7 @@ public interface Constants {
     public final static String NUMBERS_MALE_RESOURCE = SOUNDS_RESOURCES_BASE + "numbers/male/";
     public final static String TIME_WORDS_RESOURCE = SOUNDS_RESOURCES_BASE + "time words/male/";
     public final static String CONFERENCE_STOP_AFTER_1MIN = SOUNDS_RESOURCES_BASE+"conference/male/stop_after_1min";
+    public final static String CONFERENCE_STOPPED = SOUNDS_RESOURCES_BASE+"conference/male/stopped";
     public final static String VMAIL_BOX = "vmailBox";
     public final static String VMAIL_BOX_NUMBER = "vmailBoxNumber";
 }

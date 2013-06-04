@@ -30,6 +30,7 @@ import javax.media.protocol.DataSource;
 import javax.media.protocol.FileTypeDescriptor;
 import javax.media.protocol.PushBufferDataSource;
 import org.onesec.raven.ivr.AudioFile;
+import org.onesec.raven.ivr.BufferCache;
 import org.onesec.raven.ivr.CodecManager;
 import org.onesec.raven.ivr.IncomingRtpStream;
 import org.onesec.raven.ivr.IncomingRtpStreamDataSourceListener;
@@ -43,7 +44,6 @@ import org.onesec.raven.ivr.IvrEndpointConversationTransferedEvent;
 import org.onesec.raven.ivr.IvrIncomingRtpStartedEvent;
 import org.onesec.raven.ivr.IvrOutgoingRtpStartedEvent;
 import org.onesec.raven.ivr.RtpStreamException;
-import org.onesec.raven.ivr.actions.PlayAudioAction;
 import org.onesec.raven.ivr.conference.Conference;
 import org.onesec.raven.ivr.conference.ConferenceManager;
 import org.onesec.raven.ivr.conference.ConferenceMixerSession;
@@ -55,6 +55,7 @@ import org.onesec.raven.ivr.impl.AudioFileWriterDataSource;
 import org.onesec.raven.ivr.impl.BufferSplitterDataSource;
 import org.onesec.raven.ivr.impl.ContainerParserDataSource;
 import org.onesec.raven.ivr.impl.IssDataSource;
+import org.onesec.raven.ivr.impl.IvrUtils;
 import org.onesec.raven.ivr.impl.PullToPushConverterDataSource;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
@@ -62,7 +63,6 @@ import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.impl.AbstractTask;
 import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
-import org.raven.tree.Node;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.LoggerHelper;
 import org.weda.annotations.constraints.NotNull;
@@ -78,6 +78,9 @@ public class ConferenceNode extends BaseNode implements Conference {
     
     @Service
     private CodecManager codecManager;
+    
+    @Service
+    private BufferCache bufferCache;
     
     @NotNull @Parameter
     private String conferenceName;
@@ -140,9 +143,8 @@ public class ConferenceNode extends BaseNode implements Conference {
         if (recordingsNode==null) {
             recordingsNode = new ConferenceRecordingsNode();
             addAndSaveChildren(recordingsNode);
-            if (start) 
-                recordingsNode.start();            
         }
+        if (start) recordingsNode.start();
     }
 
     @Override
@@ -226,10 +228,26 @@ public class ConferenceNode extends BaseNode implements Conference {
                                 finalController.stop();
                             }
                         });
-                    final long delay = (getEndTime().getTime()-60000)-curTime;
+                    long delay = (getEndTime().getTime()-60000)-curTime;
                     AudioFile audio = getManager().getOneMinuteLeftAudio();
-                    if (delay>0 && audio!=null)
-                        executor.executeQuietly(delay, new PlayAudioTask(finalController, audio, codecManager));
+                    if (delay>0 && audio!= null)
+                        executor.executeQuietly(delay, new PlayAudioTask("1 min left", finalController, audio, 
+                                codecManager, bufferCache, executor));
+                    delay = (getEndTime().getTime()-30000)-curTime;
+                    audio = getManager().getOneMinuteLeftAudio();
+                    if (delay>0 && audio!= null)
+                        executor.executeQuietly(delay, new PlayAudioTask("1 min left", finalController, audio, 
+                                codecManager, bufferCache, executor));
+                    delay = (getEndTime().getTime()-10000)-curTime;
+                    audio = getManager().getConferenceStoppedAudio();
+                    if (delay>0 && audio!= null)
+                        executor.executeQuietly(delay, new PlayAudioTask("Conference stopped", finalController, 
+                                audio, codecManager, bufferCache, executor));
+                    delay = (getEndTime().getTime()-30000)-curTime;
+                    audio = getManager().getConferenceStoppedAudio();
+                    if (delay>0 && audio!= null)
+                        executor.executeQuietly(delay, new PlayAudioTask("Conference stopped", finalController, 
+                                audio, codecManager, bufferCache, executor));
                 }
             } catch (Throwable e) {
                 if (isLogLevelEnabled(LogLevel.ERROR)) 
@@ -400,25 +418,36 @@ public class ConferenceNode extends BaseNode implements Conference {
         private final ConferenceController conferenceController;
         private final AudioFile audio;
         private final CodecManager codecManager;
+        private final ExecutorService executor;
+        private final BufferCache bufferCache;
+        private final String name;
 
-        public PlayAudioTask(ConferenceController conferenceController, AudioFile audio, CodecManager codecManager) {
+        public PlayAudioTask(String name, ConferenceController conferenceController, AudioFile audio, 
+                CodecManager codecManager, BufferCache bufferCache, ExecutorService executor) 
+        {
             super(ConferenceNode.this, "Play audio in conference");
             this.conferenceController = conferenceController;
             this.audio = audio;
             this.codecManager = codecManager;
+            this.name = name;
+            this.bufferCache = bufferCache;
+            this.executor = executor;
         }
 
         @Override
         public void doRun() throws Exception {
             if (conferenceController.isActive()) {
+                LoggerHelper logger = new LoggerHelper(ConferenceNode.this, 
+                        conferenceController.logger.getPrefix()+"Prepare audio ("+name+"). ");
+//                PushBufferDataSource source = IvrUtils.createSourceFromAudioFile(audio, codecManager, 
+//                        executor, ConferenceNode.this, bufferCache, 240, logger);
                 AudioFileInputStreamSource stream = new AudioFileInputStreamSource(audio, ConferenceNode.this);
                 IssDataSource dataSource = new IssDataSource(stream, FileTypeDescriptor.WAVE);
                 ContainerParserDataSource parser = new ContainerParserDataSource(codecManager, dataSource);
                 PullToPushConverterDataSource conv = new PullToPushConverterDataSource(
                         parser, executor, ConferenceNode.this);
-                BufferSplitterDataSource source = new BufferSplitterDataSource(conv, 160, codecManager, 
-                        new LoggerHelper(ConferenceNode.this, conferenceController.logger.getPrefix()));
-                conferenceController.getMixer().playAudio("1 min left", source);
+                BufferSplitterDataSource source = new BufferSplitterDataSource(conv, 160, codecManager, logger);
+                conferenceController.getMixer().playAudio(name, source);
             }
         }
         
