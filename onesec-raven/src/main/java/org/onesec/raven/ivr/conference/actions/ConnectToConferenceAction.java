@@ -22,10 +22,10 @@ import org.onesec.raven.ivr.actions.AsyncAction;
  *
  * @author Mikhail Titov
  */
-public class ConnectionToConferenceAction extends AsyncAction {
+public class ConnectToConferenceAction extends AsyncAction {
     public final static String NAME = "Connect to conference";
 
-    public ConnectionToConferenceAction() {
+    public ConnectToConferenceAction() {
         super(NAME);
     }
 

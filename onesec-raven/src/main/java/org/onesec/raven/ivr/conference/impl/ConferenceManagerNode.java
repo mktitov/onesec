@@ -96,12 +96,16 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
     @NotNull @Parameter
     private String recordingStoragePath;
     
-    @NotNull @Parameter
+    @NotNull @Parameter(valueHandlerType = SystemSchedulerValueHandlerFactory.TYPE)
     private Scheduler archiveScheduler;
     
     @Parameter(valueHandlerType=ResourceReferenceValueHandlerFactory.TYPE,
             defaultValue=Constants.CONFERENCE_STOP_AFTER_1MIN)
     private AudioFile oneMinuteLeftAudio;
+    
+    @Parameter(valueHandlerType=ResourceReferenceValueHandlerFactory.TYPE,
+            defaultValue=Constants.CONFERENCE_STOPPED)
+    private AudioFile conferenceStoppedAudio;
     
     private Lock lock;
     private PlannedConferencesNode plannedNode;
@@ -143,14 +147,14 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
         if (archiveNode==null) {
             archiveNode = new ConferencesArchiveNode();
             addAndSaveChildren(archiveNode);
-            if (start) archiveNode.start();
         }
+        if (start) archiveNode.start();
         plannedNode = (PlannedConferencesNode) getNode(PlannedConferencesNode.NAME);
         if (plannedNode==null) {
             plannedNode = new PlannedConferencesNode();
             addAndSaveChildren(plannedNode);
-            if (start) plannedNode.start();
         }
+        if (start) plannedNode.start();
     }
 
     public void executeScheduledJob(Scheduler scheduler) {
@@ -282,13 +286,13 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
     {        
         try {
             ConferenceNode conference = (ConferenceNode) plannedNode.getNodeById(Integer.parseInt(conferenceId));
+            if (conference==null) {
+                sendInvalidIdOrAccessCode(listener, conferenceId);
+                return;
+            }
             conference.join(conversation, accessCode, listener);
         } catch (NumberFormatException e) {
-            executor.executeQuietly(new AbstractTask(this, "Pushing message 'invalid conference id' to conversation") {
-                @Override public void doRun() throws Exception {
-                    listener.invalidConferenceId(conferenceId);
-                }
-            });
+            sendInvalidIdOrAccessCode(listener, conferenceId);
         }
     }
     
@@ -433,6 +437,14 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
         this.oneMinuteLeftAudio = oneMinuteLeftAudio;
     }
 
+    public AudioFile getConferenceStoppedAudio() {
+        return conferenceStoppedAudio;
+    }
+
+    public void setConferenceStoppedAudio(AudioFile conferenceStoppedAudio) {
+        this.conferenceStoppedAudio = conferenceStoppedAudio;
+    }
+
     private void checkDates(Date fromDate, Date toDate) throws ConferenceException {
         final Date curDate = new Date();
         if (fromDate.after(toDate)) 
@@ -484,6 +496,14 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
 
     public Collection<NodeAttribute> generateAttributes() {
         return null;
+    }
+
+    private void sendInvalidIdOrAccessCode(final ConferenceSessionListener listener, final String conferenceId) {
+        executor.executeQuietly(new AbstractTask(this, "Pushing message 'invalid conference id' to conversation") {
+            @Override public void doRun() throws Exception {
+                listener.invalidConferenceId(conferenceId);
+            }
+        });
     }
     
     private interface Task<T>{}

@@ -24,11 +24,11 @@ import org.raven.annotations.NodeClass;
  * @author Mikhail Titov
  */
 @NodeClass(parentNode=ConferenceEventHandlerNode.class)
-public class ConnectionToConferenceActionNode extends AbstractActionNode {
+public class ConnectToConferenceActionNode extends AbstractActionNode {
 
     @Override
     protected IvrAction doCreateAction() {
-        return new ConnectionToConferenceAction();
+        return new ConnectToConferenceAction();
     }
     
 }

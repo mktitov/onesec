@@ -85,8 +85,12 @@ public class IvrUtils
         final Codec codec = Codec.LINEAR;
         Buffer[] buffers = bufferCache.getCachedBuffers(key, checksum, codec, packetSize);
         if (buffers!=null) {
+            if (logger.isDebugEnabled())
+                logger.debug("Reading audio data from cache");
             return new ReplayBuffersDataSource(buffers, packetSize, executor, codec, owner, logger);
         } else {
+            if (logger.isDebugEnabled())
+                logger.debug("Reading audio data from audio file node");
             AudioFileInputStreamSource source = new AudioFileInputStreamSource(audioFile, owner);            
             IssDataSource dataSource = new IssDataSource(source, FileTypeDescriptor.WAVE);
             ContainerParserDataSource parser = new ContainerParserDataSource(codecManager, dataSource);

@@ -145,7 +145,7 @@ public class ConferenceManagerRealTest extends OnesecRavenTestCase {
         manager.setChannelsCount(10);
         manager.setExecutor(executor);
         manager.setRecordingStoragePath("target/conferences_recordings");
-        manager.setNoiseLevel(2);
+        manager.setNoiseLevel(1);
         manager.setArchiveScheduler(scheduler);
         assertTrue(manager.start());
         conference = manager.createConference("test", addToCur(5), addToCur(60*2), 10, null);

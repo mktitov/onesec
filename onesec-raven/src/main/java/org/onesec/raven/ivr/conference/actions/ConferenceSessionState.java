@@ -135,6 +135,7 @@ public class ConferenceSessionState implements ConferenceSessionListener {
         if (makeTransition(CONNECTED)) {
             conversation.getConversationScenarioState().setBinding(
                     IvrEndpointConversation.DISABLE_AUDIO_STREAM_RESET, true, BindingScope.POINT);
+            conversation.getAudioStream().reset();
             session.start();
             continueConversation();
         }

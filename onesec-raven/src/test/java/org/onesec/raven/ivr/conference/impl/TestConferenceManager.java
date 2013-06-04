@@ -70,5 +70,9 @@ public class TestConferenceManager extends BaseNode implements ConferenceManager
     public AudioFile getOneMinuteLeftAudio() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
+
+    public AudioFile getConferenceStoppedAudio() {
+        throw new UnsupportedOperationException("Not supported yet."); 
+    }
     
 }

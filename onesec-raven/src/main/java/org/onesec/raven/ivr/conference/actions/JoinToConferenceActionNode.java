@@ -18,6 +18,8 @@ package org.onesec.raven.ivr.conference.actions;
 import org.onesec.raven.ivr.IvrAction;
 import org.onesec.raven.ivr.actions.AbstractActionNode;
 import org.onesec.raven.ivr.conference.impl.ConferenceManagerNode;
+import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
+import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
 import org.weda.annotations.constraints.NotNull;
@@ -26,6 +28,7 @@ import org.weda.annotations.constraints.NotNull;
  *
  * @author Mikhail Titov
  */
+@NodeClass(parentNode=IvrConversationScenarioNode.class)
 public class JoinToConferenceActionNode extends AbstractActionNode {
     
     @NotNull @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)

@@ -58,7 +58,7 @@ public class RealTimeConferenceMixer extends AbstractRealTimeMixer {
     }
     
     public void playAudio(String name, PushBufferDataSource audioSource) throws Exception {
-        addDataSourceHandler(new PlayAudioHandler(audioSource, logger));
+        addDataSourceHandler(new PlayAudioHandler(name, audioSource, logger));
     }
 
     @Override
@@ -105,13 +105,22 @@ public class RealTimeConferenceMixer extends AbstractRealTimeMixer {
     }
     
     class PlayAudioHandler extends AbstractMixerHandler {
+        private final String name;
 
-        public PlayAudioHandler(PushBufferDataSource datasource, LoggerHelper logger) throws CodecManagerException, IOException {
-            super(codecManager, datasource, FORMAT, new LoggerHelper(logger, "Audio player"));
+        public PlayAudioHandler(String name, PushBufferDataSource datasource, LoggerHelper logger) 
+                throws CodecManagerException, IOException 
+        {
+            super(codecManager, datasource, FORMAT, new LoggerHelper(logger, "Audio player ("+name+"). "));
+            this.name = name;
         }
 
         public void applyProcessingBuffer(int[] buffer) { }
         public void applyMergedBuffer(int[] data, int len, int streamsCount, double maxGainCoef, int bufferSize) { }
+
+        @Override
+        public String toString() {
+            return name;
+        }
     }
     
     class Handler extends AbstractMixerHandler implements ConferenceMixerSession {
@@ -188,6 +197,11 @@ public class RealTimeConferenceMixer extends AbstractRealTimeMixer {
 
         public PushBufferDataSource getConferenceAudioSource() {
             return conferenceAudio;
+        }
+
+        @Override
+        public String toString() {
+            return name;
         }
     }
     

@@ -33,4 +33,5 @@ public interface ConferenceManager {
     void checkConferenceNode(final Conference conf) throws ConferenceException;
     public File getRecordingPath(Conference conference) throws Exception;
     public AudioFile getOneMinuteLeftAudio();
+    public AudioFile getConferenceStoppedAudio();
 }
