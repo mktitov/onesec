@@ -410,7 +410,8 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
         Map<Long, CallQueueRequestController> requests = owner.getRequests();
         if (requests!=null)
             owner.getRequests().remove(requestId);
-        queue.updateCallDuration(getCallDuration());
+        if (queue!=null)
+            queue.updateCallDuration(getCallDuration());
         callQueueChangeEvent(new RejectedQueueEventImpl(queue, requestId));
     }
 

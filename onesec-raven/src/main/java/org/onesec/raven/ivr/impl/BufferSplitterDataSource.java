@@ -166,6 +166,7 @@ public class BufferSplitterDataSource extends PushBufferDataSource {
                 byte[] data = (byte[]) sourceBuf.getData();
                 int len = sourceBuf.getLength();
                 int pos = 0;
+                TickHelper ticker = new TickHelper(maxBufferSize/8);
                 while (pos<=len) {
                     int clen = Math.min(maxBufferSize, len-pos);
                     byte[] newData = new byte[clen];
@@ -185,7 +186,7 @@ public class BufferSplitterDataSource extends PushBufferDataSource {
                     }
                     if (transferHandler!=null)
                         transferHandler.transferData(this);
-                    Thread.sleep(clen/8);
+                    ticker.sleep();
                 }
             } catch (Throwable e) {
                 if (logger.isErrorEnabled()) 

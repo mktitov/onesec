@@ -31,6 +31,7 @@ import javax.media.protocol.PushBufferStream;
 import org.onesec.raven.RingQueue;
 import org.onesec.raven.ivr.CodecManager;
 import org.onesec.raven.ivr.MixerHandler;
+import org.onesec.raven.ivr.RealTimeDataSourceMarker;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.ExecutorServiceException;
 import org.raven.sched.Task;
@@ -40,7 +41,9 @@ import org.raven.tree.impl.LoggerHelper;
  *
  * @author Mikhail Titov
  */
-public abstract class AbstractRealTimeMixer<H extends MixerHandler<H>> extends PushBufferDataSource {
+public abstract class AbstractRealTimeMixer<H extends MixerHandler<H>> extends PushBufferDataSource 
+    implements RealTimeDataSourceMarker
+{
     public final static long TICK_INTERVAL = 20;
     public final static int BUFFER_SIZE = (int) (TICK_INTERVAL * 8);
     public final static ContentDescriptor CONTENT_DESCRIPTOR = new ContentDescriptor(ContentDescriptor.RAW);

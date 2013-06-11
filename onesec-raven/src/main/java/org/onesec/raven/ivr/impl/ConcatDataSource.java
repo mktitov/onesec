@@ -266,7 +266,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
             this.sourceChecksum = 0l;
             this.sourceKey = null;
             this.concatStream = streams[0];
-            this.realTime = source instanceof RealTimeDataSource;
+            this.realTime = source instanceof RealTimeDataSourceMarker;
         }
 
         public SourceProcessor(DataSource source, String sourceKey, long sourceChecksum) {
@@ -274,7 +274,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
             this.sourceKey = sourceKey;
             this.sourceChecksum = sourceChecksum;
             this.concatStream = streams[0];
-            this.realTime = source instanceof RealTimeDataSource;
+            this.realTime = source instanceof RealTimeDataSourceMarker;
         }
 
         public boolean isProcessing(){
