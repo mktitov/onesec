@@ -65,7 +65,7 @@ public class ConferenceNodeTest extends OnesecRavenTestCase {
         conference.setEndTime(new Date(System.currentTimeMillis()+20000));
         conference.setExecutor(executor);
         conference.setNoiseLevel(0);
-        conference.setMaxGainCoef(1);
+        conference.setMaxGainCoef(1.0);
     }
     
     @After

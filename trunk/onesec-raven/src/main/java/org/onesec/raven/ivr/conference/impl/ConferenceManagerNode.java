@@ -91,7 +91,7 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
     private Integer noiseLevel;
     
     @NotNull @Parameter(defaultValue="3")
-    private Integer maxGainCoef;
+    private Double maxGainCoef;
     
     @NotNull @Parameter
     private String recordingStoragePath;
@@ -405,11 +405,11 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
         this.noiseLevel = noiseLevel;
     }
 
-    public Integer getMaxGainCoef() {
+    public Double getMaxGainCoef() {
         return maxGainCoef;
     }
 
-    public void setMaxGainCoef(Integer maxGainCoef) {
+    public void setMaxGainCoef(Double maxGainCoef) {
         this.maxGainCoef = maxGainCoef;
     }
 

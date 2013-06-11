@@ -196,11 +196,13 @@ public class ReplayBuffersDataSource extends PushBufferDataSource {
 
             public void run() {
                 try {
+                    TickHelper ticker = new TickHelper(codec.getMillisecondsForPacketSize(packetSize));
                     while (!stopped.get() && bufferPos.incrementAndGet() < buffers.length) {
                         BufferTransferHandler handler = transferHandler;
                         if (handler!=null)
                             handler.transferData(Stream.this);
-                        Thread.sleep(codec.getMillisecondsForPacketSize(packetSize));
+//                        Thread.sleep(codec.getMillisecondsForPacketSize(packetSize));
+                       ticker.sleep();
                     }
                 } catch (InterruptedException e) {
                     if (logger.isWarnEnabled())

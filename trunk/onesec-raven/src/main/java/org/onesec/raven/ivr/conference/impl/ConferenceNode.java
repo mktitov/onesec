@@ -55,7 +55,6 @@ import org.onesec.raven.ivr.impl.AudioFileWriterDataSource;
 import org.onesec.raven.ivr.impl.BufferSplitterDataSource;
 import org.onesec.raven.ivr.impl.ContainerParserDataSource;
 import org.onesec.raven.ivr.impl.IssDataSource;
-import org.onesec.raven.ivr.impl.IvrUtils;
 import org.onesec.raven.ivr.impl.PullToPushConverterDataSource;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
@@ -116,7 +115,7 @@ public class ConferenceNode extends BaseNode implements Conference {
     private Integer noiseLevel;
     
     @NotNull @Parameter
-    private Integer maxGainCoef;
+    private Double maxGainCoef;
     
     @NotNull @Parameter(defaultValue="30")
     private Integer autoStopRecorderAfter;
@@ -233,17 +232,7 @@ public class ConferenceNode extends BaseNode implements Conference {
                     if (delay>0 && audio!= null)
                         executor.executeQuietly(delay, new PlayAudioTask("1 min left", finalController, audio, 
                                 codecManager, bufferCache, executor));
-                    delay = (getEndTime().getTime()-30000)-curTime;
-                    audio = getManager().getOneMinuteLeftAudio();
-                    if (delay>0 && audio!= null)
-                        executor.executeQuietly(delay, new PlayAudioTask("1 min left", finalController, audio, 
-                                codecManager, bufferCache, executor));
                     delay = (getEndTime().getTime()-10000)-curTime;
-                    audio = getManager().getConferenceStoppedAudio();
-                    if (delay>0 && audio!= null)
-                        executor.executeQuietly(delay, new PlayAudioTask("Conference stopped", finalController, 
-                                audio, codecManager, bufferCache, executor));
-                    delay = (getEndTime().getTime()-30000)-curTime;
                     audio = getManager().getConferenceStoppedAudio();
                     if (delay>0 && audio!= null)
                         executor.executeQuietly(delay, new PlayAudioTask("Conference stopped", finalController, 
@@ -265,11 +254,11 @@ public class ConferenceNode extends BaseNode implements Conference {
         this.noiseLevel = noiseLevel;
     }
 
-    public Integer getMaxGainCoef() {
+    public Double getMaxGainCoef() {
         return maxGainCoef;
     }
 
-    public void setMaxGainCoef(Integer maxGainCoef) {
+    public void setMaxGainCoef(Double maxGainCoef) {
         this.maxGainCoef = maxGainCoef;
     }
 

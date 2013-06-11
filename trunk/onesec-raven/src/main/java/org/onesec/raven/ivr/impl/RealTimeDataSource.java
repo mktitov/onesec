@@ -19,6 +19,7 @@ import java.io.IOException;
 import javax.media.Time;
 import javax.media.protocol.PushBufferDataSource;
 import javax.media.protocol.PushBufferStream;
+import org.onesec.raven.ivr.RealTimeDataSourceMarker;
 import org.raven.tree.Node;
 import org.slf4j.Logger;
 
@@ -26,10 +27,10 @@ import org.slf4j.Logger;
  *
  * @author Mikhail Titov
  */
-public class RealTimeDataSource extends PushBufferDataSource {
+public class RealTimeDataSource extends PushBufferDataSource implements RealTimeDataSourceMarker {
 
     private final PushBufferDataSource source;
-    private final RealTimeDataStream[] streams;
+//    private final RealTimeDataStream[] streams;
     private final Node owner;
     private final String logPrefix;
 
@@ -37,16 +38,16 @@ public class RealTimeDataSource extends PushBufferDataSource {
         this.source = source;
         this.owner = owner;
         this.logPrefix = logPrefix;
-        streams = new RealTimeDataStream[]{new RealTimeDataStream(this, source.getStreams()[0])};
+//        streams = new RealTimeDataStream[]{new RealTimeDataStream(this, source.getStreams()[0])};
     }
     
-    public long getDiscardedBuffersCount() {
-        return streams[0].getDiscardedBuffersCount();
-    }
+//    public long getDiscardedBuffersCount() {
+////        return streams[0].getDiscardedBuffersCount();
+//    }
 
     @Override
     public PushBufferStream[] getStreams() {
-        return streams;
+        return source.getStreams();
     }
 
     @Override

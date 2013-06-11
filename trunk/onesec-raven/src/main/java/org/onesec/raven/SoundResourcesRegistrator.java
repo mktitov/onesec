@@ -38,6 +38,7 @@ public class SoundResourcesRegistrator implements ResourceRegistrator, Constants
     private final static String[] names = new String[] {
         "hello_ru",
         "beeps/phone_beep_ru",
+        "beeps/long_phone_beep_ru",
         "status/current_status_ru",
         "status/press_1_to_change_status_ru",
         "status/status_available_ru",
