@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr;
 
+import org.raven.conv.ConversationScenario;
 import org.raven.sched.ExecutorServiceException;
 import org.raven.tree.Node;
 
@@ -44,5 +45,9 @@ public interface IvrEndpointPool extends Node
      * status is <b>IN_SERVICE</b>).
      * @param timeout - timeout in millisecond
      */
-    public IvrEndpoint reserveEndpoint(long timeout);
+    public IvrEndpoint reserveEndpoint(ReserveEndpointRequest request);
+    /**
+     * Returns conversation for given endpoint.
+     */
+    public ConversationScenario getConversationScenario(IvrEndpoint endpoint);
 }

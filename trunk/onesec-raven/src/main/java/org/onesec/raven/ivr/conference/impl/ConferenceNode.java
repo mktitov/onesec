@@ -50,12 +50,8 @@ import org.onesec.raven.ivr.conference.ConferenceMixerSession;
 import org.onesec.raven.ivr.conference.ConferenceSession;
 import org.onesec.raven.ivr.conference.ConferenceSessionListener;
 import org.onesec.raven.ivr.impl.AsyncPushBufferDataSource;
-import org.onesec.raven.ivr.impl.AudioFileInputStreamSource;
 import org.onesec.raven.ivr.impl.AudioFileWriterDataSource;
-import org.onesec.raven.ivr.impl.BufferSplitterDataSource;
-import org.onesec.raven.ivr.impl.ContainerParserDataSource;
-import org.onesec.raven.ivr.impl.IssDataSource;
-import org.onesec.raven.ivr.impl.PullToPushConverterDataSource;
+import org.onesec.raven.ivr.impl.IvrUtils;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.log.LogLevel;
@@ -74,6 +70,14 @@ import org.weda.internal.annotations.Service;
 @NodeClass(parentNode=PlannedConferencesNode.class)
 public class ConferenceNode extends BaseNode implements Conference {
     public final static String DATE_PATTERN = "yyyy-MM-dd HH:mm:ss";
+    
+    public final static String CONFERENCE_NAME_ATTR = "conferenceName";
+    public final static String START_TIME_STR_ATTR = "startTimeStr";
+    public final static String END_TIME_STR_ATTR = "endTimeStr";
+    public final static String CHANNELS_COUNT_ATTR = "channelsCount";
+    public final static String RECORD_CONFERENCE_ATTR = "recordConference";
+    public final static String CURRENT_PARTICIPANTS_COUNT = "currentParticipantsCount";
+    public final static String REGISTERED_PARTICIPANTS_COUNT = "registeredParticipantsCount";
     
     @Service
     private CodecManager codecManager;
@@ -126,6 +130,7 @@ public class ConferenceNode extends BaseNode implements Conference {
     
     private AtomicMarkableReference<ConferenceController> controller;
     private ConferenceRecordingsNode recordingsNode;
+    private ConferenceParticipantsNode participantsNode;
     
     private ConferenceManager getManager() {
         return (ConferenceManager) getParent().getParent();
@@ -144,6 +149,13 @@ public class ConferenceNode extends BaseNode implements Conference {
             addAndSaveChildren(recordingsNode);
         }
         if (start) recordingsNode.start();
+        
+        participantsNode = (ConferenceParticipantsNode) getNode(ConferenceParticipantsNode.NAME);
+        if (participantsNode==null) {
+            participantsNode = new ConferenceParticipantsNode();
+            addAndSaveChildren(participantsNode);
+        }
+        if (start) participantsNode.start();
     }
 
     @Override
@@ -199,6 +211,19 @@ public class ConferenceNode extends BaseNode implements Conference {
         }
     }
     
+    private ConferenceParticipantNode getOrCreateParticipant(String phoneNumber) {
+        ConferenceParticipantNode participant = (ConferenceParticipantNode) participantsNode.getNode(phoneNumber);
+        if (participant==null) {
+            participant = new ConferenceParticipantNode();
+            participant.setName(phoneNumber);
+            participantsNode.addAndSaveChildren(participant);
+            participant.start();
+            participant.setJoinTime(formatDate(new Date()));
+            participant.setLogLevel(getLogLevel());
+        }
+        return participant;
+    }
+    
     private void sendConferenceNotActive(final ConferenceSessionListener listener) {
         executor.executeQuietly(new AbstractTask(this, "Pushing 'conference not active' to conversation") {
             @Override public void doRun() throws Exception {
@@ -244,6 +269,17 @@ public class ConferenceNode extends BaseNode implements Conference {
             }
         }
         return controller.getReference();
+    }
+    
+    @Parameter(readOnly = true)
+    public Integer getCurrentParticipantsCount() {
+        ConferenceController _controller = controller.getReference();
+        return _controller!=null? _controller.sessions.size() : 0;
+    }
+    
+    @Parameter(readOnly = true)
+    public Integer getRegisteredParticipantsCount() {
+        return participantsNode.getNodesCount();
     }
 
     public Integer getNoiseLevel() {
@@ -399,6 +435,7 @@ public class ConferenceNode extends BaseNode implements Conference {
         ConferenceRecordingNode node = new ConferenceRecordingNode();
         node.setName(""+i);
         recordingsNode.addAndSaveChildren(node);
+        node.setLogLevel(getLogLevel());
         node.start();
         return node;
     }
@@ -428,14 +465,14 @@ public class ConferenceNode extends BaseNode implements Conference {
             if (conferenceController.isActive()) {
                 LoggerHelper logger = new LoggerHelper(ConferenceNode.this, 
                         conferenceController.logger.getPrefix()+"Prepare audio ("+name+"). ");
-//                PushBufferDataSource source = IvrUtils.createSourceFromAudioFile(audio, codecManager, 
-//                        executor, ConferenceNode.this, bufferCache, 240, logger);
-                AudioFileInputStreamSource stream = new AudioFileInputStreamSource(audio, ConferenceNode.this);
-                IssDataSource dataSource = new IssDataSource(stream, FileTypeDescriptor.WAVE);
-                ContainerParserDataSource parser = new ContainerParserDataSource(codecManager, dataSource);
-                PullToPushConverterDataSource conv = new PullToPushConverterDataSource(
-                        parser, executor, ConferenceNode.this);
-                BufferSplitterDataSource source = new BufferSplitterDataSource(conv, 160, codecManager, logger);
+                PushBufferDataSource source = IvrUtils.createSourceFromAudioFile(audio, codecManager, 
+                        executor, ConferenceNode.this, bufferCache, 240, logger);
+//                AudioFileInputStreamSource stream = new AudioFileInputStreamSource(audio, ConferenceNode.this);
+//                IssDataSource dataSource = new IssDataSource(stream, FileTypeDescriptor.WAVE);
+//                ContainerParserDataSource parser = new ContainerParserDataSource(codecManager, dataSource);
+//                PullToPushConverterDataSource conv = new PullToPushConverterDataSource(
+//                        parser, executor, ConferenceNode.this);
+//                BufferSplitterDataSource source = new BufferSplitterDataSource(conv, 160, codecManager, logger);
                 conferenceController.getMixer().playAudio(name, source);
             }
         }
@@ -492,7 +529,7 @@ public class ConferenceNode extends BaseNode implements Conference {
                 else {
                     final Integer id = idGenerator.incrementAndGet();
                     final ConferenceSessionImpl session = new ConferenceSessionImpl(this, id, conv, mixer, 
-                            logger, listener);
+                            logger, listener, getOrCreateParticipant(conv.getCallingNumber()));
                     conv.addConversationListener(session);
                     sessions.put(id, session);
                     sendConferenceCreated(listener, session);
@@ -641,16 +678,20 @@ public class ConferenceNode extends BaseNode implements Conference {
         private final ConferenceController controller;
         private final ConferenceSessionListener sessionListener;
         private final Integer id;
+        private final ConferenceParticipantNode participantNode;
 
         public ConferenceSessionImpl(ConferenceController controller, Integer id, IvrEndpointConversation conversation, 
-                RealTimeConferenceMixer mixer, LoggerHelper logger, ConferenceSessionListener listener) 
-                throws Exception 
+                RealTimeConferenceMixer mixer, LoggerHelper logger, ConferenceSessionListener listener, 
+                ConferenceParticipantNode participantNode) 
+            throws Exception 
         {
             this.id = id;
             this.controller = controller;
             this.conversation = conversation;
             this.sessionListener = listener;
-            this.logger = new LoggerHelper(logger, "["+id+", "+conversation.getCallingNumber()+"]. ");
+            this.participantNode = participantNode;
+//            this.logger = new LoggerHelper(logger, "["+id+", "+conversation.getCallingNumber()+"]. ");
+            this.logger = new LoggerHelper(participantNode, logger.getPrefix()+"["+id+", "+conversation.getCallingNumber()+"]. ");
             this.mixerSession = mixer.addParticipant(+id+", "+conversation.getCallingNumber(), null);
         }
         
@@ -673,6 +714,7 @@ public class ConferenceNode extends BaseNode implements Conference {
         
         private void stopMixerSession() {
             try {
+                participantNode.setDisconnectTime(formatDate(new Date()));
                 mixerSession.stopSession();
                 controller.removeSession(this);
                 if (logger.isDebugEnabled())

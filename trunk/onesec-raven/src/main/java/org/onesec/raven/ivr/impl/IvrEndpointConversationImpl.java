@@ -691,7 +691,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
 
     public void sendMessage(String message, String encoding, SendMessageDirection direction) {
         String address = null;
-        try{
+        try {
             address = direction==SendMessageDirection.CALLED_PARTY?
                 getCalledNumber() : getCallingNumber();
             ProviderController controller =  providerRegistry.getProviderController(address);

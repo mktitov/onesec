@@ -181,7 +181,7 @@ public class IvrConversationsBridgeManagerNodeTest extends OnesecRavenTestCase
         endpoint.setName(number);
         tree.getRootNode().addAndSaveChildren(endpoint);
         endpoint.setExecutor(executor);
-        endpoint.setConversationScenario(scenario);
+//        endpoint.setConversationScenario(scenario);
         endpoint.setAddress(number);
         endpoint.setRtpStreamManager(rtpManager);
         endpoint.setLogLevel(LogLevel.TRACE);

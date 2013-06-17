@@ -26,7 +26,7 @@ import org.raven.tree.Node;
 public interface RtpStreamManager
 {
     /**
-     * Return the incoming rtp stream (the object that can recieve the incoming rtp stream).
+     * Return the incoming rtp stream (the object that can receive the incoming rtp stream).
      * The stream must be {@link RtpStreamHandler#release() released}
      * after use.
      */
@@ -37,7 +37,7 @@ public interface RtpStreamManager
      */
     public OutgoingRtpStream getOutgoingRtpStream(Node owner);
     /**
-     * Reserves the address by then node passed in the parameter. Next time the call of the method
+     * Reserves the address by the node passed in the parameter. Next time the call of the method
      * {@link #getOutgoingRtpStream(Node)} returns the stream with the address and port reserved by
      * this method.
      * @param node the node which reserves the pair of the ip address and the port

@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr;
 
+import org.raven.conv.ConversationScenario;
 import org.raven.sched.ExecutorService;
 
 /**
@@ -27,7 +28,7 @@ public interface IvrMediaTerminal extends IvrTerminal
 {
     public RtpStreamManager getRtpStreamManager();
     public ExecutorService getExecutor();
-    public IvrConversationScenario getConversationScenario();
+    public ConversationScenario getConversationScenario();
     public Codec getCodec();
     public Integer getRtpPacketSize();
     public Integer getRtpMaxSendAheadPacketsCount();

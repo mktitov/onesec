@@ -22,7 +22,9 @@ import java.util.Map;
 import org.onesec.raven.ivr.*;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
+import org.raven.conv.ConversationScenario;
 import org.raven.log.LogLevel;
+import org.raven.tree.impl.InvisibleNode;
 import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
 import org.weda.annotations.constraints.NotNull;
 
@@ -30,12 +32,12 @@ import org.weda.annotations.constraints.NotNull;
  *
  * @author Mikhail Titov
  */
-@NodeClass
+@NodeClass(parentNode = InvisibleNode.class)
 public class IvrEndpointNode extends AbstractEndpointNode
         implements IvrEndpoint, IvrEndpointConversationListener
 {
-    @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
-    private IvrConversationScenarioNode conversationScenario;
+//    @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
+//    private IvrConversationScenarioNode conversationScenario;
     
     @NotNull @Parameter(defaultValue="false")
     private Boolean enableIncomingCalls;
@@ -68,6 +70,10 @@ public class IvrEndpointNode extends AbstractEndpointNode
 
     public Boolean getStopProcessingOnError() {
         return false;
+    }
+    
+    private IvrEndpointPool getEndpointPool() {
+        return (IvrEndpointPool) getEffectiveParent();
     }
 
     public void invite(String opponentNum, int inviteTimeout, int maxCallDur
@@ -154,13 +160,13 @@ public class IvrEndpointNode extends AbstractEndpointNode
         return endpointState;
     }
 
-    public IvrConversationScenarioNode getConversationScenario() {
-        return conversationScenario;
+    public ConversationScenario getConversationScenario() {
+        return getEndpointPool().getConversationScenario(this);
     }
 
-    public void setConversationScenario(IvrConversationScenarioNode conversationScenario) {
-        this.conversationScenario = conversationScenario;
-    }
+//    public void setConversationScenario(IvrConversationScenarioNode conversationScenario) {
+//        this.conversationScenario = conversationScenario;
+//    }
 
     public Boolean getEnableIncomingCalls() {
         return enableIncomingCalls;

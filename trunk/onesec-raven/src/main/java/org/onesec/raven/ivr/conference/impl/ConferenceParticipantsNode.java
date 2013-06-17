@@ -15,38 +15,25 @@
  */
 package org.onesec.raven.ivr.conference.impl;
 
-import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import org.raven.tree.impl.BaseNode;
+import static org.onesec.raven.ivr.conference.impl.ConferenceParticipantNode.*;
 import org.raven.tree.NodeAttribute;
 import org.raven.tree.Viewable;
 import org.raven.tree.ViewableObject;
-import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.ChildsAsTableViewableObject;
-import static org.onesec.raven.ivr.conference.impl.ConferenceRecordingNode.*;
-import org.raven.tree.Node;
-import org.raven.tree.impl.AttributeValueVisualizer;
-import org.raven.tree.impl.FileViewableObject;
-
 /**
  *
  * @author Mikhail Titov
  */
-public class ConferenceRecordingsNode extends BaseNode implements Viewable {
-    public final static String NAME = "Recordings";
+public class ConferenceParticipantsNode extends BaseNode implements Viewable {
+    public final static String NAME = "Participants";
     
-    private final static String[] attrs = new String[]{RECORDING_START_TIME_ATTR, RECORDING_END_TIME_ATTR, 
-        RECORDING_DURATION_ATTR, RECORDING_FILE_ATTR};
-    
-    private final static AttributeValueVisualizer VISUALIZER = new AttributeValueVisualizer() {
-        public Object visualize(Node node, NodeAttribute attr) {
-            return RECORDING_FILE_ATTR.equals(attr.getName())?
-                new FileViewableObject(new File(attr.getValue()), node) : attr.getValue();
-        }
-    };
+    private final static String[] attrs = new String[]{JOIN_TIME_ATTR, DISCONNECT_TIME_ATTR};
 
-    public ConferenceRecordingsNode() {
+    public ConferenceParticipantsNode() {
         super(NAME);
     }
 
@@ -57,7 +44,7 @@ public class ConferenceRecordingsNode extends BaseNode implements Viewable {
     public List<ViewableObject> getViewableObjects(Map<String, NodeAttribute> refreshAttributes) 
             throws Exception 
     {
-        return Arrays.asList((ViewableObject)new ChildsAsTableViewableObject(this, attrs, attrs, VISUALIZER));
+        return Arrays.asList((ViewableObject)new ChildsAsTableViewableObject(this, attrs, attrs));
     }
 
     public Boolean getAutoRefresh() {

@@ -84,6 +84,7 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
     @Message private static String creationTimeMessage;
     @Message private static String durationMessage;
     @Message private static String managerBusyMessage;
+    @Message private static String streamOwnerMessage;
 
     @Override
     protected void initFields()
@@ -152,7 +153,7 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
 
                 String[] colnames = {
                     localAddressMessage, localPortMessage, remoteAddressMessage, remotePortMessage,
-                    creationTimeMessage, durationMessage};
+                    creationTimeMessage, durationMessage, streamOwnerMessage};
                 TableImpl inStreams = new TableImpl(colnames);
                 TableImpl outStreams = new TableImpl(colnames);
                 SimpleDateFormat fmt = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
@@ -189,7 +190,8 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
             stream.getAddress().toString(), stream.getPort(),
             stream.getRemoteHost(), stream.getRemotePort(),
             fmt.format(new Date(stream.getCreationTime())),
-            (System.currentTimeMillis()-stream.getCreationTime())/1000};
+            (System.currentTimeMillis()-stream.getCreationTime())/1000,
+            new ViewableObjectImpl(Viewable.RAVEN_NODE_MIMETYPE, ((AbstractRtpStream)stream).getOwner().getPath())};
     }
 
     public Integer getMaxStreamCount()
