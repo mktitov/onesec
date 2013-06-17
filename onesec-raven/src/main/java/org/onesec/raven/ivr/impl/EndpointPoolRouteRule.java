@@ -18,10 +18,12 @@ package org.onesec.raven.ivr.impl;
 import javax.script.Bindings;
 import org.onesec.raven.ivr.CallRouteRule;
 import org.onesec.raven.ivr.CallRouteRuleProvider;
+import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.IvrEndpoint;
 import org.onesec.raven.ivr.IvrEndpointPool;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
+import org.raven.conv.ConversationScenario;
 import org.raven.expr.impl.BindingSupportImpl;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
@@ -44,6 +46,9 @@ public class EndpointPoolRouteRule extends BaseNode implements CallRouteRuleProv
     
     @NotNull @Parameter(defaultValue="1000")
     private Long endpointReserveTimeout;
+    
+    @Parameter(valueHandlerType = NodeReferenceValueHandlerFactory.TYPE)
+    private IvrConversationScenario conversationScenario;
 
     private BindingSupportImpl bindingSupport;
 
@@ -60,7 +65,8 @@ public class EndpointPoolRouteRule extends BaseNode implements CallRouteRuleProv
     }
     
     public CallRouteRule getCallRouteRule() {
-        return new RouteRule((CiscoCallsRouterNode)getParent(), endpointPool, endpointReserveTimeout);
+        return new RouteRule((CiscoCallsRouterNode)getParent(), endpointPool, endpointReserveTimeout, 
+                conversationScenario);
     }
 
     public Boolean getAccept() {
@@ -86,18 +92,30 @@ public class EndpointPoolRouteRule extends BaseNode implements CallRouteRuleProv
     public void setEndpointReserveTimeout(Long endpointReserveTimeout) {
         this.endpointReserveTimeout = endpointReserveTimeout;
     }
+
+    public IvrConversationScenario getConversationScenario() {
+        return conversationScenario;
+    }
+
+    public void setConversationScenario(IvrConversationScenario conversationScenario) {
+        this.conversationScenario = conversationScenario;
+    }
     
     private class RouteRule implements CallRouteRule {
         private final String ruleKey;
         private final CiscoCallsRouterNode owner;
         private final IvrEndpointPool pool;
         private final long reserveTimeout;
+        private final ConversationScenario conversationScenario;
 
-        public RouteRule(CiscoCallsRouterNode owner, IvrEndpointPool pool, long reserveTimeout) {
+        public RouteRule(CiscoCallsRouterNode owner, IvrEndpointPool pool, long reserveTimeout, 
+                ConversationScenario conversationScenario) 
+        {
             this.ruleKey = owner.formRuleKey(EndpointPoolRouteRule.this);
             this.pool = pool;
             this.owner = owner;
             this.reserveTimeout = reserveTimeout;
+            this.conversationScenario = conversationScenario;
         }
 
         public boolean accept(String callingNumber) {
@@ -117,7 +135,8 @@ public class EndpointPoolRouteRule extends BaseNode implements CallRouteRuleProv
         }
 
         public String[] getDestinations() {
-            IvrEndpoint endpoint = pool.reserveEndpoint(reserveTimeout);
+            IvrEndpoint endpoint = pool.reserveEndpoint(new ReserveEndpointRequestImpl(
+                    reserveTimeout, conversationScenario));
             return endpoint==null? null : new String[]{endpoint.getAddress()};
         }
 

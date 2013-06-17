@@ -23,6 +23,11 @@ import org.raven.tree.impl.BaseNode;
  * @author Mikhail Titov
  */
 public class ConferenceRecordingNode extends BaseNode {
+    public final static String RECORDING_START_TIME_ATTR = "recordingStartTime";
+    public final static String RECORDING_END_TIME_ATTR = "recordingEndTime";
+    public final static String RECORDING_DURATION_ATTR = "recordingDuration";
+    public final static String RECORDING_FILE_ATTR = "recordingFile";
+    
     @Parameter
     private String recordingStartTime;
     @Parameter

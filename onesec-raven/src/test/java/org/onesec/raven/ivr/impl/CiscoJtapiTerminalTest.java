@@ -50,6 +50,7 @@ import org.raven.log.LogLevel;
 import org.raven.sched.impl.ExecutorServiceNode;
 import org.raven.tree.impl.ContainerNode;
 import static org.easymock.EasyMock.*;
+import org.junit.Test;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.SendMessageDirection;
 
@@ -201,18 +202,20 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
     
     //В данном тесте система позвонит, на указанный адрес. Необходимо взять трубку. 
     //в течении секунды вызов должен переадресоваться на 88028
-//    @Test(timeout=70000)
+    @Test(timeout=70000)
     public void transferTest() throws Exception {
         waitForProvider();
         createSimpleScenarioWithPause();
 
-        IvrMediaTerminal term = trainTerminal("631799", scenario, true, true);
-        IvrEndpointConversationListener listener = createTransferListener("88028");
+        IvrMediaTerminal term = trainTerminal(TEST_NUMBER, scenario, true, true);
+        IvrEndpointConversationListener listener = createTransferListener("088002500990*1");
+//        IvrEndpointConversationListener listener = createTransferListener("88028*19");
         replay(term);
 
         endpoint = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, term, null);
         startEndpoint(endpoint);
-        endpoint.invite("88024", 0, 0, listener, scenario, null, null);
+        endpoint.invite("88024*88027", 0, 0, listener, scenario, null, null);
+//        endpoint.invite("088002500990*1", 0, 0, listener, scenario, null, null);
 //        endpoint.invite("88027", 0, 0, listener, scenario, null);
         waitForConversationStop();
         assertEquals(0, endpoint.getActiveCallsCount());

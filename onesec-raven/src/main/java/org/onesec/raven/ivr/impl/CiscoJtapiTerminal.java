@@ -40,6 +40,7 @@ import com.cisco.jtapi.extensions.CiscoTerminalObserver;
 import com.cisco.jtapi.extensions.CiscoTransferEndEv;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -63,18 +64,25 @@ import javax.telephony.TerminalConnection;
 import javax.telephony.callcontrol.CallControlCall;
 import javax.telephony.callcontrol.CallControlCallObserver;
 import javax.telephony.callcontrol.CallControlConnection;
+import javax.telephony.callcontrol.events.CallCtlConnDialingEv;
 import javax.telephony.callcontrol.events.CallCtlConnEstablishedEv;
+import javax.telephony.callcontrol.events.CallCtlConnEv;
 import javax.telephony.callcontrol.events.CallCtlConnFailedEv;
+import javax.telephony.callcontrol.events.CallCtlConnInitiatedEv;
 import javax.telephony.callcontrol.events.CallCtlConnOfferedEv;
 import javax.telephony.events.AddrEv;
 import javax.telephony.events.CallActiveEv;
 import javax.telephony.events.CallEv;
 import javax.telephony.events.CallInvalidEv;
 import javax.telephony.events.ConnConnectedEv;
+import javax.telephony.events.ConnCreatedEv;
 import javax.telephony.events.ConnDisconnectedEv;
+import javax.telephony.events.ConnEv;
+import javax.telephony.events.TermConnEv;
 import javax.telephony.events.TermConnRingingEv;
 import javax.telephony.events.TermEv;
 import javax.telephony.media.MediaCallObserver;
+import javax.telephony.media.MediaTerminalConnection;
 import javax.telephony.media.events.MediaTermConnDtmfEv;
 import org.onesec.core.provider.ProviderController;
 import org.onesec.core.services.ProviderRegistry;
@@ -104,7 +112,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
 
     private final RtpStreamManager rtpStreamManager;
     private final ExecutorService executor;
-    private final IvrConversationScenario conversationScenario;
+//    private final IvrConversationScenario conversationScenario;
     private final String address;
     private final Codec codec;
     private final Integer rtpPacketSize;
@@ -147,7 +155,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
         this.providerRegistry = providerRegistry;
         this.rtpStreamManager = term.getRtpStreamManager();
         this.executor = term.getExecutor();
-        this.conversationScenario = term.getConversationScenario();
+//        this.conversationScenario = term.getConversationScenario();
         this.address = term.getAddress();
         this.codec = term.getCodec();
         this.rtpPacketSize = term.getRtpPacketSize();
@@ -220,7 +228,8 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                         , rtpStreamManager, enableIncomingRtp, address, bindings);
                 conv.addConversationListener(listener);
                 conv.addConversationListener(this);
-                ConvHolder holder = new ConvHolder(conv, false);
+                ConvHolder holder = new ConvHolder(conv, false, opponentNum);                
+                opponentNum = holder.calledNumber;
                 calls.put(call, holder);
                 if (callsRouter!=null) {
                     callsRouter.setData(
@@ -272,7 +281,9 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                 call = (CiscoCall) provider.createCall();
                 lock.writeLock().lock();
                 try {
-                    calls.put(call, new ConvHolder(callForTransfer, address));
+                    ConvHolder holder = new ConvHolder(callForTransfer, address);
+                    address = holder.transferAddress;
+                    calls.put(call, holder);
                 } finally {
                     lock.writeLock().unlock();
                 }
@@ -480,20 +491,24 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
     public void callChangedEvent(CallEv[] events) {
         if (logger.isDebugEnabled())
             logCallEvents(events);
-        for (CallEv ev: events)
+        for (CallEv ev: events) {
             switch (ev.getID()) {
                 case CallActiveEv.ID: createConversation(((CallActiveEv)ev).getCall()); break;
-                case CiscoCallChangedEv.ID: replaceCalls((CiscoCallChangedEv)ev);
+                case CiscoCallChangedEv.ID: replaceCalls((CiscoCallChangedEv)ev); break;
                 case ConnConnectedEv.ID: bindConnIdToConv((ConnConnectedEv)ev); break;
                 case CallCtlConnOfferedEv.ID: acceptIncomingCall((CallCtlConnOfferedEv) ev); break;
                 case TermConnRingingEv.ID   : answerOnIncomingCall((TermConnRingingEv)ev); break;
-                case CallCtlConnEstablishedEv.ID: openLogicalChannel((CallCtlConnEstablishedEv)ev); break;
+                case CallCtlConnEstablishedEv.ID: 
+                    appendAdditionalNumberToAddress((CallCtlConnEv)ev); 
+                    openLogicalChannel((CallCtlConnEstablishedEv)ev); 
+                    break;
                 case MediaTermConnDtmfEv.ID: continueConv((MediaTermConnDtmfEv)ev); break;
                 case CiscoTransferEndEv.ID: callTransfered((CiscoTransferEndEv)ev);
                 case ConnDisconnectedEv.ID: unbindConnIdFromConv((ConnDisconnectedEv)ev); break;
                 case CallCtlConnFailedEv.ID: handleConnFailedEvent((CallCtlConnFailedEv)ev); break;
                 case CallInvalidEv.ID: stopConversation(ev.getCall(), CompletionCode.COMPLETED_BY_OPPONENT); break;
             }
+        }
     }
     
     public void addressChangedEvent(AddrEv[] events) {
@@ -522,11 +537,11 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                     if (logger.isDebugEnabled())
                         logger.debug(callLog(call, "Creating conversation"));
                     IvrEndpointConversationImpl conv = new IvrEndpointConversationImpl(
-                            term, this, executor, conversationScenario, rtpStreamManager
+                            term, this, executor, term.getConversationScenario(), rtpStreamManager
                             , enableIncomingRtp, address, null);
                     conv.setCall((CallControlCall) call);
                     conv.addConversationListener(this);
-                    calls.put(call, new ConvHolder(conv, true));
+                    calls.put(call, new ConvHolder(conv, true, null));
                 } else if (holder!=null && !holder.incoming) 
                     holder.conv.setCall((CallControlCall) call);
             } catch (Throwable e) {
@@ -1010,6 +1025,54 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
         });
     }
     //--------------- End of the IvrEndpointConversationListener methods -----------------//
+
+    private void appendAdditionalNumberToAddress(CallCtlConnEv ev) {
+        ConvHolder holder = getConvHolderByCall(ev.getCall());
+        if (holder!=null && holder.additionalNumber!=null) {
+            Connection[] connections = ev.getCall().getConnections();
+            if (connections!=null) {
+                TerminalConnection termConn = null;
+                int estCount = 0;
+                for (Connection conn: connections) {
+                    if (logger.isDebugEnabled())
+                        logger.debug("Testing connection: "+conn);
+                    CallControlConnection ctlConn = (CallControlConnection) conn;
+                    TerminalConnection[] termConns = conn.getTerminalConnections();                    
+//                    if (logger.isDebugEnabled()) {
+//                        logger.debug("    CallControll connection state: "+ctlConn.getCallControlState());
+//                        if (termConns!=null && termConns.length>0) {
+//                            logger.debug("    TerminalConnection state: "+termConns[0].getState());
+//                            logger.debug("    TerminalConnections: "+ Arrays.toString(termConns));
+//                        }
+//                    }
+                    if (ctlConn.getCallControlState()==CallControlConnection.ESTABLISHED) {
+                        if (!address.equals(conn.getAddress().getName()))
+                            estCount++;
+                        else if (termConns!=null && termConns.length>0 
+                                && termConns[0].getState()==TerminalConnection.ACTIVE) 
+                        {
+                            estCount++;
+                            termConn = termConns[0];
+                        }
+                    }
+                }
+                if (estCount>=2 && termConn!=null) {
+                    if (logger.isDebugEnabled()) 
+                        logger.debug(String.format("Appending (%s) to called number for connection: %s", 
+                                holder.additionalNumber, termConn));
+                    try {
+                        ((MediaTerminalConnection)termConn).generateDtmf(holder.additionalNumber);
+                    } catch (Throwable e) {
+                        if (logger.isErrorEnabled())
+                            logger.error(String.format("Error appending additional digits (%s) to called number: %s", 
+                                    holder.additionalNumber, termConn), e);
+                    }
+                } else if (logger.isDebugEnabled())
+                    logger.debug("Can't append additional digits to numbers. Not all connections ready, wating...");
+            }
+//                ((CallControlConnection)ev.getConnection()).addToAddress(holder.additionalNumber);
+        }
+    }
     
     private class ConvHolder {
         private final IvrEndpointConversationImpl conv;
@@ -1020,20 +1083,28 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
         private volatile String transferAddress;
         private volatile boolean unparkCall = false;
         private volatile boolean transfering = false;
+        private final String additionalNumber;
+        private final String calledNumber;
         
 
-        public ConvHolder(IvrEndpointConversationImpl conv, boolean incoming) {
+        public ConvHolder(IvrEndpointConversationImpl conv, boolean incoming, String calledNumber) {
             this.conv = conv;
             this.incoming = incoming;
             callForTransfer = null;
             this.transferAddress = null;
+            String[] nums = splitNumber(calledNumber);
+            this.calledNumber = nums[0];
+            this.additionalNumber = nums[1];
         }
 
         public ConvHolder(Call callForTransfer, String transferAddress) {
             this.conv = null;
             this.incoming = false;
             this.callForTransfer = (CiscoCall)callForTransfer;
-            this.transferAddress = transferAddress;
+            String[] nums = splitNumber(transferAddress);
+            this.transferAddress = nums[0];
+            this.additionalNumber = nums[1];
+            this.calledNumber=null;
         }
         
         public ConvHolder(String parkDN, Call callForUnpark) {
@@ -1067,6 +1138,16 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
         
         public long getDuration() {
             return (System.currentTimeMillis() - created)/1000;
+        }
+        
+        private String[] splitNumber(String number) {
+            String[] res = new String[]{null, null};
+            if (number!=null) {
+                String[] tokens = number.split("\\*");
+                for (int i=0; i<Math.min(tokens.length, res.length); ++i)
+                    res[i] = tokens[i];
+            }
+            return res;
         }
 
         @Override

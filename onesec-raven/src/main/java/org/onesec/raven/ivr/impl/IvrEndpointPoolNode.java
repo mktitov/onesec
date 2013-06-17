@@ -20,7 +20,7 @@ package org.onesec.raven.ivr.impl;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -33,6 +33,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.onesec.raven.ivr.*;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
+import org.raven.conv.ConversationScenario;
 import org.raven.log.LogLevel;
 import org.raven.sched.*;
 import org.raven.sched.impl.AbstractTask;
@@ -126,7 +127,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     private int sessionMaxRequestsPerSecond;
     private int requestsCountInSecond;
     private long lastMaxRequestsPerSecondCheckTime;
-    private Set<IvrEndpoint> reservedEndpoints;
+    private ConcurrentMap<IvrEndpoint, ReservedEndpointInfo> reservedEndpoints;
 
     @Message private static String totalUsageCountMessage;
     @Message private static String terminalsTableTitleMessage;
@@ -160,7 +161,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         statusMessage = new AtomicReference<String>("");
         managerThreadStoped = new AtomicBoolean(true);
         auxiliaryPoolUsageCount = new AtomicInteger(0);
-        reservedEndpoints = new ConcurrentSkipListSet<IvrEndpoint>();
+        reservedEndpoints = new ConcurrentHashMap<IvrEndpoint, ReservedEndpointInfo>();
     }
 
     @Override
@@ -197,7 +198,12 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         return TaskRestartPolicy.RESTART_NODE;
     }
 
-    public IvrEndpoint reserveEndpoint(long timeout) {
+    public ConversationScenario getConversationScenario(IvrEndpoint endpoint) {
+        ReservedEndpointInfo info = reservedEndpoints.get(endpoint);
+        return info==null? getConversationScenario() : info.scenario;
+    }
+
+    public IvrEndpoint reserveEndpoint(ReserveEndpointRequest request) {
         if (!isStarted())
             return null;
         if (useCase!=UseCase.INCOMING_CALLS) {
@@ -205,13 +211,23 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                 getLogger().warn("Can't reserve endpoints in OUTGOING_CALLS mode");
             return null;
         }
+        ConversationScenario scenario = request.getConversationScenario();
+        if (scenario==null)
+            scenario = getConversationScenario();
+        if (scenario==null) {
+            if (isLogLevelEnabled(LogLevel.ERROR))
+                getLogger().error("Can't reserve endpoint because of conversation scenario not defined "
+                        + "neither in reserve request nor in the conversationScenarion attribute");
+            return null;
+        }
+        ReservedEndpointInfo res = new ReservedEndpointInfo(scenario);
         for (IvrEndpoint endpoint: NodeUtils.getChildsOfType(this, IvrEndpoint.class))
             if (   endpoint.getEndpointState().getId()==IvrEndpointState.IN_SERVICE
                 && endpoint.getActiveCallsCount()==0
-                && reservedEndpoints.add(endpoint)) 
+                && reservedEndpoints.putIfAbsent(endpoint, res)==null) 
             {
-                executor.executeQuietly(timeout, new UnreserveEndpointTask(endpoint));
-                incEnpointUsageCounter(endpoint);
+                executor.executeQuietly(request.getTimeout(), new UnreserveEndpointTask(endpoint));
+                incEndpointUsageCounter(endpoint);
                 return endpoint;
             }
         if (isLogLevelEnabled(LogLevel.WARN))
@@ -504,7 +520,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                 busyEndpoints.put(endpoint.getId(), requestInfo);
                 requestInfo.terminalUsageTime = System.currentTimeMillis();                
                 requestInfo.endpoint = (IvrEndpoint) endpoint;
-                incEnpointUsageCounter(endpoint);
+                incEndpointUsageCounter(endpoint);
 //                Long counter = usageCounters.get(endpoint.getId());
 //                usageCounters.put(endpoint.getId(), counter == null ? 1 : counter + 1);
                 return;
@@ -512,7 +528,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         }
     }
     
-    private void incEnpointUsageCounter(IvrEndpoint endpoint) {
+    private void incEndpointUsageCounter(IvrEndpoint endpoint) {
         Long counter = usageCounters.get(endpoint.getId());
         usageCounters.put(endpoint.getId(), counter == null ? 1 : counter + 1);
     }
@@ -625,7 +641,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     }
     
     private String getReservedStatus(IvrEndpoint endpoint) {
-        boolean reserved = reservedEndpoints.contains(endpoint);
+        boolean reserved = reservedEndpoints.containsKey(endpoint);
         return String.format(STATUS_FORMAT, reserved?"blue": "green", reserved? yesMessage: noMessage);
     }
     
@@ -694,7 +710,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     
     private void runWatchdogForIncomingCallsUseCase() {
         for (IvrEndpoint endpoint: NodeUtils.getChildsOfType(this, IvrEndpoint.class, false))
-            if (   !reservedEndpoints.contains(endpoint)
+            if (   !reservedEndpoints.containsKey(endpoint)
                 && (   (endpoint.isInitialized() && endpoint.isAutoStart())
                     || (endpoint.isStarted() && endpoint.getEndpointState().getId()==IvrEndpointState.OUT_OF_SERVICE)))
             {
@@ -763,7 +779,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                 for (int addr = Integer.parseInt(range[0]); addr<=Integer.parseInt(range[1]); ++addr){
                     String addrStr = ""+addr;
                     legalAddresses.add(addrStr);
-                    IvrEndpointNode term = (IvrEndpointNode) getChildren(addrStr);
+                    IvrEndpointNode term = (IvrEndpointNode) getNode(addrStr);
                     if (term==null){
                         if (isLogLevelEnabled(LogLevel.DEBUG))
                             getLogger().debug("Creating endpoint with address ({})", addrStr);
@@ -783,11 +799,11 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                     term.start();
                 }
             }
-            for (Node term: getSortedChildrens())
+            for (Node term: getNodes())
                 if (!legalAddresses.contains(term.getName())) {
                     if (isLogLevelEnabled(LogLevel.DEBUG))
                         getLogger().debug("Removing endpoint ({}) from the pool", term.getName());
-                    if (Status.STARTED.equals(term.getStatus()))
+                    if (term.isStarted())
                         term.stop();
                     tree.remove(term);
                 }
@@ -850,6 +866,14 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
             if (res==0 && o1!=o2)
                 res = new Long(o1.id).compareTo(o2.id);
             return res;
+        }
+    }
+    
+    private class ReservedEndpointInfo {
+        private final ConversationScenario scenario;
+
+        public ReservedEndpointInfo(ConversationScenario scenario) {
+            this.scenario = scenario;
         }
     }
     

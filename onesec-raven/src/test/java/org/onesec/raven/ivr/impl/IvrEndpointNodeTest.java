@@ -17,7 +17,6 @@
 
 package org.onesec.raven.ivr.impl;
 
-import com.cisco.jtapi.extensions.CiscoCall;
 import java.io.FileInputStream;
 import java.util.Date;
 import java.util.HashMap;
@@ -109,7 +108,7 @@ public class IvrEndpointNodeTest
         endpoint.setName("endpoint");
         tree.getRootNode().addAndSaveChildren(endpoint);
         endpoint.setExecutor(executor);
-        endpoint.setConversationScenario(scenario);
+//        endpoint.setConversationScenario(scenario);
         endpoint.setAddress("88013");
 //        endpoint.setAddress("88014");
 //        endpoint.setRtpMaxSendAheadPacketsCount(0);

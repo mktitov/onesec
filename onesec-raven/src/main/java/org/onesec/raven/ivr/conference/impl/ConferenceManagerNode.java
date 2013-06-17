@@ -36,7 +36,6 @@ import org.onesec.raven.ivr.conference.ConferenceException;
 import org.onesec.raven.ivr.conference.ConferenceInitiator;
 import org.onesec.raven.ivr.conference.ConferenceManager;
 import org.onesec.raven.ivr.conference.ConferenceSessionListener;
-import org.onesec.raven.ivr.impl.AudioFileNode;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.ds.DataConsumer;
@@ -470,6 +469,7 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
         conf.setEndTime(toDate);
         conf.setChannelsCount(channelsCount);
         conf.setAccessCode(generateAccessCode(accessCodeLength));
+        conf.setLogLevel(getLogLevel());
         processingConference.set(conf);
         try {
             conf.start();

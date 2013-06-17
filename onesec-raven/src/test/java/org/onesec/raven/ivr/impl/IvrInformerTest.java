@@ -114,7 +114,7 @@ public class IvrInformerTest extends OnesecRavenTestCase
         endpoint.setName("endpoint");
         tree.getRootNode().addAndSaveChildren(endpoint);
         endpoint.setExecutor(executor);
-        endpoint.setConversationScenario(scenario);
+//        endpoint.setConversationScenario(scenario);
         endpoint.setAddress("88013");
         endpoint.setRtpStreamManager(manager);
         endpoint.setLogLevel(LogLevel.TRACE);
