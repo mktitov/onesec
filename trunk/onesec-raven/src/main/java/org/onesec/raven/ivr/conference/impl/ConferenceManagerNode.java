@@ -19,7 +19,9 @@ import fj.data.List;
 import java.io.File;
 import static java.lang.Math.*;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -31,8 +33,10 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.onesec.raven.Constants;
 import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.IvrEndpointConversation;
+import org.onesec.raven.ivr.conference.ChannelUsage;
 import org.onesec.raven.ivr.conference.Conference;
 import org.onesec.raven.ivr.conference.ConferenceException;
+import org.onesec.raven.ivr.conference.ConferenceException.CauseCode;
 import org.onesec.raven.ivr.conference.ConferenceInitiator;
 import org.onesec.raven.ivr.conference.ConferenceManager;
 import org.onesec.raven.ivr.conference.ConferenceSessionListener;
@@ -91,6 +95,9 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
     
     @NotNull @Parameter(defaultValue="3")
     private Double maxGainCoef;
+    
+    @NotNull @Parameter(defaultValue="900")
+    private Integer timeQuant;
     
     @NotNull @Parameter
     private String recordingStoragePath;
@@ -238,8 +245,10 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
         try {
             return executeInLock(new Ask<Conference>() {
                 public Conference run() throws Exception {
-                    checkConference(name, fromDate, toDate, channelCount, null);
-                    return createConferenceNode(name, fromDate, toDate, channelCount, initiator);
+                    Date fd = tuneDate(fromDate);
+                    Date td = tuneDate(toDate);
+                    checkConference(name, fd, td, channelCount, null);
+                    return createConferenceNode(name, fd, td, channelCount, initiator);
                 }
             });
         } catch (ConferenceException e) {
@@ -250,30 +259,52 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
             throw (ConferenceException)e;
         }
     }
+
+    public java.util.List<Conference> getConferencesByInitiatorId(String id) {
+        ArrayList<Conference> confs = new ArrayList<Conference>();
+        for (Conference conf: NodeUtils.getChildsOfType(plannedNode, Conference.class)) {
+            ConferenceInitiator initiator = conf.getConferenceInitiator();
+            if (initiator!=null && id.equals(initiator.getInitiatorId()))
+                confs.add(conf);
+        }
+        return confs;
+    }
     
     private void checkConference(String name, Date fromDate, Date toDate, int channelCount, Conference skipConf) 
             throws ConferenceException 
     {
         if (name==null || name.trim().isEmpty()) 
-            throw new ConferenceException(ConferenceException.NULL_CONFERENCE_NAME);
+            throw new ConferenceException(CauseCode.NULL_CONFERENCE_NAME);
         if (fromDate==null)
-            throw new ConferenceException(ConferenceException.NULL_FROM_DATE);
+            throw new ConferenceException(CauseCode.NULL_FROM_DATE);
         if (toDate==null)
-            throw new ConferenceException(ConferenceException.NULL_TO_DATE);
+            throw new ConferenceException(CauseCode.NULL_TO_DATE);
         if (channelCount<minChannelsPerConference)
-            throw new ConferenceException(ConferenceException.INVALID_CHANNELS_COUNT);
+            throw new ConferenceException(CauseCode.INVALID_CHANNELS_COUNT);
         checkDates(fromDate, toDate);
         List<Conference> conferences = List.list(
                 NodeUtils.getChildsOfType(plannedNode, Conference.class).toArray(new Conference[]{}));
         if (!checkChannels(fromDate.getTime(), toDate.getTime(), conferences, this.channelsCount, channelCount, skipConf))
-            throw new ConferenceException(ConferenceException.NOT_ENOUGH_CHANNELS);
+            throw new ConferenceException(CauseCode.NOT_ENOUGH_CHANNELS);
+    }
+    
+    Date tuneDate(Date date) {
+        if (date==null)
+            return null;
+        long _timeQuant = timeQuant * 1000;
+        return new Date(date.getTime() / _timeQuant * _timeQuant);
     }
     
     public void checkConferenceNode(final Conference conf) throws ConferenceException {
-        if (!isStarted()) throw new ConferenceException(ConferenceException.CONFERENCE_MANAGER_STOPPED);
+        if (!isStarted()) throw new ConferenceException(CauseCode.CONFERENCE_MANAGER_STOPPED);
         else if (processingConference.get()==conf) return;
         else executeInLock(new Tell() {
             public void run() throws Exception {
+                if (conf instanceof ConferenceNode) {
+                    ConferenceNode confNode = (ConferenceNode) conf;
+                    confNode.setStartTime(tuneDate(conf.getStartTime()));
+                    confNode.setEndTime(tuneDate(conf.getEndTime()));
+                }
                 checkConference(conf.getConferenceName(), conf.getStartTime(), conf.getEndTime(), 
                         conf.getChannelsCount(), conf);
             }
@@ -294,6 +325,30 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
             sendInvalidIdOrAccessCode(listener, conferenceId);
         }
     }
+
+    public java.util.List<ChannelUsage> getChannelUsageSchedule(Date fromDate, Date toDate) {
+        Map<Long, ChannelUsageImpl> usages = new HashMap<Long, ChannelUsageImpl>();
+        int _timeQuant = timeQuant * 1000;
+        int _channelsCount = channelsCount;
+        fromDate = tuneDate(fromDate);
+        toDate = tuneDate(toDate);
+        long time = fromDate.getTime();
+        while (time < toDate.getTime()) {
+            usages.put(time, new ChannelUsageImpl(_channelsCount, new Date(time)));
+            time += _timeQuant;
+        }            
+        for (Conference conf: NodeUtils.getChildsOfType(plannedNode, Conference.class)) {
+            long[] interval = getIntersection(fromDate.getTime(), toDate.getTime(), 
+                    tuneDate(conf.getStartTime()).getTime(), tuneDate(conf.getEndTime()).getTime());
+            while (interval!=null && interval[0]<interval[1]) {
+                usages.get(interval[0]).incUsedChannels(conf.getChannelsCount());
+                interval[0] += _timeQuant;
+            }
+        }
+        java.util.List<ChannelUsage> res = new ArrayList<ChannelUsage>(usages.values());
+        Collections.sort(res);
+        return res;
+    }
     
     private<T> T executeInLock(Task<T> task) throws ConferenceException {
         try {
@@ -307,7 +362,7 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
                 } finally {
                     lock.unlock();
                 }
-            } else throw new ConferenceException(ConferenceException.CONFERENCE_MANAGER_BUSY);
+            } else throw new ConferenceException(CauseCode.CONFERENCE_MANAGER_BUSY);
         } catch (Throwable e) {
             if (!(e instanceof ConferenceException))
                 throw new ConferenceException("Error creating conference. "+(e.getMessage()==null?"":e.getMessage()), e);
@@ -345,7 +400,11 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
     }
 
     public void removeConference(int conferenceId) throws ConferenceException {
-        throw new UnsupportedOperationException("Not supported yet.");
+        ConferenceNode conf = (ConferenceNode) plannedNode.getNodeById(conferenceId);
+        if (conf!=null) {
+            conf.stop();
+            tree.remove(conf);
+        }
     }
 
     public Integer getChannelsCount() {
@@ -444,16 +503,24 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
         this.conferenceStoppedAudio = conferenceStoppedAudio;
     }
 
+    public Integer getTimeQuant() {
+        return timeQuant;
+    }
+
+    public void setTimeQuant(Integer timeQuant) {
+        this.timeQuant = timeQuant;
+    }
+
     private void checkDates(Date fromDate, Date toDate) throws ConferenceException {
         final Date curDate = new Date();
         if (fromDate.after(toDate)) 
-            throw new ConferenceException(ConferenceException.FROM_DATE_AFTER_TO_DATE);
+            throw new ConferenceException(CauseCode.FROM_DATE_AFTER_TO_DATE);
         if (curDate.after(toDate))
-            throw new ConferenceException(ConferenceException.DATE_AFTER_CURRENT_DATE);
+            throw new ConferenceException(CauseCode.TO_DATE_AFTER_CURRENT_DATE);
         if (toDate.getTime()-fromDate.getTime() > maxConferenceDuration*60*1000)
-            throw new ConferenceException(ConferenceException.CONFERENCE_TO_LONG);
+            throw new ConferenceException(CauseCode.CONFERENCE_TO_LONG);
         if (fromDate.getTime()-TimeUnit.DAYS.toMillis(maxPlanDays) > curDate.getTime())
-            throw new ConferenceException(ConferenceException.CONFERENCE_TO_FAR_IN_FUTURE);
+            throw new ConferenceException(CauseCode.CONFERENCE_TO_FAR_IN_FUTURE);
     }
     
     private Conference createConferenceNode(String name, Date fromDate, Date toDate, int channelsCount, 
@@ -470,6 +537,15 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
         conf.setChannelsCount(channelsCount);
         conf.setAccessCode(generateAccessCode(accessCodeLength));
         conf.setLogLevel(getLogLevel());
+        if (initiator!=null) {
+            ConferenceInitiatorNode initiatorNode = new ConferenceInitiatorNode();
+            conf.addAndSaveChildren(initiatorNode);
+            initiatorNode.setInitiatorId(initiator.getInitiatorId());
+            initiatorNode.setInitiatorName(initiator.getInitiatorName());
+            initiatorNode.setInitiatorEmail(initiator.getInitiatorEmail());
+            initiatorNode.setInitiatorPhone(initiator.getInitiatorPhone());
+            initiatorNode.start();
+        }
         processingConference.set(conf);
         try {
             conf.start();

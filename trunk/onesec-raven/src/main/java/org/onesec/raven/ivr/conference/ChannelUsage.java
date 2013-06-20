@@ -15,13 +15,14 @@
  */
 package org.onesec.raven.ivr.conference;
 
+import java.util.Date;
+
 /**
  *
  * @author Mikhail Titov
  */
-public interface ConferenceInitiator {
-    String getInitiatorId();
-    String getInitiatorName();
-    String getInitiatorPhone();
-    String getInitiatorEmail();
+public interface ChannelUsage extends Comparable<ChannelUsage> {    
+    public Date getTime();
+    public int getUsedChannels();
+    public int getFreeChannels();
 }

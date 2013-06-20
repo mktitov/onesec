@@ -28,14 +28,14 @@ import org.junit.Before;
 import org.junit.Test;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.TestSchedulerNode;
+import org.onesec.raven.ivr.conference.ChannelUsage;
 import org.onesec.raven.ivr.conference.Conference;
 import org.onesec.raven.ivr.conference.ConferenceException;
-import static org.onesec.raven.ivr.conference.ConferenceException.*;
+import org.onesec.raven.ivr.conference.ConferenceException.CauseCode;
 import org.onesec.raven.ivr.conference.ConferenceInitiator;
 import static org.onesec.raven.ivr.conference.impl.ConferenceManagerNode.*;
 import org.raven.test.DataCollector;
 import org.raven.test.InThreadExecutorService;
-import org.raven.test.RavenCoreTestCase;
 import org.raven.tree.Node;
 /**
  *
@@ -70,6 +70,7 @@ public class ConferenceManagerNodeTest extends OnesecRavenTestCase {
         manager.setArchiveScheduler(scheduler);
         manager.setRecordingStoragePath("target/conference_manager");
         manager.setExecutor(executor);
+        manager.setTimeQuant(1);
         
         collector = new DataCollector();
         collector.setName("data collector");
@@ -181,16 +182,16 @@ public class ConferenceManagerNodeTest extends OnesecRavenTestCase {
         manager.setMaxConferenceDuration(1);
         manager.setMaxPlanDays(1);
         assertTrue(manager.start());
-        checkCreateConferenceException(NULL_CONFERENCE_NAME, null, null, null, 0, null);
-        checkCreateConferenceException(NULL_FROM_DATE, "name", null, null, 0, null);
-        checkCreateConferenceException(NULL_TO_DATE, "name", new Date(), null, 0, null);
-        checkCreateConferenceException(INVALID_CHANNELS_COUNT, "name", new Date(), new Date(), 0, null);
-        checkCreateConferenceException(FROM_DATE_AFTER_TO_DATE, "name", new Date(), new Date(System.currentTimeMillis()-1000), 10, null);
-        checkCreateConferenceException(DATE_AFTER_CURRENT_DATE, "name", new Date(System.currentTimeMillis()-1000), new Date(System.currentTimeMillis()-100), 10, null);
+        checkCreateConferenceException(CauseCode.NULL_CONFERENCE_NAME, null, new Date(), new Date(), 0, null);
+        checkCreateConferenceException(CauseCode.NULL_FROM_DATE, "name", null, null, 0, null);
+        checkCreateConferenceException(CauseCode.NULL_TO_DATE, "name", new Date(), null, 0, null);
+        checkCreateConferenceException(CauseCode.INVALID_CHANNELS_COUNT, "name", new Date(), new Date(), 0, null);
+        checkCreateConferenceException(CauseCode.FROM_DATE_AFTER_TO_DATE, "name", new Date(), new Date(System.currentTimeMillis()-1000), 10, null);
+        checkCreateConferenceException(CauseCode.TO_DATE_AFTER_CURRENT_DATE, "name", new Date(System.currentTimeMillis()-1000), new Date(System.currentTimeMillis()-100), 10, null);
         Date fd = new Date(System.currentTimeMillis()+10000);
-        checkCreateConferenceException(CONFERENCE_TO_LONG, "name", fd, new Date(fd.getTime()+61*1000), 10, null);
+        checkCreateConferenceException(CauseCode.CONFERENCE_TO_LONG, "name", fd, new Date(fd.getTime()+61*1000), 10, null);
         fd = new Date(System.currentTimeMillis()+TimeUnit.DAYS.toMillis(2));
-        checkCreateConferenceException(CONFERENCE_TO_FAR_IN_FUTURE, "name", fd, new Date(fd.getTime()+30*1000), 10, null);
+        checkCreateConferenceException(CauseCode.CONFERENCE_TO_FAR_IN_FUTURE, "name", fd, new Date(fd.getTime()+30*1000), 10, null);
     }
     
     @Test
@@ -201,13 +202,21 @@ public class ConferenceManagerNodeTest extends OnesecRavenTestCase {
         long time = (System.currentTimeMillis()+10000)/1000*1000;
         Date fd = new Date(time);
         Date td = new Date(fd.getTime()+60*1000);
-        Conference conf = manager.createConference("c1", fd, td, 5, null);
+        Conference conf = manager.createConference("c1", fd, td, 5, new ConferenceInitiatorImpl("user1", 
+                "Test user", "123", "e@mail"));
         assertNotNull(conf);
         assertTrue(((Node)conf).isStarted());
         assertEquals("c1", conf.getConferenceName());
         assertEquals(new Integer(5), conf.getChannelsCount());
         assertEquals(fd, conf.getStartTime());
         assertEquals(td, conf.getEndTime());
+        
+        ConferenceInitiator user = conf.getConferenceInitiator();
+        assertNotNull(user);
+        assertEquals("user1", user.getInitiatorId());
+        assertEquals("Test user", user.getInitiatorName());
+        assertEquals("123", user.getInitiatorPhone());
+        assertEquals("e@mail", user.getInitiatorEmail());
 //        assertNot
     }
     
@@ -265,9 +274,35 @@ public class ConferenceManagerNodeTest extends OnesecRavenTestCase {
     }
     
     @Test
+    public void getChannelUsageScheduleTest() throws Exception {
+        manager.setChannelsCount(10);
+        manager.setMinChannelsPerConference(5);
+        assertTrue(manager.start());
+        Date fd = manager.tuneDate(new Date(System.currentTimeMillis()));
+        Date td = manager.tuneDate(new Date(System.currentTimeMillis()+4000));
+        ConferenceNode conference = createConferenceNode("c1", new Date(fd.getTime()+1000), new Date(td.getTime()-1000), 5);
+        assertTrue(conference.start());
+        conference = createConferenceNode("c2", new Date(fd.getTime()+2000), new Date(td.getTime()+1000), 5);
+        assertTrue(conference.start());
+        java.util.List<ChannelUsage> usages = manager.getChannelUsageSchedule(fd, td);
+        assertEquals(4, usages.size());
+        for (int i=0; i<usages.size(); ++i)
+            assertEquals(new Date(fd.getTime()+i*1000), usages.get(i).getTime());
+        checkChannelsCount(10, 0, usages.get(0));
+        checkChannelsCount(5, 5, usages.get(1));
+        checkChannelsCount(0, 10, usages.get(2));
+        checkChannelsCount(5, 5, usages.get(3));
+    }
+    
+    @Test
     public void oneMinuteLeftAttrTest() {
         assertTrue(manager.start());
         assertNotNull(manager.getOneMinuteLeftAudio());
+    }
+    
+    private void checkChannelsCount(int free, int busy, ChannelUsage usage)  {
+        assertEquals(free, usage.getFreeChannels());
+        assertEquals(busy, usage.getUsedChannels());
     }
     
     private Conference createConference() {
@@ -299,7 +334,7 @@ public class ConferenceManagerNodeTest extends OnesecRavenTestCase {
         return conf;
     }
     
-    private void checkCreateConferenceException(int causeCode, String name, Date fd, Date td, int channelsCount, 
+    private void checkCreateConferenceException(CauseCode causeCode, String name, Date fd, Date td, int channelsCount, 
             ConferenceInitiator initiator) 
     {
         try {

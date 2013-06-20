@@ -20,42 +20,34 @@ package org.onesec.raven.ivr.conference;
  * @author Mikhail Titov
  */
 public class ConferenceException extends Exception {
-    public final static int UNKNWON_CAUSE = 0;
-    public final static int FROM_DATE_AFTER_TO_DATE = 1;
-    public final static int DATE_AFTER_CURRENT_DATE = 2;
-    public final static int CONFERENCE_TO_LONG = 3;
-    public final static int CONFERENCE_TO_FAR_IN_FUTURE = 4;
-    public final static int NOT_ENOUGH_CHANNELS = 5;
-    public final static int NULL_CONFERENCE_NAME = 6;
-    public final static int NULL_FROM_DATE = 7;
-    public final static int NULL_TO_DATE = 8;
-    public final static int INVALID_CHANNELS_COUNT = 9;
-    public final static int CONFERENCE_MANAGER_BUSY = 10;
-    public final static int CONFERENCE_MANAGER_STOPPED = 11;
+    public enum CauseCode {UNKNWON_CAUSE, FROM_DATE_AFTER_TO_DATE, TO_DATE_AFTER_CURRENT_DATE, 
+        CONFERENCE_TO_LONG, CONFERENCE_TO_FAR_IN_FUTURE, NOT_ENOUGH_CHANNELS, NULL_CONFERENCE_NAME, 
+        NULL_FROM_DATE, NULL_TO_DATE, INVALID_CHANNELS_COUNT, CONFERENCE_MANAGER_BUSY, 
+        CONFERENCE_MANAGER_STOPPED}
     
-    private final int causeCode;
+    private final CauseCode causeCode;
             
     public ConferenceException(String msg) {
         super(msg);
-        this.causeCode = 0;
+        this.causeCode = CauseCode.UNKNWON_CAUSE;
     }
 
-    public ConferenceException(int causeCode) {
-        super();
+    public ConferenceException(CauseCode causeCode) {
+        super(causeCode.name());
         this.causeCode = causeCode;
     }
 
     public ConferenceException(String message, Throwable cause) {
         super(message, cause);
-        this.causeCode = UNKNWON_CAUSE;
+        this.causeCode = CauseCode.UNKNWON_CAUSE;
     }
 
     public ConferenceException(Throwable cause) {
         super(cause);
-        this.causeCode = UNKNWON_CAUSE;
+        this.causeCode = CauseCode.UNKNWON_CAUSE;
     }
 
-    public int getCauseCode() {
+    public CauseCode getCauseCode() {
         return causeCode;
     }
 }

@@ -45,6 +45,7 @@ import org.onesec.raven.ivr.IvrIncomingRtpStartedEvent;
 import org.onesec.raven.ivr.IvrOutgoingRtpStartedEvent;
 import org.onesec.raven.ivr.RtpStreamException;
 import org.onesec.raven.ivr.conference.Conference;
+import org.onesec.raven.ivr.conference.ConferenceInitiator;
 import org.onesec.raven.ivr.conference.ConferenceManager;
 import org.onesec.raven.ivr.conference.ConferenceMixerSession;
 import org.onesec.raven.ivr.conference.ConferenceSession;
@@ -78,6 +79,8 @@ public class ConferenceNode extends BaseNode implements Conference {
     public final static String RECORD_CONFERENCE_ATTR = "recordConference";
     public final static String CURRENT_PARTICIPANTS_COUNT = "currentParticipantsCount";
     public final static String REGISTERED_PARTICIPANTS_COUNT = "registeredParticipantsCount";
+    public final static String INITIATOR_ID_ATTR = "initiatorId";
+    public final static String INITIATOR_NAME_ATTR = "initiatorName";
     
     @Service
     private CodecManager codecManager;
@@ -210,7 +213,11 @@ public class ConferenceNode extends BaseNode implements Conference {
             }
         }
     }
-    
+
+    public ConferenceInitiator getConferenceInitiator() {
+        return (ConferenceInitiator) getNode(ConferenceInitiatorNode.NAME);
+    }
+
     private ConferenceParticipantNode getOrCreateParticipant(String phoneNumber) {
         ConferenceParticipantNode participant = (ConferenceParticipantNode) participantsNode.getNode(phoneNumber);
         if (participant==null) {
@@ -280,6 +287,18 @@ public class ConferenceNode extends BaseNode implements Conference {
     @Parameter(readOnly = true)
     public Integer getRegisteredParticipantsCount() {
         return participantsNode.getNodesCount();
+    }
+    
+    @Parameter(readOnly = true)
+    public String getInitiatorId() {
+        ConferenceInitiator initiator = (ConferenceInitiator) getNode(ConferenceInitiatorNode.NAME);
+        return initiator==null? null : initiator.getInitiatorId();
+    }
+
+    @Parameter(readOnly = true)
+    public String getInitiatorName() {
+        ConferenceInitiator initiator = (ConferenceInitiator) getNode(ConferenceInitiatorNode.NAME);
+        return initiator==null? null : initiator.getInitiatorName();
     }
 
     public Integer getNoiseLevel() {
