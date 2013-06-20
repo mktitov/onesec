@@ -17,8 +17,10 @@ package org.onesec.raven.ivr.conference.impl;
 
 import java.io.File;
 import java.util.Date;
+import java.util.List;
 import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.IvrEndpointConversation;
+import org.onesec.raven.ivr.conference.ChannelUsage;
 import org.onesec.raven.ivr.conference.Conference;
 import org.onesec.raven.ivr.conference.ConferenceException;
 import org.onesec.raven.ivr.conference.ConferenceInitiator;
@@ -74,5 +76,12 @@ public class TestConferenceManager extends BaseNode implements ConferenceManager
     public AudioFile getConferenceStoppedAudio() {
         throw new UnsupportedOperationException("Not supported yet."); 
     }
-    
+
+    public List<ChannelUsage> getChannelUsageSchedule(Date fromDate, Date toDate) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    public List<Conference> getConferencesByInitiatorId(String id) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
 }

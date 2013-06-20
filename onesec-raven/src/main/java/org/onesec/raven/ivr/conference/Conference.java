@@ -50,5 +50,7 @@ public interface Conference {
     public Integer getAutoStopRecorderAfter();
     public void setAutoStopRecorderAfter(Integer autoStopRecorderAfter); 
     
+    public ConferenceInitiator getConferenceInitiator();
+    
     void update();    
 }

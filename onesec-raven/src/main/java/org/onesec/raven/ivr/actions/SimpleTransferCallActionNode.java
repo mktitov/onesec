@@ -34,4 +34,12 @@ public class SimpleTransferCallActionNode extends AbstractActionNode {
     protected IvrAction doCreateAction() {
         return new SimpleTransferCallAction(address);
     }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
 }
