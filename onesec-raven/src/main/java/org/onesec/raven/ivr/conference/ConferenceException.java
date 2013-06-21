@@ -20,7 +20,7 @@ package org.onesec.raven.ivr.conference;
  * @author Mikhail Titov
  */
 public class ConferenceException extends Exception {
-    public enum CauseCode {UNKNWON_CAUSE, FROM_DATE_AFTER_TO_DATE, TO_DATE_AFTER_CURRENT_DATE, 
+    public enum CauseCode {UNKNWON_CAUSE, FROM_DATE_AFTER_TO_DATE, CURRENT_DATE_AFTER_TO_DATE, 
         CONFERENCE_TO_LONG, CONFERENCE_TO_FAR_IN_FUTURE, NOT_ENOUGH_CHANNELS, NULL_CONFERENCE_NAME, 
         NULL_FROM_DATE, NULL_TO_DATE, INVALID_CHANNELS_COUNT, CONFERENCE_MANAGER_BUSY, 
         CONFERENCE_MANAGER_STOPPED}
