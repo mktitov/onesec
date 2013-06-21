@@ -516,7 +516,7 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
         if (fromDate.after(toDate)) 
             throw new ConferenceException(CauseCode.FROM_DATE_AFTER_TO_DATE);
         if (curDate.after(toDate))
-            throw new ConferenceException(CauseCode.TO_DATE_AFTER_CURRENT_DATE);
+            throw new ConferenceException(CauseCode.CURRENT_DATE_AFTER_TO_DATE);
         if (toDate.getTime()-fromDate.getTime() > maxConferenceDuration*60*1000)
             throw new ConferenceException(CauseCode.CONFERENCE_TO_LONG);
         if (fromDate.getTime()-TimeUnit.DAYS.toMillis(maxPlanDays) > curDate.getTime())

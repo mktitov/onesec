@@ -187,7 +187,7 @@ public class ConferenceManagerNodeTest extends OnesecRavenTestCase {
         checkCreateConferenceException(CauseCode.NULL_TO_DATE, "name", new Date(), null, 0, null);
         checkCreateConferenceException(CauseCode.INVALID_CHANNELS_COUNT, "name", new Date(), new Date(), 0, null);
         checkCreateConferenceException(CauseCode.FROM_DATE_AFTER_TO_DATE, "name", new Date(), new Date(System.currentTimeMillis()-1000), 10, null);
-        checkCreateConferenceException(CauseCode.TO_DATE_AFTER_CURRENT_DATE, "name", new Date(System.currentTimeMillis()-1000), new Date(System.currentTimeMillis()-100), 10, null);
+        checkCreateConferenceException(CauseCode.CURRENT_DATE_AFTER_TO_DATE, "name", new Date(System.currentTimeMillis()-1000), new Date(System.currentTimeMillis()-100), 10, null);
         Date fd = new Date(System.currentTimeMillis()+10000);
         checkCreateConferenceException(CauseCode.CONFERENCE_TO_LONG, "name", fd, new Date(fd.getTime()+61*1000), 10, null);
         fd = new Date(System.currentTimeMillis()+TimeUnit.DAYS.toMillis(2));
