@@ -38,8 +38,8 @@ import org.raven.tree.impl.ChildsAsTableViewableObject;
 public class PlannedConferencesNode extends ContainerNode implements Viewable {
     public final static String NAME = "Planned";
     
-    private final static String[] attrs = new String[]{CONFERENCE_NAME_ATTR, INITIATOR_ID_ATTR, 
-        INITIATOR_NAME_ATTR, START_TIME_STR_ATTR, END_TIME_STR_ATTR, CHANNELS_COUNT_ATTR, 
+    private final static String[] attrs = new String[]{CONFERENCE_NAME_ATTR, CONFERENCE_INITIATOR_ID_ATTR, 
+        CONFERENCE_INITIATOR_NAME_ATTR, START_TIME_STR_ATTR, END_TIME_STR_ATTR, CHANNELS_COUNT_ATTR, 
         RECORD_CONFERENCE_ATTR, CURRENT_PARTICIPANTS_COUNT, REGISTERED_PARTICIPANTS_COUNT};
     
     private final static AttributeValueVisualizer visualizer = new AttributeValueVisualizer() {

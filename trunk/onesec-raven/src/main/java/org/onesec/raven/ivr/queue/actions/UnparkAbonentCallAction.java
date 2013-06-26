@@ -42,5 +42,4 @@ public class UnparkAbonentCallAction extends AsyncAction {
     public boolean isFlowControlAction() {
         return true;
     }
-    
 }
