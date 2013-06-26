@@ -59,6 +59,7 @@ import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.impl.AbstractTask;
 import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
+import org.raven.tree.Node;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.LoggerHelper;
 import org.weda.annotations.constraints.NotNull;
@@ -79,8 +80,8 @@ public class ConferenceNode extends BaseNode implements Conference {
     public final static String RECORD_CONFERENCE_ATTR = "recordConference";
     public final static String CURRENT_PARTICIPANTS_COUNT = "currentParticipantsCount";
     public final static String REGISTERED_PARTICIPANTS_COUNT = "registeredParticipantsCount";
-    public final static String INITIATOR_ID_ATTR = "initiatorId";
-    public final static String INITIATOR_NAME_ATTR = "initiatorName";
+    public final static String CONFERENCE_INITIATOR_ID_ATTR = "conferenceInitiatorId";
+    public final static String CONFERENCE_INITIATOR_NAME_ATTR = "conferenceInitiatorName";
     
     @Service
     private CodecManager codecManager;
@@ -136,7 +137,8 @@ public class ConferenceNode extends BaseNode implements Conference {
     private ConferenceParticipantsNode participantsNode;
     
     private ConferenceManager getManager() {
-        return (ConferenceManager) getParent().getParent();
+        Node manager = getParent().getParent();
+        return manager instanceof ConferenceManager? (ConferenceManager)manager : null;
     }
 
     @Override
@@ -171,7 +173,9 @@ public class ConferenceNode extends BaseNode implements Conference {
     protected void doStart() throws Exception {
         super.doStart();
         initNodes(true);
-        getManager().checkConferenceNode(this);
+        ConferenceManager manager = getManager();
+        if (manager!=null)
+            getManager().checkConferenceNode(this);
         controller.set(null, true);
     }
 
@@ -290,13 +294,13 @@ public class ConferenceNode extends BaseNode implements Conference {
     }
     
     @Parameter(readOnly = true)
-    public String getInitiatorId() {
+    public String getConferenceInitiatorId() {
         ConferenceInitiator initiator = (ConferenceInitiator) getNode(ConferenceInitiatorNode.NAME);
         return initiator==null? null : initiator.getInitiatorId();
     }
 
     @Parameter(readOnly = true)
-    public String getInitiatorName() {
+    public String getConferenceInitiatorName() {
         ConferenceInitiator initiator = (ConferenceInitiator) getNode(ConferenceInitiatorNode.NAME);
         return initiator==null? null : initiator.getInitiatorName();
     }
