@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Mikhail Titov.
+ * Copyright 2013 Mikhail Titov.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,20 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.onesec.raven.smsender;
 
-import org.onesec.raven.sms.SmeTransceiver;
-import org.junit.*;
+package org.onesec.raven.sms;
+
+import com.logica.smpp.pdu.Request;
+import com.logica.smpp.pdu.Response;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class SmeTranseiverTest {
- 
-    @Test
-    public void test() {
-        SmeTransceiver.main(null);
-    }
- 
+public interface SmsAgentListener {
+    public void inService(SmsAgent agent);
+    public void responseReceived(SmsAgent agent, Response pdu);
+    public void requestReceived(SmsAgent agent, Request pdu);
+    public void outOfService(SmsAgent agent);
 }

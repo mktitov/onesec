@@ -2,92 +2,90 @@ package org.onesec.raven.sms;
 
 import com.logica.smpp.pdu.Address;
 
-public interface ISmeConfig 
-{
-	public static final int RECEIVER 	= 1;
-	public static final int TRANSMITTER = 2;
-	public static final int TRANSCEIVER = 3;
+public interface ISmeConfig {
+    
+    public static final int RECEIVER = 1;
+    public static final int TRANSMITTER = 2;
+    public static final int TRANSCEIVER = 3;
 
-	public abstract int getBindMode();
+    public BindMode getBindMode();
 
-	public abstract String getBindAddr();
+    public abstract String getBindAddr();
 
-	public abstract int getBindPort();
+    public abstract int getBindPort();
 
-	public abstract int getBindTon();
+    public abstract int getBindTon();
 
-	public abstract int getBindNpi();
+    public abstract int getBindNpi();
 
-	public abstract String getAddrRange();
+    public abstract String getAddrRange();
 
-	public abstract String getFromAddr();
-	
-	public abstract boolean getAsync();
-	
-	public abstract int getBindTimeout();
+    public abstract String getFromAddr();
 
-	public abstract int getRebindInterval();
+    public abstract boolean getAsync();
 
-	public abstract int getEnquireTimeout();
-	
-	public abstract int getMaxEnquireAttempts();
+    public abstract int getBindTimeout();
 
-	public abstract int getSoTimeout();
-	
-	public abstract int getReceiveTimeout();
-	
-	public abstract int getNoRcvTimeout();
+    public abstract int getRebindInterval();
 
-	public abstract int getThrottledDelay();
+    public abstract int getEnquireTimeout();
 
-	public abstract int getMesThrottledDelay();
+    public abstract int getMaxEnquireAttempts();
 
-	public abstract int getQueueFullDelay();
+    public abstract int getSoTimeout();
 
-	public abstract int getMesQueueFullDelay();
-	
-	public abstract int getOnceSend();
+    public abstract int getReceiveTimeout();
 
-	public abstract String getSystemType();
+    public abstract int getNoRcvTimeout();
 
-	public abstract String getServiceType();
+    public abstract int getThrottledDelay();
 
-	public abstract Address getSrcAddr();
+    public abstract int getMesThrottledDelay();
 
-	public abstract Address getSmscAddr();
+    public abstract int getQueueFullDelay();
 
-	public abstract String getValidityPeriod();
+    public abstract int getMesQueueFullDelay();
 
-	public abstract byte getEsmClass();
+    public abstract int getOnceSend();
 
-	public abstract byte getProtocolId();
+    public abstract String getSystemType();
 
-	public abstract byte getPriorityFlag();
+    public abstract String getServiceType();
 
-	public abstract byte getRegisteredDelivery();
+    public abstract Address getSrcAddr();
 
-	public abstract byte getReplaceIfPresentFlag();
+    public abstract Address getSmscAddr();
 
-	public abstract byte getDataCoding();
+    public abstract String getValidityPeriod();
 
-	public abstract byte getSmDefaultMsgId();
+    public abstract byte getEsmClass();
 
-	public abstract byte getDstTon();
+    public abstract byte getProtocolId();
 
-	public abstract byte getDstNpi();
+    public abstract byte getPriorityFlag();
 
-	public abstract byte getSrcTon();
+    public abstract byte getRegisteredDelivery();
 
-	public abstract byte getSrcNpi();
+    public abstract byte getReplaceIfPresentFlag();
 
-	public abstract String getMessageCP();
+    public abstract byte getDataCoding();
+
+    public abstract byte getSmDefaultMsgId();
+
+    public abstract byte getDstTon();
+
+    public abstract byte getDstNpi();
+
+    public abstract byte getSrcTon();
+
+    public abstract byte getSrcNpi();
+
+    public abstract String getMessageCP();
 
 //	public abstract boolean isUseSarTags();
+    public abstract boolean isUse7bit();
 
-	public abstract boolean isUse7bit();
+    public abstract int getLongSmMode();
 
-	public abstract int getLongSmMode();
-	
-	public abstract int getMaxUnconfirmed();
-
+    public abstract int getMaxUnconfirmed();
 }
