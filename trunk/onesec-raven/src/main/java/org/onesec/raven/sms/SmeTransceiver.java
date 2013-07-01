@@ -29,9 +29,9 @@ import org.raven.tree.impl.LoggerHelper;
  * To change the template for this generated type comment go to
  * Window&gt;Preferences&gt;Java&gt;Code Generation&gt;Code and Comments
  */
-public class SmeTranseiver extends Thread implements ISmeConfig {
+public class SmeTransceiver extends Thread implements ISmeConfig {
 
-    private static final Logger log = LoggerFactory.getLogger(SmeTranseiver.class);
+    private static final Logger log = LoggerFactory.getLogger(SmeTransceiver.class);
     private SmeA sme = null;
     private boolean stopFlag = false;
     //private SmCoder smCoder =  null; 
@@ -88,7 +88,7 @@ public class SmeTranseiver extends Thread implements ISmeConfig {
      * 0; На сколько отложить отправку сообщений при ошибке 58 - THROTTLED (мс). private long waitTH
      * = 0;
      */
-    public SmeTranseiver() throws SmppException {
+    public SmeTransceiver() throws SmppException {
         init();
     }
 
@@ -691,9 +691,9 @@ public class SmeTranseiver extends Thread implements ISmeConfig {
 
     public static void main(String[] args) {
         new BindTransciever();
-        SmeTranseiver sme;
+        SmeTransceiver sme;
         try {
-            sme = new SmeTranseiver();
+            sme = new SmeTransceiver();
         } catch (SmppException e1) {
             log.error("...", e1);
             return;

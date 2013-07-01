@@ -20,7 +20,7 @@ package org.onesec.raven.sms;
  * @author Mikhail Titov
  */
 public enum BindMode {
-    RECEIVER("r"), TRANCSEIVER("t"), RECEIVER_AND_TRANCEIVER("tr");
+    RECEIVER("r"), TRANSMITTER("t"), RECEIVER_AND_TRANSMITTER("tr");
     
     private final String smeBindMode;
 

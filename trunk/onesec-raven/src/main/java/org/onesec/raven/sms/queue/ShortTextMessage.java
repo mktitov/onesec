@@ -4,7 +4,7 @@ import com.logica.smpp.pdu.SubmitSM;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.onesec.raven.sms.SmCoder;
-import org.onesec.raven.sms.SmsTranseiverNode;
+import org.onesec.raven.sms.SmsTransceiverNode;
 import org.raven.tree.impl.LoggerHelper;
 
 public class ShortTextMessage {
@@ -12,14 +12,14 @@ public class ShortTextMessage {
     private final String dst;
     private final String message;
     private final Object tag;
-    private final SmsTranseiverNode transeiver;
+    private final SmsTransceiverNode transeiver;
     private final long id;
     private final LoggerHelper logger;
     
     private final AtomicInteger unitsCount = new AtomicInteger(0);
     private final AtomicBoolean success = new AtomicBoolean(true);
 
-    public ShortTextMessage(String dstAddr, String mes, Object tag, SmsTranseiverNode transeiver, 
+    public ShortTextMessage(String dstAddr, String mes, Object tag, SmsTransceiverNode transeiver, 
             long id, LoggerHelper logger) 
     {
         this.dst = dstAddr;
