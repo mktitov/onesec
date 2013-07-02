@@ -350,9 +350,9 @@ public class SmeTransceiver extends Thread implements ISmeConfig {
         return queue;
     }
 
-    public int getBindMode() {
-        return bindMode;
-    }
+//    public int getBindMode() {
+//        return bindMode;
+//    }
 
     public void setBindMode(int bindMode) {
         if (bindMode > 3 || bindMode < 1) {
@@ -717,5 +717,9 @@ public class SmeTransceiver extends Thread implements ISmeConfig {
                 return;
             }
         }
+    }
+
+    public BindMode getBindMode() {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 }

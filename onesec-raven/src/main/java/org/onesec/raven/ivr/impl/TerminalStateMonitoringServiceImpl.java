@@ -25,6 +25,8 @@ import org.onesec.raven.ivr.IvrTerminal;
 import org.onesec.raven.ivr.TerminalStateMonitoringService;
 import org.raven.log.LogLevel;
 import org.raven.tree.Node;
+import org.raven.tree.NodeAttribute;
+import org.raven.tree.NodeListener;
 import org.raven.tree.Tree;
 import org.raven.tree.impl.ServicesNode;
 import org.raven.tree.impl.SystemNode;
@@ -37,6 +39,7 @@ import org.weda.beans.ObjectUtils;
 public class TerminalStateMonitoringServiceImpl implements TerminalStateMonitoringService
 {
     private final Map<IvrTerminal, IvrTerminal> terminals = new ConcurrentHashMap<IvrTerminal, IvrTerminal>();
+    private final TerminalNodeListener terminalNodeListener = new TerminalNodeListener();
     private TerminalStateMonitoringServiceNode serviceNode = null;
 
     public void treeReloaded(Tree tree) {
@@ -65,10 +68,12 @@ public class TerminalStateMonitoringServiceImpl implements TerminalStateMonitori
 
     public void addTerminal(IvrTerminal terminal) {
         terminals.put(terminal, terminal);
+        terminal.addListener(terminalNodeListener);
     }
 
     public void removeTerminal(IvrTerminal terminal) {
         terminals.remove(terminal);
+//        terminal.removeListener(terminalNodeListener);
     }
 
     public void stateChanged(ProviderControllerState state) {
@@ -114,5 +119,28 @@ public class TerminalStateMonitoringServiceImpl implements TerminalStateMonitori
 //                term.stop();
 //            }
 ////        }
+    }
+    
+    private class TerminalNodeListener implements NodeListener {
+        public boolean isSubtreeListener() {
+            return false;
+        }
+        public boolean nodeAttributeRemoved(Node node, NodeAttribute attribute) {
+            return false;
+        }
+        public void nodeRemoved(Node removedNode) {
+            removeTerminal((IvrTerminal)removedNode);
+        }
+        public void nodeStatusChanged(Node node, Node.Status oldStatus, Node.Status newStatus) { }
+        public void nodeNameChanged(Node node, String oldName, String newName) { }
+        public void nodeShutdowned(Node node) { }
+        public void childrenAdded(Node owner, Node children) { }
+        public void dependendNodeAdded(Node node, Node dependentNode) { }
+        public void nodeMoved(Node node) {}
+        public void nodeIndexChanged(Node node, int oldIndex, int newIndex) {}
+        public void nodeAttributeNameChanged(NodeAttribute attribute, String oldName, String newName) {}
+        public void nodeAttributeValueChanged(Node node, NodeAttribute attribute, Object oldRealValue, Object newRealValue) {}
+
+        
     }
 }

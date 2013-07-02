@@ -30,6 +30,7 @@ import com.logica.smpp.pdu.BindTransmitter;
 import com.logica.smpp.pdu.PDU;
 import com.logica.smpp.pdu.Request;
 import com.logica.smpp.pdu.Response;
+import com.logica.smpp.pdu.SubmitSM;
 import java.util.concurrent.atomic.AtomicReference;
 import static org.onesec.raven.sms.BindMode.RECEIVER;
 import static org.onesec.raven.sms.BindMode.TRANSMITTER;
@@ -53,6 +54,8 @@ public class SmsAgent {
     private final Session session;
     private final Node owner;
     private final MessageListener messageListener;
+    
+    private volatile long lastInteractionTime = 0;
 
     public SmsAgent(SmsConfig config, SmsAgentListener agentListener, ExecutorService executor
             , Node owner, LoggerHelper logger) 
@@ -65,10 +68,30 @@ public class SmsAgent {
         this.owner = owner;
         this.messageListener = new MessageListener();
         this.session = createSession();
+        bind();
+        executeCheckConnectionTask();
     }
     
     public void unbind() {
         changeStatusToOutOfService();
+    }
+    
+    public void submit(SubmitSM request) throws Exception {
+        try {
+            if (config.getBindMode()== BindMode.RECEIVER) 
+                throw new SmppException("Can't transmitte message in RECEIVER mode");
+            if (logger.isDebugEnabled()) 
+                logger.debug("Submiting request {}", request.debugString());
+            session.submit(request);
+        } catch (Exception e) {
+            if (logger.isErrorEnabled())
+                logger.error("Submiting error", e);
+            throw e;
+        }
+    }
+    
+    private void bind() {
+        executor.executeQuietly(new BindTask(owner));
     }
     
     private Session createSession() {
@@ -87,6 +110,10 @@ public class SmsAgent {
     
     private void changeStatusToOutOfService() {
         executor.executeQuietly(new UnbindTask());
+    }
+    
+    private void executeCheckConnectionTask() {
+        executor.executeQuietly(new CheckConnectionTask());
     }
     
     private void fireOutOfServiceEvent() {
@@ -117,7 +144,6 @@ public class SmsAgent {
             }
         });
     }
-    
     
     private class BindTask extends AbstractTask {
 
@@ -159,6 +185,8 @@ public class SmsAgent {
 
         public void handleEvent(ServerPDUEvent event) {
             final PDU pdu = event.getPDU();
+            if (logger.isDebugEnabled())
+                logger.debug("Processing received event: "+pdu.debugString());
             if (pdu.isRequest()) 
                 processRequest((Request)pdu);
             else if (pdu.isRequest()) 
@@ -167,7 +195,15 @@ public class SmsAgent {
         
         private void processRequest(Request req) {
             switch (req.getCommandId()) {
-                default: fireMessageReceived(req, false);
+                case Data.UNBIND: changeStatusToOutOfService(); break;
+                case Data.DATA_SM:
+                case Data.DELIVER_SM: 
+                    lastInteractionTime = System.currentTimeMillis();
+                    fireMessageReceived(req, false); 
+                    break;
+                default:
+                    if (logger.isDebugEnabled())
+                        logger.debug("No handler for request: {}", req.debugString());
             }
         }
 
@@ -176,10 +212,24 @@ public class SmsAgent {
                 case Data.BIND_RECEIVER_RESP:
                 case Data.BIND_TRANSCEIVER_RESP:
                 case Data.BIND_TRANSMITTER_RESP:
+                    lastInteractionTime = System.currentTimeMillis();
                     if (resp.getCommandStatus() == Data.ESME_ROK) changeStatusToInService();
                     else changeStatusToOutOfService();
                     break;
-                default: fireMessageReceived(resp, true);
+                case Data.ENQUIRE_LINK_RESP: 
+                    if (resp.getCommandStatus() != Data.ESME_ROK) {
+                        if (logger.isErrorEnabled())
+                            logger.error("Problem with connection testing. Link is down. Unbinding");
+                        changeStatusToOutOfService();
+                    } else { 
+                        if (logger.isDebugEnabled())
+                            logger.debug("Link is alive.");
+                        lastInteractionTime = System.currentTimeMillis();
+                    }
+                    break;    
+                default: 
+                    lastInteractionTime = System.currentTimeMillis();
+                    fireMessageReceived(resp, true);
             }
         }
     }
@@ -214,6 +264,26 @@ public class SmsAgent {
                     fireOutOfServiceEvent();
                 }
             }
+        }
+    }
+    
+    private class CheckConnectionTask extends AbstractTask {
+
+        public CheckConnectionTask() {
+            super(owner, logger.logMess("Checking connection"));
+        }
+
+        @Override
+        public void doRun() throws Exception {
+            if (lastInteractionTime + config.getEnquireTimeout() <= System.currentTimeMillis()
+                && status.get() == Status.IN_SERVICE) 
+            {
+                if (logger.isDebugEnabled()) 
+                    logger.debug("Enquiring link");
+                session.enquireLink();
+            }
+            if (status.get() != Status.OUT_OF_SERVICE)
+                executeCheckConnectionTask();
         }
     }
 }
