@@ -26,6 +26,7 @@ import org.raven.sched.impl.AbstractTask;
 import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
 import org.raven.tree.impl.BaseNode;
 import org.weda.annotations.constraints.NotNull;
+import org.weda.beans.ObjectUtils;
 
 /**
  *
@@ -86,6 +87,7 @@ public class TerminalStateMonitoringServiceNode extends BaseNode
             getLogger().debug("Restarting terminal ({})", term);
         executor.executeQuietly(new AbstractTask(this, "Restarting terminal: "+term) {
             @Override public void doRun() throws Exception {
+                if (!ObjectUtils.in(term.getStatus(), Status.INITIALIZED, Status.STARTED)) return;
                 if (term.isStarted()) term.stop();
                 if (term.isAutoStart()) {
                     if (term.start()) {
