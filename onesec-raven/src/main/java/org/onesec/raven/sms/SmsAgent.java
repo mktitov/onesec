@@ -22,9 +22,11 @@ import com.logica.smpp.ServerPDUEvent;
 import com.logica.smpp.ServerPDUEventListener;
 import com.logica.smpp.Session;
 import com.logica.smpp.SmppException;
+import com.logica.smpp.SmppObject;
 import com.logica.smpp.TCPIPConnection;
 import com.logica.smpp.pdu.BindReceiver;
 import com.logica.smpp.pdu.BindRequest;
+import com.logica.smpp.pdu.BindResponse;
 import com.logica.smpp.pdu.BindTransciever;
 import com.logica.smpp.pdu.BindTransmitter;
 import com.logica.smpp.pdu.PDU;
@@ -156,7 +158,11 @@ public class SmsAgent {
             try {
                 if (logger.isDebugEnabled()) 
                     logger.debug("Binding to SMSC: addr={} port={}", config.getBindAddr(), config.getBindPort());
-                session.bind(createBindRequest(), messageListener);
+                BindResponse resp = session.bind(createBindRequest(), messageListener);
+                if (resp!=null) {
+                    messageListener.processResponse(resp);
+                    logger.debug("Bind response: "+resp.debugString());
+                }
             } catch (Throwable e) {
                 logger.error(String.format("Bind operation failed: %s", e.getMessage()), e);
                 changeStatusToOutOfService();
@@ -181,7 +187,7 @@ public class SmsAgent {
         }
     }
     
-    private class MessageListener implements ServerPDUEventListener {
+    private class MessageListener extends SmppObject implements ServerPDUEventListener {
 
         public void handleEvent(ServerPDUEvent event) {
             final PDU pdu = event.getPDU();
@@ -207,11 +213,13 @@ public class SmsAgent {
             }
         }
 
-        private void processResponse(Response resp) {
+        public void processResponse(Response resp) {
             switch (resp.getCommandId()) {
                 case Data.BIND_RECEIVER_RESP:
                 case Data.BIND_TRANSCEIVER_RESP:
                 case Data.BIND_TRANSMITTER_RESP:
+                    if (logger.isDebugEnabled())
+                        logger.debug("Received BIND response");
                     lastInteractionTime = System.currentTimeMillis();
                     if (resp.getCommandStatus() == Data.ESME_ROK) changeStatusToInService();
                     else changeStatusToOutOfService();
@@ -242,6 +250,8 @@ public class SmsAgent {
 
         @Override
         public void doRun() throws Exception {
+            if (logger.isDebugEnabled())
+                logger.debug("Unbinding...");
             if (status.compareAndSet(Status.IN_SERVICE, Status.OUT_OF_SERVICE)) {
                 try {
                     session.unbind();
@@ -250,6 +260,8 @@ public class SmsAgent {
                 }
             } else if (status.compareAndSet(Status.INITIALIZING, Status.OUT_OF_SERVICE)) 
                 closeSession();
+            else if (logger.isDebugEnabled())
+                logger.debug("Can't unbind because of invalid agent status ({})", status);
         }
         
         private void closeSession() throws Exception {

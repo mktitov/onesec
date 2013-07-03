@@ -52,6 +52,7 @@ public class SmsAgentTest extends ServiceTestCase {
     private ExecutorService executor;
     private SmsConfig config;
     private volatile boolean binded;
+    private volatile boolean unbinded;
     
     @Before
     public void prepare() throws Exception {
@@ -74,9 +75,15 @@ public class SmsAgentTest extends ServiceTestCase {
         SmsAgentListener listener = trainAgentListener();
         testMocks.replay();
         binded = false;
+        unbinded = false;
         SmsAgent agent = new SmsAgent(config, listener, executor, owner, loggerHelper);
-        while (!binded)
-            Thread.sleep(100);
+        while (!binded) Thread.sleep(100);
+        while (!unbinded) Thread.sleep(100);
+    }
+    
+    public void submitTest() throws Exception {
+        trainConfig();
+        SmsAgentListener listener = trainAgentListenerForSubmit();
     }
     
     private void trainConfig() throws Exception {
@@ -98,18 +105,29 @@ public class SmsAgentTest extends ServiceTestCase {
     private SmsAgentListener trainAgentListener() {
         SmsAgentListener res = testMocks.createMock(SmsAgentListener.class);
         res.inService(isA(SmsAgent.class));
-        expectLastCall().andDelegateTo(new SmsAgentListener() {
-            public void inService(SmsAgent agent) {
+        expectLastCall().andDelegateTo(new SmsAgentListenerAdapter() {
+            @Override public void inService(SmsAgent agent) {
                 binded = true;
+                agent.unbind();
             }
-            public void responseReceived(SmsAgent agent, Response pdu) {
-                throw new UnsupportedOperationException("Not supported yet.");
+        });
+        res.outOfService(isA(SmsAgent.class));
+        expectLastCall().andDelegateTo(new SmsAgentListenerAdapter(){
+            @Override public void outOfService(SmsAgent agent) {
+                unbinded = true;
             }
-            public void requestReceived(SmsAgent agent, Request pdu) {
-                throw new UnsupportedOperationException("Not supported yet.");
-            }
-            public void outOfService(SmsAgent agent) {
-                throw new UnsupportedOperationException("Not supported yet.");
+        });
+        return res;
+    }
+    
+    private SmsAgentListener trainAgentListenerForSubmit() {
+        SmsAgentListener res = testMocks.createMock(SmsAgentListener.class);
+        res.inService(isA(SmsAgent.class));
+        res.outOfService(isA(SmsAgent.class));
+        
+        expectLastCall().andDelegateTo(new SmsAgentListenerAdapter(){
+            @Override public void outOfService(SmsAgent agent) {
+                unbinded = true;
             }
         });
         return res;
@@ -196,14 +214,29 @@ public class SmsAgentTest extends ServiceTestCase {
                 public void run() {
                     try {
                         Thread.sleep(delay);
+                        task.run();
                     } catch (InterruptedException ex) {
                         ex.printStackTrace();
                     }
-                    task.run();
 //                        ++tasksFinished;
                 }
             }).start();
             return true;
+        }
+    }
+    
+    private class SmsAgentListenerAdapter implements SmsAgentListener {
+
+        public void inService(SmsAgent agent) {
+        }
+
+        public void responseReceived(SmsAgent agent, Response pdu) {
+        }
+
+        public void requestReceived(SmsAgent agent, Request pdu) {
+        }
+
+        public void outOfService(SmsAgent agent) {
         }
     }
 }
