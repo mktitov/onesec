@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.logica.smpp.util.ByteBuffer;
 import com.logica.smpp.util.NotEnoughDataInByteBufferException;
+import org.onesec.raven.sms.SmsUtil;
 
 public class UDHData extends UDH {
 	private static Logger log = LoggerFactory.getLogger(UDHData.class);
@@ -14,17 +15,16 @@ public class UDHData extends UDH {
 	
 	public void setMesData(byte[] b) { setMesData(new ByteBuffer(b)); }
 
-	public void setMesData(ByteBuffer b) { mesData = b.getClone(); }
+	public void setMesData(ByteBuffer b) { mesData = SmsUtil.cloneByteBuffer(b); }
 	
-	public ByteBuffer getMesData() { return mesData.getClone(); }
+	public ByteBuffer getMesData() { return SmsUtil.cloneByteBuffer(mesData); }
 
 	public UDHData() { }
 	
-	public UDHData(ByteBuffer b)
-	{
-		ByteBuffer bf = b.getClone(); 
-        super.init(bf);
-        mesData = bf;
+	public UDHData(ByteBuffer b) {
+            ByteBuffer bf = SmsUtil.cloneByteBuffer(b); 
+            super.init(bf);
+            mesData = bf;
 	}
 	
 	public boolean isLongMessage()

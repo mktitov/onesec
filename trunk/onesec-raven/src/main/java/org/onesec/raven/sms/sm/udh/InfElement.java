@@ -43,7 +43,7 @@ public class InfElement
     public InfElement(int tag, ByteBuffer dt) 
     {
     	this.tag = (short)tag;
-    	this.data.setBuffer(dt.getClone().getBuffer());
+//    	this.data.setBuffer(dt.getClone().getBuffer());
     	this.dataLength = data.length();
     	valueInited = true;
 		if(log.isDebugEnabled()) log.debug("set: "+debugString());

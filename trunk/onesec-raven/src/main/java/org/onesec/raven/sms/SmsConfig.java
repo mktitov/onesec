@@ -26,9 +26,6 @@ public interface SmsConfig {
     public BindMode getBindMode();
     public String getBindAddr();
     public int getBindPort();
-//    public int getBindTon();
-//    public int getBindNpi();
-//    public String getAddrRange();
     public AddressRange getServeAddr();
     public String getFromAddr();
     public boolean getAsync();
@@ -39,6 +36,7 @@ public interface SmsConfig {
     public int getSoTimeout();
     public int getReceiveTimeout();
     public int getNoRcvTimeout();
+    
     public int getThrottledDelay();
     public int getMesThrottledDelay();
     public int getQueueFullDelay();
@@ -57,13 +55,28 @@ public interface SmsConfig {
     public byte getDataCoding();
     public byte getSmDefaultMsgId();
     public byte getDstTon();
-    public byte getDstNpi();
-//    public byte getSrcTon();
-//    public byte getSrcNpi();
+    public byte getDstNpi();    
     public String getMessageCP();
     public boolean isUse7bit();
     public int getLongSmMode();
-    public int getMaxUnconfirmed();
     public String getSystemId();
     public String getPassword();
+    
+    public int getMaxUnconfirmed();
+    /**
+     * Max messages count in the queue
+     */
+    public int getMaxMessagesInQueue();
+    /**
+     * Максимальное время нахождения сообщения в очереди (мс).
+     */
+    public int getMesLifeTime();
+    /**
+     * Maximum message submit attempts
+     */
+    public int getMaxSubmitAttempts();
+    /**
+     * Max wait for response in ms
+     */
+    public long getMaxWaitForResp();
 }

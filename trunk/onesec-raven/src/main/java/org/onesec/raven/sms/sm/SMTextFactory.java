@@ -118,7 +118,7 @@ public class SMTextFactory extends SMFactory implements SmCoder {
 
         if (bmes.length() <= UDH.SM_DATA_LENGTH) {
             setRequestParams(request);
-            request.setShortMessageData(bmes);
+//            request.setShortMessageData(bmes);
             al.add(request);
             return 0;
         }
@@ -148,7 +148,7 @@ public class SMTextFactory extends SMFactory implements SmCoder {
             setRequestParams(req);
             req.setEsmClass((byte) 0x40);
 //		req.setDataCoding((byte)0xf5);
-            req.setShortMessageData(bb);
+//            req.setShortMessageData(bb);
             if (log.isDebugEnabled()) {
                 log.debug("TXT: " + req.debugString());
             }
@@ -181,7 +181,7 @@ public class SMTextFactory extends SMFactory implements SmCoder {
             req.setSarMsgRefNum((short) segSequence);
             req.setSarTotalSegments((short) segCnt);
             req.setSarSegmentSeqnum((short) segCur);
-            req.setShortMessageData(bb);
+//            req.setShortMessageData(bb);
             //if(log.isDebugEnabled())
             log.info("SAR(" + segSequence + "/" + segCnt + "/" + segCur + ") " + req.debugString());
             al.add(req);

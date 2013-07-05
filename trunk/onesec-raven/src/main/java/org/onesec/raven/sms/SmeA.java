@@ -215,7 +215,7 @@ public class SmeA {
         connection.setReceiveTimeout(bindTimeout);
         connection.setCommsTimeout(soTimeout);
         Session session = new Session(connection);
-        session.setQueueWaitTimeout(queueWaitTimeout);
+//        session.setQueueWaitTimeout(queueWaitTimeout);
         return session;
     }
 

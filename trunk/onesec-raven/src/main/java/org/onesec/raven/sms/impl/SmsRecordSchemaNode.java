@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.onesec.raven.sms;
+package org.onesec.raven.sms.impl;
 
 import org.raven.annotations.NodeClass;
 import org.raven.ds.RecordSchemaFieldType;

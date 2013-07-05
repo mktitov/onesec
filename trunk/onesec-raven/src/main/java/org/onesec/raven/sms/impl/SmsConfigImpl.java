@@ -13,10 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.onesec.raven.sms;
+package org.onesec.raven.sms.impl;
 
 import com.logica.smpp.pdu.Address;
 import com.logica.smpp.pdu.AddressRange;
+import org.onesec.raven.sms.BindMode;
+import org.onesec.raven.sms.SmsConfig;
 
 /**
  *
@@ -26,9 +28,6 @@ public class SmsConfigImpl implements SmsConfig {
     private final BindMode bindMode;
     private final String bindAddr;
     private final int bindPort;
-//    private final int bindTon;
-//    private final int bindNpi;
-//    private final String addrRange;
     private final AddressRange serveAddr;
     private final String fromAddr;
     private final int bindTimeout;
@@ -59,14 +58,15 @@ public class SmsConfigImpl implements SmsConfig {
     private final int maxUnconfirmed;
     private final String systemId;
     private final String password;
+    private final int maxMessagesInQueue;
+    private final int mesLifeTime;
+    private final int maxSubmitAttempts;
+    private final long maxWaitForResp;
 
     public SmsConfigImpl(SmsTransceiverNode node) throws Exception {
         bindMode = node.getBindMode();
         bindAddr = node.getBindAddr();
         bindPort = node.getBindPort();
-//        bindTon = node.getBindTon();
-//        bindNpi = node.getBindNpi();
-//        addrRange = node.getAddrRange();
         fromAddr = node.getFromAddr();
         bindTimeout = node.getBindTimeout();
         rebindInterval = node.getRebindInterval();
@@ -97,6 +97,10 @@ public class SmsConfigImpl implements SmsConfig {
         password = node.getPassword();
         srcAddr = new Address(node.getSrcTon(), node.getSrcNpi(), fromAddr);
         serveAddr = new AddressRange(node.getBindTon(), node.getBindNpi(), node.getAddrRange());
+        maxMessagesInQueue = node.getMaxMessagesInQueue();
+        mesLifeTime = node.getMesLifeTime();
+        maxSubmitAttempts = node.getMaxSubmitAttempts();
+        maxWaitForResp = node.getMaxWaitForResp();
     }
 
     public BindMode getBindMode() {
@@ -261,5 +265,21 @@ public class SmsConfigImpl implements SmsConfig {
 
     public String getPassword() {
         return password;
+    }
+
+    public int getMaxMessagesInQueue() {
+        return maxMessagesInQueue;
+    }
+
+    public int getMesLifeTime() {
+        return mesLifeTime;
+    }
+
+    public int getMaxSubmitAttempts() {
+        return maxSubmitAttempts;
+    }
+
+    public long getMaxWaitForResp() {
+        return maxWaitForResp;
     }
 }

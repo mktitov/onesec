@@ -16,6 +16,9 @@
 
 package org.onesec.raven.sms;
 
+import com.logica.smpp.util.ByteBuffer;
+import java.util.Arrays;
+
 /**
  *
  * @author Mikhail Titov
@@ -61,5 +64,14 @@ public class SmsUtil {
 
     public static String toGSM_0338(String in) throws Exception {
         return toFromGSM_0338(in, replArTo);
+    }
+    
+    public static ByteBuffer cloneByteBuffer(ByteBuffer src) {
+        byte[] buffer = Arrays.copyOf(src.getBuffer(), src.getBuffer().length);
+        return new ByteBuffer(buffer);
+    }
+    
+    public static byte[] cloneBuffer(ByteBuffer src) {
+        return Arrays.copyOf(src.getBuffer(), src.getBuffer().length);
     }
 }
