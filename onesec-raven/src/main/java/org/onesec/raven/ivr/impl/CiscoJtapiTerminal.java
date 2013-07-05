@@ -1145,7 +1145,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
 
         @Override
         public String toString() {
-            return conv.toString();
+            return conv==null? "" : conv.toString();
         }
     }
 

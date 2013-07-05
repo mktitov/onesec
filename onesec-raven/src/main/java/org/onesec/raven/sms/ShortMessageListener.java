@@ -16,17 +16,12 @@
 
 package org.onesec.raven.sms;
 
-import org.onesec.raven.sms.impl.SmsAgent;
-import com.logica.smpp.pdu.Request;
-import com.logica.smpp.pdu.Response;
+import org.onesec.raven.sms.queue.ShortTextMessage;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface SmsAgentListener {
-    public void inService(SmsAgent agent);
-    public void responseReceived(SmsAgent agent, Response pdu);
-    public void requestReceived(SmsAgent agent, Request pdu);
-    public void outOfService(SmsAgent agent);
+public interface ShortMessageListener {
+    public void messageHandled(boolean success, Object tag);
 }

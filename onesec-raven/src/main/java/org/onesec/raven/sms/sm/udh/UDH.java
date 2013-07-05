@@ -8,6 +8,7 @@ import org.onesec.raven.sms.SmeA;
 import com.logica.smpp.Data;
 import com.logica.smpp.util.ByteBuffer;
 import com.logica.smpp.util.NotEnoughDataInByteBufferException;
+import org.onesec.raven.sms.SmsUtil;
 
 public class UDH {
 	 private static Logger log = LoggerFactory.getLogger(UDH.class);
@@ -88,7 +89,8 @@ public class UDH {
 		if(containsIE(UDH.CONCAT_8BIT))
 		{
 			ByteBuffer bfx = iemap.get(new Integer(UDH.CONCAT_8BIT)).getData();
-			byte[] x = bfx.getClone().getBuffer();
+//			byte[] x = bfx.getClone().getBuffer();
+                     byte[] x = SmsUtil.cloneBuffer(bfx);
 			if(x.length < 3) return;
 			concatRef = UDH.decodeUnsigned(x[0]);
 			concatMsgCount = UDH.decodeUnsigned(x[1]);
@@ -100,7 +102,8 @@ public class UDH {
   		if(containsIE(UDH.CONCAT_16BIT))
 		{
 			ByteBuffer bfx = iemap.get(new Integer(UDH.CONCAT_16BIT)).getData();
-			ByteBuffer xx = bfx.getClone();
+//			ByteBuffer xx = bfx.getClone();
+			ByteBuffer xx = SmsUtil.cloneByteBuffer(bfx);
 			if(xx.length() < 4) return;
 			try {
 			concatRef = xx.removeShort(); 

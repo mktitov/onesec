@@ -13,12 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.onesec.raven.sms;
+package org.onesec.raven.sms.impl;
 
 import com.logica.smpp.pdu.Address;
 import java.util.Collection;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import org.onesec.raven.sms.BindMode;
 import org.onesec.raven.sms.queue.ShortTextMessage;
 import org.raven.annotations.Parameter;
 import org.raven.ds.DataConsumer;
@@ -108,8 +109,15 @@ public class SmsTransceiverNode extends BaseNode implements DataPipe {
     private String systemId;
     @NotNull @Parameter
     private String password;
-    
-    
+    @NotNull @Parameter(defaultValue = "100")
+    private Integer maxMessagesInQueue;
+    @NotNull @Parameter(defaultValue = "600000")
+    private Integer mesLifeTime;
+    @NotNull @Parameter(defaultValue = "5")
+    private Integer maxSubmitAttempts;
+    @NotNull @Parameter(defaultValue = "60000")
+    private Long maxWaitForResp;
+
     private ReentrantReadWriteLock dataLock;
     private Condition messageProcessed;
 //    private 
@@ -433,5 +441,37 @@ public class SmsTransceiverNode extends BaseNode implements DataPipe {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public Integer getMaxMessagesInQueue() {
+        return maxMessagesInQueue;
+    }
+
+    public void setMaxMessagesInQueue(Integer maxMessagesInQueue) {
+        this.maxMessagesInQueue = maxMessagesInQueue;
+    }
+
+    public Integer getMesLifeTime() {
+        return mesLifeTime;
+    }
+
+    public void setMesLifeTime(Integer mesLifeTime) {
+        this.mesLifeTime = mesLifeTime;
+    }
+
+    public Integer getMaxSubmitAttempts() {
+        return maxSubmitAttempts;
+    }
+
+    public void setMaxSubmitAttempts(Integer maxSubmitAttempts) {
+        this.maxSubmitAttempts = maxSubmitAttempts;
+    }
+
+    public Long getMaxWaitForResp() {
+        return maxWaitForResp;
+    }
+
+    public void setMaxWaitForResp(Long maxWaitForResp) {
+        this.maxWaitForResp = maxWaitForResp;
     }
 }

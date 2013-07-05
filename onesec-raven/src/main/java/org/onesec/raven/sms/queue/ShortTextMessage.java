@@ -3,8 +3,11 @@ package org.onesec.raven.sms.queue;
 import com.logica.smpp.pdu.SubmitSM;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.onesec.raven.sms.ShortMessageListener;
 import org.onesec.raven.sms.SmCoder;
-import org.onesec.raven.sms.SmsTransceiverNode;
+import org.onesec.raven.sms.SmsMessageEncoder;
+import org.raven.sched.ExecutorService;
+import org.raven.sched.impl.AbstractTask;
 import org.raven.tree.impl.LoggerHelper;
 
 public class ShortTextMessage {
@@ -12,34 +15,33 @@ public class ShortTextMessage {
     private final String dst;
     private final String message;
     private final Object tag;
-    private final SmsTransceiverNode transeiver;
+    private final ShortMessageListener listener;
     private final long id;
-    private final LoggerHelper logger;
+    private final MessageUnit[] units;
     
     private final AtomicInteger unitsCount = new AtomicInteger(0);
     private final AtomicBoolean success = new AtomicBoolean(true);
 
-    public ShortTextMessage(String dstAddr, String mes, Object tag, SmsTransceiverNode transeiver, 
-            long id, LoggerHelper logger) 
+    public ShortTextMessage(String dstAddr, String mes, Object tag, long id, ShortMessageListener listener, 
+            SmsMessageEncoder encoder, LoggerHelper logger) 
+        throws Exception
     {
         this.dst = dstAddr;
         this.message = mes;
         this.tag = tag;
-        this.transeiver = transeiver;
+        this.listener = listener;
         this.id = id;
-        this.logger = logger;
+        SubmitSM[] frags = encoder.encode(mes, dstAddr);
+        if (frags==null || frags.length==0)
+            throw new Exception("Message encoding error. May be message is empty? Message: "+message);
+        MessageUnit[] _units = new MessageUnit[frags.length];
+        unitsCount.set(frags.length);
+        for (int i=0; i<frags.length; ++i)
+            _units[i] = new MessageUnit(frags[i], this, i==frags.length-1, new LoggerHelper(logger, "["+i+"] "));
+        this.units = _units;
     }
     
-    public MessageUnit[] getUnits(SmCoder coder) {
-        SubmitSM[] ssm = coder.encode(this);
-        if (ssm == null || ssm.length == 0) {
-            transeiver.messageHandled(this, false);
-            return null;
-        }
-        MessageUnit[] units = new MessageUnit[ssm.length];
-        unitsCount.set(ssm.length);
-        for (int i=0; i<ssm.length; ++i)
-            units[i] = new MessageUnit(ssm[i], this, i==ssm.length-1, new LoggerHelper(logger, "["+i+"] "));
+    public MessageUnit[] getUnits() {
         return units;
     }
     
@@ -47,7 +49,7 @@ public class ShortTextMessage {
         int count = unitsCount.decrementAndGet();
         boolean stat = this.success.compareAndSet(true, success);
         if (count<=0)
-            transeiver.messageHandled(this, stat);
+            listener.messageHandled(stat, tag);
     }
 
     public long getId() {

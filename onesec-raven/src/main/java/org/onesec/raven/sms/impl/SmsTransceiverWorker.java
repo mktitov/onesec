@@ -13,8 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.onesec.raven.sms;
+package org.onesec.raven.sms.impl;
 
+import org.onesec.raven.sms.ISmeConfig;
+import org.onesec.raven.sms.SmsConfig;
+import org.onesec.raven.sms.SmsMessageEncoder;
 import org.onesec.raven.sms.queue.OutQueue;
 import org.onesec.raven.sms.sm.SMTextFactory;
 import org.raven.sched.ExecutorService;
@@ -25,15 +28,17 @@ import org.raven.tree.impl.LoggerHelper;
  * @author Mikhail Titov
  */
 public class SmsTransceiverWorker {
-    private final ISmeConfig config;
+    private final SmsConfig config;
     private final ExecutorService executor;
     private final OutQueue queue;
     private final LoggerHelper logger;
+    private final SmsMessageEncoder messageEncoder;
 
-    public SmsTransceiverWorker(ISmeConfig config, ExecutorService executor, LoggerHelper logger) {
+    public SmsTransceiverWorker(SmsConfig config, ExecutorService executor, LoggerHelper logger) {
         this.config = config;
         this.executor = executor;
-        this.logger = new LoggerHelper(logger, "Transeiver. ");
+        this.logger = new LoggerHelper(logger, "Transceiver. ");
+        this.messageEncoder = new SmsMessageEncoderImpl(config, logger);
         this.queue = new OutQueue(new SMTextFactory(config), this.logger);
     }
 }

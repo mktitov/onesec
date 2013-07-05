@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.onesec.raven.sms;
+package org.onesec.raven.sms.impl;
 
 import com.logica.smpp.Data;
 import com.logica.smpp.Receiver;
@@ -33,7 +33,11 @@ import com.logica.smpp.pdu.PDU;
 import com.logica.smpp.pdu.Request;
 import com.logica.smpp.pdu.Response;
 import com.logica.smpp.pdu.SubmitSM;
+import com.logica.smpp.pdu.SubmitSMResp;
 import java.util.concurrent.atomic.AtomicReference;
+import org.onesec.raven.sms.BindMode;
+import org.onesec.raven.sms.SmsAgentListener;
+import org.onesec.raven.sms.SmsConfig;
 import static org.onesec.raven.sms.BindMode.RECEIVER;
 import static org.onesec.raven.sms.BindMode.TRANSMITTER;
 import org.raven.sched.ExecutorService;
@@ -82,9 +86,11 @@ public class SmsAgent {
         try {
             if (config.getBindMode()== BindMode.RECEIVER) 
                 throw new SmppException("Can't transmitte message in RECEIVER mode");
+            request.assignSequenceNumber(true);
             if (logger.isDebugEnabled()) 
-                logger.debug("Submiting request {}", request.debugString());
-            session.submit(request);
+                logger.debug("Submiting request: {}", request.debugString());
+            SubmitSMResp resp = session.submit(request);
+//            messageListener.processResponse(resp);
         } catch (Exception e) {
             if (logger.isErrorEnabled())
                 logger.error("Submiting error", e);
@@ -101,7 +107,8 @@ public class SmsAgent {
         connection.setReceiveTimeout(config.getBindTimeout());
         connection.setCommsTimeout(config.getSoTimeout());
         Session _session = new Session(connection);
-        _session.setQueueWaitTimeout(QUEUE_WAIT_TIMEOUT);
+//        _session.setQueueWaitTimeout(QUEUE_WAIT_TIMEOUT);
+//        _session.getReceiver()
         return _session;
     }
     
@@ -115,7 +122,7 @@ public class SmsAgent {
     }
     
     private void executeCheckConnectionTask() {
-        executor.executeQuietly(new CheckConnectionTask());
+        executor.executeQuietly(config.getEnquireTimeout(), new CheckConnectionTask());
     }
     
     private void fireOutOfServiceEvent() {
@@ -192,10 +199,10 @@ public class SmsAgent {
         public void handleEvent(ServerPDUEvent event) {
             final PDU pdu = event.getPDU();
             if (logger.isDebugEnabled())
-                logger.debug("Processing received event: "+pdu.debugString());
+                logger.debug("Received event: "+pdu.debugString());
             if (pdu.isRequest()) 
                 processRequest((Request)pdu);
-            else if (pdu.isRequest()) 
+            else if (pdu.isResponse()) 
                 processResponse((Response)pdu);
         }
         
@@ -214,6 +221,8 @@ public class SmsAgent {
         }
 
         public void processResponse(Response resp) {
+            if (logger.isDebugEnabled())
+                logger.debug("Processing response: "+resp.debugString());
             switch (resp.getCommandId()) {
                 case Data.BIND_RECEIVER_RESP:
                 case Data.BIND_TRANSCEIVER_RESP:
@@ -221,8 +230,13 @@ public class SmsAgent {
                     if (logger.isDebugEnabled())
                         logger.debug("Received BIND response");
                     lastInteractionTime = System.currentTimeMillis();
-                    if (resp.getCommandStatus() == Data.ESME_ROK) changeStatusToInService();
-                    else changeStatusToOutOfService();
+                    if (resp.getCommandStatus() == Data.ESME_ROK) {
+                        session.getConnection().setReceiveTimeout(config.getReceiveTimeout());
+                        logger.debug("Session open status: "+session.isOpened());
+                        logger.debug("Session bound status: "+session.isOpened());
+                        changeStatusToInService();
+                    } else 
+                        changeStatusToOutOfService();
                     break;
                 case Data.ENQUIRE_LINK_RESP: 
                     if (resp.getCommandStatus() != Data.ESME_ROK) {
