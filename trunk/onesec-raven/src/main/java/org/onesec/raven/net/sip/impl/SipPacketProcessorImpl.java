@@ -36,7 +36,7 @@ public class SipPacketProcessorImpl extends AbstractPacketProcessor implements S
     private final SipMessageProcessor messageProcessor;
     private final Queue<MessLines> outboundQueue = new ConcurrentLinkedQueue<MessLines>();
     private final byte[] decodeBuffer = new byte[1024];
-    private SipMessageDecoder messageDecoder;
+    private SipMessageDecoderImpl messageDecoder;
 
     public SipPacketProcessorImpl(SipMessageProcessor messageProcessor, SocketAddress address
             , boolean serverSideProcessor, boolean datagramProcessor, String desc
@@ -51,7 +51,7 @@ public class SipPacketProcessorImpl extends AbstractPacketProcessor implements S
     protected ProcessResult doProcessInboundBuffer(ByteBuffer buffer) throws Exception {
         try {
             if (messageDecoder==null)
-                messageDecoder = new SipMessageDecoder(logger, decodeBuffer);
+                messageDecoder = new SipMessageDecoderImpl(logger, decodeBuffer);
             SipMessage mess = messageDecoder.decode(buffer);
             if (mess!=null) {
                 if (mess instanceof SipResponse)
