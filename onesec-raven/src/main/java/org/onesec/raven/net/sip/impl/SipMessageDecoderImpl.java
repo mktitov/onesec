@@ -19,6 +19,7 @@ import java.nio.ByteBuffer;
 import java.util.LinkedList;
 import org.onesec.raven.net.sip.SipConstants;
 import org.onesec.raven.net.sip.SipMessage;
+import org.onesec.raven.net.sip.SipMessageDecoder;
 import org.onesec.raven.net.sip.SipRequest;
 import org.raven.RavenUtils;
 import org.slf4j.Logger;
@@ -27,7 +28,7 @@ import org.slf4j.Logger;
  *
  * @author Mikhail Titov
  */
-public class SipMessageDecoder implements SipConstants {
+public class SipMessageDecoderImpl implements SipMessageDecoder, SipConstants {
     private final byte[] decodeBuffer;
     private final Logger logger;
     private SipMessage message;
@@ -38,7 +39,7 @@ public class SipMessageDecoder implements SipConstants {
     private final LinkedList<Pair> headers = new LinkedList<Pair>();
     private Pair lastHeader;
 
-    public SipMessageDecoder(Logger logger, byte[] decodeBuffer) {
+    public SipMessageDecoderImpl(Logger logger, byte[] decodeBuffer) {
         this.logger = logger;
         this.decodeBuffer = decodeBuffer;
     }

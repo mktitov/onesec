@@ -39,6 +39,7 @@ public class SmsTransceiverWorker {
         this.executor = executor;
         this.logger = new LoggerHelper(logger, "Transceiver. ");
         this.messageEncoder = new SmsMessageEncoderImpl(config, logger);
-        this.queue = new OutQueue(new SMTextFactory(config), this.logger);
+        this.queue = null;
+//        this.queue = new OutQueue(new SMTextFactory(config), this.logger);
     }
 }

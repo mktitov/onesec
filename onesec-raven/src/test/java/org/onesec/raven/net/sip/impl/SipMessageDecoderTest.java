@@ -34,12 +34,12 @@ public class SipMessageDecoderTest extends Assert {
     private final static byte[] decodeBuffer = new byte[1024];
     private ByteBuffer buf;
     private String crlf = ""+(char)13+(char)10;
-    private SipMessageDecoder decoder;
+    private SipMessageDecoderImpl decoder;
     
     @Before
     public void prepare() {
         buf = ByteBuffer.allocate(1024);
-        decoder = new SipMessageDecoder(logger, decodeBuffer);
+        decoder = new SipMessageDecoderImpl(logger, decodeBuffer);
         assertNotNull(decoder);
     }
     
