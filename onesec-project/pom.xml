@@ -244,6 +244,12 @@
                 <version>1.0</version>
                 <scope>compile</scope>
             </dependency>
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-all</artifactId> <!-- Use 'netty-all' for 4.0 or above -->
+                <version>4.0.0.CR9</version>
+                <scope>compile</scope>
+            </dependency>
             
             <dependency>
                 <groupId>commons-digester</groupId>
