@@ -8,9 +8,9 @@ package org.onesec.raven.sms;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.onesec.raven.sms.queue.MessageUnit;
+import org.onesec.raven.sms.queue.MessageUnitImpl;
 import org.onesec.raven.sms.queue.OutQueue;
-import org.onesec.raven.sms.queue.ShortTextMessage;
+import org.onesec.raven.sms.queue.ShortTextMessageImpl;
 import org.onesec.raven.sms.sm.SMTextFactory;
 import com.logica.smpp.Data;
 import com.logica.smpp.SmppException;
@@ -298,7 +298,7 @@ public class SmeTransceiver extends Thread implements ISmeConfig {
                     if (isStopFlag()) {
                         break;
                     }
-                    MessageUnit mu = queue.getNext();
+                    MessageUnitImpl mu = queue.getNext();
                     if (mu == null) {
                         break;
                     }
@@ -309,7 +309,7 @@ public class SmeTransceiver extends Thread implements ISmeConfig {
                         log.info("SubmitSM: {}", sm.debugString());
                     }
                     sme.submit254(sm);
-                    queue.sended(mu);
+                    queue.submitted(mu);
                     sendfl = 1;
                     if (++snd > once) {
                         log.info("now go to rcv");

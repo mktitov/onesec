@@ -13,13 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.onesec.raven.sms.queue;
+
+import org.junit.Before;
+import org.junit.Test;
+import org.onesec.raven.ivr.impl.ContainerParserDataSource;
+import org.raven.log.LogLevel;
+import org.raven.tree.impl.LoggerHelper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface ShortTextMessage {
-//    public 
+public class OutQueueTest {
+    private final static Logger logger = LoggerFactory.getLogger(OutQueueTest.class);
+    private static LoggerHelper loggerHelper = new LoggerHelper(LogLevel.TRACE, "SMS. ", null, logger);
+
+    @Before
+    public void prepare() {
+        
+    }
+    
+    @Test
+    public void queueIsFullTest() {
+        
+    }
 }

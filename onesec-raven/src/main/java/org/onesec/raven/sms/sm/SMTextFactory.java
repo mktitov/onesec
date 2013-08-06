@@ -10,7 +10,7 @@ import com.logica.smpp.util.ByteBuffer;
 import com.logica.smpp.util.NotEnoughDataInByteBufferException;
 import org.onesec.raven.sms.ISmeConfig;
 import org.onesec.raven.sms.SmCoder;
-import org.onesec.raven.sms.queue.ShortTextMessage;
+import org.onesec.raven.sms.queue.ShortTextMessageImpl;
 import org.onesec.raven.sms.sm.udh.UDH;
 import org.onesec.raven.sms.sm.udh.UDHData;
 import org.slf4j.Logger;
@@ -209,7 +209,7 @@ public class SMTextFactory extends SMFactory implements SmCoder {
         return x;
     }
 
-    public SubmitSM[] encode(ShortTextMessage sm) {
+    public SubmitSM[] encode(ShortTextMessageImpl sm) {
         try {
             dstAddr = new Address((byte) config.getDstTon(), (byte) config.getDstNpi(), sm.getDst());
             ArrayList<SubmitSM> z = new ArrayList<SubmitSM>();
