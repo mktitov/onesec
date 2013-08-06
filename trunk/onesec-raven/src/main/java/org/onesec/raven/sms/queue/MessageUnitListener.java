@@ -20,6 +20,6 @@ package org.onesec.raven.sms.queue;
  *
  * @author Mikhail Titov
  */
-public interface ShortTextMessage {
-//    public 
+public interface MessageUnitListener {
+    public void statusChanged(MessageUnit unit, MessageUnitStatus oldStatus, MessageUnitStatus newStatus);
 }

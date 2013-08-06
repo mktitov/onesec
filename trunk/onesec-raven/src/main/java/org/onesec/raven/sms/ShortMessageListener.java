@@ -16,7 +16,7 @@
 
 package org.onesec.raven.sms;
 
-import org.onesec.raven.sms.queue.ShortTextMessage;
+import org.onesec.raven.sms.queue.ShortTextMessageImpl;
 
 /**
  *

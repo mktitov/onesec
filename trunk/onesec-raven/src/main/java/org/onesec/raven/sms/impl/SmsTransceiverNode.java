@@ -20,7 +20,7 @@ import java.util.Collection;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.onesec.raven.sms.BindMode;
-import org.onesec.raven.sms.queue.ShortTextMessage;
+import org.onesec.raven.sms.queue.ShortTextMessageImpl;
 import org.raven.annotations.Parameter;
 import org.raven.ds.DataConsumer;
 import org.raven.ds.DataContext;
@@ -147,7 +147,7 @@ public class SmsTransceiverNode extends BaseNode implements DataPipe {
         return null;
     }
     
-    public void messageHandled(ShortTextMessage message, boolean success) {
+    public void messageHandled(ShortTextMessageImpl message, boolean success) {
         
     }
 

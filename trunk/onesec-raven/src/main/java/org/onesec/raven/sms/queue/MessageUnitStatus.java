@@ -20,6 +20,6 @@ package org.onesec.raven.sms.queue;
  *
  * @author Mikhail Titov
  */
-public interface ShortTextMessage {
-//    public 
+public enum MessageUnitStatus {
+    READY, DELAYED, SUBMITTED, CONFIRMED, FATAL
 }
