@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.onesec.raven.sms.SmsConfig;
 import org.raven.tree.impl.LoggerHelper;
 import static org.onesec.raven.sms.queue.MessageUnitStatus.*;
+import org.weda.beans.ObjectUtils;
 
 public class OutQueue implements MessageUnitListener {
 
@@ -58,7 +59,7 @@ public class OutQueue implements MessageUnitListener {
 
     //public static MessageUnit[] noack
     public int howManyUnconfirmed() {
-        return sended.size();
+        return submittedCount.get();
     }
 
     public boolean addMessage(ShortTextMessageImpl sm) {
@@ -87,18 +88,18 @@ public class OutQueue implements MessageUnitListener {
 //        return true;
     }
 
-    public void submitted(MessageUnit u) {
-        submitted(u, System.currentTimeMillis());
-    }
-
-    public void submitted(MessageUnit u, long time) {
-        sended.put(u.getSequenceNumber(), u);
-        u.submitted();
-        
-    }
+//    public void submitted(MessageUnit u) {
+//        submitted(u, System.currentTimeMillis());
+//    }
+//
+//    public void submitted(MessageUnit u, long time) {
+//        sended.put(u.getSequenceNumber(), u);
+//        u.submitted();
+//        
+//    }
     
     public boolean isEmpty() {
-        return queue.isEmpty() && sended.isEmpty();
+        return queue.isEmpty();
     }
 
     public void throttled(int sequence, long time) {
@@ -135,9 +136,12 @@ public class OutQueue implements MessageUnitListener {
     }
 
     public MessageUnit getNext() {
-        for (MessageUnit unit: queue) {
+        for (Iterator<MessageUnit> it=queue.iterator(); it.hasNext();) {
+            MessageUnit unit = it.next();
             if (isDirectionAvailable(unit.getDst()) && unit.checkStatus()==READY)
                 return unit;
+            else if (ObjectUtils.in(unit.getStatus(), CONFIRMED, FATAL)) 
+                it.remove();
         }
         return null;
     }
@@ -165,54 +169,55 @@ public class OutQueue implements MessageUnitListener {
 //        return null;
 //    }
 
-    private void checkMessageUnitForFatal(long curTime, MessageUnit unit, MessageUnit prev) {
-        boolean a = curTime - unit.getFd() > config.getMesLifeTime();
-        boolean b = prev!=null && prev.getMessageId()==unit.getMessageId() && prev.getStatus()==FATAL;
-        if (a || b) {
-            if (unit.getStatus() == DELAYED) 
-                blockedNums.remove(unit.getDst());
-            unit.fatal();
-        }
-    }
-
-    private boolean handleMessageUnitStatus(MessageUnit unit, long curTime, MessageUnit prevUnit, 
-            Iterator<MessageUnit> it, boolean noPrev) 
-    {
-        switch (unit.getStatus()) {
-            case DELAYED:
-                if (curTime > unit.getXTime()) {
-                    blockedNums.remove(unit.getDst());
-                    unit.ready();
-                }
-                break;
-            case SUBMITTED:
-                if (curTime - unit.getXTime() > config.getMaxWaitForResp()) 
-                    unit.ready();
-                break;
-            case CONFIRMED:
-                if (prevUnit == null || (prevUnit.getMessageId() != unit.getMessageId())) {
-                    it.remove();
-                    if (unit.isLastSeg()) 
-                        messageSubmitted(unit, true);
-                    noPrev = true;
-                }
-                break;
-            case FATAL:
-                it.remove();
-                sended.remove(unit.getSequenceNumber());
-                if (unit.isLastSeg()) 
-                    messageSubmitted(unit, false);
-                break;
-        }
-        return noPrev;
-    }
+//    private void checkMessageUnitForFatal(long curTime, MessageUnit unit, MessageUnit prev) {
+//        boolean a = curTime - unit.getFd() > config.getMesLifeTime();
+//        boolean b = prev!=null && prev.getMessageId()==unit.getMessageId() && prev.getStatus()==FATAL;
+//        if (a || b) {
+//            if (unit.getStatus() == DELAYED) 
+//                blockedNums.remove(unit.getDst());
+//            unit.fatal();
+//        }
+//    }
+//
+//    private boolean handleMessageUnitStatus(MessageUnit unit, long curTime, MessageUnit prevUnit, 
+//            Iterator<MessageUnit> it, boolean noPrev) 
+//    {
+//        switch (unit.getStatus()) {
+//            case DELAYED:
+//                if (curTime > unit.getXTime()) {
+//                    blockedNums.remove(unit.getDst());
+//                    unit.ready();
+//                }
+//                break;
+//            case SUBMITTED:
+//                if (curTime - unit.getXTime() > config.getMaxWaitForResp()) 
+//                    unit.ready();
+//                break;
+//            case CONFIRMED:
+//                if (prevUnit == null || (prevUnit.getMessageId() != unit.getMessageId())) {
+//                    it.remove();
+//                    if (unit.isLastSeg()) 
+//                        messageSubmitted(unit, true);
+//                    noPrev = true;
+//                }
+//                break;
+//            case FATAL:
+//                it.remove();
+//                sended.remove(unit.getSequenceNumber());
+//                if (unit.isLastSeg()) 
+//                    messageSubmitted(unit, false);
+//                break;
+//        }
+//        return noPrev;
+//    }
 
     public void statusChanged(MessageUnit unit, MessageUnitStatus oldStatus, MessageUnitStatus newStatus) {
         switch (newStatus) {
             case SUBMITTED: submittedCount.incrementAndGet(); break;
             case DELAYED: blockDirection(unit.getDst(), unit.getXTime()); break; //block direction
-            case CONFIRMED: break;//remove from queue
-            case FATAL: break; //remove from queue
+        }
+        switch (oldStatus) {
+            case SUBMITTED: submittedCount.decrementAndGet(); break;
         }
     }
     
