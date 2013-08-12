@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.onesec.raven.sms.queue;
+package org.onesec.raven.sms;
 
 import com.logica.smpp.pdu.SubmitSM;
 
@@ -23,8 +23,8 @@ import com.logica.smpp.pdu.SubmitSM;
  * @author Mikhail Titov
  */
 public interface MessageUnit {
-    public boolean isLastSeg();
-    public void ready();
+//    public boolean isLastSeg();
+//    public void ready();
     public void submitted();
     public void fatal();
     public void confirmed();
@@ -32,10 +32,11 @@ public interface MessageUnit {
     public SubmitSM getPdu();
     public String getDst();
     public MessageUnitStatus getStatus();
-    public long getMessageId();
+//    public long getMessageId();
     public long getXTime();
     public int getAttempts();
     public long getFd();
     public int getSequenceNumber();
     public MessageUnitStatus checkStatus();
+    public MessageUnit addListener(MessageUnitListener listener);
 }

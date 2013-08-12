@@ -14,12 +14,18 @@
  * limitations under the License.
  */
 
-package org.onesec.raven.sms.queue;
+package org.onesec.raven.sms;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface MessageUnitListener {
-    public void statusChanged(MessageUnit unit, MessageUnitStatus oldStatus, MessageUnitStatus newStatus);
+public interface ShortTextMessage {
+    public MessageUnit[] getUnits();
+    public long getId();
+    public Object getTag();
+    public int getUnitsCount();
+    public String getDst();
+    public String getMessage();
+    public void addListener(ShortMessageListener listener);
 }

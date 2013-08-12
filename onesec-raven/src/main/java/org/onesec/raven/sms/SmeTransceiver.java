@@ -155,22 +155,22 @@ public class SmeTransceiver extends Thread implements ISmeConfig {
         long time = System.currentTimeMillis();
         switch (pdu.getCommandStatus()) {
             case Data.ESME_ROK:
-                queue.confirmed(sq, time);
+//                queue.confirmed(sq, time);
                 break;
             case Data.ESME_RTHROTTLED:
                 if (throttledDelay > 0) {
                     pleaseWait = time + throttledDelay;
                 }
-                queue.throttled(sq, time);
+//                queue.throttled(sq, time);
                 break;
             case Data.ESME_RMSGQFUL:
                 if (queueFullDelay > 0) {
                     pleaseWait = time + queueFullDelay;
                 }
-                queue.queueIsFull(sq, time);
+//                queue.queueIsFull(sq, time);
                 break;
             default:
-                queue.failed(sq, time);
+//                queue.failed(sq, time);
         }
     }
 
@@ -298,7 +298,7 @@ public class SmeTransceiver extends Thread implements ISmeConfig {
                     if (isStopFlag()) {
                         break;
                     }
-                    MessageUnitImpl mu = queue.getNext();
+                    MessageUnit mu = queue.getNext();
                     if (mu == null) {
                         break;
                     }
@@ -309,7 +309,7 @@ public class SmeTransceiver extends Thread implements ISmeConfig {
                         log.info("SubmitSM: {}", sm.debugString());
                     }
                     sme.submit254(sm);
-                    queue.submitted(mu);
+//                    queue.submitted(mu);
                     sendfl = 1;
                     if (++snd > once) {
                         log.info("now go to rcv");
