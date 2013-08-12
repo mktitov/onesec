@@ -21,6 +21,7 @@ import com.logica.smpp.pdu.Response;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import org.onesec.raven.sms.MessageUnit;
 import org.onesec.raven.sms.SmsAgentListener;
 import org.onesec.raven.sms.SmsConfig;
 import org.onesec.raven.sms.SmsMessageEncoder;
@@ -34,6 +35,25 @@ import org.raven.tree.impl.LoggerHelper;
  * @author Mikhail Titov
  */
 public class SmsTransceiverWorker {
+    /**
+     * @see OutQueue.factorQF
+     */
+    private final long mesWaitQF = 60 * 1000;
+    /**
+     * @see OutQueue.factorTH
+     */
+    private final long mesWaitTH = 60 * 1000;
+    /**
+     * На сколько отложить попытки отправки сообщения при ошибке 14 - QUEUE_FULL (мс). If QUEUE_FULL
+     * : waitInterval = mesWaitQF * ( 1+factorQF*attempsCount )
+     */
+    private final int factorQF = 0;
+    /**
+     * На сколько отложить попытки отправки сообщения при ошибке 58 - THROTTLED (мс). If THROTTLED :
+     * waitInterval = mesWaitTH * ( 1+factorTH*attempsCount )
+     */
+    private final int factorTH = 0;
+    
     public static final long rebuindInterval = 30000;
     private final SmsConfig config;
     private final ExecutorService executor;
@@ -165,25 +185,34 @@ public class SmsTransceiverWorker {
         public void responseReceived(SmsAgent agent, Response pdu) {
             if (valid.get()) {
                 int sq = pdu.getSequenceNumber();
-                long time = System.currentTimeMillis();
+//                long time = System.currentTimeMillis();
+                MessageUnit unit;
                 switch (pdu.getCommandStatus()) {
                     case Data.ESME_ROK:
-                        queue.confirmed(sq, time);
+                        unit = queue.getMessageUnit(sq);
+                        if (unit!=null) unit.confirmed();
+//                        queue.confirmed(sq, time);
                         break;
                     case Data.ESME_RTHROTTLED:
                         if (config.getThrottledDelay() > 0) {
                             restartMessageProcessor(config.getThrottledDelay());
-                            queue.throttled(sq, time);
+                            unit = queue.getMessageUnit(sq);
+                            if (unit!=null) unit.delay(mesWaitTH * (1 + factorTH * unit.getAttempts()));
+//                            queue.throttled(sq, time);
                         }
                         break;
                     case Data.ESME_RMSGQFUL:
                         if (config.getQueueFullDelay() > 0) {
                             restartMessageProcessor(config.getQueueFullDelay());
-                            queue.queueIsFull(sq, time);
+                            unit = queue.getMessageUnit(sq);
+                            if (unit!=null) unit.delay(mesWaitQF * (1 + factorQF * unit.getAttempts()));
+//                            queue.queueIsFull(sq, time);
                         }
                         break;
                     default:
-                        queue.failed(sq, time);
+                        unit = queue.getMessageUnit(sq);
+                        if (unit!=null) unit.fatal();
+//                        queue.failed(sq, time);
                 }
             }
         }

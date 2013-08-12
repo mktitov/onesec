@@ -1,57 +1,94 @@
 package org.onesec.raven.sms.queue;
 
 import com.logica.smpp.pdu.SubmitSM;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.onesec.raven.sms.MessageUnit;
+import org.onesec.raven.sms.MessageUnitListener;
+import org.onesec.raven.sms.MessageUnitStatus;
+import static org.onesec.raven.sms.MessageUnitStatus.*;
 import org.onesec.raven.sms.ShortMessageListener;
+import org.onesec.raven.sms.ShortTextMessage;
+import org.onesec.raven.sms.SmsConfig;
 import org.onesec.raven.sms.SmsMessageEncoder;
 import org.raven.tree.impl.LoggerHelper;
 
-public class ShortTextMessageImpl {
+public class ShortTextMessageImpl implements ShortTextMessage, MessageUnitListener {
 
     private final String dst;
     private final String message;
     private final Object tag;
-    private final ShortMessageListener listener;
+    private final List<ShortMessageListener> listeners = new ArrayList<ShortMessageListener>(2);
     private final long id;
-    private final MessageUnitImpl[] units;
+    private final MessageUnit[] units;
     private final LoggerHelper logger;
     
     private final AtomicInteger unitsCount = new AtomicInteger(0);
     private final AtomicBoolean success = new AtomicBoolean(true);
 
-    public ShortTextMessageImpl(String dstAddr, String mes, Object tag, long id, ShortMessageListener listener, 
-            SmsMessageEncoder encoder, LoggerHelper logger) 
+    public ShortTextMessageImpl(String dstAddr, String mes, Object tag, long id, 
+            SmsMessageEncoder encoder, SmsConfig config, LoggerHelper logger) 
         throws Exception
     {
         this.dst = dstAddr;
         this.message = mes;
         this.tag = tag;
-        this.listener = listener;
         this.id = id;
         this.logger = new LoggerHelper(logger, "Message ["+id+"]. ");
         SubmitSM[] frags = encoder.encode(mes, dstAddr);
         if (frags==null || frags.length==0)
             throw new Exception("Message encoding error. May be message is empty? Message: "+message);
-        MessageUnitImpl[] _units = new MessageUnitImpl[frags.length];
+        MessageUnit[] _units = new MessageUnitImpl[frags.length];
         unitsCount.set(frags.length);
         for (int i=0; i<frags.length; ++i)
-            _units[i] = new MessageUnitImpl(frags[i], this, i==frags.length-1, new LoggerHelper(logger, "Unit ["+i+"]. "));
+            _units[i] = new MessageUnitImpl(frags[i], config, new LoggerHelper(logger, "Unit ["+i+"]. "))
+                        .addListener(this);
         this.units = _units;
     }
     
-    public MessageUnitImpl[] getUnits() {
+    public MessageUnit[] getUnits() {
         return units;
     }
-    
-    void unitHandled(boolean success) {
-        int count = unitsCount.decrementAndGet();
-        boolean stat = this.success.compareAndSet(true, success);
-        if (count<=0) {
-            if (logger.isDebugEnabled())
-                logger.debug("Handled, success = "+stat);
-            listener.messageHandled(stat, tag);
+
+    public void statusChanged(MessageUnit unit, MessageUnitStatus oldStatus, MessageUnitStatus newStatus) {
+        if (newStatus==CONFIRMED || newStatus==FATAL) {
+            boolean stat = this.success.compareAndSet(true, newStatus==CONFIRMED);
+            if (unitsCount.decrementAndGet()==0) {
+                if (logger.isDebugEnabled())
+                    logger.debug("Handled, success = "+stat);
+                for (ShortMessageListener listener: listeners)
+                    listener.messageHandled(stat, tag);                
+            } else if (!stat)
+                for (MessageUnit u: units)
+                    u.fatal();
         }
+    }
+    
+//    private boolean isSuccess() {
+//        for (MessageUnit unit: units)
+//            if (unit.getStatus()==FATAL)
+//                return false;
+//        return true;
+//    }
+
+//    void unitHandled(boolean success) {
+//        int count = unitsCount.decrementAndGet();
+//        boolean stat = this.success.compareAndSet(true, success);
+//        if (count==0) {
+//            if (logger.isDebugEnabled())
+//                logger.debug("Handled, success = "+stat);
+//            for (ShortMessageListener listener: listeners)
+//                listener.messageHandled(stat, tag);
+//        } else if (!stat)
+//            for (MessageUnit unit: units)
+//                unit.fatal();
+//
+//    }
+
+    public void addListener(ShortMessageListener listener) {
+        listeners.add(listener);
     }
 
     public long getId() {

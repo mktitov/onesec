@@ -1,18 +1,22 @@
 package org.onesec.raven.sms.queue;
 
+import org.onesec.raven.sms.MessageUnit;
+import org.onesec.raven.sms.MessageUnitListener;
+import org.onesec.raven.sms.MessageUnitStatus;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.onesec.raven.sms.SmsConfig;
 import org.raven.tree.impl.LoggerHelper;
-import static org.onesec.raven.sms.queue.MessageUnitStatus.*;
+import static org.onesec.raven.sms.MessageUnitStatus.*;
+import org.onesec.raven.sms.ShortMessageListener;
+import org.onesec.raven.sms.ShortTextMessage;
 import org.weda.beans.ObjectUtils;
 
-public class OutQueue implements MessageUnitListener {
+public class OutQueue implements MessageUnitListener, ShortMessageListener {
 
 //    private int maxMesCount = 100;
     /**
@@ -44,11 +48,12 @@ public class OutQueue implements MessageUnitListener {
 //    private int maxAttempts = 5;
     
 //    private final Map<Integer, MessageUnit> sended = new ConcurrentHashMap<Integer, MessageUnit>();
+    private final Map<Integer, MessageUnit> submitted = new ConcurrentHashMap<Integer, MessageUnit>();
     private final ConcurrentHashMap<String, Long> blockedNums = new ConcurrentHashMap<String, Long>();
 //    private final LinkedBlockingQueue<MessageUnit> queue = new LinkedBlockingQueue<MessageUnit>();
     private final Queue<MessageUnit> queue = new ConcurrentLinkedQueue<MessageUnit>();
     private final AtomicInteger mesCount = new AtomicInteger(0);
-    private final AtomicInteger submittedCount = new AtomicInteger(0);
+//    private final AtomicInteger submittedCount = new AtomicInteger(0);
     private final LoggerHelper logger;
     private final SmsConfig config;
 
@@ -59,17 +64,18 @@ public class OutQueue implements MessageUnitListener {
 
     //public static MessageUnit[] noack
     public int howManyUnconfirmed() {
-        return submittedCount.get();
+        return submitted.size();
     }
 
-    public boolean addMessage(ShortTextMessageImpl sm) {
+    public boolean addMessage(ShortTextMessage sm) {
         if (mesCount.incrementAndGet() > config.getMaxMessagesInQueue()) {
             mesCount.decrementAndGet();
             if (logger.isWarnEnabled())
                 logger.warn("Can't queue message. Queue is FULL");
             return false;
         } else {
-            MessageUnitImpl[] units = sm.getUnits();
+            sm.addListener(this);
+            MessageUnit[] units = sm.getUnits();
             for (int i = 0; i < units.length; i++) 
                 queue.offer(units[i]);
             if (logger.isDebugEnabled())
@@ -99,50 +105,59 @@ public class OutQueue implements MessageUnitListener {
 //    }
     
     public boolean isEmpty() {
-        return queue.isEmpty();
-    }
-
-    public void throttled(int sequence, long time) {
-        MessageUnit u = sended.remove(sequence);
-        if (u != null) 
-            blockDirection(u, mesWaitTH * (1 + factorTH * u.getAttempts()), time);
-    }
-
-    public void queueIsFull(int sequence, long time) {
-        MessageUnit u = sended.remove(sequence);
-        if (u != null) 
-            blockDirection(u, mesWaitQF * (1 + factorQF * u.getAttempts()), time);
+        return queue.isEmpty() && submitted.isEmpty();
     }
     
-    private void blockDirection(MessageUnit unit, long delay, long curTime) {
-        unit.delay(delay);
-        blockedNums.putIfAbsent(unit.getDst(), curTime);
+    /**
+     * Returns submitted message by sequence number or null
+     * @param sequenceNumber sequence number
+     */
+    public MessageUnit getMessageUnit(int sequenceNumber) {
+        return submitted.get(sequenceNumber);
     }
 
-    public void confirmed(int sequence, long time) {
-        MessageUnit u = sended.remove(sequence);
-        if (u != null) 
-            u.confirmed();
-    }
+//    public void throttled(int sequence, long time) {
+//        MessageUnit u = sended.remove(sequence);
+//        if (u != null) 
+//            blockDirection(u, mesWaitTH * (1 + factorTH * u.getAttempts()), time);
+//    }
+//
+//    public void queueIsFull(int sequence, long time) {
+//        MessageUnit u = sended.remove(sequence);
+//        if (u != null) 
+//            blockDirection(u, mesWaitQF * (1 + factorQF * u.getAttempts()), time);
+//    }
+//    
+//    private void blockDirection(MessageUnit unit, long delay, long curTime) {
+//        unit.delay(delay);
+//        blockedNums.putIfAbsent(unit.getDst(), curTime);
+//    }
+//
+//    public void confirmed(int sequence, long time) {
+//        MessageUnit u = sended.remove(sequence);
+//        if (u != null) 
+//            u.confirmed();
+//    }
+//
+//    public void failed(int sequence, long time) {
+//        MessageUnit u = sended.remove(sequence);
+//        if (u != null) 
+//            u.fatal();
+//    }
 
-    public void failed(int sequence, long time) {
-        MessageUnit u = sended.remove(sequence);
-        if (u != null) 
-            u.fatal();
-    }
-
-    public void messageSubmitted(MessageUnit u, boolean ok) {
-        mesCount.decrementAndGet();
-    }
+//    public void messageSubmitted(MessageUnit u, boolean ok) {
+//        mesCount.decrementAndGet();
+//    }
 
     public MessageUnit getNext() {
-        for (Iterator<MessageUnit> it=queue.iterator(); it.hasNext();) {
-            MessageUnit unit = it.next();
-            if (isDirectionAvailable(unit.getDst()) && unit.checkStatus()==READY)
-                return unit;
-            else if (ObjectUtils.in(unit.getStatus(), CONFIRMED, FATAL)) 
-                it.remove();
-        }
+        if (submitted.size()<=config.getMaxUnconfirmed()) 
+            for (Iterator<MessageUnit> it=queue.iterator(); it.hasNext();) {
+                MessageUnit unit = it.next();
+                if (isDirectionAvailable(unit.getDst()) && unit.checkStatus()==READY)
+                    return unit;
+                else if (ObjectUtils.in(unit.getStatus(), CONFIRMED, FATAL)) 
+                    it.remove();
+            }
         return null;
     }
 //    public MessageUnit getNext() {
@@ -213,11 +228,11 @@ public class OutQueue implements MessageUnitListener {
 
     public void statusChanged(MessageUnit unit, MessageUnitStatus oldStatus, MessageUnitStatus newStatus) {
         switch (newStatus) {
-            case SUBMITTED: submittedCount.incrementAndGet(); break;
+            case SUBMITTED: submitted.put(unit.getSequenceNumber(), unit); break;
             case DELAYED: blockDirection(unit.getDst(), unit.getXTime()); break; //block direction
         }
         switch (oldStatus) {
-            case SUBMITTED: submittedCount.decrementAndGet(); break;
+            case SUBMITTED: submitted.remove(unit.getSequenceNumber()); break;
         }
     }
     
@@ -233,5 +248,9 @@ public class OutQueue implements MessageUnitListener {
         else if (time>=curTime) 
             blockedNums.remove(dst);
         return true;
+    }
+
+    public void messageHandled(boolean success, Object tag) {
+        mesCount.decrementAndGet();
     }
 }

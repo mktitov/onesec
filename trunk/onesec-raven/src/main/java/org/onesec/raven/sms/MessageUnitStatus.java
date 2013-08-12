@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package org.onesec.raven.sms.queue;
+package org.onesec.raven.sms;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface ShortTextMessage {
-//    public 
+public enum MessageUnitStatus {
+    READY, DELAYED, SUBMITTED, CONFIRMED, FATAL
 }

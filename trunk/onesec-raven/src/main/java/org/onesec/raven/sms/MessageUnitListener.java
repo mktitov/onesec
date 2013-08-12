@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package org.onesec.raven.sms.queue;
+package org.onesec.raven.sms;
 
 /**
  *
  * @author Mikhail Titov
  */
-public enum MessageUnitStatus {
-    READY, DELAYED, SUBMITTED, CONFIRMED, FATAL
+public interface MessageUnitListener {
+    public void statusChanged(MessageUnit unit, MessageUnitStatus oldStatus, MessageUnitStatus newStatus);
 }
