@@ -17,13 +17,16 @@
 package org.onesec.raven.ivr.actions;
 
 import java.util.Collection;
+import org.raven.annotations.NodeClass;
 import org.raven.tree.Node;
 import org.raven.tree.impl.BaseNode;
+import org.raven.tree.impl.InvisibleNode;
 
 /**
  *
  * @author Mikhail Titov
  */
+@NodeClass(parentNode = InvisibleNode.class, importChildTypesFromParent = true)
 public class CollectDtmfsErrorHandler extends BaseNode {
     public final static String NAME = "Error actions";
 
