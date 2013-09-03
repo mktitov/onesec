@@ -26,11 +26,11 @@ public class OutQueue implements MessageUnitListener, ShortMessageListener {
     /**
      * @see OutQueue.factorQF
      */
-    private final long mesWaitQF = 60 * 1000;
+//    private final long mesWaitQF = 60 * 1000;
     /**
      * @see OutQueue.factorTH
      */
-    private final long mesWaitTH = 60 * 1000;
+//    private final long mesWaitTH = 60 * 1000;
     /**
      * Максимальное время ожидания потверждения на отправленное сообщение (мс).
      */
@@ -39,12 +39,12 @@ public class OutQueue implements MessageUnitListener, ShortMessageListener {
      * На сколько отложить попытки отправки сообщения при ошибке 14 - QUEUE_FULL (мс). If QUEUE_FULL
      * : waitInterval = mesWaitQF * ( 1+factorQF*attempsCount )
      */
-    private final int factorQF = 0;
+//    private final int factorQF = 0;
     /**
      * На сколько отложить попытки отправки сообщения при ошибке 58 - THROTTLED (мс). If THROTTLED :
      * waitInterval = mesWaitTH * ( 1+factorTH*attempsCount )
      */
-    private final int factorTH = 0;
+//    private final int factorTH = 0;
 //    private int maxAttempts = 5;
     
 //    private final Map<Integer, MessageUnit> sended = new ConcurrentHashMap<Integer, MessageUnit>();
@@ -60,6 +60,11 @@ public class OutQueue implements MessageUnitListener, ShortMessageListener {
     public OutQueue(SmsConfig config, LoggerHelper logger) {
         this.config = config;
         this.logger = new LoggerHelper(logger, "Queue. ");
+    }
+    
+    public void clear() {
+        queue.clear();
+        submitted.clear();
     }
 
     //public static MessageUnit[] noack
@@ -77,7 +82,7 @@ public class OutQueue implements MessageUnitListener, ShortMessageListener {
             sm.addListener(this);
             MessageUnit[] units = sm.getUnits();
             for (int i = 0; i < units.length; i++) 
-                queue.offer(units[i]);
+                queue.offer(units[i].addListener(this));
             if (logger.isDebugEnabled())
                 logger.debug("Message ({}) queued", sm);
             return true;
@@ -242,12 +247,14 @@ public class OutQueue implements MessageUnitListener, ShortMessageListener {
     
     private boolean isDirectionAvailable(String dst) {
         Long time = blockedNums.get(dst);
-        long curTime = System.currentTimeMillis();
-        if (time!=null && time<curTime)
+        if (time==null) 
+            return true;
+        else if (time>System.currentTimeMillis()) 
             return false;
-        else if (time>=curTime) 
+        else {
             blockedNums.remove(dst);
-        return true;
+            return true;
+        }
     }
 
     public void messageHandled(boolean success, Object tag) {

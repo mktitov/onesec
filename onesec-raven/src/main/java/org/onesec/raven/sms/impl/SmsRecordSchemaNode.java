@@ -32,6 +32,9 @@ import org.weda.internal.annotations.Message;
  */
 @NodeClass(parentNode=RecordSchemasNode.class, childNodes=RecordSchemaFieldNode.class)
 public class SmsRecordSchemaNode extends RecordSchemaNode {
+    public final static String QUEUE_FULL_STATUS = "QUEUE_FULL";
+    public final static String SUCCESSFUL_STATUS = "SUCCESSFUL";
+    
     public final static String ID = "id";
     public final static String MESSAGE = "message";
     public final static String ADDRESS = "address";
@@ -74,7 +77,7 @@ public class SmsRecordSchemaNode extends RecordSchemaNode {
         createField(MESSAGE, messageDisplayName, RecordSchemaFieldType.STRING);
         createField(ADDRESS, addressDisplayName, RecordSchemaFieldType.STRING);
         createField(COMPLETION_CODE, completionCodeDisplayName, RecordSchemaFieldType.STRING);
-        createField(SEND_TIME, sendTimeDisplayName, RecordSchemaFieldType.DATE);
+        createField(SEND_TIME, sendTimeDisplayName, RecordSchemaFieldType.TIMESTAMP);
     }
     
     protected void createField(String name, String displayName, RecordSchemaFieldType fieldType) {

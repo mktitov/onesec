@@ -15,18 +15,24 @@
  */
 package org.onesec.raven.sms.impl;
 
-import com.logica.smpp.pdu.Address;
 import java.util.Collection;
+import java.util.Date;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.onesec.raven.sms.BindMode;
-import org.onesec.raven.sms.queue.ShortTextMessageImpl;
 import org.raven.annotations.Parameter;
 import org.raven.ds.DataConsumer;
 import org.raven.ds.DataContext;
 import org.raven.ds.DataPipe;
 import org.raven.ds.DataSource;
+import org.raven.ds.Record;
+import org.raven.ds.RecordException;
 import org.raven.ds.impl.DataSourceHelper;
+import org.raven.log.LogLevel;
+import org.raven.sched.ExecutorService;
+import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
 import org.raven.tree.NodeAttribute;
 import org.raven.tree.impl.BaseNode;
 import org.weda.annotations.constraints.NotNull;
@@ -117,9 +123,15 @@ public class SmsTransceiverNode extends BaseNode implements DataPipe {
     private Integer maxSubmitAttempts;
     @NotNull @Parameter(defaultValue = "60000")
     private Long maxWaitForResp;
+    
+    @NotNull @Parameter(valueHandlerType = SystemSchedulerValueHandlerFactory.TYPE)
+    private ExecutorService executor;
+    @NotNull @Parameter(defaultValue = "60000")
+    private Long messageQueueWaitTimeout;
 
     private ReentrantReadWriteLock dataLock;
     private Condition messageProcessed;
+    private AtomicReference<SmsTransceiverWorker> worker;
 //    private 
 
     @Override
@@ -127,14 +139,83 @@ public class SmsTransceiverNode extends BaseNode implements DataPipe {
         super.initFields();
         dataLock = new ReentrantReadWriteLock();
         messageProcessed = dataLock.writeLock().newCondition();
+        worker = new AtomicReference<SmsTransceiverWorker>();
+    }
+
+    @Override
+    protected void doStart() throws Exception {
+        super.doStart();
+        worker.set(new SmsTransceiverWorker(this, new SmsConfigImpl(this), executor));
+    }
+
+    @Override
+    protected void doStop() throws Exception {
+        super.doStop();
+        SmsTransceiverWorker _worker = worker.getAndSet(null);
+        if (_worker!=null)
+            _worker.stop();
     }
 
     public void setData(DataSource dataSource, Object data, DataContext context) {
         if (data==null)
             DataSourceHelper.sendDataToConsumers(dataSource, data, context);
-        
+        try {
+            Record rec = converter.convert(Record.class, data, null);
+            SmsTransceiverWorker _worker = worker.get();
+            if (_worker==null)
+                return;
+            queueMessage(rec, context, _worker);
+        } catch (Throwable e) {
+            context.addError(this, new Exception("Error processing sms request", e));
+        }
     }
-
+    
+    public void messageHandled(boolean success, Object tag) {
+        RecordHolder holder = (RecordHolder) tag;
+        try {
+            if (dataLock.writeLock().tryLock())
+                try {
+                    messageProcessed.signal();
+                } finally {
+                    dataLock.writeLock().unlock();
+                }
+            holder.rec.setValue(SmsRecordSchemaNode.COMPLETION_CODE, "SUCCESS");
+            holder.rec.setValue(SmsRecordSchemaNode.SEND_TIME, new Date());
+            DataSourceHelper.sendDataToConsumers(this, holder.rec, holder.context);
+        } catch (RecordException e) {
+            if (isLogLevelEnabled(LogLevel.ERROR)) 
+                getLogger().error("Error processing SMS record", e);
+        }
+    }
+    
+    private void queueMessage(Record rec, DataContext context, SmsTransceiverWorker _worker) 
+        throws Exception 
+    {
+        final String message = (String) rec.getValue(SmsRecordSchemaNode.MESSAGE);
+        final String addr = (String) rec.getValue(SmsRecordSchemaNode.ADDRESS);
+        final Long id = (Long) rec.getValue(SmsRecordSchemaNode.ID);
+        final RecordHolder holder = new RecordHolder(rec, context);
+        if (!_worker.addMessage(id, message, addr, holder)) {
+            long timeout = System.currentTimeMillis() + messageQueueWaitTimeout;
+            boolean queued = false;
+            do {
+                if (dataLock.writeLock().tryLock(1000, TimeUnit.MILLISECONDS)) 
+                    try {
+                        messageProcessed.await(1000, TimeUnit.MILLISECONDS);
+                    } finally {
+                        dataLock.writeLock().unlock();
+                    }
+                queued = _worker.addMessage(id, message, addr, holder);
+            } while (!queued && System.currentTimeMillis()<=timeout);
+            if (!queued) {
+                rec.setValue(SmsRecordSchemaNode.COMPLETION_CODE, SmsRecordSchemaNode.QUEUE_FULL_STATUS);
+                DataSourceHelper.sendDataToConsumers(this, rec, context);
+                if (isLogLevelEnabled(LogLevel.WARN))
+                    getLogger().warn("Can't send SMS because queue is full. {}", rec);
+            }
+        }
+    }
+    
     public Object refereshData(Collection<NodeAttribute> sessionAttributes) {
         return null;
     }
@@ -147,10 +228,6 @@ public class SmsTransceiverNode extends BaseNode implements DataPipe {
         return null;
     }
     
-    public void messageHandled(ShortTextMessageImpl message, boolean success) {
-        
-    }
-
     public Boolean getStopProcessingOnError() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
@@ -473,5 +550,31 @@ public class SmsTransceiverNode extends BaseNode implements DataPipe {
 
     public void setMaxWaitForResp(Long maxWaitForResp) {
         this.maxWaitForResp = maxWaitForResp;
+    }
+
+    public ExecutorService getExecutor() {
+        return executor;
+    }
+
+    public void setExecutor(ExecutorService executor) {
+        this.executor = executor;
+    }
+
+    public Long getMessageQueueWaitTimeout() {
+        return messageQueueWaitTimeout;
+    }
+
+    public void setMessageQueueWaitTimeout(Long messageQueueWaitTimeout) {
+        this.messageQueueWaitTimeout = messageQueueWaitTimeout;
+    }
+
+    private class RecordHolder {
+        private final Record rec;
+        private final DataContext context;
+
+        public RecordHolder(Record rec, DataContext context) {
+            this.rec = rec;
+            this.context = context;
+        }
     }
 }

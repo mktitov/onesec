@@ -16,8 +16,6 @@
 
 package org.onesec.raven.sms;
 
-import org.onesec.raven.sms.queue.ShortTextMessageImpl;
-
 /**
  *
  * @author Mikhail Titov

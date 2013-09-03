@@ -21,20 +21,26 @@ import com.logica.smpp.pdu.Response;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.onesec.raven.sms.MessageUnit;
+import org.onesec.raven.sms.ShortMessageListener;
 import org.onesec.raven.sms.SmsAgentListener;
 import org.onesec.raven.sms.SmsConfig;
 import org.onesec.raven.sms.SmsMessageEncoder;
 import org.onesec.raven.sms.queue.OutQueue;
+import org.onesec.raven.sms.queue.ShortTextMessageImpl;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.impl.AbstractTask;
 import org.raven.tree.impl.LoggerHelper;
+import org.raven.util.UnsignedLongCounter;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class SmsTransceiverWorker {
+public class SmsTransceiverWorker implements ShortMessageListener {
+    private final long CYCLE_PAUSE_INTERVAL = 100;
     /**
      * @see OutQueue.factorQF
      */
@@ -65,23 +71,33 @@ public class SmsTransceiverWorker {
     private final SmsTransceiverNode owner;
     private final AtomicBoolean running = new AtomicBoolean();
     private final AtomicBoolean stopped = new AtomicBoolean();
-    private final AtomicLong waitUntil = new AtomicLong();
+    private final UnsignedLongCounter messageIds = new UnsignedLongCounter(1);
 
-    public SmsTransceiverWorker(SmsTransceiverNode owner, SmsConfig config, ExecutorService executor, 
-            LoggerHelper logger) 
+    public SmsTransceiverWorker(SmsTransceiverNode owner, SmsConfig config, ExecutorService executor) 
         throws Exception 
     {
         this.owner = owner;
         this.config = config;
         this.executor = executor;
-        this.logger = new LoggerHelper(logger, "Transceiver. ");
+        this.logger = new LoggerHelper(owner, "Transceiver. ");
         this.messageEncoder = new SmsMessageEncoderImpl(config, logger);
         this.queue = new OutQueue(config, this.logger);
         createAgent();
     }
     
-    public void addMessage(String message, String dstAddr, Object tag) {
-        
+    public boolean addMessage(Long messageId, String message, String dstAddr, Object tag) {
+        try {
+            ShortTextMessageImpl msg = new ShortTextMessageImpl(
+                    dstAddr, message, tag, messageId, messageEncoder, config, logger);
+            msg.addListener(this);
+            if (!queue.addMessage(msg)) return false;
+            else {
+                startMessageProcessor();
+                return true;
+            }
+        } catch (Exception e) {
+            return false;
+        }
     }
     
     public void stop() {
@@ -131,7 +147,12 @@ public class SmsTransceiverWorker {
         if (_agent!=null)
             _agent.unbind();
     }
-    
+
+    public void messageHandled(boolean success, Object tag) {
+        if (!stopped.get())
+            owner.messageHandled(success, tag);
+    }
+
     private class MessageProcessor extends AbstractTask {
         private final AtomicBoolean needStop = new AtomicBoolean();
 
@@ -149,10 +170,22 @@ public class SmsTransceiverWorker {
                 logger.debug("Message processor task STARTED");
             try {
                 while (true) {
+                    long cyclePause = 0;
+                    int counter = 0;
                     while (!needStop.get() && !queue.isEmpty()) {
-                        long waitInterval = waitUntil.get()-System.currentTimeMillis();
-                        if (waitInterval>0) Thread.sleep(waitInterval);
-                        else processQueueMessages();
+//                        long waitInterval = waitUntil.get()-System.currentTimeMillis();
+//                        if (waitInterval>0) Thread.sleep(waitInterval);
+//                        else processQueueMessages();
+                       if (cyclePause > 0) {
+                           Thread.sleep(cyclePause);
+                            cyclePause = 0;
+                       }
+                       cyclePause = CYCLE_PAUSE_INTERVAL;
+                       if (trySendMessageUnit()) {
+                           ++counter;
+                           if (counter==config.getOnceSend()) counter = 0;
+                           else cyclePause = 0;
+                       }
                     }
                     running.set(false);
                     if (needStop.get() || queue.isEmpty() || !running.compareAndSet(false, true)) {
@@ -166,8 +199,27 @@ public class SmsTransceiverWorker {
             }
         }
 
-        private void processQueueMessages() {
-            throw new UnsupportedOperationException("Not supported yet.");
+        private boolean trySendMessageUnit() {
+            if (queue.howManyUnconfirmed() > config.getMaxUnconfirmed()) 
+                return false;
+            MessageUnit unit = queue.getNext();
+            if (unit==null) 
+                return false;
+            SmsAgent _agent = agent.get();
+            if (_agent!=null) { 
+                try {
+                    _agent.submit(unit.getPdu());
+                    unit.submitted();
+                    return true;
+                } catch (Exception ex) {
+                    if (logger.isErrorEnabled())
+                        logger.error(
+                            String.format("Error submitting message unit: %s", unit.getPdu().debugString())
+                            , ex);
+                    return false;
+                }
+            } else
+                return false;
         }
     }
     
@@ -227,7 +279,6 @@ public class SmsTransceiverWorker {
             valid.set(false);
             agent.set(null);
             stopMessageProcessor();
-            
         }
     }
     
