@@ -17,6 +17,7 @@ package org.onesec.raven.sms;
 
 import com.logica.smpp.pdu.Address;
 import com.logica.smpp.pdu.AddressRange;
+import java.util.concurrent.TimeUnit;
 
 /**
  *
@@ -79,4 +80,8 @@ public interface SmsConfig {
      * Max wait for response in ms
      */
     public long getMaxWaitForResp();
+    
+    public long getMaxMessagesPerTimeUnit();
+    public TimeUnit getMaxMessagesTimeUnit();
+    public long getMaxMessagesTimeQuantity();
 }
