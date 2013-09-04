@@ -17,6 +17,7 @@ package org.onesec.raven.sms.impl;
 
 import com.logica.smpp.pdu.Address;
 import com.logica.smpp.pdu.AddressRange;
+import java.util.concurrent.TimeUnit;
 import org.onesec.raven.sms.BindMode;
 import org.onesec.raven.sms.SmsConfig;
 
@@ -62,6 +63,9 @@ public class SmsConfigImpl implements SmsConfig {
     private final int mesLifeTime;
     private final int maxSubmitAttempts;
     private final long maxWaitForResp;
+    private final long maxMessagesPerTimeUnit;
+    private final TimeUnit maxMessagesTimeUnit;
+    private final long maxMessagesTimeQuantity;
 
     public SmsConfigImpl(SmsTransceiverNode node) throws Exception {
         bindMode = node.getBindMode();
@@ -101,6 +105,9 @@ public class SmsConfigImpl implements SmsConfig {
         mesLifeTime = node.getMesLifeTime();
         maxSubmitAttempts = node.getMaxSubmitAttempts();
         maxWaitForResp = node.getMaxWaitForResp();
+        maxMessagesPerTimeUnit = node.getMaxMessagesPerTimeUnit();
+        maxMessagesTimeUnit = node.getMaxMessagesTimeUnit();
+        maxMessagesTimeQuantity = node.getMaxMessagesTimeQuantity();
     }
 
     public BindMode getBindMode() {
@@ -282,4 +289,17 @@ public class SmsConfigImpl implements SmsConfig {
     public long getMaxWaitForResp() {
         return maxWaitForResp;
     }
+
+    public long getMaxMessagesPerTimeUnit() {
+        return maxMessagesPerTimeUnit;
+    }
+
+    public TimeUnit getMaxMessagesTimeUnit() {
+        return maxMessagesTimeUnit;
+    }
+
+    public long getMaxMessagesTimeQuantity() {
+        return maxMessagesTimeQuantity;
+    }
+    
 }

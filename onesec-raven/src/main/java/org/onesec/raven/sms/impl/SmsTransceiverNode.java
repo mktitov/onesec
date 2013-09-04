@@ -124,10 +124,19 @@ public class SmsTransceiverNode extends BaseNode implements DataPipe {
     @NotNull @Parameter(defaultValue = "60000")
     private Long maxWaitForResp;
     
+    @NotNull @Parameter(defaultValue = "1000")
+    private Long maxMessagesPerTimeUnit;
+    @NotNull @Parameter(defaultValue = "MINUTES")
+    private TimeUnit maxMessagesTimeUnit;
+    @NotNull @Parameter(defaultValue = "1")
+    private Long maxMessagesTimeQuantity;  
+    
     @NotNull @Parameter(valueHandlerType = SystemSchedulerValueHandlerFactory.TYPE)
     private ExecutorService executor;
     @NotNull @Parameter(defaultValue = "60000")
     private Long messageQueueWaitTimeout;
+    @NotNull @Parameter
+    private DataSource dataSource;
 
     private ReentrantReadWriteLock dataLock;
     private Condition messageProcessed;
@@ -179,7 +188,7 @@ public class SmsTransceiverNode extends BaseNode implements DataPipe {
                 } finally {
                     dataLock.writeLock().unlock();
                 }
-            holder.rec.setValue(SmsRecordSchemaNode.COMPLETION_CODE, "SUCCESS");
+            holder.rec.setValue(SmsRecordSchemaNode.COMPLETION_CODE, SmsRecordSchemaNode.SUCCESSFUL_STATUS);
             holder.rec.setValue(SmsRecordSchemaNode.SEND_TIME, new Date());
             DataSourceHelper.sendDataToConsumers(this, holder.rec, holder.context);
         } catch (RecordException e) {
@@ -206,12 +215,12 @@ public class SmsTransceiverNode extends BaseNode implements DataPipe {
                         dataLock.writeLock().unlock();
                     }
                 queued = _worker.addMessage(id, message, addr, holder);
-            } while (!queued && System.currentTimeMillis()<=timeout);
+            } while (!queued && System.currentTimeMillis() <= timeout);
             if (!queued) {
                 rec.setValue(SmsRecordSchemaNode.COMPLETION_CODE, SmsRecordSchemaNode.QUEUE_FULL_STATUS);
                 DataSourceHelper.sendDataToConsumers(this, rec, context);
                 if (isLogLevelEnabled(LogLevel.WARN))
-                    getLogger().warn("Can't send SMS because queue is full. {}", rec);
+                    getLogger().warn("Can't send SMS because of queue is full. {}", rec);
             }
         }
     }
@@ -566,6 +575,38 @@ public class SmsTransceiverNode extends BaseNode implements DataPipe {
 
     public void setMessageQueueWaitTimeout(Long messageQueueWaitTimeout) {
         this.messageQueueWaitTimeout = messageQueueWaitTimeout;
+    }
+
+    public DataSource getDataSource() {
+        return dataSource;
+    }
+
+    public void setDataSource(DataSource dataSource) {
+        this.dataSource = dataSource;
+    }
+
+    public Long getMaxMessagesPerTimeUnit() {
+        return maxMessagesPerTimeUnit;
+    }
+
+    public void setMaxMessagesPerTimeUnit(Long maxMessagesPerTimeUnit) {
+        this.maxMessagesPerTimeUnit = maxMessagesPerTimeUnit;
+    }
+
+    public TimeUnit getMaxMessagesTimeUnit() {
+        return maxMessagesTimeUnit;
+    }
+
+    public void setMaxMessagesTimeUnit(TimeUnit maxMessagesTimeUnit) {
+        this.maxMessagesTimeUnit = maxMessagesTimeUnit;
+    }
+
+    public Long getMaxMessagesTimeQuantity() {
+        return maxMessagesTimeQuantity;
+    }
+
+    public void setMaxMessagesTimeQuantity(Long maxMessagesTimeQuantity) {
+        this.maxMessagesTimeQuantity = maxMessagesTimeQuantity;
     }
 
     private class RecordHolder {

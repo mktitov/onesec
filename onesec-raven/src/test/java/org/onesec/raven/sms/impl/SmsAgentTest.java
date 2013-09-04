@@ -109,7 +109,7 @@ public class SmsAgentTest extends ServiceTestCase {
         expect(config.getReceiveTimeout()).andReturn(100);
         expect(config.getBindMode()).andReturn(BindMode.RECEIVER_AND_TRANSMITTER).atLeastOnce();
         expect(config.getSystemId()).andReturn(privateProperties.getProperty("sms_system_id"));
-        expect(config.getPassword()).andReturn((privateProperties.getProperty("sms_passwd")));
+        expect(config.getPassword()).andReturn(privateProperties.getProperty("sms_passwd"));
         expect(config.getSystemType()).andReturn("");
         expect(config.getServeAddr()).andReturn(new AddressRange((byte)5, (byte)0, 
                 privateProperties.getProperty("sms_addr_range")));

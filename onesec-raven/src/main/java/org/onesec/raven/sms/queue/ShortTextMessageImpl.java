@@ -43,7 +43,7 @@ public class ShortTextMessageImpl implements ShortTextMessage, MessageUnitListen
         MessageUnit[] _units = new MessageUnitImpl[frags.length];
         unitsCount.set(frags.length);
         for (int i=0; i<frags.length; ++i)
-            _units[i] = new MessageUnitImpl(frags[i], config, new LoggerHelper(logger, "Unit ["+i+"]. "))
+            _units[i] = new MessageUnitImpl(frags[i], config, new LoggerHelper(this.logger, "Unit ["+i+"]. "))
                         .addListener(this);
         this.units = _units;
     }

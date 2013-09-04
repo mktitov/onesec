@@ -9,6 +9,7 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import org.onesec.raven.sms.SmsConfig;
 import org.raven.tree.impl.LoggerHelper;
 import static org.onesec.raven.sms.MessageUnitStatus.*;
@@ -56,6 +57,8 @@ public class OutQueue implements MessageUnitListener, ShortMessageListener {
 //    private final AtomicInteger submittedCount = new AtomicInteger(0);
     private final LoggerHelper logger;
     private final SmsConfig config;
+    private final AtomicLong timePeriod = new AtomicLong();
+    private final AtomicLong submittedInPeriod = new AtomicLong();
 
     public OutQueue(SmsConfig config, LoggerHelper logger) {
         this.config = config;
@@ -163,7 +166,15 @@ public class OutQueue implements MessageUnitListener, ShortMessageListener {
                 else if (ObjectUtils.in(unit.getStatus(), CONFIRMED, FATAL)) 
                     it.remove();
             }
+        else if (logger.isTraceEnabled())
+            logger.trace("Can't provide message unit. Too many unconfirmed message units");
         return null;
+    }
+    
+    private boolean checkSubmitted() {
+        if (submitted.size()>=config.getMaxUnconfirmed())
+            return false;
+        
     }
 //    public MessageUnit getNext() {
 //        Iterator<MessageUnit> it = queue.iterator();

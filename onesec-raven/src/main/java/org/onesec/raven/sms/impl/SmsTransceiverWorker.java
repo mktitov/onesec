@@ -155,6 +155,7 @@ public class SmsTransceiverWorker implements ShortMessageListener {
 
     private class MessageProcessor extends AbstractTask {
         private final AtomicBoolean needStop = new AtomicBoolean();
+        private final LoggerHelper logger = new LoggerHelper(SmsTransceiverWorker.this.logger, "Processor. ");
 
         public MessageProcessor() {
             super(owner, "Processing messages");
@@ -173,9 +174,6 @@ public class SmsTransceiverWorker implements ShortMessageListener {
                     long cyclePause = 0;
                     int counter = 0;
                     while (!needStop.get() && !queue.isEmpty()) {
-//                        long waitInterval = waitUntil.get()-System.currentTimeMillis();
-//                        if (waitInterval>0) Thread.sleep(waitInterval);
-//                        else processQueueMessages();
                        if (cyclePause > 0) {
                            Thread.sleep(cyclePause);
                             cyclePause = 0;
@@ -183,14 +181,19 @@ public class SmsTransceiverWorker implements ShortMessageListener {
                        cyclePause = CYCLE_PAUSE_INTERVAL;
                        if (trySendMessageUnit()) {
                            ++counter;
-                           if (counter==config.getOnceSend()) counter = 0;
+                           if (counter > config.getOnceSend()) {
+                               if (logger.isTraceEnabled())
+                                   logger.trace("Packet sent. Messages in packet - {}", counter);
+                               counter = 0;
+                           }
                            else cyclePause = 0;
                        }
-                    }
+                    }                    
                     running.set(false);
                     if (needStop.get() || queue.isEmpty() || !running.compareAndSet(false, true)) {
                         if (logger.isDebugEnabled())
-                            logger.debug("Message processor task FINISHED");
+                            logger.debug("Message processor task FINISHED. Queue empty flag: {}; Stopped flag: {}", 
+                                    queue.isEmpty(), needStop.get());
                         return;
                     }
                 }
@@ -200,11 +203,17 @@ public class SmsTransceiverWorker implements ShortMessageListener {
         }
 
         private boolean trySendMessageUnit() {
-            if (queue.howManyUnconfirmed() > config.getMaxUnconfirmed()) 
-                return false;
+//            if (queue.howManyUnconfirmed() >= config.getMaxUnconfirmed()) {
+//                if (logger.isTraceEnabled())
+//                    logger.trace("Too many unconfirmed messages. Wating...");
+//                return false;
+//            }
             MessageUnit unit = queue.getNext();
-            if (unit==null) 
+            if (unit==null) {
+                if (logger.isTraceEnabled())
+                    logger.trace("Queue doesn't have message unit READY to submit. Waiting");
                 return false;
+            }
             SmsAgent _agent = agent.get();
             if (_agent!=null) { 
                 try {
@@ -218,8 +227,11 @@ public class SmsTransceiverWorker implements ShortMessageListener {
                             , ex);
                     return false;
                 }
-            } else
+            } else {
+                if (logger.isWarnEnabled())
+                    logger.warn("SmsAgent not active");
                 return false;
+            }
         }
     }
     
