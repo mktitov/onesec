@@ -16,6 +16,7 @@
 package org.onesec.raven.ivr.conference;
 
 import java.util.Date;
+import java.util.List;
 
 /**
  *
@@ -51,6 +52,8 @@ public interface Conference {
     public void setAutoStopRecorderAfter(Integer autoStopRecorderAfter); 
     
     public ConferenceInitiator getConferenceInitiator();
+    public List<ConferenceRecording> getConferenceRecordings();
+    public ConferenceRecording getConferenceRecording(String id);
     
     void update();    
 }

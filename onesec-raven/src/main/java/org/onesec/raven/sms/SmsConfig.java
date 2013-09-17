@@ -31,12 +31,13 @@ public interface SmsConfig {
     public String getFromAddr();
     public boolean getAsync();
     public int getBindTimeout();
+    public int getRebindOnTimeoutInterval();
     public int getRebindInterval();
     public int getEnquireTimeout();
     public int getMaxEnquireAttempts();
-    public int getSoTimeout();
+    public int getSoTimeout(); 
     public int getReceiveTimeout();
-    public int getNoRcvTimeout();
+    public int getNoRcvTimeout();//not used
     
     public int getThrottledDelay();
     public int getMesThrottledDelay();
@@ -47,7 +48,7 @@ public interface SmsConfig {
     public String getServiceType();
     public Address getSrcAddr();
     public Address getSmscAddr();
-    public String getValidityPeriod();
+    public String getValidityPeriod();//not used
     public byte getEsmClass();
     public byte getProtocolId();
     public byte getPriorityFlag();
@@ -81,7 +82,7 @@ public interface SmsConfig {
      */
     public long getMaxWaitForResp();
     
-    public long getMaxMessagesPerTimeUnit();
-    public TimeUnit getMaxMessagesTimeUnit();
-    public long getMaxMessagesTimeQuantity();
+    public long getMaxMessageUnitsPerTimeUnit();
+    public TimeUnit getMaxMessageUnitsTimeUnit();
+    public long getMaxMessageUnitsTimeQuantity();
 }

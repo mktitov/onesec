@@ -15,6 +15,7 @@
  */
 package org.onesec.raven.sms.queue;
 
+import java.util.concurrent.TimeUnit;
 import org.easymock.IMocksControl;
 import org.junit.After;
 import org.junit.Assert;
@@ -42,8 +43,8 @@ public class OutQueueTest extends Assert {
     private SmsConfig config;
     private ShortTextMessage mess1;
     private ShortTextMessage mess2;
-    private MessageUnit unit;
-    
+    private MessageUnit unit1;
+    private MessageUnit unit2;
 
     @Before
     public void prepare() {
@@ -69,7 +70,7 @@ public class OutQueueTest extends Assert {
         createMocksForGetNextTest();
         OutQueue queue = new OutQueue(config, loggerHelper);
         assertTrue(queue.addMessage(mess1));
-        assertSame(unit, queue.getNext());
+        assertSame(unit1, queue.getNext());
     }
     
     @Test
@@ -77,13 +78,13 @@ public class OutQueueTest extends Assert {
         createMocksForSubmitTest();
         OutQueue queue = createQueueAndAddMessage();
         
-        queue.statusChanged(unit, MessageUnitStatus.READY, MessageUnitStatus.SUBMITTED);
+        queue.statusChanged(unit1, MessageUnitStatus.READY, MessageUnitStatus.SUBMITTED);
         assertEquals(1, queue.howManyUnconfirmed());
         assertNull(queue.getNext());
-        assertSame(unit, queue.getMessageUnit(1));
+        assertSame(unit1, queue.getMessageUnit(1));
         assertFalse(queue.isEmpty());
         
-        queue.statusChanged(unit, MessageUnitStatus.SUBMITTED, MessageUnitStatus.CONFIRMED);
+        queue.statusChanged(unit1, MessageUnitStatus.SUBMITTED, MessageUnitStatus.CONFIRMED);
         assertFalse(queue.isEmpty());
         assertEquals(0, queue.howManyUnconfirmed());
         assertNull(queue.getNext());
@@ -95,7 +96,7 @@ public class OutQueueTest extends Assert {
         createMocksForFatalTest();
         OutQueue queue = createQueueAndAddMessage();
         
-        queue.statusChanged(unit, MessageUnitStatus.SUBMITTED, MessageUnitStatus.FATAL);
+        queue.statusChanged(unit1, MessageUnitStatus.SUBMITTED, MessageUnitStatus.FATAL);
         assertNull(queue.getNext());
         assertTrue(queue.isEmpty());
     }
@@ -105,12 +106,69 @@ public class OutQueueTest extends Assert {
         createMocksForDelayedTest();
         OutQueue queue = createQueueAndAddMessage();
         
-        queue.statusChanged(unit, MessageUnitStatus.READY, MessageUnitStatus.DELAYED);
+        queue.statusChanged(unit1, MessageUnitStatus.READY, MessageUnitStatus.DELAYED);
         assertNull(queue.getNext());
         Thread.sleep(100);
-        assertSame(unit, queue.getNext());
+        assertSame(unit1, queue.getNext());
     }
     
+    @Test
+    public void maxMessagesPerTimeUnitTest() throws Exception {
+        createMocksForMaxMessagesPerTimeUnit();
+        OutQueue queue = createQueueAndAddMessage();
+        queue.addMessage(mess2);
+        
+        assertSame(unit1, queue.getNext());
+        assertEquals(0l, queue.getUnitsInPeriod());
+        queue.statusChanged(unit1, MessageUnitStatus.READY, MessageUnitStatus.SUBMITTED);
+        assertEquals(1l, queue.getUnitsInPeriod());        
+        assertNull(queue.getNext());
+        Thread.sleep(1001);
+        assertSame(unit2, queue.getNext());
+        assertEquals(0, queue.getUnitsInPeriod());
+    }
+    
+    private void createMocksForMaxMessagesPerTimeUnit() {
+        config = mocks.createMock(SmsConfig.class);
+        mess1 = mocks.createMock("mess1", ShortTextMessage.class);
+        mess2 = mocks.createMock("mess2", ShortTextMessage.class);
+        unit1 = mocks.createMock("unit1", MessageUnit.class);
+        unit2 = mocks.createMock("unit2", MessageUnit.class);
+        
+        expect(config.getMaxMessagesInQueue()).andReturn(2).anyTimes();
+        expect(config.getMaxMessageUnitsPerTimeUnit()).andReturn(1l).anyTimes();
+        expect(config.getMaxMessageUnitsTimeQuantity()).andReturn(1l).anyTimes();
+        expect(config.getMaxMessageUnitsTimeUnit()).andReturn(TimeUnit.SECONDS).anyTimes();
+        expect(config.getMaxUnconfirmed()).andReturn(10).anyTimes();
+        
+        //on addMessage()
+        expect(mess1.getUnits()).andReturn(new MessageUnit[]{unit1});
+        mess1.addListener(isA(OutQueue.class));
+        expect(unit1.addListener(isA(OutQueue.class))).andReturn(unit1);
+        
+        //on addMessage()
+        expect(mess2.getUnits()).andReturn(new MessageUnit[]{unit2});
+        mess2.addListener(isA(OutQueue.class));
+        expect(unit2.addListener(isA(OutQueue.class))).andReturn(unit2);
+        
+        //on getNext()
+        expect(unit1.getDst()).andReturn("123");
+        expect(unit1.checkStatus()).andReturn(MessageUnitStatus.READY);
+        
+        //on unit1.submitted()
+        expect(unit1.getSequenceNumber()).andReturn(1);
+        
+        //on getNext()
+        expect(unit1.getDst()).andReturn("123");
+        expect(unit1.checkStatus()).andReturn(MessageUnitStatus.SUBMITTED);
+        expect(unit1.getStatus()).andReturn(MessageUnitStatus.SUBMITTED);
+        expect(unit2.getDst()).andReturn("123");
+        expect(unit2.checkStatus()).andReturn(MessageUnitStatus.READY);
+        
+        
+        mocks.replay();
+    }
+
     private void createMocksForQueueIsFullTest() {
         config = mocks.createMock(SmsConfig.class);
         mess1 = mocks.createMock("mess1", ShortTextMessage.class);
@@ -123,49 +181,52 @@ public class OutQueueTest extends Assert {
         expect(unit.addListener(isA(OutQueue.class))).andReturn(unit);
         mocks.replay();
     }
-
+    
     private void createMocksForGetNextTest() {
         config = mocks.createMock(SmsConfig.class);
         mess1 = mocks.createMock("mess1", ShortTextMessage.class);
-        unit = mocks.createMock(MessageUnit.class);
+        unit1 = mocks.createMock(MessageUnit.class);
         
         //on addMessage()
         expect(config.getMaxMessagesInQueue()).andReturn(1).times(1);
-        expect(mess1.getUnits()).andReturn(new MessageUnit[]{unit});
+        expect(mess1.getUnits()).andReturn(new MessageUnit[]{unit1});
         mess1.addListener(isA(OutQueue.class));
-        expect(unit.addListener(isA(OutQueue.class))).andReturn(unit);
+        expect(unit1.addListener(isA(OutQueue.class))).andReturn(unit1);
         
         //on getNext()
         expect(config.getMaxUnconfirmed()).andReturn(1);
-        expect(unit.getDst()).andReturn("123");
-        expect(unit.checkStatus()).andReturn(MessageUnitStatus.READY);
+        expect(config.getMaxMessageUnitsPerTimeUnit()).andReturn(0l);
+        expect(unit1.getDst()).andReturn("123");
+        expect(unit1.checkStatus()).andReturn(MessageUnitStatus.READY);
         mocks.replay();
     }
     
     private void createMocksForSubmitTest() {
         config = mocks.createMock(SmsConfig.class);
         mess1 = mocks.createMock("mess1", ShortTextMessage.class);
-        unit = mocks.createMock(MessageUnit.class);
+        unit1 = mocks.createMock(MessageUnit.class);
         
+        expect(config.getMaxMessageUnitsPerTimeUnit()).andReturn(0l).anyTimes();
         //on addMessage()
         expect(config.getMaxMessagesInQueue()).andReturn(1).times(1);
-        expect(mess1.getUnits()).andReturn(new MessageUnit[]{unit});
+        expect(mess1.getUnits()).andReturn(new MessageUnit[]{unit1});
         mess1.addListener(isA(OutQueue.class));
-        expect(unit.addListener(isA(OutQueue.class))).andReturn(unit);
+        expect(unit1.addListener(isA(OutQueue.class))).andReturn(unit1);
         
         //on MessageUnit.submitted()
-        expect(unit.getSequenceNumber()).andReturn(1);       
-        expect(config.getMaxUnconfirmed()).andReturn(2);        
-        expect(unit.getDst()).andReturn("123");
-        expect(unit.checkStatus()).andReturn(MessageUnitStatus.SUBMITTED);
-        expect(unit.getStatus()).andReturn(MessageUnitStatus.SUBMITTED);
+        expect(unit1.getSequenceNumber()).andReturn(1);       
+        expect(config.getMaxUnconfirmed()).andReturn(2);
+        expect(unit1.getDst()).andReturn("123");
+        expect(unit1.checkStatus()).andReturn(MessageUnitStatus.SUBMITTED);
+        expect(unit1.getStatus()).andReturn(MessageUnitStatus.SUBMITTED);
         
         //on MessageUnit.confirmed
         expect(config.getMaxUnconfirmed()).andReturn(2);        
-        expect(unit.getDst()).andReturn("123");
-        expect(unit.checkStatus()).andReturn(MessageUnitStatus.CONFIRMED);
-        expect(unit.getSequenceNumber()).andReturn(1);
-        expect(unit.getStatus()).andReturn(MessageUnitStatus.CONFIRMED);
+        expect(unit1.getDst()).andReturn("123");
+        expect(unit1.checkStatus()).andReturn(MessageUnitStatus.CONFIRMED);
+        expect(unit1.getSequenceNumber()).andReturn(1);
+        expect(unit1.getConfirmTime()).andReturn(1l);
+        expect(unit1.getStatus()).andReturn(MessageUnitStatus.CONFIRMED);
         
         
         mocks.replay();
@@ -174,20 +235,21 @@ public class OutQueueTest extends Assert {
     private void createMocksForFatalTest() {
         config = mocks.createMock(SmsConfig.class);
         mess1 = mocks.createMock("mess1", ShortTextMessage.class);
-        unit = mocks.createMock(MessageUnit.class);
+        unit1 = mocks.createMock(MessageUnit.class);
         
+        expect(config.getMaxMessageUnitsPerTimeUnit()).andReturn(0l).anyTimes();
         //on addMessage()
         expect(config.getMaxMessagesInQueue()).andReturn(1).times(1);
-        expect(mess1.getUnits()).andReturn(new MessageUnit[]{unit});
+        expect(mess1.getUnits()).andReturn(new MessageUnit[]{unit1});
         mess1.addListener(isA(OutQueue.class));
-        expect(unit.addListener(isA(OutQueue.class))).andReturn(unit);
+        expect(unit1.addListener(isA(OutQueue.class))).andReturn(unit1);
         
         //on MessageUnit.fatal
-        expect(unit.getSequenceNumber()).andReturn(1);
+        expect(unit1.getSequenceNumber()).andReturn(1);
         expect(config.getMaxUnconfirmed()).andReturn(2);        
-        expect(unit.getDst()).andReturn("123");
-        expect(unit.checkStatus()).andReturn(MessageUnitStatus.FATAL);
-        expect(unit.getStatus()).andReturn(MessageUnitStatus.FATAL);
+        expect(unit1.getDst()).andReturn("123");
+        expect(unit1.checkStatus()).andReturn(MessageUnitStatus.FATAL);
+        expect(unit1.getStatus()).andReturn(MessageUnitStatus.FATAL);
         
         mocks.replay();
     }
@@ -195,27 +257,28 @@ public class OutQueueTest extends Assert {
     private void createMocksForDelayedTest() {
         config = mocks.createMock(SmsConfig.class);
         mess1 = mocks.createMock("mess1", ShortTextMessage.class);
-        unit = mocks.createMock(MessageUnit.class);
+        unit1 = mocks.createMock(MessageUnit.class);
         
+        expect(config.getMaxMessageUnitsPerTimeUnit()).andReturn(0l).anyTimes();
         //on addMessage()
         expect(config.getMaxMessagesInQueue()).andReturn(1).times(1);
-        expect(mess1.getUnits()).andReturn(new MessageUnit[]{unit});
+        expect(mess1.getUnits()).andReturn(new MessageUnit[]{unit1});
         mess1.addListener(isA(OutQueue.class));
-        expect(unit.addListener(isA(OutQueue.class))).andReturn(unit);
+        expect(unit1.addListener(isA(OutQueue.class))).andReturn(unit1);
         
         //on MessageUnit.delayed
-        expect(unit.getXTime()).andReturn(System.currentTimeMillis()+100);
-        expect(unit.getDst()).andReturn("123");
+        expect(unit1.getXTime()).andReturn(System.currentTimeMillis()+100);
+        expect(unit1.getDst()).andReturn("123");
         
         //on first getNext() when direction locked
         expect(config.getMaxUnconfirmed()).andReturn(2);        
-        expect(unit.getDst()).andReturn("123");
-        expect(unit.getStatus()).andReturn(MessageUnitStatus.READY);
+        expect(unit1.getDst()).andReturn("123");
+        expect(unit1.getStatus()).andReturn(MessageUnitStatus.READY);
         
         //on next getNext() when direction unlocked
         expect(config.getMaxUnconfirmed()).andReturn(2);        
-        expect(unit.getDst()).andReturn("123");
-        expect(unit.checkStatus()).andReturn(MessageUnitStatus.READY);
+        expect(unit1.getDst()).andReturn("123");
+        expect(unit1.checkStatus()).andReturn(MessageUnitStatus.READY);
         
         mocks.replay();
     }
@@ -227,4 +290,5 @@ public class OutQueueTest extends Assert {
         assertFalse(queue.isEmpty());
         return queue;
     }
+
 }

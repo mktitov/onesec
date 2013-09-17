@@ -14,12 +14,16 @@
  * limitations under the License.
  */
 
-package org.onesec.raven.sms;
+package org.onesec.raven.ivr.conference;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface ShortMessageListener {
-    public void messageHandled(ShortTextMessage message, boolean success, Object tag);
+public interface ConferenceRecording {
+    public String getRecordingId();
+    public String getRecordingStartTime();
+    public String getRecordingEndTime();
+    public Integer getRecordingDuration();
+    public String getRecordingFile();
 }

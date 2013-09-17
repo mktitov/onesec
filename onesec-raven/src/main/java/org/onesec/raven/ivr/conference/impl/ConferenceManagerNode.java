@@ -239,7 +239,8 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
     }
 
     public Conference createConference(final String name, final Date fromDate, final Date toDate,  
-            final int channelCount, final ConferenceInitiator initiator) throws ConferenceException 
+            final int channelCount, final ConferenceInitiator initiator, final boolean enableRecording) 
+        throws ConferenceException 
     {
         if (!isStarted()) return null;
         try {
@@ -248,7 +249,7 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
                     Date fd = tuneDate(fromDate);
                     Date td = tuneDate(toDate);
                     checkConference(name, fd, td, channelCount, null);
-                    return createConferenceNode(name, fd, td, channelCount, initiator);
+                    return createConferenceNode(name, fd, td, channelCount, initiator, enableRecording);
                 }
             });
         } catch (ConferenceException e) {
@@ -270,6 +271,14 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
         return confs;
     }
     
+    public java.util.List<Conference> getConferences() {
+        return NodeUtils.getChildsOfType(plannedNode, Conference.class);
+    }
+
+    public Conference getConferenceById(int id) {
+        return (Conference)plannedNode.getNodeById(id);
+    }
+
     private void checkConference(String name, Date fromDate, Date toDate, int channelCount, Conference skipConf) 
             throws ConferenceException 
     {
@@ -513,7 +522,7 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
 
     private void checkDates(Date fromDate, Date toDate) throws ConferenceException {
         final Date curDate = new Date();
-        if (fromDate.after(toDate)) 
+        if (!fromDate.before(toDate)) 
             throw new ConferenceException(CauseCode.FROM_DATE_AFTER_TO_DATE);
         if (curDate.after(toDate))
             throw new ConferenceException(CauseCode.CURRENT_DATE_AFTER_TO_DATE);
@@ -524,7 +533,7 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
     }
     
     private Conference createConferenceNode(String name, Date fromDate, Date toDate, int channelsCount, 
-            ConferenceInitiator initiator) 
+            ConferenceInitiator initiator, boolean enableRecording) 
     {
         ConferenceNode conf = new ConferenceNode();
         conf.setName(new SimpleDateFormat("yyyy-MM-dd HH:mm").format(fromDate));
@@ -537,6 +546,7 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
         conf.setChannelsCount(channelsCount);
         conf.setAccessCode(generateAccessCode(accessCodeLength));
         conf.setLogLevel(getLogLevel());
+        conf.setRecordConference(enableRecording);
         if (initiator!=null) {
             ConferenceInitiatorNode initiatorNode = new ConferenceInitiatorNode();
             conf.addAndSaveChildren(initiatorNode);

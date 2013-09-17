@@ -24,6 +24,8 @@ public class ShortTextMessageImpl implements ShortTextMessage, MessageUnitListen
     private final long id;
     private final MessageUnit[] units;
     private final LoggerHelper logger;
+    private final long created = System.currentTimeMillis();
+    private volatile long handled = 0l;
     
     private final AtomicInteger unitsCount = new AtomicInteger(0);
     private final AtomicBoolean success = new AtomicBoolean(true);
@@ -56,37 +58,21 @@ public class ShortTextMessageImpl implements ShortTextMessage, MessageUnitListen
         if (newStatus==CONFIRMED || newStatus==FATAL) {
             boolean stat = this.success.compareAndSet(true, newStatus==CONFIRMED);
             if (unitsCount.decrementAndGet()==0) {
+                handled = System.currentTimeMillis();
                 if (logger.isDebugEnabled())
                     logger.debug("Handled, success = "+stat);
                 for (ShortMessageListener listener: listeners)
-                    listener.messageHandled(stat, tag);                
+                    listener.messageHandled(this, stat, tag);                
             } else if (!stat)
                 for (MessageUnit u: units)
                     u.fatal();
         }
     }
     
-//    private boolean isSuccess() {
-//        for (MessageUnit unit: units)
-//            if (unit.getStatus()==FATAL)
-//                return false;
-//        return true;
-//    }
-
-//    void unitHandled(boolean success) {
-//        int count = unitsCount.decrementAndGet();
-//        boolean stat = this.success.compareAndSet(true, success);
-//        if (count==0) {
-//            if (logger.isDebugEnabled())
-//                logger.debug("Handled, success = "+stat);
-//            for (ShortMessageListener listener: listeners)
-//                listener.messageHandled(stat, tag);
-//        } else if (!stat)
-//            for (MessageUnit unit: units)
-//                unit.fatal();
-//
-//    }
-
+    public long getHandledTime() {
+        return handled - created;
+    }
+    
     public void addListener(ShortMessageListener listener) {
         listeners.add(listener);
     }

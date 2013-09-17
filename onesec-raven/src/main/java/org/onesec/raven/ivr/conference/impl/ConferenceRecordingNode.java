@@ -15,6 +15,7 @@
  */
 package org.onesec.raven.ivr.conference.impl;
 
+import org.onesec.raven.ivr.conference.ConferenceRecording;
 import org.raven.annotations.Parameter;
 import org.raven.tree.impl.BaseNode;
 
@@ -22,7 +23,7 @@ import org.raven.tree.impl.BaseNode;
  *
  * @author Mikhail Titov
  */
-public class ConferenceRecordingNode extends BaseNode {
+public class ConferenceRecordingNode extends BaseNode implements ConferenceRecording {
     public final static String RECORDING_START_TIME_ATTR = "recordingStartTime";
     public final static String RECORDING_END_TIME_ATTR = "recordingEndTime";
     public final static String RECORDING_DURATION_ATTR = "recordingDuration";
@@ -36,6 +37,10 @@ public class ConferenceRecordingNode extends BaseNode {
     private Integer recordingDuration;
     @Parameter
     private String recordingFile;
+
+    public String getRecordingId() {
+        return getName();
+    }
 
     public String getRecordingStartTime() {
         return recordingStartTime;

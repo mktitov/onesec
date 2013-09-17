@@ -27,6 +27,8 @@ public class MessageUnitImpl implements MessageUnit {
     private int attempts;
     private long xtime;
     private SmsConfig config;
+    private volatile long submitTime = 0;
+    private volatile long confirmTime = 0;
 
     public MessageUnitImpl(SubmitSM sm, SmsConfig config, LoggerHelper logger) {
         this.logger = logger;
@@ -92,6 +94,7 @@ public class MessageUnitImpl implements MessageUnit {
 //    }
 
     public  void submitted() {
+        submitTime = System.currentTimeMillis();
         changeStatusTo(SUBMITTED, 0);
 //        sended(System.currentTimeMillis());
     }
@@ -115,8 +118,13 @@ public class MessageUnitImpl implements MessageUnit {
 //    }
 
     public  void confirmed() {
+        confirmTime = System.currentTimeMillis();
         changeStatusTo(CONFIRMED, 0);
 //        confirmed(System.currentTimeMillis());
+    }
+    
+    public long getConfirmTime() {
+        return confirmTime-submitTime;
     }
 
 //    private synchronized void confirmed(long time) {

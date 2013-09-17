@@ -15,128 +15,146 @@
  */
 package org.onesec.raven.sms.impl;
 
-import java.util.Collection;
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.onesec.raven.sms.BindMode;
+import org.onesec.raven.sms.queue.OutQueue;
+import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
-import org.raven.ds.DataConsumer;
 import org.raven.ds.DataContext;
-import org.raven.ds.DataPipe;
 import org.raven.ds.DataSource;
 import org.raven.ds.Record;
 import org.raven.ds.RecordException;
+import org.raven.ds.impl.AbstractSafeDataPipe;
 import org.raven.ds.impl.DataSourceHelper;
+import org.raven.expr.BindingSupport;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
 import org.raven.tree.NodeAttribute;
-import org.raven.tree.impl.BaseNode;
+import org.raven.tree.ViewableObject;
+import org.raven.tree.impl.ChildAttributesValueHandlerFactory;
 import org.weda.annotations.constraints.NotNull;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class SmsTransceiverNode extends BaseNode implements DataPipe {
-    
-    @NotNull @Parameter()
+@NodeClass
+public class SmsTransceiverNode extends AbstractSafeDataPipe {
+    @Parameter(valueHandlerType = ChildAttributesValueHandlerFactory.TYPE)
+    private String smscBindAttributes;
+    @NotNull @Parameter(parent = "smscBindAttributes")
     private String addrRange;
-    @NotNull @Parameter()
+    @NotNull @Parameter(parent = "smscBindAttributes")
     private String fromAddr;
-    @NotNull @Parameter(defaultValue = "TRANSMITTER")
+    @NotNull @Parameter(defaultValue = "TRANSMITTER", parent = "smscBindAttributes")
     private BindMode bindMode;
-    @NotNull @Parameter()
+    @NotNull @Parameter(parent = "smscBindAttributes")
     private String bindAddr;
-    @NotNull @Parameter(defaultValue = "5016")
+    @NotNull @Parameter(defaultValue = "5016", parent = "smscBindAttributes")
     private Integer bindPort;
-    @NotNull @Parameter(defaultValue = "5")
+    @NotNull @Parameter(defaultValue = "5", parent = "smscBindAttributes")
     private Byte bindTon;
-    @NotNull @Parameter(defaultValue = "0")
+    @NotNull @Parameter(defaultValue = "0", parent = "smscBindAttributes")
     private Byte bindNpi;
-    @NotNull @Parameter(defaultValue = "30000")
+    @NotNull @Parameter(defaultValue = "30000", parent = "smscBindAttributes")
     private Integer bindTimeout;
-    @NotNull @Parameter(defaultValue = "60000")
+    @NotNull @Parameter(defaultValue = "60000", parent = "smscBindAttributes")
     private Integer rebindInterval;
-    @NotNull @Parameter(defaultValue = "90000")
+    @NotNull @Parameter(defaultValue = "60000", parent = "smscBindAttributes")
+    private Integer rebindOnTimeoutInterval;
+    @NotNull @Parameter(defaultValue = "90000", parent = "smscBindAttributes")
     private Integer enquireTimeout;
-    @NotNull @Parameter(defaultValue = "3")
+    @NotNull @Parameter(defaultValue = "3", parent = "smscBindAttributes")
     private Integer maxEnquireAttempts;
-    @NotNull @Parameter(defaultValue = "100")
-    private Integer soTimeout;
-    @NotNull @Parameter(defaultValue = "100")
-    private Integer receiveTimeout;
-    @NotNull @Parameter(defaultValue = "90000")
-    private Integer noRcvTimeout;
-    @NotNull @Parameter(defaultValue = "30000")
-    private Integer throttledDelay;
-    @NotNull @Parameter(defaultValue = "30000")
-    private Integer mesThrottledDelay;
-    @NotNull @Parameter(defaultValue = "30000")
-    private Integer queueFullDelay;
-    @NotNull @Parameter(defaultValue = "30000")
-    private Integer mesQueueFullDelay;
-    @NotNull @Parameter(defaultValue = "10")
-    private Integer onceSend;
-    @NotNull @Parameter(defaultValue = "0")
-    private Byte esmClass;
-    @NotNull @Parameter(defaultValue = "0")
-    private Byte protocolId;
-    @NotNull @Parameter(defaultValue = "0")
-    private Byte priorityFlag;
-    @NotNull @Parameter(defaultValue = "0")
-    private Byte registeredDelivery;
-    @NotNull @Parameter(defaultValue = "0")
-    private Byte replaceIfPresentFlag;
-    @NotNull @Parameter(defaultValue = "8")
-    private Byte dataCoding;
-    @NotNull @Parameter(defaultValue = "0")
-    private Byte smDefaultMsgId;
-    @NotNull @Parameter(defaultValue = "1")
-    private Byte dstTon;
-    @NotNull @Parameter(defaultValue = "1")
-    private Byte dstNpi;
-    @NotNull @Parameter(defaultValue = "5")
-    private Byte srcTon;
-    @NotNull @Parameter(defaultValue = "0")
-    private Byte srcNpi;
-    @NotNull @Parameter(defaultValue = "cp1251")
-    private String messageCP;
-    @NotNull @Parameter(defaultValue = "false")
-    private Boolean use7bit;
-    @NotNull @Parameter(defaultValue = "3")
-    private Integer longSmMode;
-    @NotNull @Parameter(defaultValue = "10")
-    private Integer maxUnconfirmed;
-    @NotNull @Parameter
+    @NotNull @Parameter(parent = "smscBindAttributes")
     private String systemId;
-    @NotNull @Parameter
+    @NotNull @Parameter(parent = "smscBindAttributes")
     private String password;
-    @NotNull @Parameter(defaultValue = "100")
-    private Integer maxMessagesInQueue;
-    @NotNull @Parameter(defaultValue = "600000")
-    private Integer mesLifeTime;
-    @NotNull @Parameter(defaultValue = "5")
-    private Integer maxSubmitAttempts;
-    @NotNull @Parameter(defaultValue = "60000")
-    private Long maxWaitForResp;
+    @NotNull @Parameter(defaultValue = "1", parent = "smscBindAttributes")
+    private Byte dstTon;
+    @NotNull @Parameter(defaultValue = "1", parent = "smscBindAttributes")
+    private Byte dstNpi;
+    @NotNull @Parameter(defaultValue = "5", parent = "smscBindAttributes")
+    private Byte srcTon;
+    @NotNull @Parameter(defaultValue = "0", parent = "smscBindAttributes")
+    private Byte srcNpi;
     
-    @NotNull @Parameter(defaultValue = "1000")
-    private Long maxMessagesPerTimeUnit;
-    @NotNull @Parameter(defaultValue = "MINUTES")
-    private TimeUnit maxMessagesTimeUnit;
-    @NotNull @Parameter(defaultValue = "1")
-    private Long maxMessagesTimeQuantity;  
+    
+    @Parameter(valueHandlerType = ChildAttributesValueHandlerFactory.TYPE)
+    private String smscConnectionAttributes;
+    @NotNull @Parameter(defaultValue = "100", parent = "smscConnectionAttributes")
+    private Integer soTimeout;
+    @NotNull @Parameter(defaultValue = "100", parent = "smscConnectionAttributes")
+    private Integer receiveTimeout;
+    @NotNull @Parameter(defaultValue = "90000", parent = "smscConnectionAttributes")
+    private Integer noRcvTimeout;
+    
+    @Parameter(valueHandlerType = ChildAttributesValueHandlerFactory.TYPE)
+    private String smscCodingAttributes;
+    @NotNull @Parameter(defaultValue = "0", parent = "smscCodingAttributes")
+    private Byte esmClass;
+    @NotNull @Parameter(defaultValue = "0", parent = "smscCodingAttributes")
+    private Byte protocolId;
+    @NotNull @Parameter(defaultValue = "0", parent = "smscCodingAttributes")
+    private Byte priorityFlag;
+    @NotNull @Parameter(defaultValue = "0", parent = "smscCodingAttributes")
+    private Byte registeredDelivery;
+    @NotNull @Parameter(defaultValue = "0", parent = "smscCodingAttributes")
+    private Byte replaceIfPresentFlag;
+    @NotNull @Parameter(defaultValue = "8", parent = "smscCodingAttributes")
+    private Byte dataCoding;
+    @NotNull @Parameter(defaultValue = "0", parent = "smscCodingAttributes")
+    private Byte smDefaultMsgId;
+    @NotNull @Parameter(defaultValue = "cp1251", parent = "smscCodingAttributes")
+    private String messageCP;
+    @NotNull @Parameter(defaultValue = "false", parent = "smscCodingAttributes")
+    private Boolean use7bit;
+    @NotNull @Parameter(defaultValue = "3", parent = "smscCodingAttributes")
+    private Integer longSmMode;
+    
+    
+    @Parameter(valueHandlerType = ChildAttributesValueHandlerFactory.TYPE)
+    private String smscQueueAttributes;
+    @NotNull @Parameter(defaultValue = "30000", parent = "smscQueueAttributes")
+    private Integer throttledDelay;
+    @NotNull @Parameter(defaultValue = "30000", parent = "smscQueueAttributes")
+    private Integer mesThrottledDelay;
+    @NotNull @Parameter(defaultValue = "30000", parent = "smscQueueAttributes")
+    private Integer queueFullDelay;
+    @NotNull @Parameter(defaultValue = "30000", parent = "smscQueueAttributes")
+    private Integer mesQueueFullDelay;
+    @NotNull @Parameter(defaultValue = "10", parent = "smscQueueAttributes")
+    private Integer onceSend;
+    @NotNull @Parameter(defaultValue = "10", parent = "smscQueueAttributes")
+    private Integer maxUnconfirmed;
+    @NotNull @Parameter(defaultValue = "100", parent = "smscQueueAttributes")
+    private Integer maxMessagesInQueue;
+    @NotNull @Parameter(defaultValue = "600000", parent = "smscQueueAttributes")
+    private Integer mesLifeTime;
+    @NotNull @Parameter(defaultValue = "5", parent = "smscQueueAttributes")
+    private Integer maxSubmitAttempts;
+    @NotNull @Parameter(defaultValue = "60000", parent = "smscQueueAttributes")
+    private Long maxWaitForResp;   
+    @NotNull @Parameter(defaultValue = "1000", parent = "smscQueueAttributes")
+    private Long maxMessageUnitsPerTimeUnit;
+    @NotNull @Parameter(defaultValue = "MINUTES", parent = "smscQueueAttributes")
+    private TimeUnit maxMessageUnitsTimeUnit;
+    @NotNull @Parameter(defaultValue = "1", parent = "smscQueueAttributes")
+    private Long maxMessageUnitsTimeQuantity;  
+    @NotNull @Parameter(defaultValue = "60000", parent = "smscQueueAttributes")
+    private Long messageQueueWaitTimeout;
     
     @NotNull @Parameter(valueHandlerType = SystemSchedulerValueHandlerFactory.TYPE)
     private ExecutorService executor;
-    @NotNull @Parameter(defaultValue = "60000")
-    private Long messageQueueWaitTimeout;
-    @NotNull @Parameter
-    private DataSource dataSource;
+//    @NotNull @Parameter
+//    private DataSource dataSource;
 
     private ReentrantReadWriteLock dataLock;
     private Condition messageProcessed;
@@ -165,20 +183,30 @@ public class SmsTransceiverNode extends BaseNode implements DataPipe {
             _worker.stop();
     }
 
-    public void setData(DataSource dataSource, Object data, DataContext context) {
+    @Override
+    protected void doSetData(DataSource dataSource, Object data, DataContext context) throws Exception {
         if (data==null)
-            DataSourceHelper.sendDataToConsumers(dataSource, data, context);
-        try {
-            Record rec = converter.convert(Record.class, data, null);
-            SmsTransceiverWorker _worker = worker.get();
-            if (_worker==null)
-                return;
-            queueMessage(rec, context, _worker);
-        } catch (Throwable e) {
-            context.addError(this, new Exception("Error processing sms request", e));
+            DataSourceHelper.sendDataToConsumers(this, data, context);
+        else {
+            try {
+                Record rec = converter.convert(Record.class, data, null);
+                SmsTransceiverWorker _worker = worker.get();
+                if (_worker==null)
+                    return;
+                queueMessage(rec, context, _worker);
+            } catch (Throwable e) {
+                context.addError(this, new Exception("Error processing sms request", e));
+            }
         }
     }
-    
+
+    @Override
+    protected void doAddBindingsForExpression(DataSource dataSource, Object data, DataContext context, BindingSupport bindingSupport) {
+    }
+
+//    public void setData(DataSource dataSource, Object data, DataContext context) {
+//    }
+//    
     public void messageHandled(boolean success, Object tag) {
         RecordHolder holder = (RecordHolder) tag;
         try {
@@ -225,21 +253,21 @@ public class SmsTransceiverNode extends BaseNode implements DataPipe {
         }
     }
     
-    public Object refereshData(Collection<NodeAttribute> sessionAttributes) {
-        return null;
-    }
+//    public Object refereshData(Collection<NodeAttribute> sessionAttributes) {
+//        return null;
+//    }
 
-    public boolean getDataImmediate(DataConsumer dataConsumer, DataContext context) {
-        return true;
-    }
+//    public boolean getDataImmediate(DataConsumer dataConsumer, DataContext context) {
+//        return dataSource.getDataImmediate(dataConsumer, context);
+//    }
 
-    public Collection<NodeAttribute> generateAttributes() {
-        return null;
-    }
-    
-    public Boolean getStopProcessingOnError() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
+//    public Collection<NodeAttribute> generateAttributes() {
+//        return null;
+//    }
+//    
+//    public Boolean getStopProcessingOnError() {
+//        throw new UnsupportedOperationException("Not supported yet.");
+//    }
 
     public BindMode getBindMode() {
         return bindMode;
@@ -311,6 +339,14 @@ public class SmsTransceiverNode extends BaseNode implements DataPipe {
 
     public void setRebindInterval(Integer rebindInterval) {
         this.rebindInterval = rebindInterval;
+    }
+
+    public Integer getRebindOnTimeoutInterval() {
+        return rebindOnTimeoutInterval;
+    }
+
+    public void setRebindOnTimeoutInterval(Integer rebindOnTimeoutInterval) {
+        this.rebindOnTimeoutInterval = rebindOnTimeoutInterval;
     }
 
     public Integer getEnquireTimeout() {
@@ -577,36 +613,169 @@ public class SmsTransceiverNode extends BaseNode implements DataPipe {
         this.messageQueueWaitTimeout = messageQueueWaitTimeout;
     }
 
-    public DataSource getDataSource() {
-        return dataSource;
+    public String getSmscConnectionAttributes() {
+        return smscConnectionAttributes;
     }
 
-    public void setDataSource(DataSource dataSource) {
-        this.dataSource = dataSource;
+    public void setSmscConnectionAttributes(String smscConnectionAttributes) {
+        this.smscConnectionAttributes = smscConnectionAttributes;
     }
 
-    public Long getMaxMessagesPerTimeUnit() {
-        return maxMessagesPerTimeUnit;
+    public String getSmscCodingAttributes() {
+        return smscCodingAttributes;
     }
 
-    public void setMaxMessagesPerTimeUnit(Long maxMessagesPerTimeUnit) {
-        this.maxMessagesPerTimeUnit = maxMessagesPerTimeUnit;
+    public void setSmscCodingAttributes(String smscCodingAttributes) {
+        this.smscCodingAttributes = smscCodingAttributes;
     }
 
-    public TimeUnit getMaxMessagesTimeUnit() {
-        return maxMessagesTimeUnit;
+    public String getSmscQueueAttributes() {
+        return smscQueueAttributes;
     }
 
-    public void setMaxMessagesTimeUnit(TimeUnit maxMessagesTimeUnit) {
-        this.maxMessagesTimeUnit = maxMessagesTimeUnit;
+    public void setSmscQueueAttributes(String smscQueueAttributes) {
+        this.smscQueueAttributes = smscQueueAttributes;
     }
 
-    public Long getMaxMessagesTimeQuantity() {
-        return maxMessagesTimeQuantity;
+//    public DataSource getDataSource() {
+//        return dataSource;
+//    }
+//
+//    public void setDataSource(DataSource dataSource) {
+//        this.dataSource = dataSource;
+//    }
+
+    public Long getMaxMessageUnitsPerTimeUnit() {
+        return maxMessageUnitsPerTimeUnit;
     }
 
-    public void setMaxMessagesTimeQuantity(Long maxMessagesTimeQuantity) {
-        this.maxMessagesTimeQuantity = maxMessagesTimeQuantity;
+    public void setMaxMessageUnitsPerTimeUnit(Long maxMessageUnitsPerTimeUnit) {
+        this.maxMessageUnitsPerTimeUnit = maxMessageUnitsPerTimeUnit;
+    }
+
+    public TimeUnit getMaxMessageUnitsTimeUnit() {
+        return maxMessageUnitsTimeUnit;
+    }
+
+    public void setMaxMessageUnitsTimeUnit(TimeUnit maxMessageUnitsTimeUnit) {
+        this.maxMessageUnitsTimeUnit = maxMessageUnitsTimeUnit;
+    }
+
+    public Long getMaxMessageUnitsTimeQuantity() {
+        return maxMessageUnitsTimeQuantity;
+    }
+
+    public void setMaxMessageUnitsTimeQuantity(Long maxMessageUnitsTimeQuantity) {
+        this.maxMessageUnitsTimeQuantity = maxMessageUnitsTimeQuantity;
+    }
+
+    public String getSmscBindAttributes() {
+        return smscBindAttributes;
+    }
+
+    public void setSmscBindAttributes(String smscBindAttributes) {
+        this.smscBindAttributes = smscBindAttributes;
+    }
+
+    @Parameter(readOnly = true)
+    public Long getMessagesTotal() {
+        OutQueue queue = getQueue();
+        return queue==null? null : queue.getTotalMessages();
+    }
+    
+    @Parameter(readOnly = true)
+    public Long getMessagesSuccess() {
+        OutQueue queue = getQueue();
+        return queue==null? null : queue.getSuccessMessages();
+    }
+    
+    @Parameter(readOnly = true)
+    public Long getMessagesUnsuccess() {
+        OutQueue queue = getQueue();
+        return queue==null? null : queue.getUnsuccessMessages();
+    }
+    
+    @Parameter(readOnly = true)
+    public Integer getMessagesUnconfirmed() {
+        OutQueue queue = getQueue();
+        return queue==null? null : queue.howManyUnconfirmed();
+    }
+    
+    @Parameter(readOnly = true)
+    public Integer getMessagesInQueue() {
+        OutQueue queue = getQueue();
+        return queue==null? null : queue.getMessagesInQueue();
+    }
+    
+    @Parameter(readOnly = true)
+    public Long getMessagesAvgSentTime() {
+        OutQueue queue = getQueue();
+        return queue==null? null : queue.getAvgSentTime();
+    }
+    
+    @Parameter(readOnly = true)
+    public Long getUnitsTotal() {
+        OutQueue queue = getQueue();
+        return queue==null? null : queue.getTotalUnits();
+    }
+    
+    @Parameter(readOnly = true)
+    public Long getUnitsSubmitted() {
+        OutQueue queue = getQueue();
+        return queue==null? null : queue.getSubmittedUnits();
+    }
+    
+    @Parameter(readOnly = true)
+    public Long getUnitsConfirmed() {
+        OutQueue queue = getQueue();
+        return queue==null? null : queue.getConfirmedUnits();
+    }
+    
+    @Parameter(readOnly = true)
+    public Long getUnitsFatal() {
+        OutQueue queue = getQueue();
+        return queue==null? null : queue.getFatalUnits();
+    }
+    
+    @Parameter(readOnly = true)
+    public Long getUnitsAvgConfirmTime() {
+        OutQueue queue = getQueue();
+        return queue==null? null : queue.getAvgConfirmTime();
+    }
+    
+    @Parameter(readOnly = true)
+    public Long getUnitsSentInCurrentPeriod() {
+        OutQueue queue = getQueue();
+        return queue==null? null : queue.getUnitsInPeriod();
+    }
+    
+    @Parameter(readOnly = true)
+    public Boolean getProcessorActive() {
+        SmsTransceiverWorker _worker = worker.get();
+        return _worker==null? null : _worker.isProcessorActive();
+    }
+    
+    @Parameter(readOnly = true)
+    public String getSmsAgentStatus() {
+        SmsTransceiverWorker _worker = worker.get();
+        return _worker==null? null : _worker.getSmsAgentStatus();
+    }
+    
+    private OutQueue getQueue() {
+        SmsTransceiverWorker _worker = worker.get();
+        return _worker==null? null : _worker.getQueue();
+    }
+
+    public Map<String, NodeAttribute> getRefreshAttributes() throws Exception {
+        return null;
+    }
+
+    public List<ViewableObject> getViewableObjects(Map<String, NodeAttribute> refreshAttributes) throws Exception {
+        return null;
+    }
+
+    public Boolean getAutoRefresh() {
+        return true;
     }
 
     private class RecordHolder {

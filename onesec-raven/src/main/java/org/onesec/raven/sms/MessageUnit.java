@@ -36,6 +36,7 @@ public interface MessageUnit {
     public long getXTime();
     public int getAttempts();
     public long getFd();
+    public long getConfirmTime();
     public int getSequenceNumber();
     public MessageUnitStatus checkStatus();
     public MessageUnit addListener(MessageUnitListener listener);

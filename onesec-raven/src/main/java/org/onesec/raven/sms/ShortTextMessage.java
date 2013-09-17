@@ -27,5 +27,6 @@ public interface ShortTextMessage {
     public int getUnitsCount();
     public String getDst();
     public String getMessage();
+    public long getHandledTime();
     public void addListener(ShortMessageListener listener);
 }
