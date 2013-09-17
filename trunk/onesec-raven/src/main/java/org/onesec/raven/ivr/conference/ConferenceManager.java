@@ -27,8 +27,10 @@ import org.onesec.raven.ivr.IvrEndpointConversation;
  */
 public interface ConferenceManager {
     Conference createConference(String name, Date fromDate, Date toDate, int channelCount, 
-            ConferenceInitiator initiator) throws ConferenceException;
+            ConferenceInitiator initiator, boolean enableRecording) throws ConferenceException;
     List<Conference> getConferencesByInitiatorId(String id);
+    Conference getConferenceById(int id);
+    List<Conference> getConferences();
     void removeConference(int conferenceId) throws ConferenceException;
     void join(IvrEndpointConversation conversation, String conferenceId, String accessCode, 
             ConferenceSessionListener listener);

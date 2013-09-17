@@ -33,6 +33,7 @@ public class SmsConfigImpl implements SmsConfig {
     private final String fromAddr;
     private final int bindTimeout;
     private final int rebindInterval;
+    private final int rebindOnTimeoutInterval;
     private final int enquireTimeout;
     private final int maxEnquireAttempts;
     private final int soTimeout;
@@ -63,9 +64,9 @@ public class SmsConfigImpl implements SmsConfig {
     private final int mesLifeTime;
     private final int maxSubmitAttempts;
     private final long maxWaitForResp;
-    private final long maxMessagesPerTimeUnit;
-    private final TimeUnit maxMessagesTimeUnit;
-    private final long maxMessagesTimeQuantity;
+    private final long maxMessageUnitsPerTimeUnit;
+    private final TimeUnit maxMessageUnitsTimeUnit;
+    private final long maxMessageUnitsTimeQuantity;
 
     public SmsConfigImpl(SmsTransceiverNode node) throws Exception {
         bindMode = node.getBindMode();
@@ -74,6 +75,7 @@ public class SmsConfigImpl implements SmsConfig {
         fromAddr = node.getFromAddr();
         bindTimeout = node.getBindTimeout();
         rebindInterval = node.getRebindInterval();
+        rebindOnTimeoutInterval = node.getRebindOnTimeoutInterval();
         enquireTimeout = node.getEnquireTimeout();
         maxEnquireAttempts = node.getMaxEnquireAttempts();
         soTimeout = node.getSoTimeout();
@@ -82,7 +84,7 @@ public class SmsConfigImpl implements SmsConfig {
         throttledDelay = node.getThrottledDelay();
         mesThrottledDelay = node.getMesThrottledDelay();
         queueFullDelay = node.getQueueFullDelay();
-        mesQueueFullDelay = node.getQueueFullDelay();
+        mesQueueFullDelay = node.getMesQueueFullDelay();
         onceSend = node.getOnceSend();
         esmClass = node.getEsmClass();
         protocolId = node.getProtocolId();
@@ -105,9 +107,9 @@ public class SmsConfigImpl implements SmsConfig {
         mesLifeTime = node.getMesLifeTime();
         maxSubmitAttempts = node.getMaxSubmitAttempts();
         maxWaitForResp = node.getMaxWaitForResp();
-        maxMessagesPerTimeUnit = node.getMaxMessagesPerTimeUnit();
-        maxMessagesTimeUnit = node.getMaxMessagesTimeUnit();
-        maxMessagesTimeQuantity = node.getMaxMessagesTimeQuantity();
+        maxMessageUnitsPerTimeUnit = node.getMaxMessageUnitsPerTimeUnit();
+        maxMessageUnitsTimeUnit = node.getMaxMessageUnitsTimeUnit();
+        maxMessageUnitsTimeQuantity = node.getMaxMessageUnitsTimeQuantity();
     }
 
     public BindMode getBindMode() {
@@ -152,6 +154,10 @@ public class SmsConfigImpl implements SmsConfig {
 
     public int getRebindInterval() {
         return rebindInterval;
+    }
+
+    public int getRebindOnTimeoutInterval() {
+        return rebindOnTimeoutInterval;
     }
 
     public int getEnquireTimeout() {
@@ -290,16 +296,16 @@ public class SmsConfigImpl implements SmsConfig {
         return maxWaitForResp;
     }
 
-    public long getMaxMessagesPerTimeUnit() {
-        return maxMessagesPerTimeUnit;
+    public long getMaxMessageUnitsPerTimeUnit() {
+        return maxMessageUnitsPerTimeUnit;
     }
 
-    public TimeUnit getMaxMessagesTimeUnit() {
-        return maxMessagesTimeUnit;
+    public TimeUnit getMaxMessageUnitsTimeUnit() {
+        return maxMessageUnitsTimeUnit;
     }
 
-    public long getMaxMessagesTimeQuantity() {
-        return maxMessagesTimeQuantity;
+    public long getMaxMessageUnitsTimeQuantity() {
+        return maxMessageUnitsTimeQuantity;
     }
     
 }

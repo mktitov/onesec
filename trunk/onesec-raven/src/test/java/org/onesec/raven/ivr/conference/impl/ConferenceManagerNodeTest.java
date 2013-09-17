@@ -203,7 +203,7 @@ public class ConferenceManagerNodeTest extends OnesecRavenTestCase {
         Date fd = new Date(time);
         Date td = new Date(fd.getTime()+60*1000);
         Conference conf = manager.createConference("c1", fd, td, 5, new ConferenceInitiatorImpl("user1", 
-                "Test user", "123", "e@mail"));
+                "Test user", "123", "e@mail"), false);
         assertNotNull(conf);
         assertTrue(((Node)conf).isStarted());
         assertEquals("c1", conf.getConferenceName());
@@ -338,7 +338,7 @@ public class ConferenceManagerNodeTest extends OnesecRavenTestCase {
             ConferenceInitiator initiator) 
     {
         try {
-            manager.createConference(name, fd, td, channelsCount, initiator);
+            manager.createConference(name, fd, td, channelsCount, initiator, false);
             fail();
         } catch (ConferenceException e) {
             assertEquals(causeCode, e.getCauseCode());

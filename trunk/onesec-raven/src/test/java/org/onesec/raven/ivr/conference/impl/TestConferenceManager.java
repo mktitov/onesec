@@ -50,10 +50,6 @@ public class TestConferenceManager extends BaseNode implements ConferenceManager
         return plannedConferences;
     }
 
-    public Conference createConference(String name, Date fromDate, Date toDate, int channelCount, ConferenceInitiator initiator) throws ConferenceException {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
     public void removeConference(int conferenceId) throws ConferenceException {
         throw new UnsupportedOperationException("Not supported yet.");
     }
@@ -83,5 +79,17 @@ public class TestConferenceManager extends BaseNode implements ConferenceManager
 
     public List<Conference> getConferencesByInitiatorId(String id) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    public List<Conference> getConferences() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public Conference createConference(String name, Date fromDate, Date toDate, int channelCount, ConferenceInitiator initiator, boolean enableRecording) throws ConferenceException {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public Conference getConferenceById(int id) {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 }

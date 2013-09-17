@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -48,6 +49,7 @@ import org.onesec.raven.ivr.conference.Conference;
 import org.onesec.raven.ivr.conference.ConferenceInitiator;
 import org.onesec.raven.ivr.conference.ConferenceManager;
 import org.onesec.raven.ivr.conference.ConferenceMixerSession;
+import org.onesec.raven.ivr.conference.ConferenceRecording;
 import org.onesec.raven.ivr.conference.ConferenceSession;
 import org.onesec.raven.ivr.conference.ConferenceSessionListener;
 import org.onesec.raven.ivr.impl.AsyncPushBufferDataSource;
@@ -62,6 +64,7 @@ import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
 import org.raven.tree.Node;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.LoggerHelper;
+import org.raven.util.NodeUtils;
 import org.weda.annotations.constraints.NotNull;
 import org.weda.internal.annotations.Service;
 
@@ -220,6 +223,14 @@ public class ConferenceNode extends BaseNode implements Conference {
 
     public ConferenceInitiator getConferenceInitiator() {
         return (ConferenceInitiator) getNode(ConferenceInitiatorNode.NAME);
+    }
+
+    public List<ConferenceRecording> getConferenceRecordings() {
+        return NodeUtils.getChildsOfType(recordingsNode, ConferenceRecording.class);
+    }
+    
+    public ConferenceRecording getConferenceRecording(String id) {
+        return (ConferenceRecording) recordingsNode.getNode(id);
     }
 
     private ConferenceParticipantNode getOrCreateParticipant(String phoneNumber) {

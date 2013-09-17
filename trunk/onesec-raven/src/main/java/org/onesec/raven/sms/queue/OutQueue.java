@@ -59,6 +59,17 @@ public class OutQueue implements MessageUnitListener, ShortMessageListener {
     private final SmsConfig config;
     private final AtomicLong timePeriod = new AtomicLong();
     private final AtomicLong submittedInPeriod = new AtomicLong();
+    
+    private final AtomicLong totalUnits = new AtomicLong();
+    private final AtomicLong submittedUnits = new AtomicLong();
+    private final AtomicLong confirmedUnits = new AtomicLong();
+    private final AtomicLong fatalUnits = new AtomicLong();
+    private final AtomicLong confirmTime = new AtomicLong();
+    
+    private final AtomicLong totalMessages = new AtomicLong();
+    private final AtomicLong successMessages = new AtomicLong();
+    private final AtomicLong unsuccessMessages = new AtomicLong();
+    private final AtomicLong sentTime = new AtomicLong();
 
     public OutQueue(SmsConfig config, LoggerHelper logger) {
         this.config = config;
@@ -74,6 +85,46 @@ public class OutQueue implements MessageUnitListener, ShortMessageListener {
     public int howManyUnconfirmed() {
         return submitted.size();
     }
+    
+    public long getAvgSentTime() {
+        return sentTime.get()==0l? 0 : (successMessages.get()+unsuccessMessages.get())/sentTime.get();
+    }
+    
+    public long getAvgConfirmTime() {
+        return confirmTime.get()==0l? 0 : confirmedUnits.get() / confirmTime.get();
+    }
+    
+    public long getTotalMessages() {
+        return totalMessages.get();
+    }
+    
+    public long getSuccessMessages() {
+        return successMessages.get();
+    }
+    
+    public long getUnsuccessMessages() {
+        return unsuccessMessages.get();
+    }
+    
+    public int getMessagesInQueue() {
+        return mesCount.get();
+    }
+    
+    public long getTotalUnits() {
+        return totalUnits.get();
+    }
+    
+    public long getSubmittedUnits() {
+        return submittedUnits.get();
+    }
+    
+    public long getConfirmedUnits() {
+        return confirmedUnits.get();
+    }
+    
+    public long getFatalUnits() {
+        return fatalUnits.get();
+    }
 
     public boolean addMessage(ShortTextMessage sm) {
         if (mesCount.incrementAndGet() > config.getMaxMessagesInQueue()) {
@@ -82,36 +133,18 @@ public class OutQueue implements MessageUnitListener, ShortMessageListener {
                 logger.warn("Can't queue message. Queue is FULL");
             return false;
         } else {
+            totalMessages.incrementAndGet();
             sm.addListener(this);
             MessageUnit[] units = sm.getUnits();
+            totalUnits.addAndGet(units.length);
             for (int i = 0; i < units.length; i++) 
                 queue.offer(units[i].addListener(this));
             if (logger.isDebugEnabled())
                 logger.debug("Message ({}) queued", sm);
             return true;
         }
-//        synchronized (mesCount) {
-//            if (mesCount.get() + 1 > config.getMaxMessagesInQueue()) 
-//                return false;
-//            for (int i = 0; i < units.length; i++) 
-//                queue.offer(units[i]);
-//            mesCount.incrementAndGet();
-//        }
-//        if (logger.isDebugEnabled())
-//            logger.debug("Message ({}) queued", sm);
-//        return true;
     }
 
-//    public void submitted(MessageUnit u) {
-//        submitted(u, System.currentTimeMillis());
-//    }
-//
-//    public void submitted(MessageUnit u, long time) {
-//        sended.put(u.getSequenceNumber(), u);
-//        u.submitted();
-//        
-//    }
-    
     public boolean isEmpty() {
         return queue.isEmpty() && submitted.isEmpty();
     }
@@ -124,41 +157,8 @@ public class OutQueue implements MessageUnitListener, ShortMessageListener {
         return submitted.get(sequenceNumber);
     }
 
-//    public void throttled(int sequence, long time) {
-//        MessageUnit u = sended.remove(sequence);
-//        if (u != null) 
-//            blockDirection(u, mesWaitTH * (1 + factorTH * u.getAttempts()), time);
-//    }
-//
-//    public void queueIsFull(int sequence, long time) {
-//        MessageUnit u = sended.remove(sequence);
-//        if (u != null) 
-//            blockDirection(u, mesWaitQF * (1 + factorQF * u.getAttempts()), time);
-//    }
-//    
-//    private void blockDirection(MessageUnit unit, long delay, long curTime) {
-//        unit.delay(delay);
-//        blockedNums.putIfAbsent(unit.getDst(), curTime);
-//    }
-//
-//    public void confirmed(int sequence, long time) {
-//        MessageUnit u = sended.remove(sequence);
-//        if (u != null) 
-//            u.confirmed();
-//    }
-//
-//    public void failed(int sequence, long time) {
-//        MessageUnit u = sended.remove(sequence);
-//        if (u != null) 
-//            u.fatal();
-//    }
-
-//    public void messageSubmitted(MessageUnit u, boolean ok) {
-//        mesCount.decrementAndGet();
-//    }
-
     public MessageUnit getNext() {
-        if (submitted.size()<=config.getMaxUnconfirmed()) 
+        if (checkSubmitted()) 
             for (Iterator<MessageUnit> it=queue.iterator(); it.hasNext();) {
                 MessageUnit unit = it.next();
                 if (isDirectionAvailable(unit.getDst()) && unit.checkStatus()==READY)
@@ -166,15 +166,41 @@ public class OutQueue implements MessageUnitListener, ShortMessageListener {
                 else if (ObjectUtils.in(unit.getStatus(), CONFIRMED, FATAL)) 
                     it.remove();
             }
-        else if (logger.isTraceEnabled())
-            logger.trace("Can't provide message unit. Too many unconfirmed message units");
         return null;
     }
     
     private boolean checkSubmitted() {
-        if (submitted.size()>=config.getMaxUnconfirmed())
+        if (submitted.size()>=config.getMaxUnconfirmed()) {
+            if (logger.isTraceEnabled())
+                logger.trace("Can't provide message unit. Too many unconfirmed message units");
             return false;
-        
+        }
+        if (config.getMaxMessageUnitsPerTimeUnit()<=0)
+            return true;
+        if (getUnitsInPeriod() < config.getMaxMessageUnitsPerTimeUnit()) return true;
+        else {
+            if (logger.isTraceEnabled()) 
+                logger.trace(String.format("Exceeded max messages per time unit. %s messages per %s %s"
+                        , config.getMaxMessageUnitsPerTimeUnit()
+                        , config.getMaxMessageUnitsTimeQuantity()
+                        , config.getMaxMessageUnitsTimeUnit().toString()));
+            return false;
+        }
+    }
+    
+    public long getUnitsInPeriod() {
+        checkPeriod();
+        return submittedInPeriod.get();
+    }
+    
+    private void checkPeriod() {
+        if (config.getMaxMessageUnitsPerTimeUnit()<=0)
+            return;
+        final long curPeriod = getCurPeriod();
+        if (timePeriod.get()!=curPeriod) {
+            timePeriod.set(curPeriod);
+            submittedInPeriod.set(0);
+        }
     }
 //    public MessageUnit getNext() {
 //        Iterator<MessageUnit> it = queue.iterator();
@@ -244,8 +270,18 @@ public class OutQueue implements MessageUnitListener, ShortMessageListener {
 
     public void statusChanged(MessageUnit unit, MessageUnitStatus oldStatus, MessageUnitStatus newStatus) {
         switch (newStatus) {
-            case SUBMITTED: submitted.put(unit.getSequenceNumber(), unit); break;
+            case SUBMITTED: 
+                submittedUnits.incrementAndGet();
+                submitted.put(unit.getSequenceNumber(), unit); 
+                checkPeriod();
+                submittedInPeriod.incrementAndGet();
+                break;
             case DELAYED: blockDirection(unit.getDst(), unit.getXTime()); break; //block direction
+            case CONFIRMED: 
+                confirmedUnits.incrementAndGet(); 
+                confirmTime.addAndGet(unit.getConfirmTime());
+                break;
+            case FATAL: fatalUnits.incrementAndGet(); break;
         }
         switch (oldStatus) {
             case SUBMITTED: submitted.remove(unit.getSequenceNumber()); break;
@@ -268,7 +304,14 @@ public class OutQueue implements MessageUnitListener, ShortMessageListener {
         }
     }
 
-    public void messageHandled(boolean success, Object tag) {
+    public void messageHandled(ShortTextMessage msg, boolean success, Object tag) {
         mesCount.decrementAndGet();
+        sentTime.addAndGet(msg.getHandledTime());
+        if (success) successMessages.incrementAndGet();
+        else unsuccessMessages.incrementAndGet();
+    }
+
+    private long getCurPeriod() {
+        return System.currentTimeMillis() / config.getMaxMessageUnitsTimeUnit().toMillis(config.getMaxMessageUnitsTimeQuantity());
     }
 }

@@ -149,8 +149,7 @@ public class ConferenceManagerRealTest extends OnesecRavenTestCase {
         manager.setMaxGainCoef(0.0);
         manager.setArchiveScheduler(scheduler);
         assertTrue(manager.start());
-        conference = manager.createConference("test", addToCur(5), addToCur(60*2), 10, null);
-        conference.setRecordConference(Boolean.TRUE);
+        conference = manager.createConference("test", addToCur(5), addToCur(60*2), 10, null, true);
         manager.setLogLevel(LogLevel.TRACE);
         ((BaseNode)conference).setLogLevel(LogLevel.TRACE);
     }

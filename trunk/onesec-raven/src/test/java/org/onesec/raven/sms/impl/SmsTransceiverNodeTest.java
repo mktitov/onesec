@@ -82,9 +82,10 @@ public class SmsTransceiverNodeTest extends OnesecRavenTestCase {
         assertTrue(collector.start());
     }
     
-//    @Test
+    @Test
     public void startTest() throws Exception {
         assertTrue(sender.start());
+        assertNotNull(sender.getAttr("bind").getValue());
         Thread.sleep(1000);
         sender.stop();
     }
@@ -134,7 +135,7 @@ public class SmsTransceiverNodeTest extends OnesecRavenTestCase {
     }
     
     //Must see in th log: "Too many unconfirmed messages. Wating..."
-    @Test
+//    @Test
     public void tooManyUnconfirmedTest() throws Exception {
         sender.setOnceSend(5);
         sender.setMaxUnconfirmed(1);

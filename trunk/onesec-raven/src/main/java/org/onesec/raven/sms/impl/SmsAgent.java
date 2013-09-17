@@ -41,6 +41,7 @@ import org.onesec.raven.sms.SmsConfig;
 import static org.onesec.raven.sms.BindMode.RECEIVER;
 import static org.onesec.raven.sms.BindMode.TRANSMITTER;
 import org.raven.sched.ExecutorService;
+import org.raven.sched.ExecutorServiceException;
 import org.raven.sched.impl.AbstractTask;
 import org.raven.tree.Node;
 import org.raven.tree.impl.LoggerHelper;
@@ -50,7 +51,7 @@ import org.raven.tree.impl.LoggerHelper;
  * @author Mikhail Titov
  */
 public class SmsAgent {
-    private enum Status {INITIALIZING, IN_SERVICE, OUT_OF_SERVICE};
+    public enum Status {INITIALIZING, IN_SERVICE, OUT_OF_SERVICE};
     private final static long QUEUE_WAIT_TIMEOUT = 100;
     private final SmsConfig config;
     private final LoggerHelper logger;
@@ -77,6 +78,10 @@ public class SmsAgent {
         bind();
         executeCheckConnectionTask();
     }
+
+    public Status getStatus() {
+        return status.get();
+    }
     
     public void unbind() {
         changeStatusToOutOfService();
@@ -84,7 +89,7 @@ public class SmsAgent {
     
     public void submit(SubmitSM request) throws Exception {
         try {
-            if (config.getBindMode()== BindMode.RECEIVER) 
+            if (config.getBindMode() == BindMode.RECEIVER) 
                 throw new SmppException("Can't transmitte message in RECEIVER mode");
             request.assignSequenceNumber(true);
             if (logger.isDebugEnabled()) 
@@ -98,8 +103,8 @@ public class SmsAgent {
         }
     }
     
-    private void bind() {
-        executor.executeQuietly(new BindTask(owner));
+    private void bind() throws ExecutorServiceException {
+        executor.execute(new BindTask(owner));
     }
     
     private Session createSession() {

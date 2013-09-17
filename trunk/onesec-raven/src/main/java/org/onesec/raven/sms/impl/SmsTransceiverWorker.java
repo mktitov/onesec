@@ -21,10 +21,9 @@ import com.logica.smpp.pdu.Response;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.onesec.raven.sms.MessageUnit;
 import org.onesec.raven.sms.ShortMessageListener;
+import org.onesec.raven.sms.ShortTextMessage;
 import org.onesec.raven.sms.SmsAgentListener;
 import org.onesec.raven.sms.SmsConfig;
 import org.onesec.raven.sms.SmsMessageEncoder;
@@ -33,22 +32,23 @@ import org.onesec.raven.sms.queue.ShortTextMessageImpl;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.impl.AbstractTask;
 import org.raven.tree.impl.LoggerHelper;
-import org.raven.util.UnsignedLongCounter;
 
 /**
  *
  * @author Mikhail Titov
  */
 public class SmsTransceiverWorker implements ShortMessageListener {
-    private final long CYCLE_PAUSE_INTERVAL = 100;
+    public final static long CYCLE_PAUSE_INTERVAL = 100;
+//    public final static long RESTART_AGENT_ON_ERROR = 30; //secs
+    public final static long SMS_AGENT_BIND_TIMEOUT = 10000; //ms
     /**
      * @see OutQueue.factorQF
      */
-    private final long mesWaitQF = 60 * 1000;
+//    private final long mesWaitQF = 60 * 1000;
     /**
      * @see OutQueue.factorTH
      */
-    private final long mesWaitTH = 60 * 1000;
+//    private final long mesWaitTH = 60 * 1000;
     /**
      * На сколько отложить попытки отправки сообщения при ошибке 14 - QUEUE_FULL (мс). If QUEUE_FULL
      * : waitInterval = mesWaitQF * ( 1+factorQF*attempsCount )
@@ -60,18 +60,19 @@ public class SmsTransceiverWorker implements ShortMessageListener {
      */
     private final int factorTH = 0;
     
+    
     public static final long rebuindInterval = 30000;
     private final SmsConfig config;
     private final ExecutorService executor;
     private final OutQueue queue;
     private final LoggerHelper logger;
     private final SmsMessageEncoder messageEncoder;
-    private final AtomicReference<SmsAgent> agent = new AtomicReference<SmsAgent>();
+//    private final AtomicReference<SmsAgent> agent = new AtomicReference<SmsAgent>();
     private final AtomicReference<MessageProcessor> messageProcessor = new AtomicReference<MessageProcessor>();
     private final SmsTransceiverNode owner;
     private final AtomicBoolean running = new AtomicBoolean();
     private final AtomicBoolean stopped = new AtomicBoolean();
-    private final UnsignedLongCounter messageIds = new UnsignedLongCounter(1);
+    private final AtomicLong suspendProcessorUntil = new AtomicLong();
 
     public SmsTransceiverWorker(SmsTransceiverNode owner, SmsConfig config, ExecutorService executor) 
         throws Exception 
@@ -82,7 +83,24 @@ public class SmsTransceiverWorker implements ShortMessageListener {
         this.logger = new LoggerHelper(owner, "Transceiver. ");
         this.messageEncoder = new SmsMessageEncoderImpl(config, logger);
         this.queue = new OutQueue(config, this.logger);
-        createAgent();
+//        createAgent();
+    }
+    
+    public OutQueue getQueue() {
+        return queue;
+    }
+    
+    public boolean isProcessorActive() {
+        return messageProcessor.get()!=null;
+    }
+    
+    public String getSmsAgentStatus() {
+        MessageProcessor _processor = messageProcessor.get();
+        if (_processor==null) return "NOT_CREATED";
+        else {
+            SmsAgent agent = _processor.agent.get();
+            return agent==null? "NOT_CREATED" : agent.getStatus().toString();
+        }
     }
     
     public boolean addMessage(Long messageId, String message, String dstAddr, Object tag) {
@@ -104,21 +122,21 @@ public class SmsTransceiverWorker implements ShortMessageListener {
         synchronized(stopped) {
             stopped.set(true);
             stopMessageProcessor();
-            stopAgent();
+//            stopAgent();
         }
     }
     
-    private void createAgent() throws Exception {
-        new SmsAgent(config, new AgentListener(), executor, executor, logger);
-    }
-    
     private void startMessageProcessor() {
-        if (!stopped.get() && running.compareAndSet(false, true)) {
+        if (!stopped.get() && !isProcessorSuspended() && running.compareAndSet(false, true)) {
             stopMessageProcessor();
             messageProcessor.set(new MessageProcessor());
             if (!executor.executeQuietly(messageProcessor.get()))
                 running.set(false);
         }
+    }
+    
+    private boolean isProcessorSuspended() {
+        return System.currentTimeMillis() < suspendProcessorUntil.get();
     }
     
     private void startMessageProcessor(long delay) {
@@ -130,10 +148,11 @@ public class SmsTransceiverWorker implements ShortMessageListener {
     }
     
     private void restartMessageProcessor(long delay) {
+        suspendProcessorUntil.set(System.currentTimeMillis()+delay);
         stopMessageProcessor();
         startMessageProcessor(delay);
         if (logger.isInfoEnabled())
-            logger.info(String.format("Message processor stopped on %s secs", delay/1000));
+            logger.info(String.format("Message processor suspended on %s secs", delay/1000));
     }
     
     private void stopMessageProcessor() {
@@ -142,13 +161,7 @@ public class SmsTransceiverWorker implements ShortMessageListener {
             _processor.stop();
     }
     
-    private void stopAgent() {
-        SmsAgent _agent = agent.getAndSet(null);
-        if (_agent!=null)
-            _agent.unbind();
-    }
-
-    public void messageHandled(boolean success, Object tag) {
+    public void messageHandled(ShortTextMessage msg, boolean success, Object tag) {
         if (!stopped.get())
             owner.messageHandled(success, tag);
     }
@@ -156,7 +169,10 @@ public class SmsTransceiverWorker implements ShortMessageListener {
     private class MessageProcessor extends AbstractTask {
         private final AtomicBoolean needStop = new AtomicBoolean();
         private final LoggerHelper logger = new LoggerHelper(SmsTransceiverWorker.this.logger, "Processor. ");
-
+        private final AtomicReference<SmsAgent> agent = new AtomicReference<SmsAgent>();
+        private final AtomicBoolean binding = new AtomicBoolean(false);
+        private final AtomicBoolean unbinding = new AtomicBoolean(false);
+        
         public MessageProcessor() {
             super(owner, "Processing messages");
         }
@@ -199,22 +215,24 @@ public class SmsTransceiverWorker implements ShortMessageListener {
                 }
             } finally {
                 running.compareAndSet(true, false);
+                synchronized(unbinding) {
+                    unbinding.set(true);
+                    SmsAgent _agent = agent.getAndSet(null);
+                    if (_agent != null) {
+                        _agent.unbind();
+                    }
+                }
             }
         }
 
         private boolean trySendMessageUnit() {
-//            if (queue.howManyUnconfirmed() >= config.getMaxUnconfirmed()) {
-//                if (logger.isTraceEnabled())
-//                    logger.trace("Too many unconfirmed messages. Wating...");
-//                return false;
-//            }
             MessageUnit unit = queue.getNext();
             if (unit==null) {
                 if (logger.isTraceEnabled())
                     logger.trace("Queue doesn't have message unit READY to submit. Waiting");
                 return false;
             }
-            SmsAgent _agent = agent.get();
+            SmsAgent _agent = getAgent();
             if (_agent!=null) { 
                 try {
                     _agent.submit(unit.getPdu());
@@ -233,17 +251,68 @@ public class SmsTransceiverWorker implements ShortMessageListener {
                 return false;
             }
         }
+        
+        private SmsAgent getAgent() {
+            if (agent.get()!=null) return agent.get();
+            else {
+                try {
+                    if (binding.compareAndSet(false, true)) {
+                        SmsAgent _agent = new SmsAgent(config, new AgentListener(this), executor, executor, logger);
+                        if (logger.isDebugEnabled())
+                            logger.debug("SmsAgent created. Wating for IN_SERVICE");
+                        synchronized(this) {
+                            wait(SMS_AGENT_BIND_TIMEOUT);
+                        }
+                        if (agent.get()!=null) return agent.get();
+                        else throw new Exception("Bind timeout");
+                    }
+                    return null;
+                } catch (Exception ex) {
+                    if (logger.isErrorEnabled())
+                        logger.error(
+                                String.format("Error creating SMS agent. Will try again via %s seconds"
+                                    , config.getRebindOnTimeoutInterval()/1000)
+                                , ex);
+                    restartMessageProcessor(config.getRebindOnTimeoutInterval());
+                    return null;
+                }
+            }
+        }
+        
+        private void setAgent(SmsAgent agent) {
+            boolean needNotify = false;
+            synchronized(unbinding) {
+                if (unbinding.get()) {
+                    if (agent!=null) agent.unbind();
+                } else {
+                    this.agent.set(agent);
+                    if (agent!=null) needNotify = true;
+                    else {
+                        if (logger.isWarnEnabled())
+                            logger.warn("SMS agent unexpected chaneged state to OUT_OF_SERVICE. "
+                                    + "Restarting processor and sms agent via {} seconds", 
+                                    config.getRebindOnTimeoutInterval()/1000);
+                        restartMessageProcessor(config.getRebindOnTimeoutInterval());
+                    }
+                }
+            }
+            if (needNotify)
+                synchronized(this) {
+                    notify();
+                }
+        }
     }
     
     private class AgentListener implements SmsAgentListener {
         private final AtomicBoolean valid = new AtomicBoolean(true);
+        private final MessageProcessor processor;
+
+        public AgentListener(MessageProcessor processor) {
+            this.processor = processor;
+        }
         
         public void inService(SmsAgent _agent) {
-            synchronized(stopped) {
-                if (stopped.get()) _agent.unbind();
-                else agent.set(_agent);
-                
-            }
+            processor.setAgent(_agent);
         }
 
         public void responseReceived(SmsAgent agent, Response pdu) {
@@ -255,28 +324,26 @@ public class SmsTransceiverWorker implements ShortMessageListener {
                     case Data.ESME_ROK:
                         unit = queue.getMessageUnit(sq);
                         if (unit!=null) unit.confirmed();
-//                        queue.confirmed(sq, time);
                         break;
                     case Data.ESME_RTHROTTLED:
                         if (config.getThrottledDelay() > 0) {
                             restartMessageProcessor(config.getThrottledDelay());
                             unit = queue.getMessageUnit(sq);
-                            if (unit!=null) unit.delay(mesWaitTH * (1 + factorTH * unit.getAttempts()));
-//                            queue.throttled(sq, time);
+                            if (unit!=null) unit.delay(
+                                    config.getMesThrottledDelay() * (1 + factorTH * unit.getAttempts()));
                         }
                         break;
                     case Data.ESME_RMSGQFUL:
                         if (config.getQueueFullDelay() > 0) {
                             restartMessageProcessor(config.getQueueFullDelay());
                             unit = queue.getMessageUnit(sq);
-                            if (unit!=null) unit.delay(mesWaitQF * (1 + factorQF * unit.getAttempts()));
-//                            queue.queueIsFull(sq, time);
+                            if (unit!=null) unit.delay(
+                                    config.getMesQueueFullDelay() * (1 + factorQF * unit.getAttempts()));
                         }
                         break;
                     default:
                         unit = queue.getMessageUnit(sq);
                         if (unit!=null) unit.fatal();
-//                        queue.failed(sq, time);
                 }
             }
         }
@@ -289,21 +356,20 @@ public class SmsTransceiverWorker implements ShortMessageListener {
 
         public void outOfService(SmsAgent _agent) {
             valid.set(false);
-            agent.set(null);
-            stopMessageProcessor();
+            processor.setAgent(null);
         }
     }
     
-    private class TaskRebuindTask extends AbstractTask {
-
-        public TaskRebuindTask() {
-            super(owner, "Agent rebuind task");
-        }
-        
-        @Override
-        public void doRun() throws Exception {
-            if (!stopped.get()) 
-                createAgent();
-        }
-    }
+//    private class TaskRebuindTask extends AbstractTask {
+//
+//        public TaskRebuindTask() {
+//            super(owner, "Agent rebuind task");
+//        }
+//        
+//        @Override
+//        public void doRun() throws Exception {
+//            if (!stopped.get()) 
+//                createAgent();
+//        }
+//    }
 }
