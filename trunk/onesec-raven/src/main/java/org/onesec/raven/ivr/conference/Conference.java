@@ -29,7 +29,7 @@ public interface Conference {
     Date getStartTime();
     Date getEndTime();
     Integer getChannelsCount();
-//    List<Participant> getParticipants();
+    List<Participant> getParticipants();
 //    void addParticipant(Participant participant);
 //    void removeParticipant(Participant participant);
     
