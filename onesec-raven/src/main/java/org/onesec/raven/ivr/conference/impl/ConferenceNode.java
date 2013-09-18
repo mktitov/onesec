@@ -19,9 +19,13 @@ import java.io.File;
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -52,6 +56,7 @@ import org.onesec.raven.ivr.conference.ConferenceMixerSession;
 import org.onesec.raven.ivr.conference.ConferenceRecording;
 import org.onesec.raven.ivr.conference.ConferenceSession;
 import org.onesec.raven.ivr.conference.ConferenceSessionListener;
+import org.onesec.raven.ivr.conference.Participant;
 import org.onesec.raven.ivr.impl.AsyncPushBufferDataSource;
 import org.onesec.raven.ivr.impl.AudioFileWriterDataSource;
 import org.onesec.raven.ivr.impl.IvrUtils;
@@ -63,6 +68,7 @@ import org.raven.sched.impl.AbstractTask;
 import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
 import org.raven.tree.Node;
 import org.raven.tree.impl.BaseNode;
+import org.raven.tree.impl.ChildAttributesValueHandlerFactory;
 import org.raven.tree.impl.LoggerHelper;
 import org.raven.util.NodeUtils;
 import org.weda.annotations.constraints.NotNull;
@@ -98,10 +104,13 @@ public class ConferenceNode extends BaseNode implements Conference {
     @NotNull @Parameter
     private String accessCode;
     
-    @NotNull @Parameter
+    @Parameter(valueHandlerType = ChildAttributesValueHandlerFactory.TYPE)
+    private String period;
+    
+    @NotNull @Parameter(parent = "period")
     private String startTimeStr;
     
-    @NotNull @Parameter
+    @NotNull @Parameter(parent = "period")
     private String endTimeStr;
     
     @NotNull @Parameter
@@ -292,7 +301,26 @@ public class ConferenceNode extends BaseNode implements Conference {
         }
         return controller.getReference();
     }
-    
+
+    public List<Participant> getParticipants() {
+        ConferenceController _controller = controller.getReference();        
+        Set<String> active = null;
+        if (_controller==null) active = Collections.EMPTY_SET;
+        else {
+            active = new HashSet<String>();
+            for (ConferenceSessionImpl session: _controller.sessions.values())
+                active.add(session.participantNode.getName());
+        }  
+        if (participantsNode.getNodesCount()==0) return Collections.EMPTY_LIST;
+        else {
+            List<Participant> parts = new ArrayList<Participant>(participantsNode.getNodesCount());
+            for (ConferenceParticipantNode part: NodeUtils.getChildsOfType(participantsNode, ConferenceParticipantNode.class)) 
+                parts.add(new ParticipantImpl(part.getName(), part.getJoinTime(), part.getDisconnectTime(), 
+                        active.contains(part.getName())));
+            return parts;
+        }
+    }
+
     @Parameter(readOnly = true)
     public Integer getCurrentParticipantsCount() {
         ConferenceController _controller = controller.getReference();
@@ -354,6 +382,14 @@ public class ConferenceNode extends BaseNode implements Conference {
 
     public void setAccessCode(String accessCode) {
         this.accessCode = accessCode;
+    }
+
+    public String getPeriod() {
+        return period;
+    }
+
+    public void setPeriod(String period) {
+        this.period = period;
     }
 
     public String getStartTimeStr() {

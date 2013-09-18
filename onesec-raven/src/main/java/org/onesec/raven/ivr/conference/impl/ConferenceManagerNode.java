@@ -263,7 +263,7 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
 
     public java.util.List<Conference> getConferencesByInitiatorId(String id) {
         ArrayList<Conference> confs = new ArrayList<Conference>();
-        for (Conference conf: NodeUtils.getChildsOfType(plannedNode, Conference.class)) {
+        for (Conference conf: NodeUtils.getChildsOfType(plannedNode, Conference.class, false)) {
             ConferenceInitiator initiator = conf.getConferenceInitiator();
             if (initiator!=null && id.equals(initiator.getInitiatorId()))
                 confs.add(conf);
@@ -272,7 +272,7 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
     }
     
     public java.util.List<Conference> getConferences() {
-        return NodeUtils.getChildsOfType(plannedNode, Conference.class);
+        return NodeUtils.getChildsOfType(plannedNode, Conference.class, false);
     }
 
     public Conference getConferenceById(int id) {

@@ -20,5 +20,8 @@ package org.onesec.raven.ivr.conference;
  * @author Mikhail Titov
  */
 public interface Participant {
-    
+    public String getPhoneNumber();
+    public String getJoinTime();
+    public String getDisconnectTime();
+    public boolean isActive();
 }

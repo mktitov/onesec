@@ -35,7 +35,6 @@ import javax.media.control.PacketSizeControl;
 import javax.media.format.AudioFormat;
 import javax.media.protocol.*;
 import org.onesec.raven.ivr.*;
-import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.ExecutorServiceException;
 import org.raven.sched.impl.AbstractTask;
