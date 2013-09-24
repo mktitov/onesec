@@ -194,13 +194,21 @@ public class ConferenceNode extends BaseNode implements Conference {
     @Override
     protected void doStop() throws Exception {
         super.doStop();
+        ConferenceController _controller = resetControllerReference(null, false);
+        if (_controller!=null)
+            _controller.stop();
+    }
+    
+    private ConferenceController resetControllerReference(final ConferenceController expectedController, 
+            boolean enableCreate) 
+    {
         final ConferenceController _controller;
         synchronized(this) {
-            _controller = controller.getReference();
-            controller.set(null, false);
+            _controller = controller.getReference();            
+            if (expectedController==null || _controller==expectedController)
+                controller.set(null, enableCreate);
         }
-        if (_controller!=null) 
-            _controller.stop();
+        return _controller;
     }
     
     public boolean isActive() {
@@ -280,6 +288,7 @@ public class ConferenceNode extends BaseNode implements Conference {
                     executor.executeQuietly(getEndTime().getTime()-curTime, 
                         new AbstractTask(this, "Stop conference task") {
                             @Override public void doRun() throws Exception {
+                                resetControllerReference(finalController, true);
                                 finalController.stop();
                             }
                         });
@@ -645,7 +654,8 @@ public class ConferenceNode extends BaseNode implements Conference {
         public synchronized void stop() {
             if (stopped.compareAndSet(false, true)) {
                 executor.executeQuietly(new AbstractTask(ConferenceNode.this, "Stopping conference controller") {
-                    @Override public void doRun() throws Exception {
+                    @Override public void doRun() throws Exception {                        
+                        stopMixer();                        
                         Recorder _recorder = recorder.getAndSet(null);
                         if (_recorder!=null)
                             _recorder.stop();
@@ -658,6 +668,19 @@ public class ConferenceNode extends BaseNode implements Conference {
                             logger.debug("Conference controller stopped");
                     }
                 });
+            }
+        }
+        
+        private void stopMixer() {
+            try {
+                try {
+                    mixer.disconnect();
+                } finally {
+                    mixer.stop();
+                }
+            } catch (IOException e) {
+                if (logger.isErrorEnabled())
+                    logger.error("Error while stopping mixer", e);
             }
         }
         
@@ -707,6 +730,7 @@ public class ConferenceNode extends BaseNode implements Conference {
                     if (logger.isDebugEnabled())
                         logger.debug("Stopping recorder because of no participants in conference "
                                 + "more than {} seconds", stopRecorderAfter);
+                    resetControllerReference(ConferenceController.this, true);
                     stop();
                 }
             }
