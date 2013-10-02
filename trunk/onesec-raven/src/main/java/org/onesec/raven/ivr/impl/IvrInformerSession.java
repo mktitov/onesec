@@ -152,15 +152,16 @@ public class IvrInformerSession implements EndpointRequest {
         statusMessage.set(String.format("Calling to the abonent number (%s)", _abonentNumber));
         _abonentNumber = informer.translateNumber(_abonentNumber, rec);
         if (_abonentNumber==null && informer.isLogLevelEnabled(LogLevel.WARN))
-            informer.getLogger().warn("Abonent number translated to NULL");
+            informer.getLogger().warn("Abonent number translated to NULL");        
         abonentNumber = _abonentNumber;
+        String aNumber = informer.substituteANumber(rec, dataContext);
         Map<String, Object> bindings = new HashMap<String, Object>();
         bindings.put(AsyncIvrInformer.RECORD_BINDING, rec);
         bindings.put(AsyncIvrInformer.INFORMER_BINDING, this);
         bindings.put(BindingNames.DATA_CONTEXT_BINDING, dataContext);
         rec.setValue(CALL_START_TIME_FIELD, new Timestamp(System.currentTimeMillis()));
         
-        endpoint.invite(_abonentNumber, inviteTimeout, maxCallDuration, new ConversationListener(), scenario, bindings, null);
+        endpoint.invite(_abonentNumber, inviteTimeout, maxCallDuration, new ConversationListener(), scenario, bindings, aNumber);
     }
 
 //    @Override

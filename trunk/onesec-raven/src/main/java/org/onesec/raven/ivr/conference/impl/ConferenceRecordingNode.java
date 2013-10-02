@@ -15,6 +15,7 @@
  */
 package org.onesec.raven.ivr.conference.impl;
 
+import java.io.File;
 import org.onesec.raven.ivr.conference.ConferenceRecording;
 import org.raven.annotations.Parameter;
 import org.raven.tree.impl.BaseNode;
@@ -72,5 +73,13 @@ public class ConferenceRecordingNode extends BaseNode implements ConferenceRecor
 
     public void setRecordingFile(String recordingFile) {
         this.recordingFile = recordingFile;
+    }
+
+    @Override
+    public synchronized void remove() {
+        super.remove();
+        String file = recordingFile;
+        if (file!=null && !new File(file).delete())
+            logger.error("Error deleting conference recording file ({})", file);
     }
 }

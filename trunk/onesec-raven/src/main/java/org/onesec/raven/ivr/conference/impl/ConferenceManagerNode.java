@@ -57,7 +57,7 @@ import org.raven.tree.Node;
 import org.raven.tree.NodeAttribute;
 import org.raven.tree.TreeException;
 import org.raven.tree.impl.BaseNode;
-import org.raven.tree.impl.ContainerNode;
+import org.raven.tree.impl.GroupNode;
 import org.raven.tree.impl.ResourceReferenceValueHandlerFactory;
 import org.raven.util.NodeUtils;
 import org.weda.annotations.constraints.NotNull;
@@ -113,6 +113,9 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
             defaultValue=Constants.CONFERENCE_STOPPED)
     private AudioFile conferenceStoppedAudio;
     
+    @NotNull @Parameter(defaultValue = "7")
+    private Integer conferenceLifeTime;
+    
     private Lock lock;
     private PlannedConferencesNode plannedNode;
     private ConferencesArchiveNode archiveNode;
@@ -167,13 +170,32 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
         if (!scheduling.compareAndSet(false, true))
             return;
         try {
-            final long curTime = System.currentTimeMillis();
-            for (ConferenceNode conf: NodeUtils.getChildsOfType(plannedNode, ConferenceNode.class))
-                if (conf.getEndTime().getTime()<curTime && !conf.isActive())
-                    archiveConference(conf);
+            archiveConferences();
+            deleteOldConferences();
         } finally {
             scheduling.compareAndSet(true, false);
         }
+    }
+    
+    private void archiveConferences() {
+        logger.debug("Archiving finished conferences");
+        final long curTime = System.currentTimeMillis();
+        for (ConferenceNode conf: NodeUtils.getChildsOfType(plannedNode, ConferenceNode.class, false))
+            if (conf.getEndTime().getTime()<curTime && !conf.isActive())
+                archiveConference(conf);
+    }
+    
+    private void deleteOldConferences() {
+        final boolean debugEnabled = logger.isDebugEnabled();
+        if (debugEnabled)
+            logger.debug("Deleting old archived conferences");
+        long deleteTime = System.currentTimeMillis() - (getConferenceLifeTime()*24*60*60*1000);
+        for (ConferenceNode conf: NodeUtils.getEffectiveChildsOfType(archiveNode, ConferenceNode.class, false)) 
+            if (conf.getEndTime().getTime() < deleteTime) {
+                if (debugEnabled)
+                    logger.debug("Deleting conference: name=({}), path=({})", conf.getConferenceName(), conf.getPath());
+                tree.remove(conf);
+            }
     }
     
     private void archiveConference(ConferenceNode conf) {
@@ -184,6 +206,7 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
         Node container = getOrCreateArchivePath(archiveNode, path, 0);
         try {
             tree.move(conf, container, null);
+            conf.start();
             sendConferenceArchived(conf);
         } catch (TreeException ex) {
             if (isLogLevelEnabled(LogLevel.ERROR))
@@ -203,7 +226,8 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
         else {
             Node child = owner.getNode(path[pos]);
             if (child==null) {
-                child = new ContainerNode(path[pos]);
+                child = new GroupNode();
+                child.setName(path[pos]);
                 owner.addAndSaveChildren(child);
                 child.start();
             }
@@ -262,21 +286,36 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
     }
 
     public java.util.List<Conference> getConferencesByInitiatorId(String id) {
-        ArrayList<Conference> confs = new ArrayList<Conference>();
-        for (Conference conf: NodeUtils.getChildsOfType(plannedNode, Conference.class, false)) {
-            ConferenceInitiator initiator = conf.getConferenceInitiator();
-            if (initiator!=null && id.equals(initiator.getInitiatorId()))
-                confs.add(conf);
-        }
+        ArrayList<Conference> confs = new ArrayList<Conference>(100);
+        extractUserConferences(confs, NodeUtils.getChildsOfType(plannedNode, Conference.class, false), id);
+        extractUserConferences(confs, NodeUtils.getEffectiveChildsOfType(archiveNode, Conference.class, false), id);
         return confs;
     }
     
-    public java.util.List<Conference> getConferences() {
-        return NodeUtils.getChildsOfType(plannedNode, Conference.class, false);
+    private void extractUserConferences(java.util.List<Conference> target, 
+            java.util.List<Conference> source, String userId) 
+    {
+        for (Conference conf: source) {
+            ConferenceInitiator initiator = conf.getConferenceInitiator();
+            if (initiator!=null && userId.equals(initiator.getInitiatorId()))
+                target.add(conf);
+        }        
+        
+    }
+    
+    public java.util.List<Conference> getConferences() {        
+        ArrayList<Conference> conferences = new ArrayList<Conference>(100);
+        conferences.addAll(NodeUtils.getEffectiveChildsOfType(archiveNode, Conference.class, false));
+        conferences.addAll(NodeUtils.getChildsOfType(plannedNode, Conference.class, false));
+        return conferences;
     }
 
-    public Conference getConferenceById(int id) {
-        return (Conference)plannedNode.getNodeById(id);
+    public Conference getConferenceById(int id) {        
+        Conference conference = (Conference)plannedNode.getNodeById(id);
+        if (conference==null) 
+            for (Conference archived: NodeUtils.getEffectiveChildsOfType(archiveNode, Conference.class))
+                if (archived.getId()==id) return archived;
+        return conference;
     }
 
     private void checkConference(String name, Date fromDate, Date toDate, int channelCount, Conference skipConf) 
@@ -520,6 +559,14 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
         this.timeQuant = timeQuant;
     }
 
+    public Integer getConferenceLifeTime() {
+        return conferenceLifeTime;
+    }
+
+    public void setConferenceLifeTime(Integer conferenceLifeTime) {
+        this.conferenceLifeTime = conferenceLifeTime;
+    }
+
     private void checkDates(Date fromDate, Date toDate) throws ConferenceException {
         final Date curDate = new Date();
         if (!fromDate.before(toDate)) 
@@ -591,7 +638,7 @@ public class ConferenceManagerNode extends BaseNode implements ConferenceManager
             }
         });
     }
-    
+
     private interface Task<T>{}
     
     private interface Tell extends Task {
