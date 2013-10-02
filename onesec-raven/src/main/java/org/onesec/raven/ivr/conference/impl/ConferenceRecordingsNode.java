@@ -45,7 +45,7 @@ public class ConferenceRecordingsNode extends BaseNode implements Viewable {
                 new FileViewableObject(new File(attr.getValue()), node) : attr.getValue();
         }
     };
-
+    
     public ConferenceRecordingsNode() {
         super(NAME);
     }
@@ -57,7 +57,7 @@ public class ConferenceRecordingsNode extends BaseNode implements Viewable {
     public List<ViewableObject> getViewableObjects(Map<String, NodeAttribute> refreshAttributes) 
             throws Exception 
     {
-        return Arrays.asList((ViewableObject)new ChildsAsTableViewableObject(this, attrs, attrs, VISUALIZER));
+        return Arrays.asList((ViewableObject)new ChildsAsTableViewableObject(this, attrs, attrs, VISUALIZER, null));
     }
 
     public Boolean getAutoRefresh() {

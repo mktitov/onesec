@@ -16,9 +16,11 @@
 package org.onesec.raven.ivr.conference.impl;
 
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import org.onesec.raven.ivr.conference.Conference;
 import org.raven.annotations.NodeClass;
 import org.raven.tree.NodeAttribute;
 import org.raven.tree.Viewable;
@@ -41,6 +43,12 @@ public class PlannedConferencesNode extends ContainerNode implements Viewable {
     private final static String[] attrs = new String[]{CONFERENCE_NAME_ATTR, CONFERENCE_INITIATOR_ID_ATTR, 
         CONFERENCE_INITIATOR_NAME_ATTR, START_TIME_STR_ATTR, END_TIME_STR_ATTR, CHANNELS_COUNT_ATTR, 
         RECORD_CONFERENCE_ATTR, CURRENT_PARTICIPANTS_COUNT, REGISTERED_PARTICIPANTS_COUNT};
+    
+    private final static Comparator<Node> startTimeComparator = new Comparator<Node>() {
+        public int compare(Node o1, Node o2) {
+            return ((Conference)o2).getStartTime().compareTo(((Conference)o1).getStartTime());
+        }
+    };
     
     private final static AttributeValueVisualizer visualizer = new AttributeValueVisualizer() {
         public Object visualize(Node node, NodeAttribute attr) {
@@ -66,7 +74,8 @@ public class PlannedConferencesNode extends ContainerNode implements Viewable {
     public List<ViewableObject> getViewableObjects(Map<String, NodeAttribute> refreshAttributes) 
             throws Exception 
     {
-        return Arrays.asList((ViewableObject)new ChildsAsTableViewableObject(this, attrs, attrs, visualizer));
+        return Arrays.asList((ViewableObject)new ChildsAsTableViewableObject(
+                this, attrs, attrs, visualizer, startTimeComparator));
     }
 
     public Boolean getAutoRefresh() {

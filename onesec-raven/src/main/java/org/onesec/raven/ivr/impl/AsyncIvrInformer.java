@@ -65,6 +65,7 @@ import org.weda.annotations.constraints.NotNull;
 import org.weda.beans.ObjectUtils;
 import org.weda.internal.annotations.Message;
 import static org.onesec.raven.ivr.impl.IvrInformerRecordSchemaNode.*;
+import org.raven.BindingNames;
 import org.raven.sched.impl.AbstractTask;
 
 /**
@@ -135,6 +136,12 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
 
     @NotNull @Parameter(defaultValue="false")
     private Boolean useNumberTranslation;
+
+    @Parameter(valueHandlerType=ScriptAttributeValueHandlerFactory.TYPE)
+    private String aNumberSubstitution;
+
+    @NotNull @Parameter(defaultValue="false")
+    private Boolean useANumberSubstitution;
 
     @NotNull @Parameter(defaultValue="10")
     private Integer priority;
@@ -482,6 +489,22 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         this.useNumberTranslation = useNumberTranslation;
     }
 
+    public String getaNumberSubstitution() {
+        return aNumberSubstitution;
+    }
+
+    public void setaNumberSubstitution(String aNumberSubstitution) {
+        this.aNumberSubstitution = aNumberSubstitution;
+    }
+
+    public Boolean getUseANumberSubstitution() {
+        return useANumberSubstitution;
+    }
+
+    public void setUseANumberSubstitution(Boolean useANumberSubstitution) {
+        this.useANumberSubstitution = useANumberSubstitution;
+    }
+
     public Integer getPriority() {
         return priority;
     }
@@ -818,8 +841,7 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         ++informedAbonents;
     }
 
-    String translateNumber(String number, Record record)
-    {
+    String translateNumber(String number, Record record) {
         if (!useNumberTranslation)
             return number;
         try {
@@ -832,5 +854,21 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         } finally {
             bindingSupport.reset();
         }
+    }
+    
+    String substituteANumber(Record record, DataContext context) throws RecordException {
+        if (!useANumberSubstitution)
+            return null;
+        try {
+            bindingSupport.put(BindingNames.DATA_CONTEXT_BINDING, context);
+            bindingSupport.put(RECORD_BINDING, record);
+            String aNumber = aNumberSubstitution;
+            if (isLogLevelEnabled(LogLevel.DEBUG))
+                debug("Using ({}) as A number to inform: {}", aNumber, record.getValue(ABONENT_NUMBER_FIELD));
+            return aNumber;
+        } finally {
+            bindingSupport.reset();
+        }
+        
     }
 }
