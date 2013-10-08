@@ -102,5 +102,9 @@ public class OnesecRavenModule
         String vmail = "IVR/VMail/";
         conf.add(new ResourceDescriptorImpl(base, vmail+"Recording scenario.xml"));
         conf.add(new ResourceDescriptorImpl(base, vmail+"Listening scenario.xml"));
+        String conference = "IVR/Conference/";
+        conf.add(new ResourceDescriptorImpl(base, conference+"Conference.xml"));
+        conf.add(new ResourceDescriptorImpl(base, conference+"Conference HTTP API.xml"));
+        
     }
 }
