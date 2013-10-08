@@ -30,5 +30,9 @@ public class OnesecRavenModuleTest extends OnesecRavenTestCase {
         assertNotNull(vmailTemplates);
         assertNotNull(vmailTemplates.getNode("Recording scenario"));
         assertNotNull(vmailTemplates.getNode("Listening scenario"));
+        Node conferenceTemplates = tree.getRootNode().getNodeByPath("Templates/IVR/Conference");
+        assertNotNull(conferenceTemplates);
+        assertNotNull(conferenceTemplates.getNode("Conference"));
+        assertNotNull(conferenceTemplates.getNode("Conference HTTP API"));
     }
 }
