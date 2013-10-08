@@ -66,13 +66,12 @@ import org.weda.beans.ObjectUtils;
 import org.weda.internal.annotations.Message;
 import static org.onesec.raven.ivr.impl.IvrInformerRecordSchemaNode.*;
 import org.raven.BindingNames;
-import org.raven.sched.impl.AbstractTask;
 
 /**
  *
  * @author Mikhail Titov
  */
-@NodeClass(childNodes=TimeWindowNode.class)
+@NodeClass(childNodes=InformerTimeWindow.class)
 public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsumer, Viewable, Schedulable
 {
     public static final String ERROR_NO_FREE_ENDPOINT_IN_THE_POOL = "ERROR_NO_FREE_ENDPOINT_IN_THE_POOL";
@@ -161,24 +160,17 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
     private BindingSupportImpl bindingSupport;
 
 
-    @Message
-    private static String informAllowedMessage;
-    @Message
-    private static String statusMessageTitle;
-    @Message
-    private static String informedAbonentsMessage;
-    @Message
-    private static String successfullyInformedAbonentsMessage;
-    @Message
-    private static String statMessage;
-    @Message
-    private static String sessionsMessage;
-    @Message
-    private static String terminalMessage;
-    @Message
-    private static String terminalStatusMessage;
-    @Message
-    private static String callDurationMessage;
+    @Message private static String informAllowedMessage;
+    @Message private static String defaultMaxSessionsMessage;
+    @Message private static String currentMaxSessionsMessage;
+    @Message private static String statusMessageTitle;
+    @Message private static String informedAbonentsMessage;
+    @Message private static String successfullyInformedAbonentsMessage;
+    @Message private static String statMessage;
+    @Message private static String sessionsMessage;
+    @Message private static String terminalMessage;
+    @Message private static String terminalStatusMessage;
+    @Message private static String callDurationMessage;
 
     @Override
     protected void initFields()
@@ -222,7 +214,14 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         informerStatus.set(IvrInformerStatus.WAITING);
         informAllowed.set(true);
     }
-
+    
+//    private void initTimeWindowNodes() {
+//        for (TimeWindowNode window: NodeUtils.getChildsOfType(this, TimeWindowNode.class, false))
+//            if (window.getAttr("maxSessionsCount")==null) {
+//                NodeAttributeImpl attr = new NodeAttributeImpl("maxSessionsCount", Integer.class, null, null);
+//            }
+//    }
+//
     public void executeScheduledJob(Scheduler scheduler)
     {
         if (!Status.STARTED.equals(getStatus()))
@@ -524,14 +523,17 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         }
     }
 
-    public Collection<NodeAttribute> generateAttributes()
-    {
+    public Collection<NodeAttribute> generateAttributes() {
         return null;
     }
 
     public void setData(DataSource dataSource, Object data, DataContext context)
     {
-        if (!Status.STARTED.equals(getStatus()) || !informAllowed.get() || !TimeWindowHelper.isCurrentDateInPeriod(this))
+        if (!Status.STARTED.equals(getStatus()) || !informAllowed.get())
+            return;
+        
+        TimeWindowNode timeWindow = TimeWindowHelper.getTimeWindowForCurrentDate(this);
+        if (timeWindow==null)
             return;
         
         if (data!=null && !(data instanceof Record))
@@ -543,6 +545,8 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         try {
             if (dataLock.writeLock().tryLock(2, TimeUnit.SECONDS)) {
                 try {
+                    bindingSupport.put(RECORD_BINDING, rec);
+                    bindingSupport.put(BindingNames.DATA_CONTEXT_BINDING, context);
                     List<Record> recordsChain = null;
                     if (rec!=null) {
                         String _groupField = groupField;
@@ -568,13 +572,14 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
                         try{
                             for (Record record: recordsChain)
                                 initFields(record);
-                            createSession(recordsChain, context);
+                            createSession(recordsChain, context, calcMaxSessionsCount(timeWindow));
                         } finally{
                             recordsChain = null;
                         }
                     }
                 } finally {
                     dataLock.writeLock().unlock();
+                    bindingSupport.reset();
                 }
             }
         } catch (Exception ex) {
@@ -588,6 +593,14 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
     {
         super.formExpressionBindings(bindings);
         bindingSupport.addTo(bindings);
+    }
+    
+    private int calcMaxSessionsCount(TimeWindowNode window) {
+        NodeAttribute attr = window.getAttr("maxSessionsCount");
+        Integer count = null;
+        if (attr!=null && Integer.class.equals(attr.getType())) 
+            count = attr.getRealValue();
+        return count==null? maxSessionsCount : count;
     }
     
     String getRecordInfo(Record rec)
@@ -632,10 +645,12 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         List<ViewableObject> voList = new ArrayList<ViewableObject>(5);
 
         TableImpl statTable = new TableImpl(new String[]{
-            informAllowedMessage, statusMessageTitle, informedAbonentsMessage, successfullyInformedAbonentsMessage});
+            informAllowedMessage, defaultMaxSessionsMessage, currentMaxSessionsMessage, 
+            informedAbonentsMessage, successfullyInformedAbonentsMessage, statusMessageTitle});
+        TimeWindowNode window = TimeWindowHelper.getTimeWindowForCurrentDate(this);
         statTable.addRow(new Object[]{
-            getInformAllowed()&&TimeWindowHelper.isCurrentDateInPeriod(this),
-            statusMessage, informedAbonents, successfullyInformedAbonents});
+            getInformAllowed() && window!=null, maxSessionsCount, calcMaxSessionsCount(window),
+            informedAbonents, successfullyInformedAbonents, statusMessage});
         
         voList.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, "<b>"+statMessage+"</b>:"));
         voList.add(new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, statTable));
@@ -757,7 +772,7 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         return false;
     }
 
-    private IvrInformerSession createSession(List<Record> records, DataContext context) throws Exception
+    private IvrInformerSession createSession(List<Record> records, DataContext context, int maxSessions) throws Exception
     {
         boolean alreadyInforming = false;
         for (Record record: records) {
@@ -774,7 +789,7 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
             return null;
         }
         
-        if (sessions.size()>=maxSessionsCount && !waitForSession) {
+        if (sessions.size()>=maxSessions && !waitForSession) {
             for (Record record: records) {
                 record.setValue(COMPLETION_CODE_FIELD, ERROR_TOO_MANY_SESSIONS);
                 sendRecordToConsumers(record, context);
@@ -782,7 +797,7 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
             return null;
         }
 
-        if (sessions.size()>=maxSessionsCount)
+        if (sessions.size()>=maxSessions)
             sessionRemoved.await();
 
         if (!informAllowed.get())
@@ -869,6 +884,5 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         } finally {
             bindingSupport.reset();
         }
-        
     }
 }

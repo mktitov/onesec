@@ -50,6 +50,7 @@ public class OutQueue implements MessageUnitListener, ShortMessageListener {
     
 //    private final Map<Integer, MessageUnit> sended = new ConcurrentHashMap<Integer, MessageUnit>();
     private final Map<Integer, MessageUnit> submitted = new ConcurrentHashMap<Integer, MessageUnit>();
+    private final Map<Integer, MessageUnit> delivered = new ConcurrentHashMap<Integer, MessageUnit>();
     private final ConcurrentHashMap<String, Long> blockedNums = new ConcurrentHashMap<String, Long>();
 //    private final LinkedBlockingQueue<MessageUnit> queue = new LinkedBlockingQueue<MessageUnit>();
     private final Queue<MessageUnit> queue = new ConcurrentLinkedQueue<MessageUnit>();
