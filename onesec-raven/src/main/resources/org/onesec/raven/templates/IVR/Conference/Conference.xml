@@ -46,7 +46,7 @@
               <value><![CDATA[/"Resources"/"IVR"/"sounds"/"conference"/"male"/"greeting"/]]></value>
             </attribute>
           </node>
-          <node name="get conference id & access code" class="org.onesec.raven.ivr.impl.IvrConversationScenarioPointNode">
+          <node name="get conference id and access code" class="org.onesec.raven.ivr.impl.IvrConversationScenarioPointNode">
             <attribute name="logLevel">
               <value><![CDATA[WARN]]></value>
             </attribute>
@@ -54,11 +54,11 @@
               <value><![CDATA[*1234567890]]></value>
             </attribute>
             <node name="get id" class="org.onesec.raven.ivr.actions.CollectDtmfsActionNode">
-              <attribute name="bindingScope">
-                <value><![CDATA[CONVERSATION]]></value>
-              </attribute>
               <attribute name="dtmfsBindingName">
                 <value><![CDATA[conferenceIdDtmfs]]></value>
+              </attribute>
+              <attribute name="bindingScope">
+                <value><![CDATA[CONVERSATION]]></value>
               </attribute>
               <attribute name="logLevel">
                 <value><![CDATA[WARN]]></value>
@@ -95,11 +95,11 @@
                   <value></value>
                 </attribute>
                 <node name="get access code" class="org.onesec.raven.ivr.actions.CollectDtmfsActionNode">
-                  <attribute name="bindingScope">
-                    <value><![CDATA[CONVERSATION]]></value>
-                  </attribute>
                   <attribute name="dtmfsBindingName">
                     <value><![CDATA[conferenceAccessCodeDtmfs]]></value>
+                  </attribute>
+                  <attribute name="bindingScope">
+                    <value><![CDATA[CONVERSATION]]></value>
                   </attribute>
                   <attribute name="logLevel">
                     <value><![CDATA[WARN]]></value>
@@ -266,11 +266,11 @@
               <attribute name="autoConnect">
                 <value><![CDATA[false]]></value>
               </attribute>
-              <attribute name="autoUnmute">
-                <value><![CDATA[true]]></value>
-              </attribute>
               <attribute name="conferenceManager" valueHandler="NodeReference">
                 <value><![CDATA[../../../Conference manager]]></value>
+              </attribute>
+              <attribute name="autoUnmute">
+                <value><![CDATA[true]]></value>
               </attribute>
               <attribute name="accessCode" valueHandler="Script">
                 <value><![CDATA[conferenceAccessCode]]></value>
@@ -382,7 +382,7 @@
                     <value><![CDATA[WARN]]></value>
                   </attribute>
                   <attribute name="conversationPoint" valueHandler="NodeReference">
-                    <value><![CDATA[../../../../get conference id & access code]]></value>
+                    <value><![CDATA[../../../../"get conference id and access code"/]]></value>
                   </attribute>
                 </node>
               </node>
@@ -483,41 +483,6 @@
             <attribute name="logLevel">
               <value><![CDATA[WARN]]></value>
             </attribute>
-            <node name="2013" class="org.raven.tree.impl.GroupNode">
-              <attribute name="logLevel">
-                <value><![CDATA[WARN]]></value>
-              </attribute>
-              <node name="09" class="org.raven.tree.impl.GroupNode">
-                <attribute name="logLevel">
-                  <value><![CDATA[WARN]]></value>
-                </attribute>
-                <node name="17" class="org.raven.tree.impl.GroupNode">
-                  <attribute name="logLevel">
-                    <value><![CDATA[WARN]]></value>
-                  </attribute>
-                </node>
-                <node name="21" class="org.raven.tree.impl.GroupNode">
-                  <attribute name="logLevel">
-                    <value><![CDATA[WARN]]></value>
-                  </attribute>
-                </node>
-                <node name="18" class="org.raven.tree.impl.GroupNode">
-                  <attribute name="logLevel">
-                    <value><![CDATA[WARN]]></value>
-                  </attribute>
-                </node>
-                <node name="24" class="org.raven.tree.impl.GroupNode">
-                  <attribute name="logLevel">
-                    <value><![CDATA[WARN]]></value>
-                  </attribute>
-                </node>
-                <node name="26" class="org.raven.tree.impl.GroupNode">
-                  <attribute name="logLevel">
-                    <value><![CDATA[WARN]]></value>
-                  </attribute>
-                </node>
-              </node>
-            </node>
           </node>
           <node name="Planned" class="org.onesec.raven.ivr.conference.impl.PlannedConferencesNode">
             <attribute name="logLevel">
