@@ -50,6 +50,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.telephony.Address;
@@ -124,7 +125,9 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
     private boolean termAddressInService = false;
     Provider provider;
 
-    private final Map<Call, ConvHolder> calls = new HashMap<Call, ConvHolder>();
+//    private final Map<Call, ConvHolder> calls = new HashMap<Call, ConvHolder>();
+    private final Map<Call, ConvHolder> calls = new ConcurrentHashMap<Call, ConvHolder>();
+//    private final AtomicInteger activeCalls = new AtomicInteger();
     private final Map<Integer, ConvHolder> connIds = new HashMap<Integer, ConvHolder>();
     private final Set<Call> transferCalls = new ConcurrentSkipListSet<Call>();
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
@@ -216,6 +219,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                     throw new Exception("Can't invite oppenent to conversation. Terminal not ready");
                 if (calls.size()>=maxChannels)
                     throw new Exception("Can't invite oppenent to conversation. Too many opened channels");
+//                activeCalls.incrementAndGet();
                 call = provider.createCall();
                 conv = new IvrEndpointConversationImpl(term, this, executor, scenario
                         , rtpStreamManager, enableIncomingRtp, address, bindings);
@@ -242,6 +246,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
             else if (maxCallDur>0)
                 executor.execute(maxCallDur*1000, new MaxCallDurationHandler(conv, call));
         } catch (Throwable e) {
+//            activeCalls.decrementAndGet();
             if (logger.isWarnEnabled()) 
                 logger.warn(ccmExLog(String.format("Problem with inviting abonent with number (%s)", opponentNum), e), e);
             final IvrEndpointConversationStoppedEvent ev = new IvrEndpointConversationStoppedEventImpl(
@@ -320,12 +325,12 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
     }
     
     public int getActiveCallsCount() {
-        lock.readLock().lock();
-        try {
+//        lock.readLock().lock();
+//        try {
             return Math.max(calls.size(), getTerminalCallsCount());
-        } finally {
-            lock.readLock().unlock();
-        }
+//        } finally {
+//            lock.readLock().unlock();
+//        }
     }
     
     private int getTerminalCallsCount() {

@@ -77,6 +77,8 @@ public class SmsTransceiverNode extends AbstractSafeDataPipe {
     private String systemId;
     @NotNull @Parameter(parent = "smscBindAttributes")
     private String password;
+    @NotNull @Parameter(parent = "smscBindAttributes")
+    private String systemType;
     @NotNull @Parameter(defaultValue = "1", parent = "smscBindAttributes")
     private Byte dstTon;
     @NotNull @Parameter(defaultValue = "1", parent = "smscBindAttributes")
@@ -563,6 +565,14 @@ public class SmsTransceiverNode extends AbstractSafeDataPipe {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getSystemType() {
+        return systemType;
+    }
+
+    public void setSystemType(String systemType) {
+        this.systemType = systemType;
     }
 
     public Integer getMaxMessagesInQueue() {

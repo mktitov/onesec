@@ -60,6 +60,7 @@ public class SmsConfigImpl implements SmsConfig {
     private final int maxUnconfirmed;
     private final String systemId;
     private final String password;
+    private final String systemType;
     private final int maxMessagesInQueue;
     private final int mesLifeTime;
     private final int maxSubmitAttempts;
@@ -101,6 +102,7 @@ public class SmsConfigImpl implements SmsConfig {
         maxUnconfirmed = node.getMaxUnconfirmed();
         systemId = node.getSystemId();
         password = node.getPassword();
+        systemType = node.getSystemType();
         srcAddr = new Address(node.getSrcTon(), node.getSrcNpi(), fromAddr);
         serveAddr = new AddressRange(node.getBindTon(), node.getBindNpi(), node.getAddrRange());
         maxMessagesInQueue = node.getMaxMessagesInQueue();
@@ -201,7 +203,7 @@ public class SmsConfigImpl implements SmsConfig {
     }
 
     public String getSystemType() {
-        return "";
+        return systemType;
     }
 
     public String getServiceType() {
