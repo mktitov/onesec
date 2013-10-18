@@ -43,6 +43,7 @@ public class SayAmountAction extends AbstractSayWordsAction
     protected List<List> formWords(IvrEndpointConversation conversation) {
         actionNode.getBindingSupport().enableScriptExecution();
         try {
+            actionNode.getBindingSupport().putAll(conversation.getConversationScenarioState().getBindings());
             return Arrays.asList((List)NumberToDigitConverter.getCurrencyDigits(actionNode.getAmount()));
         } finally {
             actionNode.getBindingSupport().reset();
