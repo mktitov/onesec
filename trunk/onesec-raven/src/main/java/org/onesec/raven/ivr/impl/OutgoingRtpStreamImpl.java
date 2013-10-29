@@ -29,7 +29,9 @@ import org.onesec.raven.ivr.AudioStream;
 import org.onesec.raven.ivr.OutgoingRtpStream;
 import org.onesec.raven.ivr.RTPManagerService;
 import org.onesec.raven.ivr.RtpStreamException;
+import org.onesec.raven.rtp.RtpManagerConfigurator;
 import org.raven.log.LogLevel;
+import org.raven.tree.impl.LoggerHelper;
 import org.weda.internal.annotations.Service;
 
 /**
@@ -46,9 +48,9 @@ public class OutgoingRtpStreamImpl extends AbstractRtpStream implements Outgoing
     private SendStream sendStream;
     private SessionAddress destAddress;
 
-    public OutgoingRtpStreamImpl(InetAddress address, int portNumber)
+    public OutgoingRtpStreamImpl(InetAddress address, int portNumber, RtpManagerConfigurator configurator)
     {
-        super(address, portNumber, "Outgoing RTP");
+        super(address, portNumber, "Outgoing RTP", configurator);
     }
 
     public long getHandledBytes()
@@ -61,10 +63,8 @@ public class OutgoingRtpStreamImpl extends AbstractRtpStream implements Outgoing
         return 0;
     }
 
-    public void open(String remoteHost, int remotePort, AudioStream audioStream) throws RtpStreamException
-    {
-        try
-        {
+    public void open(String remoteHost, int remotePort, AudioStream audioStream) throws RtpStreamException {
+        try {
             this.remoteHost = remoteHost;
             this.remotePort = remotePort;
             if (owner.isLogLevelEnabled(LogLevel.DEBUG))
@@ -72,10 +72,12 @@ public class OutgoingRtpStreamImpl extends AbstractRtpStream implements Outgoing
                         "Trying to open outgoing RTP stream to the remote host (%s) using port (%s)"
                         , remoteHost, remotePort));
             this.audioStream = audioStream;
-            destAddress = new SessionAddress(InetAddress.getByName(remoteHost), remotePort);
-            rtpManager = rtpManagerService.createRtpManager();
-            rtpManager.initialize(new SessionAddress(address, port));
-            rtpManager.addTarget(destAddress);
+            rtpManager = rtpManagerConfigurator.configureOutboundManager(
+                    address, port, InetAddress.getByName(remoteHost), remotePort, new LoggerHelper(owner, logMess("")));
+//            destAddress = new SessionAddress(InetAddress.getByName(remoteHost), remotePort);
+//            rtpManager = rtpManagerService.createRtpManager();
+//            rtpManager.initialize(new SessionAddress(address, port));
+//            rtpManager.addTarget(destAddress);
 //            Listener listener = new Listener();
 //            rtpManager.addReceiveStreamListener(listener);
 //            rtpManager.addRemoteListener(listener);
@@ -90,9 +92,7 @@ public class OutgoingRtpStreamImpl extends AbstractRtpStream implements Outgoing
                 owner.getLogger().debug(logMess(
                         "RTP stream was successfully opened to the remote host (%s) using port (%s)"
                         , remoteHost, remotePort));
-        }
-        catch(Exception e)
-        {
+        } catch(Exception e) {
             throw new RtpStreamException(
                     String.format(
                         "Outgoing RTP. Error opening RTP stream to remote host (%s) using port (%s)"
@@ -116,10 +116,11 @@ public class OutgoingRtpStreamImpl extends AbstractRtpStream implements Outgoing
                 } finally {
                     sendStream.close();
                 }
-            }finally{
-                rtpManager.removeTarget(destAddress, "disconnected");
+            } finally {
+//                rtpManager.removeTarget(destAddress, "disconnected");
+                rtpManager.removeTargets("disconnected");
             }
-        }finally{
+        } finally {
             rtpManager.dispose();
         }
         

@@ -44,7 +44,9 @@ import org.onesec.raven.ivr.IncomingRtpStream;
 import org.onesec.raven.ivr.IncomingRtpStreamDataSourceListener;
 import org.onesec.raven.ivr.RTPManagerService;
 import org.onesec.raven.ivr.RtpStreamException;
+import org.onesec.raven.rtp.RtpManagerConfigurator;
 import org.raven.log.LogLevel;
+import org.raven.tree.impl.LoggerHelper;
 import org.weda.internal.annotations.Service;
 
 /**
@@ -73,9 +75,9 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
     private Lock lock;
     private Status status;
 
-    public IncomingRtpStreamImpl(InetAddress address, int port)
+    public IncomingRtpStreamImpl(InetAddress address, int port, RtpManagerConfigurator configurator)
     {
-        super(address, port, "Incoming RTP");
+        super(address, port, "Incoming RTP", configurator);
         
         status = Status.INITIALIZING;
         consumers = new LinkedList<Consumer>();
@@ -96,8 +98,8 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
     @Override
     public void doRelease() throws Exception
     {
-        try{
-            try{
+        try {
+            try {
                 try {
                     if (sourceCloneBuilder!=null)
                         sourceCloneBuilder.close();
@@ -106,7 +108,7 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
                         for (Consumer consumer: consumers)
                             consumer.fireStreamClosingEvent();
                 }
-            }finally{
+            } finally {
                 if (rtpManager!=null) {
                     GlobalReceptionStats stats = rtpManager.getGlobalReceptionStats();
                     incHandledBytesBy(stats.getBytesRecd());
@@ -114,31 +116,35 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
                     rtpManager.removeTargets("Disconnected");
                 }
             }
-        }finally{
+        } finally {
             if (rtpManager!=null)
                 rtpManager.dispose();
         }
     }
 
-    public void open(String remoteHost) throws RtpStreamException
-    {
-        try
-        {
+    public void open(String remoteHost) throws RtpStreamException {
+        open(remoteHost, SessionAddress.ANY_PORT);
+    }
+    
+    public void open(String remoteHost, int remotePort) throws RtpStreamException {
+        try {
             this.remoteHost = remoteHost;
             if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                 owner.getLogger().debug(logMess(
                         "Trying to open incoming RTP stream from the remote host (%s)"
                         , remoteHost));
-
-            rtpManager = rtpManagerService.createRtpManager();
+            rtpManager = rtpManagerConfigurator.configureInboundManager(
+                    address, port, InetAddress.getByName(remoteHost), remotePort,
+                    new LoggerHelper(owner, logMess("")));
             rtpManager.addReceiveStreamListener(this);
-            rtpManager.initialize(new SessionAddress(address, port));
-            InetAddress dest = InetAddress.getByName(remoteHost);
-            destAddress = new SessionAddress(dest, SessionAddress.ANY_PORT);
-            rtpManager.addTarget(destAddress);
-        }
-        catch(Exception e)
-        {
+            
+//            rtpManager = rtpManagerService.createRtpManager();
+//            rtpManager.addReceiveStreamListener(this);
+//            rtpManager.initialize(new SessionAddress(address, port));
+//            InetAddress dest = InetAddress.getByName(remoteHost);
+//            destAddress = new SessionAddress(dest, SessionAddress.ANY_PORT);
+//            rtpManager.addTarget(destAddress);
+        } catch(Exception e) {
             throw new RtpStreamException(logMess(
                         "Error creating receiver for RTP stream from remote host (%s)"
                         , remoteHost)
@@ -194,7 +200,7 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
             } else if (event instanceof RemotePayloadChangeEvent) {
                 RemotePayloadChangeEvent payloadEvent = (RemotePayloadChangeEvent) event;
                 if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                owner.getLogger().debug(logMess("Payload changed to %d", payloadEvent.getNewPayload()));
+                    owner.getLogger().debug(logMess("Payload changed to %d", payloadEvent.getNewPayload()));
                 if (payloadEvent.getNewPayload()<19) {
                     if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                         owner.getLogger().debug("Trying to handle received stream");

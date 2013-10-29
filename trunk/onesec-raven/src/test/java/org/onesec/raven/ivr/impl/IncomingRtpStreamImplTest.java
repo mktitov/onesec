@@ -19,9 +19,13 @@ package org.onesec.raven.ivr.impl;
 
 import org.onesec.raven.ivr.BufferCache;
 import java.io.IOException;
+import javax.media.Buffer;
+import javax.media.protocol.BufferTransferHandler;
 import org.onesec.raven.JMFHelper;
 import javax.media.protocol.DataSource;
 import javax.media.protocol.FileTypeDescriptor;
+import javax.media.protocol.PushBufferDataSource;
+import javax.media.protocol.PushBufferStream;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -49,11 +53,11 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         Thread.sleep(500);
     }
 
-    @Test
+//    @Test
     public void sendOverRtpTest() throws Exception
     {
-        OperationState state = sendOverRtp(
-                "target/test.wav", Codec.G711_MU_LAW, "10.50.1.85", 1234);
+        OperationState state = sendOverRtp("target/test.wav", Codec.G711_MU_LAW, 
+                getInterfaceAddress().getHostAddress(), 1234);
         state.join();
         Thread.sleep(5000);
     }
@@ -95,22 +99,35 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         Thread.sleep(20000);
         irtp.release();
     }
-
+    
 //    @Test
-    public void oneListenerTest() throws Exception
-    {
+    public void oneListenerTest() throws Exception {
         IncomingRtpStream irtp = manager.getIncomingRtpStream(manager);
         String address = getInterfaceAddress().getHostAddress();
         irtp.open(address);
         DataSourceListener fileWriter = new DataSourceListener("target/recorded.wav");
         irtp.addDataSourceListener(fileWriter, null);
         OperationState sendControl = sendOverRtp(
-                "src/test/wav/test.wav", Codec.G729, address, irtp.getPort());
+                "src/test/wav/test.wav", Codec.G711_MU_LAW, address, irtp.getPort());
         sendControl.join();
         irtp.release();
     }
 
 //    @Test
+    public void netty_oneListenerTest() throws Exception {
+        switchToNettyRtpManagerConfigurator();
+        IncomingRtpStream irtp = manager.getIncomingRtpStream(manager);
+        String address = getInterfaceAddress().getHostAddress();
+        irtp.open(address);
+        DataSourceListener fileWriter = new DataSourceListener("target/netty_recorded.wav");
+        irtp.addDataSourceListener(fileWriter, null);
+        OperationState sendControl = sendOverRtp(
+                "src/test/wav/test.wav", Codec.G711_MU_LAW, address, irtp.getPort());
+        sendControl.join();
+        irtp.release();
+    }
+
+    @Test
     public void tenListenerTest() throws Exception
     {
         IncomingRtpStream irtp = manager.getIncomingRtpStream(manager);
@@ -119,7 +136,7 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         //creating 5 listeners before rtp starts
         int i=0;
         for (;i<5;++i){
-            DataSourceListener fileWriter = new DataSourceListener("target/recorded_"+i+".wav");
+            DataSourceListener2 fileWriter = new DataSourceListener2("target/recorded_"+i+".wav");
             irtp.addDataSourceListener(fileWriter, null);
         }
         OperationState sendControl = sendOverRtp(
@@ -128,6 +145,30 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         for (;i<10;++i){
 //            Thread.sleep(100);
             DataSourceListener fileWriter = new DataSourceListener("target/recorded_"+i+".wav");
+            irtp.addDataSourceListener(fileWriter, null);
+        }
+        sendControl.join();
+        irtp.release();
+    }
+
+//    @Test
+    public void netty_tenListenerTest() throws Exception
+    {
+        IncomingRtpStream irtp = manager.getIncomingRtpStream(manager);
+        String address = getInterfaceAddress().getHostAddress();
+        irtp.open(address);
+        //creating 5 listeners before rtp starts
+        int i=0;
+        for (;i<5;++i){
+            DataSourceListener fileWriter = new DataSourceListener("target/netty_recorded_"+i+".wav");
+            irtp.addDataSourceListener(fileWriter, null);
+        }
+        OperationState sendControl = sendOverRtp(
+                "src/test/wav/test.wav", Codec.G711_MU_LAW, address, irtp.getPort());
+        //creating 5 listeners after rtp starts
+        for (;i<10;++i){
+//            Thread.sleep(100);
+            DataSourceListener fileWriter = new DataSourceListener("target/netty_recorded_"+i+".wav");
             irtp.addDataSourceListener(fileWriter, null);
         }
         sendControl.join();
@@ -180,6 +221,51 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         public void streamClosing(IncomingRtpStream stream) {
             if (writeControl!=null)
                 writeControl.stop();
+        }
+    }
+
+    private class DataSourceListener2 implements IncomingRtpStreamDataSourceListener, BufferTransferHandler
+    {
+        private final String filename;
+        private final Buffer buf;
+        private JMFHelper.OperationController writeControl;
+
+        public DataSourceListener2(String filename) {
+            this.filename = filename;
+            this.writeControl = null;
+            this.buf = new Buffer();
+            buf.setData(new byte[2048]);
+        }
+
+        public void dataSourceCreated(IncomingRtpStream stream, DataSource dataSource) {
+            logger.debug("Received dataSourceCreated event.");
+            if (dataSource!=null)
+                try {
+                    logger.debug("Counting packets");
+                    ((PushBufferDataSource)dataSource).getStreams()[0].setTransferHandler(this);
+                } catch (Exception ex) {
+                    logger.error("Error writing to file ({})", filename, ex);
+                }
+
+        }
+
+        public void streamClosing(IncomingRtpStream stream) {
+//            if (writeControl!=null)
+//                writeControl.stop();
+        }
+
+        public void transferData(PushBufferStream stream) {
+            try {
+                try {
+                    stream.read(buf);
+                    logger.debug("!!! Bytes readed from stream: "+buf.getLength());
+                } finally {
+                    buf.setOffset(0);
+                    buf.setLength(0);
+                }
+            } catch (IOException ex) {
+                logger.error("Error reading from RTP stream", ex);
+            }
         }
     }
 

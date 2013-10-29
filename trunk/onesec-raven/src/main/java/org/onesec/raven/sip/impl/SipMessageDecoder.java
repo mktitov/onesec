@@ -17,8 +17,9 @@ package org.onesec.raven.sip.impl;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.MessageList;
+//import io.netty.channel.MessageList;
 import io.netty.handler.codec.ReplayingDecoder;
+import java.util.List;
 import org.onesec.raven.net.sip.SipMessage;
 
 /**
@@ -28,8 +29,13 @@ import org.onesec.raven.net.sip.SipMessage;
 public class SipMessageDecoder extends ReplayingDecoder<SipMessage>{
 
     @Override
-    protected void decode(ChannelHandlerContext chc, ByteBuf bb, MessageList<Object> ml) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
+
+//    @Override
+//    protected void decode(ChannelHandlerContext chc, ByteBuf bb, MessageList<Object> ml) throws Exception {
+//        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+//    }
     
 }
