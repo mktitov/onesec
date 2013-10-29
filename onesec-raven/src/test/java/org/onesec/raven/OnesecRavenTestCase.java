@@ -51,8 +51,10 @@ public class OnesecRavenTestCase extends RavenCoreTestCase
                 while (it.hasMoreElements()) {
                     InetAddress addr = it.nextElement();
                     if (addr instanceof Inet4Address) {
-                        System.out.println("\n@@@ Interface address is: "+addr.getHostAddress()+"\n");
-                        System.out.println("\n@@@ Interface hostname is: "+addr.getHostName()+"\n");
+                        System.out.println("\n@@@ Interface address is: "+addr.getHostAddress());
+                        System.out.println("@@@ Interface hostname is: "+addr.getHostName());
+                        System.out.println("@@@ Interface is virtual: "+nif.isVirtual());
+                        System.out.println("@@@ Interface is PtP: "+nif.isPointToPoint()+"\n");
                         return addr;
                     }
                 } 

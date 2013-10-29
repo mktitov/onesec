@@ -25,6 +25,8 @@ import org.onesec.raven.ivr.impl.ConcatDataSource;
 import org.onesec.raven.ivr.impl.RtpAddressNode;
 import org.onesec.raven.ivr.impl.RtpStreamManagerNode;
 import org.onesec.raven.ivr.impl.TestInputStreamSource;
+import org.onesec.raven.net.impl.NettyNioEventLoopGroupNode;
+import org.onesec.raven.rtp.NettyRtpManagerConfigurator;
 import org.raven.log.LogLevel;
 import org.raven.sched.impl.ExecutorServiceNode;
 import org.raven.tree.impl.LoggerHelper;
@@ -44,12 +46,13 @@ public class RtpManagerTestCase extends OnesecRavenTestCase
     protected ExecutorServiceNode executor;
     protected InetAddress localAddress;
     protected CodecManager codecManager;
+    protected NettyNioEventLoopGroupNode nettyGroup;
+    protected NettyRtpManagerConfigurator nettyRtpConfigurator;
 
     /**
      * Here you cat init you nodes. This method executes after rtp manager node and executor nodes.
      */
-    public void initNodes()
-    {
+    public void initNodes() throws Exception {
     }
 
     @Before
@@ -58,7 +61,7 @@ public class RtpManagerTestCase extends OnesecRavenTestCase
         codecManager = registry.getService(CodecManager.class);
         manager = new RtpStreamManagerNode();
         manager.setName("rtp manager");
-        tree.getRootNode().addAndSaveChildren(manager);
+        testsNode.addAndSaveChildren(manager);
         manager.setLogLevel(LogLevel.DEBUG);
         manager.setMaxStreamCount(10);
 
@@ -68,15 +71,31 @@ public class RtpManagerTestCase extends OnesecRavenTestCase
 
         executor = new ExecutorServiceNode();
         executor.setName("executor");
-        tree.getRootNode().addAndSaveChildren(executor);
+        testsNode.addAndSaveChildren(executor);
         executor.setCorePoolSize(20);
         executor.setMaximumPoolSize(20);
         assertTrue(executor.start());
-
+        
+        nettyGroup = new NettyNioEventLoopGroupNode();
+        nettyGroup.setName("netty event loop group");
+        testsNode.addAndSaveChildren(nettyGroup);
+        nettyGroup.setThreadsCount(4);
+        assertTrue(nettyGroup.start());
+        
+        nettyRtpConfigurator = new NettyRtpManagerConfigurator();
+        nettyRtpConfigurator.setName("Netty RTP manager configurator");
+        testsNode.addAndSaveChildren(nettyRtpConfigurator);
+        nettyRtpConfigurator.setEventLoopGroupProvider(nettyGroup);
+        assertTrue(nettyRtpConfigurator.start());
+        
         initNodes();
     }
+    
+    protected void switchToNettyRtpManagerConfigurator() {
+        manager.setRtpManagerConfigurator(nettyRtpConfigurator);
+    }
 
-        protected OperationState sendOverRtp(String filename, Codec codec, final String host, final int port)
+    protected OperationState sendOverRtp(String filename, Codec codec, final String host, final int port)
             throws Exception
     {
         logger.debug("Sending RTP stream to the ({}:{}) ", host, port);

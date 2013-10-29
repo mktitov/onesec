@@ -37,6 +37,7 @@ import javax.media.rtp.rtcp.SourceDescription;
 import org.junit.Before;
 import org.junit.Test;
 import org.onesec.raven.OnesecRavenTestCase;
+import org.onesec.raven.RtpManagerTestCase;
 import org.onesec.raven.ivr.*;
 import org.raven.sched.impl.ExecutorServiceNode;
 import org.raven.tree.impl.LoggerHelper;
@@ -45,33 +46,35 @@ import org.raven.tree.impl.LoggerHelper;
  *
  * @author Mikhail Titov
  */
-public class OutgoingRtpStreamImplTest extends OnesecRavenTestCase implements ReceiveStreamListener, SessionListener
+public class OutgoingRtpStreamImplTest 
+    extends RtpManagerTestCase 
+    implements ReceiveStreamListener, SessionListener
 {
-    private RtpStreamManagerNode manager;
-    private ExecutorServiceNode executor;
-    private AudioStream audioStream;
-    private InetAddress localAddress;
-    private CodecManager codecManager;
+//    private RtpStreamManagerNode manager;
+//    private ExecutorServiceNode executor;
+//    private AudioStream audioStream;
+//    private InetAddress localAddress;
+//    private CodecManager codecManager;
 
-    @Before
-    public void prepare() throws Exception
-    {
-        codecManager = registry.getService(CodecManager.class);
-        manager = new RtpStreamManagerNode();
-        manager.setName("rtp manager");
-        tree.getRootNode().addAndSaveChildren(manager);
-        manager.setMaxStreamCount(10);
-
-        localAddress  = getInterfaceAddress();
-        RtpAddressNode address1 = createAddress(localAddress.getHostAddress(), 3000);
-        assertTrue(manager.start());
-
-        executor = new ExecutorServiceNode();
-        executor.setName("executor");
-        tree.getRootNode().addAndSaveChildren(executor);
-        assertTrue(executor.start());
-
-    }
+//    @Before
+//    public void prepare() throws Exception
+//    {
+//        codecManager = registry.getService(CodecManager.class);
+//        manager = new RtpStreamManagerNode();
+//        manager.setName("rtp manager");
+//        tree.getRootNode().addAndSaveChildren(manager);
+//        manager.setMaxStreamCount(10);
+//
+//        localAddress  = getInterfaceAddress();
+//        RtpAddressNode address1 = createAddress(localAddress.getHostAddress(), 3000);
+//        assertTrue(manager.start());
+//
+//        executor = new ExecutorServiceNode();
+//        executor.setName("executor");
+//        tree.getRootNode().addAndSaveChildren(executor);
+//        assertTrue(executor.start());
+//
+//    }
 
     @Test
     public void test() throws Exception
@@ -111,17 +114,17 @@ public class OutgoingRtpStreamImplTest extends OnesecRavenTestCase implements Re
         assertEquals(new Integer(0), manager.getStreamsCount());
     }
 
-    private RtpAddressNode createAddress(String ip, int startingPort)
-    {
-        RtpAddressNode addr = new RtpAddressNode();
-        addr.setName(ip);
-        manager.addAndSaveChildren(addr);
-        addr.setStartingPort(startingPort);
-        assertTrue(addr.start());
-
-        return addr;
-    }
-
+//    private RtpAddressNode createAddress(String ip, int startingPort)
+//    {
+//        RtpAddressNode addr = new RtpAddressNode();
+//        addr.setName(ip);
+//        manager.addAndSaveChildren(addr);
+//        addr.setStartingPort(startingPort);
+//        assertTrue(addr.start());
+//
+//        return addr;
+//    }
+//
     private void createRtpSessionManager(int port, int port2) throws Exception
     {
         RTPSessionMgr manager = new RTPSessionMgr();

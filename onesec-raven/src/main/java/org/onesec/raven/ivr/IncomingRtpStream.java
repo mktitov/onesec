@@ -32,6 +32,7 @@ public interface IncomingRtpStream extends RtpStream
      * @throws RtpStreamException
      */
     public void open(String remoteHost) throws RtpStreamException;
+    public void open(String remoteHost, int remotePort) throws RtpStreamException;
     /**
      * Returns <b>true</b> if listener was successfully added or <b>false</b> if incoming rtp stream
      * is already closed.
