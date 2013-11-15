@@ -130,8 +130,8 @@ public class OutQueue implements MessageUnitListener, ShortMessageListener {
     public boolean addMessage(ShortTextMessage sm) {
         if (mesCount.incrementAndGet() > config.getMaxMessagesInQueue()) {
             mesCount.decrementAndGet();
-            if (logger.isWarnEnabled())
-                logger.warn("Can't queue message. Queue is FULL");
+            if (logger.isDebugEnabled())
+                logger.debug("Can't queue message. Queue is FULL");
             return false;
         } else {
             totalMessages.incrementAndGet();
@@ -174,6 +174,8 @@ public class OutQueue implements MessageUnitListener, ShortMessageListener {
         if (submitted.size()>=config.getMaxUnconfirmed()) {
             if (logger.isTraceEnabled())
                 logger.trace("Can't provide message unit. Too many unconfirmed message units");
+            for (MessageUnit unit: submitted.values())
+                unit.checkStatus();
             return false;
         }
         if (config.getMaxMessageUnitsPerTimeUnit()<=0)
