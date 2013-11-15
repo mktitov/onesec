@@ -77,7 +77,7 @@ public class SmsTransceiverNode extends AbstractSafeDataPipe {
     private String systemId;
     @NotNull @Parameter(parent = "smscBindAttributes")
     private String password;
-    @NotNull @Parameter(parent = "smscBindAttributes")
+    @Parameter(parent = "smscBindAttributes")
     private String systemType;
     @NotNull @Parameter(defaultValue = "1", parent = "smscBindAttributes")
     private Byte dstTon;

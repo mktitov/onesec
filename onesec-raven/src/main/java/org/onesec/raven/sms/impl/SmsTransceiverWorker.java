@@ -38,7 +38,7 @@ import org.raven.tree.impl.LoggerHelper;
  * @author Mikhail Titov
  */
 public class SmsTransceiverWorker implements ShortMessageListener {
-    public final static long CYCLE_PAUSE_INTERVAL = 100;
+    public final static long CYCLE_PAUSE_INTERVAL = 50;
 //    public final static long RESTART_AGENT_ON_ERROR = 30; //secs
     public final static long SMS_AGENT_BIND_TIMEOUT = 10000; //ms
     /**
@@ -326,20 +326,26 @@ public class SmsTransceiverWorker implements ShortMessageListener {
                         if (unit!=null) unit.confirmed();
                         break;
                     case Data.ESME_RTHROTTLED:
-                        if (config.getThrottledDelay() > 0) {
-                            restartMessageProcessor(config.getThrottledDelay());
+                        if (logger.isWarnEnabled())
+                            logger.warn("Received THROTTLED event from SMSC");
+                        if (config.getMesThrottledDelay()>0) {
                             unit = queue.getMessageUnit(sq);
-                            if (unit!=null) unit.delay(
-                                    config.getMesThrottledDelay() * (1 + factorTH * unit.getAttempts()));
+                            if (unit!=null) 
+                                unit.delay(config.getMesThrottledDelay() * (1 + factorTH * unit.getAttempts()));
                         }
+                        if (config.getThrottledDelay() > 0) 
+                            restartMessageProcessor(config.getThrottledDelay());
                         break;
                     case Data.ESME_RMSGQFUL:
-                        if (config.getQueueFullDelay() > 0) {
-                            restartMessageProcessor(config.getQueueFullDelay());
+                        if (logger.isWarnEnabled())
+                            logger.warn("Received QUEUE_FULL event from SMSC");
+                        if (config.getMesQueueFullDelay() > 0) {
                             unit = queue.getMessageUnit(sq);
-                            if (unit!=null) unit.delay(
-                                    config.getMesQueueFullDelay() * (1 + factorQF * unit.getAttempts()));
+                            if (unit!=null) 
+                                unit.delay(config.getMesQueueFullDelay() * (1 + factorQF * unit.getAttempts()));
                         }
+                        if (config.getQueueFullDelay() > 0) 
+                            restartMessageProcessor(config.getQueueFullDelay());
                         break;
                     default:
                         unit = queue.getMessageUnit(sq);

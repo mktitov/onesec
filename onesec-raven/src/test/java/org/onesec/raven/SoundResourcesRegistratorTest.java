@@ -28,15 +28,16 @@ import org.raven.tree.ResourceManager;
  */
 public class SoundResourcesRegistratorTest extends OnesecRavenTestCase implements Constants {
     
-//    @Test
+    @Test
     public void test() throws Exception {
         ResourceManager resourceManager = registry.getService(ResourceManager.class);
         assertNotNull(resourceManager);
         checkRes(resourceManager, "/hello", "hello_ru.wav");
         checkRes(resourceManager, "/numbers/female/1", "1_ru.wav");
+        checkRes(resourceManager, "/numbers/male2/1", "1_ru.wav");
     }
     
-    @Test
+//    @Test
     public void numbersResourceTest() throws Exception {
         ResourceManager resourceManager = registry.getService(ResourceManager.class);
         Node resource = resourceManager.getResource(NUMBERS_FEMALE_RESOURCE, null);
