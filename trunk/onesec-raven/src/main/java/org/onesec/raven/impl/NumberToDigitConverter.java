@@ -134,9 +134,9 @@ public class NumberToDigitConverter {
             if (i>0 && !nums.isEmpty()) {
                 int num = Integer.parseInt(nums.get(nums.size()-1));
                 modifyGenus(nums, ORDER_GENUS[i]);
-                if (num==1) digits.add(0, ORDER_NAMES[i][0]);
+                if (num==1)     digits.add(0, ORDER_NAMES[i][0]);
                 else if (num<5) digits.add(0, ORDER_NAMES[i][1]);
-                else digits.add(0, ORDER_NAMES[i][2]);
+                else            digits.add(0, ORDER_NAMES[i][2]);
             }
             if (i==0 && !nums.isEmpty()) modifyGenus(nums, genus);
             digits.addAll(0, nums);

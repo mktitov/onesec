@@ -25,8 +25,7 @@ import org.raven.tree.Node;
  *
  * @author Mikhail Titov
  */
-public interface AudioFile extends Node, Cacheable
-{
+public interface AudioFile extends Node, Cacheable {
     public DataFile getAudioFile();
     public BindingSupport getBindingSupport();
 }

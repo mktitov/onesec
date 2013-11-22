@@ -24,13 +24,12 @@ import org.onesec.raven.ivr.IvrActionNode;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
-import org.raven.expr.BindingSupport;
 import org.raven.expr.impl.BindingSupportImpl;
 import org.raven.tree.Node;
 import org.raven.tree.ResourceManager;
 import org.raven.tree.impl.BaseNode;
-import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
 import org.raven.tree.impl.ResourceReferenceValueHandlerFactory;
+import org.raven.util.NodeUtils;
 import org.weda.annotations.constraints.NotNull;
 import org.weda.internal.annotations.Service;
 
@@ -52,7 +51,7 @@ public class SayAmountActionNode extends BaseNode implements IvrActionNode
     @Parameter
     private Double amount;
 
-    @Parameter(defaultValue="10") @NotNull
+    @NotNull @Parameter(defaultValue="0")
     private Integer pauseBetweenWords;
     
     private BindingSupportImpl bindingSupport;
@@ -69,6 +68,11 @@ public class SayAmountActionNode extends BaseNode implements IvrActionNode
         bindingSupport.addTo(bindings);
     }
 
+    public IvrAction createAction() {
+        return new SayAmountAction(this, NodeUtils.getAttrValuesByPrefixAndType(this, "numbersNode", Node.class), 
+                pauseBetweenWords, resourceManager);
+    }
+    
     BindingSupportImpl getBindingSupport() {
         return bindingSupport;
     }
@@ -93,18 +97,11 @@ public class SayAmountActionNode extends BaseNode implements IvrActionNode
         this.numbersNode = numbersNode;
     }
 
-    public Double getAmount()
-    {
+    public Double getAmount() {
         return amount;
     }
 
-    public void setAmount(Double amount)
-    {
+    public void setAmount(Double amount) {
         this.amount = amount;
-    }
-
-    public IvrAction createAction()
-    {
-        return new SayAmountAction(this, numbersNode, pauseBetweenWords, resourceManager);
     }
 }

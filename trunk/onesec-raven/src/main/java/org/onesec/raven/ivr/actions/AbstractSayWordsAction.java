@@ -17,9 +17,11 @@
 
 package org.onesec.raven.ivr.actions;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.impl.AudioFileNode;
 import org.onesec.raven.ivr.impl.IvrUtils;
@@ -70,7 +72,7 @@ public abstract class AbstractSayWordsAction extends AsyncAction
         if (words==null || words.isEmpty())
             return;
         int i=0;
-        AudioFileNode[] audioSources = new AudioFileNode[words.size()];
+        AudioFile[] audioSources = new AudioFileNode[words.size()];
         for (Object word: words) {
             AudioFileNode audio = null;
             if (word instanceof AudioFileNode)
@@ -90,11 +92,17 @@ public abstract class AbstractSayWordsAction extends AsyncAction
             audioSources[i++] = audio;
         }
 
-        for (AudioFileNode audioFile: audioSources) {
-            IvrUtils.playAudioInAction(this, conversation, audioFile);
-            if (hasCancelRequest())
-                return;
-            TimeUnit.MILLISECONDS.sleep(pauseBetweenWords);
+        if (pauseBetweenWords>0) {
+            for (AudioFile audioFile: audioSources) {
+                IvrUtils.playAudioInAction(this, conversation, audioFile);
+                if (hasCancelRequest())
+                    return;
+                TimeUnit.MILLISECONDS.sleep(pauseBetweenWords);
+            }
+        } else {
+            conversation.getAudioStream().playContinuously(Arrays.asList(audioSources), Math.abs(pauseBetweenWords));
+            while (conversation.getAudioStream().isPlaying())
+                Thread.sleep(5);
         }
     }
     

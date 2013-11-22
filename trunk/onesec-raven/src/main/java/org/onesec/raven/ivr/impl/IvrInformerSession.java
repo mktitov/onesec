@@ -164,24 +164,6 @@ public class IvrInformerSession implements EndpointRequest {
         endpoint.invite(_abonentNumber, inviteTimeout, maxCallDuration, new ConversationListener(), scenario, bindings, aNumber);
     }
 
-//    @Override
-//    public void conversationStopped(IvrEndpointConversationStoppedEvent event) {
-//        super.conversationStopped(event);
-//        try {
-//            Record rec = getCurrentRec();
-//            boolean groupInformed = handleConversationResult(rec, getCdr());
-//            informer.sendRecordToConsumers(rec, dataContext);
-//            if (!groupInformed)
-//                inform(getNextRec());
-//            else 
-//                skipRestRec(getNextRec());
-//        } catch (Throwable ex) {
-//            if (informer.isLogLevelEnabled(LogLevel.ERROR))
-//                informer.getLogger().error("Error informing abonent.", ex);
-//            closeSession(false);
-//        }
-//    }
-    
     private void skipRestRec(Record rec) {
         if (rec==null || !informer.getInformAllowed()) {
             closeSession(rec==null);
@@ -264,11 +246,7 @@ public class IvrInformerSession implements EndpointRequest {
     private void closeSession(boolean success) {
         if (!active.compareAndSet(true, false))
             return;
-//        for (Record rec: records)
-//            informer.sendRecordToConsumers(rec, dataContext);
         informer.incInformedAbonents();
-//        if (success)
-//            informer.incSuccessfullyInformedAbonents();
         informer.removeSession(this);
     }
     
