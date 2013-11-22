@@ -48,6 +48,10 @@ public abstract class AbstractActionNode extends BaseNode implements IvrActionNo
             bindingSupport.reset();
         }
     }
+
+    public BindingSupportImpl getBindingSupport() {
+        return bindingSupport;
+    }
     
     protected abstract IvrAction doCreateAction();
 }

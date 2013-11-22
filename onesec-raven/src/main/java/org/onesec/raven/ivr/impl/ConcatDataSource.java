@@ -21,7 +21,10 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -45,8 +48,7 @@ import org.raven.tree.impl.LoggerHelper;
  *
  * @author Mikhail Titov
  */
-public class ConcatDataSource extends PushBufferDataSource implements AudioStream
-{
+public class ConcatDataSource extends PushBufferDataSource implements AudioStream {
     public static final int SOURCE_WAIT_TIMEOUT = 100;
     public static final int WAIT_STATE_TIMEOUT = 2000;
 
@@ -99,11 +101,11 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
     }
 
     public void addSource(DataSource source) {
-        replaceSourceProcessor(new SourceProcessor(source));
+        replaceSourceProcessor(new SourceProcessorImpl(source));
     }
 
     public void addSource(String key, long checksum, DataSource source) {
-        replaceSourceProcessor(new SourceProcessor(source, key, checksum));
+        replaceSourceProcessor(new SourceProcessorImpl(source, key, checksum));
     }
 
     public void addSource(InputStreamSource source) {
@@ -114,6 +116,10 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
     public void addSource(String key, long checksum, InputStreamSource source) {
         if (source!=null)
             addSource(key, checksum, new ContainerParserDataSource(codecManager, source, contentType));
+    }
+
+    public void playContinuously(List<AudioFile> files, long trimPeriod) {
+        replaceSourceProcessor(new PlayContinuousSourceProcessor(files, trimPeriod));
     }
 
     private SourceProcessor replaceSourceProcessor(final SourceProcessor newSourceProcessor)
@@ -243,8 +249,244 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
     long getPacketSizeInMillis() {
         return packetSizeInMillis;
     }
+    
+    private PushBufferDataSource prepareSource(DataSource source) {
+        PushBufferDataSource res;
+        if (source instanceof PullDataSource)
+            source = new ContainerParserDataSource(codecManager, source);
+        if (source instanceof PullBufferDataSource)
+            res = new PullToPushConverterDataSource((PullBufferDataSource)source, executorService, owner);
+        else 
+            res = (PushBufferDataSource) source;
+        return res;
+    }
+    
+    interface SourceProcessor {
+        public void start();
+        public void stop();
+        public void close();
+        public boolean isProcessing();
+        public boolean isRealTime();
+    }
+    
+    class PlayContinuousSourceProcessor implements SourceProcessor {
+        private final List<AudioFile> audioFiles;
+        private final long trimPeriod;
+        
+        private final Map<AudioFile, Buffer[]> filesBuffers = new ConcurrentHashMap<AudioFile, Buffer[]>();
+        private final AtomicBoolean stopProcessing = new AtomicBoolean();
+        private final LoggerHelper logger;
 
-    class SourceProcessor implements BufferTransferHandler {
+        public PlayContinuousSourceProcessor(List<AudioFile> audioFiles, long trimPeriod) {
+            this.audioFiles = audioFiles;
+            this.trimPeriod = trimPeriod;
+            this.logger = new LoggerHelper(ConcatDataSource.this.logger, "Cont. play processor. ");
+        }
+
+        public boolean isRealTime() {
+            return false;
+        }
+
+        public void start() {
+            if (logger.isDebugEnabled())
+                logger.debug("Processing started");
+            tryApplyBuffersFromCache();
+        }
+        
+        public void stop() {
+            stopProcessing.set(true);
+        }
+
+        public void close() {
+        }
+
+        public boolean isProcessing() {
+            return !stopProcessing.get();
+        }
+        
+        public void tryApplyBuffersFromCache() {
+            if (stopProcessing.get())
+                return;
+            try {
+                final long ts = System.currentTimeMillis();
+                int i = 0;
+                final int size = audioFiles.size();
+                Buffer[] cachedBuffers;
+                for (AudioFile file: audioFiles) {
+                    ++i;
+                    if (!filesBuffers.containsKey(file)) {
+                        String cacheKey = getKey(file, size==i);
+                        cachedBuffers = getFromCache(cacheKey, file);
+                        if (cachedBuffers==null) {
+                            new BuffersCacher(file, cacheKey, i==size? 0 : trimPeriod, this, logger).start();
+                            return;
+                        } else {
+                            if (logger.isDebugEnabled())
+                                logger.debug("Found buffers for audio file key ({}) in the buffers cache", cacheKey);
+                            filesBuffers.put(file, cachedBuffers);
+                        }
+                    }
+                }
+                if (logger.isDebugEnabled())
+                    logger.debug("Initialization time (cache time): {}ms", System.currentTimeMillis()-ts);
+                for (AudioFile file: audioFiles)
+                    buffers.addAll(Arrays.asList(filesBuffers.get(file)));
+                if (logger.isDebugEnabled())
+                    logger.debug("All audio file buffers added to stream for playing", System.currentTimeMillis()-ts);
+                stopProcessing.set(true);
+            } catch (Throwable e) {
+                stopProcessing.set(true);
+                if (logger.isErrorEnabled())
+                    logger.error("Error processing audio files for continouos playing", e);
+            }
+        }
+        
+        private void buffersCached(AudioFile file, Buffer[] buffers) {
+            if (!stopProcessing.get()) {
+                filesBuffers.put(file, buffers);            
+                tryApplyBuffersFromCache();
+            }
+        }
+        
+        private Buffer[] getFromCache(String key, AudioFile file) {
+            return bufferCache.getCachedBuffers(key, file.getCacheChecksum(), codec, rtpPacketSize);
+        }
+        
+        private String getKey(AudioFile file, boolean lastFile) {
+            return file.getPath() + (trimPeriod==0 || lastFile? "" : trimPeriod);
+        }
+    }
+    
+    private class BuffersCacher implements BufferTransferHandler {
+        private final AudioFile audioFile;
+        private final String cacheKey;
+        private final long trimPeriod;
+        private final PlayContinuousSourceProcessor processor;
+        private final LoggerHelper logger;
+        
+        private final TranscoderDataSource transcoder;
+        private final LinkedList<Buffer> cachedBuffers = new LinkedList<Buffer>();
+        private final AtomicBoolean stopProcessing = new AtomicBoolean();
+        private final Buffer[] fileBuffers;
+
+        public BuffersCacher(AudioFile audioFile, String cacheKey, long trimPeriod, 
+                PlayContinuousSourceProcessor processor, LoggerHelper logger) throws Exception 
+        {
+            this.audioFile = audioFile;
+            this.cacheKey = cacheKey;
+            this.trimPeriod = trimPeriod;
+            this.processor = processor;
+            this.logger = new LoggerHelper(logger, "Cacher. ");
+            
+            fileBuffers = audioFile.isCacheable()?
+                    bufferCache.getCachedBuffers(audioFile.getCacheKey(), audioFile.getCacheChecksum(), 
+                        codec, rtpPacketSize)
+                    : null;
+            if (fileBuffers==null) {
+                AudioFileInputStreamSource source = new AudioFileInputStreamSource(audioFile, owner);
+                ContainerParserDataSource sourceContainer = new ContainerParserDataSource(codecManager, source, contentType);
+                transcoder = new TranscoderDataSource(codecManager, prepareSource(sourceContainer), format, logger);
+            } else 
+                transcoder = null;
+//            start();
+        }
+        
+        public void start() throws Exception {
+            if (fileBuffers!=null) {
+                stopProcessing.set(true);
+                List<Buffer> bufsList = Arrays.asList(fileBuffers);
+                if (trimPeriod>0) {
+                    bufsList = bufsList.subList(0, fileBuffers.length-(int)(trimPeriod/packetSizeInMillis));
+                    bufferCache.cacheBuffers(cacheKey, audioFile.getCacheChecksum(), codec, rtpPacketSize, bufsList);
+                    Buffer[] bufs = bufferCache.getCachedBuffers(cacheKey, audioFile.getCacheChecksum(), codec, rtpPacketSize);
+                    processor.buffersCached(audioFile, bufs);
+                } else
+                    processor.buffersCached(audioFile, fileBuffers);
+            } else {
+                //start transcoding
+                transcoder.connect();
+                PacketSizeControl packetSizeControl =
+                        (PacketSizeControl) transcoder.getControl(PacketSizeControl.class.getName());
+                if (packetSizeControl != null) {
+                    if (logger.isDebugEnabled())
+                        logger.debug("Found packet control so setting up packet size for encoder");
+                    packetSizeControl.setPacketSize(rtpPacketSize);
+                }
+                transcoder.getStreams()[0].setTransferHandler(this);
+                transcoder.start();
+            }
+        }
+        
+        public void close() {
+            if (stopProcessing.compareAndSet(false, true)) {
+                try {
+                    if (transcoder!=null) {
+                        transcoder.stop();
+                        transcoder.disconnect();
+                    }
+                } catch (Exception e) {
+                    if (logger.isErrorEnabled())
+                        logger.error("Error stopping source processor", e);
+                }
+            }
+        }
+
+        public void transferData(PushBufferStream stream) {
+            try {
+                if (stopProcessing.get())
+                    return;
+                Buffer buffer = new Buffer();
+                stream.read(buffer);
+                if (buffer.isDiscard())
+                    return;
+                boolean theEnd = false;
+                if (buffer.isEOM()) {
+                    buffer.setEOM(false);
+                    close();
+                    theEnd = true;
+                }
+                cachedBuffers.add(buffer);
+                if (theEnd)
+                    cacheBuffersAndInformProcessor();
+                ++bufferCount;
+            } catch (Exception e) {
+                if (logger.isErrorEnabled())
+                    logger.error("Error reading buffer from source", e);
+                close();
+            }
+        }
+
+        private void cacheBuffersAndInformProcessor() {
+            try {
+                if (logger.isDebugEnabled())
+                    logger.debug("Loaded buffers for ({}), trimPeriod ({})", cacheKey, trimPeriod);
+                Buffer[] bufs;
+                if (audioFile.isCacheable()) {
+                    if (logger.isDebugEnabled())
+                        logger.debug("Caching audio file ({})", audioFile.getCacheKey());
+                    bufferCache.cacheBuffers(audioFile.getCacheKey(), audioFile.getCacheChecksum(), codec, 
+                            rtpPacketSize, cachedBuffers);
+                    if (trimPeriod>0) {
+                        if (logger.isDebugEnabled())
+                            logger.debug("Caching trimed audio file data ({})", cacheKey);
+                        for (int i=0; i<=trimPeriod/packetSizeInMillis; ++i)
+                            cachedBuffers.removeLast();
+                        bufferCache.cacheBuffers(cacheKey, audioFile.getCacheChecksum(), codec, rtpPacketSize, 
+                                cachedBuffers);
+                    }
+                    bufs = bufferCache.getCachedBuffers(cacheKey, audioFile.getCacheChecksum(), codec, rtpPacketSize);
+                } else {
+                    bufs = new Buffer[cachedBuffers.size()];
+                    cachedBuffers.toArray(bufs);
+                }
+                processor.buffersCached(audioFile, bufs);
+            } finally {
+                close();
+            }
+        }
+    }
+
+    class SourceProcessorImpl implements SourceProcessor, BufferTransferHandler {
         private final DataSource source;
         private final AtomicBoolean stopProcessing = new AtomicBoolean(Boolean.FALSE);
         private final Lock lock = new ReentrantLock();
@@ -260,7 +502,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
         private long startTs;
         private long firstBufferTs;
 
-        public SourceProcessor(DataSource source) {
+        public SourceProcessorImpl(DataSource source) {
             this.source = source;
             this.sourceChecksum = 0l;
             this.sourceKey = null;
@@ -268,7 +510,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
             this.realTime = source instanceof RealTimeDataSourceMarker;
         }
 
-        public SourceProcessor(DataSource source, String sourceKey, long sourceChecksum) {
+        public SourceProcessorImpl(DataSource source, String sourceKey, long sourceChecksum) {
             this.source = source;
             this.sourceKey = sourceKey;
             this.sourceChecksum = sourceChecksum;
@@ -334,17 +576,6 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
             transcoder.start();
         }
         
-        private PushBufferDataSource prepareSource(DataSource source) {
-            PushBufferDataSource res;
-            if (source instanceof PullDataSource)
-                source = new ContainerParserDataSource(codecManager, source);
-            if (source instanceof PullBufferDataSource)
-                res = new PullToPushConverterDataSource((PullBufferDataSource)source, executorService, owner);
-            else 
-                res = (PushBufferDataSource) source;
-            return res;
-        }
-
         public void stop() {
             stopProcessing.set(true);
         }

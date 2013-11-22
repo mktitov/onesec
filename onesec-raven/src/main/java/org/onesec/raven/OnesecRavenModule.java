@@ -38,8 +38,8 @@ import org.slf4j.Logger;
  *
  * @author Mikhail Titov
  */
-public class OnesecRavenModule
-{
+public class OnesecRavenModule {
+    public static boolean ENABLE_LOADING_SOUND_RESOURCE = true;
     
     public static void bind(ServiceBinder binder) {
         binder.bind(StateToNodeLogger.class, StateToNodeLoggerImpl.class);
@@ -89,7 +89,8 @@ public class OnesecRavenModule
     }
     
     public static void contributeResourceManager(Configuration<ResourceRegistrator> conf) {
-        conf.add(new SoundResourcesRegistrator());
+        if (ENABLE_LOADING_SOUND_RESOURCE)
+            conf.add(new SoundResourcesRegistrator());
     }
     
     public static void contributeTypeConverter(Configuration conf) {

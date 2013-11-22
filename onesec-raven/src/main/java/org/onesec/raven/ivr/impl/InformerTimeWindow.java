@@ -29,6 +29,9 @@ import org.raven.tree.impl.InvisibleNode;
 public class InformerTimeWindow extends TimeWindowNode {
     @Parameter
     private Integer maxSessionsCount;
+    
+    @Parameter
+    private Integer priority;
 
     public Integer getMaxSessionsCount() {
         return maxSessionsCount;
@@ -36,5 +39,13 @@ public class InformerTimeWindow extends TimeWindowNode {
 
     public void setMaxSessionsCount(Integer maxSessionsCount) {
         this.maxSessionsCount = maxSessionsCount;
-    }    
+    }
+
+    public Integer getPriority() {
+        return priority;
+    }
+
+    public void setPriority(Integer priority) {
+        this.priority = priority;
+    }
 }

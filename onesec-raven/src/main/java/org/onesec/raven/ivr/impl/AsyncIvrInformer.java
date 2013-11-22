@@ -572,7 +572,7 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
                         try{
                             for (Record record: recordsChain)
                                 initFields(record);
-                            createSession(recordsChain, context, calcMaxSessionsCount(timeWindow));
+                            createSession(recordsChain, context, calcMaxSessionsCount(timeWindow), calcPriority(timeWindow));
                         } finally{
                             recordsChain = null;
                         }
@@ -601,6 +601,14 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         if (attr!=null && Integer.class.equals(attr.getType())) 
             count = attr.getRealValue();
         return count==null? maxSessionsCount : count;
+    }
+    
+    private int calcPriority(TimeWindowNode window) {
+        NodeAttribute attr = window.getAttr("priority");
+        Integer pr = null;
+        if (attr!=null && Integer.class.equals(attr.getType())) 
+            pr = attr.getRealValue();
+        return pr==null? priority : pr;
     }
     
     String getRecordInfo(Record rec)
@@ -772,7 +780,7 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         return false;
     }
 
-    private IvrInformerSession createSession(List<Record> records, DataContext context, int maxSessions) throws Exception
+    private IvrInformerSession createSession(List<Record> records, DataContext context, int maxSessions, int priority) throws Exception
     {
         boolean alreadyInforming = false;
         for (Record record: records) {

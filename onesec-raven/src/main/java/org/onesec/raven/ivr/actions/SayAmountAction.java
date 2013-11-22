@@ -28,15 +28,14 @@ import org.raven.tree.ResourceManager;
  *
  * @author Mikhail Titov
  */
-public class SayAmountAction extends AbstractSayWordsAction
-{
+public class SayAmountAction extends AbstractSayWordsAction {
     public final static String NAME = "Say amount action";
     private final SayAmountActionNode actionNode;
 
-    public SayAmountAction(SayAmountActionNode actionNode, Node numbersNode, long pauseBetweenWords, 
+    public SayAmountAction(SayAmountActionNode actionNode, List<Node> numbersNodes, long pauseBetweenWords, 
         ResourceManager resourceManager)
     {
-        super(NAME, Arrays.asList(numbersNode), pauseBetweenWords, 0, resourceManager);
+        super(NAME, numbersNodes, pauseBetweenWords, 0, resourceManager);
         this.actionNode = actionNode;
     }
 
