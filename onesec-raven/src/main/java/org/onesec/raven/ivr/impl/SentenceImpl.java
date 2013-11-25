@@ -13,14 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.onesec.raven.ivr.actions;
 
-import org.onesec.raven.ivr.SayAnySubaction;
+package org.onesec.raven.ivr.impl;
+
+import java.util.List;
+import org.onesec.raven.ivr.AudioFile;
+import org.onesec.raven.ivr.Sentence;
 
 /**
  *
  * @author Mikhail Titov
  */
-public abstract class AbstractSayAnySubaction implements SayAnySubaction {
-    
+public class SentenceImpl implements Sentence {
+    private final long pauseBetweenWords;
+    private final List<AudioFile> words;
+
+    public SentenceImpl(long pauseBetweenWords, List<AudioFile> words) {
+        this.pauseBetweenWords = pauseBetweenWords;
+        this.words = words;
+    }
+
+    public long getPauseBetweenWords() {
+        return pauseBetweenWords;
+    }
+
+    public List<AudioFile> getWords() {
+        return words;
+    }
 }

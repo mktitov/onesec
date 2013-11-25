@@ -18,10 +18,12 @@ package org.onesec.raven.ivr.actions;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import org.onesec.raven.impl.Genus;
 import org.onesec.raven.ivr.IvrEndpointConversation;
+import org.onesec.raven.ivr.SayAnySubaction;
 import org.raven.tree.Node;
 
 /**
@@ -62,12 +64,13 @@ public class SayAnyAction extends AsyncAction {
         }
     }
     
-    private List<Action> parseActionsSequence(String actionsSeq) throws Exception {
+    private List<SayAnySubaction> parseActionsSequence(String actionsSeq) throws Exception {
         if (actionsSeq==null || actionsSeq.trim().isEmpty()) {
             if (logger.isDebugEnabled())
                 logger.debug("Nothing to say!");
             return Collections.EMPTY_LIST;
         }
+        List<SayAnySubaction> subactions = new LinkedList<SayAnySubaction>();
         for (String actionConfig: actionsSeq.trim().split("\\s+")) {
             try {
                 if (actionConfig.length()<2)
@@ -77,7 +80,7 @@ public class SayAnyAction extends AsyncAction {
                 String value = paramsAndValue[paramsAndValue.length-1];
                 Map<String, String> params = decodeParams(paramsAndValue);
                 switch (actionType) {
-                    case '@' : params.keySet(); break;
+                    case '@' : subactions.add(new SayAnyPauseSubaction(value)); break;
                     case '#' : break;
                     case '$' : break;
                     case '^' : break;
@@ -87,7 +90,7 @@ public class SayAnyAction extends AsyncAction {
                         "Invalid definition of action (%s). %s", actionConfig, e.getMessage()));
             }
         }
-        return null;
+        return subactions;
     }
 
     private Map<String, String> decodeParams(String[] paramsAndValue) throws Exception {
