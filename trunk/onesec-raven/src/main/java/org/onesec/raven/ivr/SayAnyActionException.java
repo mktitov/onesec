@@ -13,12 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.onesec.raven.ivr;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface SayAnySubaction<R extends SayAnySubactionResult> {
-    public R getResult();
+public class SayAnyActionException extends Exception {
+
+    public SayAnyActionException(String msg) {
+        super(msg);
+    }
+    
+    public SayAnyActionException(String format, Object... args) {
+        super(String.format(format, args));
+    }
 }

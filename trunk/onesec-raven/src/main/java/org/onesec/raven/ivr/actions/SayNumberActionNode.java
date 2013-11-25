@@ -25,6 +25,7 @@ import org.onesec.raven.Constants;
 import org.onesec.raven.impl.Genus;
 import org.onesec.raven.ivr.IvrAction;
 import org.onesec.raven.ivr.IvrActionNode;
+import org.onesec.raven.ivr.SubactionSentencesResult;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
@@ -123,7 +124,7 @@ public class SayNumberActionNode extends BaseNode implements IvrActionNode {
                     numbers.add(Long.parseLong(strNumber));
             } catch (NumberFormatException e) {
                 if (isLogLevelEnabled(LogLevel.ERROR))
-                    getLogger().error("Can't convert ({}) to integer");
+                    getLogger().error("Can't convert ({}) to integer", strNumber);
                 return Collections.EMPTY_LIST;
             }
         return numbers;

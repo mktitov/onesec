@@ -15,33 +15,33 @@
  */
 package org.onesec.raven.ivr.actions;
 
+import org.onesec.raven.ivr.SayAnyActionException;
 import org.onesec.raven.ivr.SayAnySubaction;
-import org.onesec.raven.ivr.SayAnySubactionResult;
 import org.onesec.raven.ivr.SubactionPauseResult;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class SayAnyPauseSubaction implements SayAnySubaction {
+public class SayAnyPauseSubaction implements SayAnySubaction<SubactionPauseResult> {
     private final SubactionPauseResult pause;
 
-    public SayAnyPauseSubaction(String strPause) throws Exception {
+    public SayAnyPauseSubaction(String strPause) throws SayAnyActionException {
         long seconds = 1;
         if (strPause.endsWith("s")) {
             seconds = 1000;
             strPause = strPause.substring(0, strPause.length()-1);
         }
         if (strPause.isEmpty())
-            throw new Exception(String.format("Invalid pause (%s)", strPause));
+            throw new SayAnyActionException(String.format("Invalid pause (%s)", strPause));
         try {
             pause = new SubactionPauseResultImpl(Long.parseLong(strPause) * seconds);
         } catch (NumberFormatException e) {
-            throw new Exception(String.format("Invalid pause (%s)", strPause));
+            throw new SayAnyActionException(String.format("Invalid pause (%s)", strPause));
         }
     }
 
-    public SayAnySubactionResult getResult() {
+    public SubactionPauseResult getResult() {
         return pause;
     }
 }
