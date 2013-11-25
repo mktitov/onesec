@@ -25,6 +25,7 @@ import org.onesec.raven.impl.Genus;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.SayAnySubaction;
 import org.raven.tree.Node;
+import org.raven.tree.ResourceManager;
 
 /**
  *
@@ -37,20 +38,33 @@ public class SayAnyAction extends AsyncAction {
     private final List<Node> wordsNodes;
     private final List<Node> numbersNodes;
     private final List<Node> amountNumbersNodes;
+    private final long wordsSentencePause;
+    private final long wordsWordPause;
     private final Genus numbersGenus;
-    private final long pauseBetweenNumbers;
+    private final long numbersSentencePause;
+    private final long numbersWordPause;
+    private final long amountWordPause;
     private final SayAnyActionNode actionNode;
+    private final ResourceManager resourceManager;
 
-    public SayAnyAction(List<Node> wordsNodes, List<Node> numbersNodes, List<Node> amountNumbersNodes, 
-            Genus numbersGenus, long pauseBetweenNumbers, SayAnyActionNode actionNode, String actionName) 
+    public SayAnyAction(SayAnyActionNode actionNode, 
+            List<Node> wordsNodes, List<Node> numbersNodes, List<Node> amountNumbersNodes, 
+            long wordsSentencePause, long wordsWordPause,
+            Genus numbersGenus, long numbersSentencePause, long numbersWordPause,
+            long amountWordPause, ResourceManager resourceManager) 
     {
         super(NAME);
         this.wordsNodes = wordsNodes;
         this.numbersNodes = numbersNodes;
         this.amountNumbersNodes = amountNumbersNodes;
-        this.numbersGenus = numbersGenus;
-        this.pauseBetweenNumbers = pauseBetweenNumbers;
         this.actionNode = actionNode;
+        this.wordsSentencePause = wordsSentencePause;
+        this.wordsWordPause = wordsWordPause;
+        this.numbersGenus = numbersGenus;
+        this.numbersSentencePause = numbersSentencePause;
+        this.numbersWordPause = numbersWordPause;
+        this.amountWordPause = amountWordPause;
+        this.resourceManager = resourceManager;
     }
 
     @Override
@@ -81,9 +95,22 @@ public class SayAnyAction extends AsyncAction {
                 Map<String, String> params = decodeParams(paramsAndValue);
                 switch (actionType) {
                     case '@' : subactions.add(new SayAnyPauseSubaction(value)); break;
-                    case '#' : break;
-                    case '$' : break;
-                    case '^' : break;
+                    case '#' : 
+                        addPauseParams(params, numbersSentencePause, wordsSentencePause);
+                        addParam(params, SayAnyNumberSubaction.GENUS_PARAM, numbersGenus.name());
+                        subactions.add(new SayAnyNumberSubaction(
+                                value, params, actionNode, numbersNodes, resourceManager));
+                        break;
+                    case '$' : 
+                        addPauseParams(params, 0l, amountWordPause);
+                        subactions.add(new SayAnyAmountSubaction(
+                                value, params, actionNode, amountNumbersNodes, resourceManager));
+                        break;
+                    case '^' : 
+                        addPauseParams(params, wordsSentencePause, wordsWordPause);
+                        subactions.add(new SayAnyWordSubaction(
+                                value, params, actionNode, wordsNodes, resourceManager));
+                        break;
                 }
             } catch (Exception e) {
                 throw new Exception(String.format(
@@ -91,6 +118,16 @@ public class SayAnyAction extends AsyncAction {
             }
         }
         return subactions;
+    }
+    
+    private void addParam(Map<String, String> params, String name, String defValue) {
+        if (!params.containsKey(name))
+            params.put(name, defValue);
+    }
+    
+    private void addPauseParams(Map<String, String> params, long pauseBetweenSentences, long pauseBentweenWords) {
+        addParam(params, AbstractSentenceSubaction.SENTENCE_PAUSE_PARAM, Long.toString(pauseBetweenSentences));
+        addParam(params, AbstractSentenceSubaction.SENTENCE_PAUSE_PARAM, Long.toString(pauseBentweenWords));
     }
 
     private Map<String, String> decodeParams(String[] paramsAndValue) throws Exception {
