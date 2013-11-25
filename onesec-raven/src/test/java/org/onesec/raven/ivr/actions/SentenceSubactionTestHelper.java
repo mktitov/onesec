@@ -18,13 +18,18 @@ package org.onesec.raven.ivr.actions;
 
 import java.io.ByteArrayInputStream;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.onesec.raven.OnesecRavenModule;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.ivr.AudioFile;
+import org.onesec.raven.ivr.Sentence;
 import org.onesec.raven.ivr.impl.AudioFileNode;
 import org.raven.tree.DataFileException;
 import org.raven.tree.Node;
@@ -77,4 +82,23 @@ public class SentenceSubactionTestHelper extends OnesecRavenTestCase {
         attr.init();
         owner.addAttr(attr);
     }
+    
+    protected void checkSentences(String[][] words, List<Sentence> sentences) {
+        assertEquals(words.length, sentences.size());
+        for (int i=0; i<words.length; ++i) {
+            List<String> names = new LinkedList<String>();
+            for (AudioFile file: sentences.get(i).getWords())
+                names.add(file.getName());
+            assertArrayEquals(words[i], names.toArray());
+        }
+    }
+    
+    protected String[] arr(String... args) {
+        return args;
+    }
+    
+    protected String[][] arrOfArr(String[]... args) {
+        return args;
+    }
+    
 }

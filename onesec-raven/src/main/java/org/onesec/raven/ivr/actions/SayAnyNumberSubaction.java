@@ -27,9 +27,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.onesec.raven.impl.Genus;
 import org.onesec.raven.impl.NumberToDigitConverter;
+import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.SayAnyActionException;
 import org.onesec.raven.ivr.Sentence;
 import org.onesec.raven.ivr.SubactionSentencesResult;
+import org.onesec.raven.ivr.impl.SentenceImpl;
 import org.onesec.raven.ivr.impl.SubactionSentencesResultImpl;
 import org.raven.tree.Node;
 import org.raven.tree.ResourceManager;
@@ -41,7 +43,8 @@ import org.weda.beans.ObjectUtils;
  */
 public class SayAnyNumberSubaction extends AbstractSentenceSubaction {
     public static final String ZERO_PARAM = "z";
-    public static final String REGEXP_PARAM = "p";
+    public static final String REGEXP_PARAM = "r";
+    public static final String GENUS_PARAM = "g";
     
     private final boolean enableZero;
     private final SubactionSentencesResult result;
@@ -68,8 +71,11 @@ public class SayAnyNumberSubaction extends AbstractSentenceSubaction {
         return new SubactionSentencesResultImpl(pauseBetweenSentences, sentences);        
     }
     
-    private Sentence createSentence(List<String> digits) {
-        throw new UnsupportedOperationException("Not supported yet."); 
+    private Sentence createSentence(List<String> digits) throws SayAnyActionException {
+        List<AudioFile> files = new LinkedList<AudioFile>();
+        for (String digit: digits)
+            files.add(getAudioNode(digit));
+        return new SentenceImpl(pauseBetweenWords, files);
     }
     
     private Collection<Long> getNumbersSequence(String value) throws SayAnyActionException {
@@ -97,7 +103,7 @@ public class SayAnyNumberSubaction extends AbstractSentenceSubaction {
         if (!params.containsKey(REGEXP_PARAM))
             return Arrays.asList(value);
         else {
-            for (String pattern: params.get("r").split(",")) {
+            for (String pattern: params.get(REGEXP_PARAM).split(",")) {
                 Matcher matcher = Pattern.compile(pattern).matcher(value);
                 if (matcher.matches()) {
                     if (matcher.groupCount()<1)
@@ -118,6 +124,6 @@ public class SayAnyNumberSubaction extends AbstractSentenceSubaction {
     }
 
     private Genus parseGenus() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return !params.containsKey(GENUS_PARAM)? Genus.MALE : Genus.valueOf(params.get(GENUS_PARAM).toUpperCase());
     }
 }
