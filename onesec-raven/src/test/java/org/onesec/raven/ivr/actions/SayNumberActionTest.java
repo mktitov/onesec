@@ -25,8 +25,11 @@ import org.junit.Before;
 import org.junit.Test;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.impl.Genus;
+import org.onesec.raven.ivr.IvrAction;
+import org.onesec.raven.ivr.IvrActionStatus;
 import org.onesec.raven.ivr.impl.AudioFileNode;
 import org.raven.conv.impl.ConversationScenarioStateImpl;
+import org.raven.log.LogLevel;
 import org.raven.sched.impl.ExecutorServiceNode;
 import org.raven.tree.Node;
 import org.raven.tree.Tree;
@@ -37,32 +40,12 @@ import org.raven.tree.impl.ResourcesNode;
  *
  * @author Mikhail Titov
  */
-public class SayNumberActionTest extends OnesecRavenTestCase {
-    private TestEndpointConversationNode conv;
-    private ExecutorServiceNode executor;
-    private Node numbers;
-    private SayNumberActionNode actionNode;
+public class SayNumberActionTest extends PlayActionTestHelper {
     
     @Before
+    @Override
     public void prepare() throws Exception {
-        ResourcesNode resources = (ResourcesNode) tree.getRootNode().getNode(ResourcesNode.NAME);
-        resources.setDefaultLocale(new Locale("ru"));
-        
-        executor = new ExecutorServiceNode();
-        executor.setName("executor");
-        tree.getRootNode().addAndSaveChildren(executor);
-        executor.setCorePoolSize(40);
-        executor.setMaximumPoolSize(40);
-        assertTrue(executor.start());
-
-        conv = new TestEndpointConversationNode();
-        conv.setName("endpoint");
-        tree.getRootNode().addAndSaveChildren(conv);
-        conv.setExecutorService(executor);
-        conv.setConversationScenarioState(new ConversationScenarioStateImpl());
-
-//        numbers = createNumbersNode(tree);
-        
+        super.prepare();
         actionNode = new SayNumberActionNode();
         actionNode.setName("say number");
         tree.getRootNode().addAndSaveChildren(actionNode);
@@ -75,18 +58,19 @@ public class SayNumberActionTest extends OnesecRavenTestCase {
     
     @Test
     public void withoutPatternsTest() throws Exception {
-        conv.setFileName("target/number.wav");
+        conv.setFileName("target/number_2.wav");
         assertTrue(conv.start());
         actionNode.setNumber("21");
         actionNode.setGenus(Genus.NEUTER);
+        actionNode.setPauseBetweenWords(-150);
         assertTrue(actionNode.start());
         SayNumberAction action = (SayNumberAction) actionNode.createAction();
         assertNotNull(action);
         action.execute(conv);
-        Thread.sleep(10000);
+        waitForAction(action);
     }
     
-//    @Test
+    @Test
     public void zeroTest() throws Exception {
         conv.setFileName("target/zero.wav");
         assertTrue(conv.start());
@@ -97,13 +81,14 @@ public class SayNumberActionTest extends OnesecRavenTestCase {
         SayNumberAction action = (SayNumberAction) actionNode.createAction();
         assertNotNull(action);
         action.execute(conv);
-        Thread.sleep(10000);
+        waitForAction(action);
     }
     
     @Test
     public void withPatternsTest() throws Exception {
         conv.setFileName("target/numbers.wav");
         assertTrue(conv.start());
+        actionNode.setPauseBetweenWords(-130);
         actionNode.setNumber("9128672947");
         assertTrue(actionNode.start());
         RegexpPattern pattern = new RegexpPattern();
@@ -114,7 +99,7 @@ public class SayNumberActionTest extends OnesecRavenTestCase {
         SayNumberAction action = (SayNumberAction) actionNode.createAction();
         assertNotNull(action);
         action.execute(conv);
-        Thread.sleep(20000);
+        waitForAction(action);
     }
     
     public static Node createNumbersNode(Tree tree) throws Exception {

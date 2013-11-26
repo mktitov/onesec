@@ -18,6 +18,7 @@
 package org.onesec.raven.ivr.impl;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import javax.media.Buffer;
 import javax.media.protocol.FileTypeDescriptor;
@@ -61,11 +62,41 @@ public class IvrUtils
                 stream.addSource(audio);
             else
                 stream.addSource(cacheInfo.getCacheKey(), cacheInfo.getCacheChecksum(), audio);
+            waitWhilePlaying(action, conversation);
 //            Thread.sleep(200);
-            while (!action.hasCancelRequest() && stream.isPlaying())
-                TimeUnit.MILLISECONDS.sleep(10);
-            TimeUnit.MILLISECONDS.sleep(20);
+//            while (!action.hasCancelRequest() && stream.isPlaying())
+//                TimeUnit.MILLISECONDS.sleep(5);
+//            TimeUnit.MILLISECONDS.sleep(20);
         }
+    }
+    
+    public static void pauseInAction(AsyncAction action, long pause) throws InterruptedException {
+        if (pause >= 0) {
+            final long endTime = System.currentTimeMillis() + pause;
+            while(!action.hasCancelRequest() && endTime>System.currentTimeMillis())
+                Thread.sleep(5);
+        }
+    }
+    
+    public static void playAudiosInAction(List<AudioFile> audioFiles, AsyncAction action, 
+            IvrEndpointConversation conversation, long pauseBetweenFragments) throws InterruptedException 
+    {
+        if (pauseBetweenFragments <= 0) {
+            conversation.getAudioStream().playContinuously(audioFiles, Math.abs(pauseBetweenFragments));
+            waitWhilePlaying(action, conversation);
+        } else {
+            for (AudioFile file: audioFiles)
+                playAudioInAction(action, conversation, file);
+        }
+        
+    }
+    
+    public static void waitWhilePlaying(AsyncAction action, IvrEndpointConversation conv) 
+            throws InterruptedException 
+    {
+        final AudioStream stream = conv.getAudioStream();
+        while (!action.hasCancelRequest() && stream.isPlaying())
+            TimeUnit.MILLISECONDS.sleep(10);
     }
 
     public static void playAudioInAction(AsyncAction action, IvrEndpointConversation conversation

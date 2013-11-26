@@ -24,6 +24,11 @@ import java.util.Map;
 import org.onesec.raven.impl.Genus;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.SayAnySubaction;
+import org.onesec.raven.ivr.SayAnySubactionResult;
+import org.onesec.raven.ivr.Sentence;
+import org.onesec.raven.ivr.SubactionPauseResult;
+import org.onesec.raven.ivr.SubactionSentencesResult;
+import org.onesec.raven.ivr.impl.IvrUtils;
 import org.raven.tree.Node;
 import org.raven.tree.ResourceManager;
 
@@ -72,7 +77,20 @@ public class SayAnyAction extends AsyncAction {
         actionNode.getBindingSupport().putAll(conversation.getConversationScenarioState().getBindings());
         try {
             String actionsSeq = actionNode.getActionsSequence();
-            
+            for (SayAnySubaction subaction: parseActionsSequence(actionsSeq)) {
+                SayAnySubactionResult res = subaction.getResult();
+                if (res instanceof SubactionPauseResult) {
+                    IvrUtils.pauseInAction(this, ((SubactionPauseResult)res).getPause());
+                } else if (res instanceof SubactionSentencesResult) {
+                    SubactionSentencesResult sentences = (SubactionSentencesResult) res;
+                    boolean first = true;
+                    for (Sentence sentence: sentences.getSentences()) {
+                        if (!first) IvrUtils.pauseInAction(this, sentences.getPauseBetweenSentences());
+                        else first = false;
+                        IvrUtils.playAudiosInAction(sentence.getWords(), this, conversation, sentence.getPauseBetweenWords());
+                    }
+                }
+            }
         } finally {
             actionNode.getBindingSupport().reset();
         }
@@ -96,7 +114,7 @@ public class SayAnyAction extends AsyncAction {
                 switch (actionType) {
                     case '@' : subactions.add(new SayAnyPauseSubaction(value)); break;
                     case '#' : 
-                        addPauseParams(params, numbersSentencePause, wordsSentencePause);
+                        addPauseParams(params, numbersSentencePause, numbersWordPause);
                         addParam(params, SayAnyNumberSubaction.GENUS_PARAM, numbersGenus.name());
                         subactions.add(new SayAnyNumberSubaction(
                                 value, params, actionNode, numbersNodes, resourceManager));
@@ -152,6 +170,4 @@ public class SayAnyAction extends AsyncAction {
     public boolean isFlowControlAction() {
         return false;
     }
-    
-    public interface Action {};
 }

@@ -59,7 +59,7 @@ public class TestEndpointConversationNode extends BaseNode implements IvrEndpoin
     {
         super.doStart();
         audioStream = new ConcatDataSource(
-                FileTypeDescriptor.WAVE, executorService, codecManager, Codec.LINEAR, 240, 5, 5
+                FileTypeDescriptor.WAVE, executorService, codecManager, Codec.G711_MU_LAW, 160, 5, 5
                 , this, bufferCache, new LoggerHelper(this, null));
         audioStream.start();
 //        player = Manager.createPlayer(audioStream);
