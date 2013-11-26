@@ -91,19 +91,17 @@ public abstract class AbstractSayWordsAction extends AsyncAction
             }            
             audioSources[i++] = audio;
         }
+        IvrUtils.playAudiosInAction(Arrays.asList(audioSources), this, conversation, pauseBetweenWords);
 
-        if (pauseBetweenWords>0) {
-            for (AudioFile audioFile: audioSources) {
-                IvrUtils.playAudioInAction(this, conversation, audioFile);
-                if (hasCancelRequest())
-                    return;
-                TimeUnit.MILLISECONDS.sleep(pauseBetweenWords);
-            }
-        } else {
-            conversation.getAudioStream().playContinuously(Arrays.asList(audioSources), Math.abs(pauseBetweenWords));
-            while (conversation.getAudioStream().isPlaying())
-                Thread.sleep(5);
-        }
+//        if (pauseBetweenWords>0) {
+//            for (AudioFile audioFile: audioSources) {
+//                IvrUtils.playAudioInAction(this, conversation, audioFile);
+//                IvrUtils.pauseInAction(this, pauseBetweenWords);
+//                if (hasCancelRequest())
+//                    return;
+//                TimeUnit.MILLISECONDS.sleep(pauseBetweenWords);
+//            }
+//        } else 
     }
     
     private Node getAudioNode(String word) {

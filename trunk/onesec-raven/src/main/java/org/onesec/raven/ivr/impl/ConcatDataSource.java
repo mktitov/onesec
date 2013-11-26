@@ -459,7 +459,8 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
         private void cacheBuffersAndInformProcessor() {
             try {
                 if (logger.isDebugEnabled())
-                    logger.debug("Loaded buffers for ({}), trimPeriod ({})", cacheKey, trimPeriod);
+                    logger.debug(String.format("Loaded (%s) buffers for (%s), trimPeriod (%s)", 
+                            cachedBuffers.size(), cacheKey, trimPeriod));
                 Buffer[] bufs;
                 if (audioFile.isCacheable()) {
                     if (logger.isDebugEnabled())
@@ -469,10 +470,12 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
                     if (trimPeriod>0) {
                         if (logger.isDebugEnabled())
                             logger.debug("Caching trimed audio file data ({})", cacheKey);
-                        for (int i=0; i<=trimPeriod/packetSizeInMillis; ++i)
+                        for (int i=0; i<=trimPeriod/packetSizeInMillis && cachedBuffers.size()>1; ++i)
                             cachedBuffers.removeLast();
                         bufferCache.cacheBuffers(cacheKey, audioFile.getCacheChecksum(), codec, rtpPacketSize, 
                                 cachedBuffers);
+                        if (logger.isDebugEnabled())
+                            logger.debug("Cached ({}) buffers for trimed audio file data ({})", cachedBuffers.size(), cacheKey);
                     }
                     bufs = bufferCache.getCachedBuffers(cacheKey, audioFile.getCacheChecksum(), codec, rtpPacketSize);
                 } else {
