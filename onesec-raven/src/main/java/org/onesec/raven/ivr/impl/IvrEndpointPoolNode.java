@@ -294,7 +294,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
 
     private void clearQueue() 
     {
-        statusMessage.set("Stoping processing requests. Clearing queue...");
+        statusMessage.set("Stopping processing requests. Clearing queue...");
         for (RequestInfo ri : queue) 
             ri.request.processRequest(null);
     }
