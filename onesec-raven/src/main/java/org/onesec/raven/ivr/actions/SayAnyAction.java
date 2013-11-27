@@ -48,6 +48,7 @@ public class SayAnyAction extends AsyncAction {
     private final Genus numbersGenus;
     private final long numbersSentencePause;
     private final long numbersWordPause;
+    private final boolean numbersEnableZero;
     private final long amountWordPause;
     private final SayAnyActionNode actionNode;
     private final ResourceManager resourceManager;
@@ -55,7 +56,7 @@ public class SayAnyAction extends AsyncAction {
     public SayAnyAction(SayAnyActionNode actionNode, 
             List<Node> wordsNodes, List<Node> numbersNodes, List<Node> amountNumbersNodes, 
             long wordsSentencePause, long wordsWordPause,
-            Genus numbersGenus, long numbersSentencePause, long numbersWordPause,
+            Genus numbersGenus, long numbersSentencePause, long numbersWordPause, boolean numbersEnableZero,
             long amountWordPause, ResourceManager resourceManager) 
     {
         super(NAME);
@@ -68,6 +69,7 @@ public class SayAnyAction extends AsyncAction {
         this.numbersGenus = numbersGenus;
         this.numbersSentencePause = numbersSentencePause;
         this.numbersWordPause = numbersWordPause;
+        this.numbersEnableZero = numbersEnableZero;
         this.amountWordPause = amountWordPause;
         this.resourceManager = resourceManager;
     }
@@ -116,6 +118,7 @@ public class SayAnyAction extends AsyncAction {
                     case '#' : 
                         addPauseParams(params, numbersSentencePause, numbersWordPause);
                         addParam(params, SayAnyNumberSubaction.GENUS_PARAM, numbersGenus.name());
+                        addParam(params, SayAnyNumberSubaction.ZERO_PARAM, numbersEnableZero? "yes":"no");
                         subactions.add(new SayAnyNumberSubaction(
                                 value, params, actionNode, numbersNodes, resourceManager));
                         break;

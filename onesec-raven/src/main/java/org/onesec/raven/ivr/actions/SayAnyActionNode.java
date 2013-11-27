@@ -70,6 +70,9 @@ public class SayAnyActionNode extends AbstractActionNode {
     @NotNull @Parameter(defaultValue = "-100")
     private Long numbersWordPause;
     
+    @NotNull @Parameter(defaultValue = "false")
+    private Boolean numbersEnableZero;
+    
     @NotNull @Parameter(defaultValue = "-100")
     private Long amountWordPause;
     
@@ -82,7 +85,8 @@ public class SayAnyActionNode extends AbstractActionNode {
                 NodeUtils.getAttrValuesByPrefixAndType(this, WORDS_NODE_ATTR, Node.class),
                 NodeUtils.getAttrValuesByPrefixAndType(this, NUMBERS_NODE_ATTR, Node.class),
                 NodeUtils.getAttrValuesByPrefixAndType(this, AMOUNT_NUMBERS_NODE_ATTR, Node.class),
-                wordsSentencePause, wordsWordPause, numbersGenus, numbersSentencePause, numbersWordPause, 
+                wordsSentencePause, wordsWordPause, 
+                numbersGenus, numbersSentencePause, numbersWordPause, numbersEnableZero,
                 amountWordPause, resourceManager);
     }
 
@@ -156,6 +160,14 @@ public class SayAnyActionNode extends AbstractActionNode {
 
     public void setNumbersWordPause(Long numbersWordPause) {
         this.numbersWordPause = numbersWordPause;
+    }
+
+    public Boolean getNumbersEnableZero() {
+        return numbersEnableZero;
+    }
+
+    public void setNumbersEnableZero(Boolean numbersEnableZero) {
+        this.numbersEnableZero = numbersEnableZero;
     }
 
     public Long getAmountWordPause() {
