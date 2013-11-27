@@ -16,31 +16,24 @@
 package org.onesec.raven.ivr.actions;
 
 import java.io.File;
-import java.util.Locale;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.junit.After;
 import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.Test;
-import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.impl.Genus;
-import org.onesec.raven.ivr.IvrAction;
-import org.onesec.raven.ivr.IvrActionStatus;
 import org.onesec.raven.ivr.impl.AudioFileNode;
-import org.raven.conv.impl.ConversationScenarioStateImpl;
-import org.raven.log.LogLevel;
-import org.raven.sched.impl.ExecutorServiceNode;
 import org.raven.tree.Node;
 import org.raven.tree.Tree;
 import org.raven.tree.impl.ContainerNode;
-import org.raven.tree.impl.ResourcesNode;
 
 /**
  *
  * @author Mikhail Titov
  */
 public class SayNumberActionTest extends PlayActionTestHelper {
+    private SayNumberActionNode actionNode;
     
     @Before
     @Override

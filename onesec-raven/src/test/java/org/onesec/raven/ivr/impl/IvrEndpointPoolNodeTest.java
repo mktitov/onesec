@@ -19,6 +19,7 @@ package org.onesec.raven.ivr.impl;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import static org.easymock.EasyMock.*;
 import org.easymock.IAnswer;
@@ -27,6 +28,7 @@ import org.easymock.IMocksControl;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.onesec.raven.OnesecRavenModule;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.ivr.EndpointRequest;
 import org.onesec.raven.ivr.IvrEndpoint;
@@ -34,6 +36,7 @@ import org.onesec.raven.ivr.IvrEndpointPool;
 import org.raven.log.LogLevel;
 import org.raven.sched.impl.ExecutorServiceNode;
 import org.raven.tree.Node;
+import org.raven.tree.NodeError;
 import org.raven.tree.impl.ContainerNode;
 
 /**
@@ -47,9 +50,17 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
     private TestIvrEndpoint endpoint;
     private Node requestOwner;
     private Node requestOwner2;
+    private IMocksControl mocks;
+
+    @Override
+    protected void configureRegistry(Set<Class> builder) {
+        super.configureRegistry(builder); 
+        OnesecRavenModule.ENABLE_LOADING_SOUND_RESOURCE = false;
+    }
 
     @Before
     public void prepare() throws Exception {
+        mocks = createControl();
         requestOwner = new ContainerNode("requestOwner");
         tree.getRootNode().addAndSaveChildren(requestOwner);
         assertTrue(requestOwner.start());
@@ -61,7 +72,8 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         executor = new ExecutorServiceNode();
         executor.setName("executor");
         tree.getRootNode().addAndSaveChildren(executor);
-        executor.setCorePoolSize(4);
+        executor.setCorePoolSize(20);
+        executor.setMaximumPoolSize(30);
         assertTrue(executor.start());
 
         pool = new IvrEndpointPoolNode();
@@ -83,23 +95,24 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
     }
     
     @Test
-    public void test() {
-        System.out.println("=>"+(99999/1000));
-    }
-
-    @Test
     public void simpleTest() throws InterruptedException {
-        EndpointRequest req = createMock(EndpointRequest.class);
+        EndpointRequest req = mocks.createMock(EndpointRequest.class);
         expect(req.getOwner()).andReturn(requestOwner).anyTimes();
+        expect(req.getPriority()).andReturn(1).anyTimes();
         req.processRequest(endpoint);
-        replay(req);
+        mocks.replay();
 
         pool.requestEndpoint(req);
         TimeUnit.SECONDS.sleep(2);
 
-        verify(req);
-        
-        TimeUnit.SECONDS.sleep(2);
+        mocks.verify();        
+        TimeUnit.SECONDS.sleep(2);        
+    }
+    
+    @Test
+    public void simple_withProbabilisticQueue() throws Exception {
+        switchToProbabilisticQueue();
+        simpleTest();
     }
 
     @Test(timeout=25000)
@@ -107,6 +120,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
     {
         EndpointRequest req = createMock(EndpointRequest.class);
         expect(req.getOwner()).andReturn(requestOwner).anyTimes();
+        expect(req.getPriority()).andReturn(1).anyTimes();
         req.processRequest(processRequest(pool));
         expectLastCall().times(2);
         replay(req);
@@ -118,6 +132,13 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
 
         verify(req);
     }
+    
+    @Test(timeout=25000)
+    public void endpointRealese_withProbabilisticQueue() throws Exception {
+        switchToProbabilisticQueue();
+        endpointRealeseTest();
+    }
+
 
     @Test(timeout=25000)
     public void endpointTimeoutTest() throws Exception
@@ -126,6 +147,8 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         EndpointRequest req2 = createMock(EndpointRequest.class);
         expect(req.getOwner()).andReturn(requestOwner).anyTimes();
         expect(req2.getOwner()).andReturn(requestOwner2).anyTimes();
+        expect(req.getPriority()).andReturn(1).anyTimes();
+        expect(req2.getPriority()).andReturn(1).anyTimes();
         req.processRequest(endpoint);
         expectLastCall().andAnswer(new IAnswer<Object>() {
             public Object answer() throws Throwable {
@@ -144,6 +167,12 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
 
         verify(req, req2);
     }
+    
+    @Test(timeout=25000)
+    public void endpointTimeout_withProbabilisticQueue() throws Exception {
+        switchToProbabilisticQueue();
+        endpointTimeoutTest();
+    }
 
     @Test(timeout=25000)
     public void asyncTest() throws Exception {
@@ -153,6 +182,8 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         EndpointRequest req2 = createMock(EndpointRequest.class);
         expect(req.getOwner()).andReturn(requestOwner).anyTimes();
         expect(req2.getOwner()).andReturn(requestOwner2).anyTimes();
+        expect(req.getPriority()).andReturn(1).anyTimes();
+        expect(req2.getPriority()).andReturn(1).anyTimes();
         req.processRequest(isA(IvrEndpoint.class));
         expectLastCall().andAnswer(new IAnswer<Object>() {
             public Object answer() throws Throwable {
@@ -170,6 +201,12 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
 
         verify(req, req2);
     }
+    
+    @Test(timeout=25000)
+    public void async_withProbabilisticQueue() throws Exception {
+        switchToProbabilisticQueue();
+        asyncTest();
+    }
 
     @Test(timeout=20000)
     public void watchdogTest() throws Exception {
@@ -177,6 +214,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
 
         expect(req.getOwner()).andReturn(requestOwner).anyTimes();
         expect(req.getWaitTimeout()).andReturn(60000l).anyTimes();
+        expect(req.getPriority()).andReturn(1).anyTimes();
         req.processRequest(endpoint);
 
         replay(req);
@@ -188,6 +226,12 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         TimeUnit.SECONDS.sleep(6);
 
         verify(req);
+    }
+
+    @Test(timeout=25000)
+    public void watchdog_withProbabilisticQueue() throws Exception {
+        switchToProbabilisticQueue();
+        watchdogTest();
     }
 
     @Test
@@ -205,6 +249,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         expect(req2.getOwner()).andReturn(requestOwner).anyTimes();
         expect(req3.getOwner()).andReturn(requestOwner).anyTimes();
         expect(req4.getOwner()).andReturn(requestOwner).anyTimes();
+        expect(req.getPriority()).andReturn(100).anyTimes();
         expect(req1.getPriority()).andReturn(10).anyTimes();
         expect(req2.getPriority()).andReturn(1).anyTimes();
         expect(req3.getPriority()).andReturn(10).anyTimes();
@@ -240,6 +285,12 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         assertEquals("req3", order.get(2));
         assertEquals("req4", order.get(3));
     }
+    
+    @Test(timeout=25000)
+    public void priority_withProbabilisticQueue() throws Exception {
+        switchToProbabilisticQueue();
+        priorityTest();
+    }
 
     @Test
     public void auxiliaryPoolTest() throws Exception
@@ -257,6 +308,8 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         EndpointRequest req2 = createMock("req2", EndpointRequest.class);
         expect(req1.getOwner()).andReturn(requestOwner).anyTimes();
         expect(req2.getOwner()).andReturn(requestOwner).anyTimes();
+        expect(req1.getPriority()).andReturn(10).anyTimes();
+        expect(req2.getPriority()).andReturn(10).anyTimes();
         req1.processRequest(endpoint);
         expectLastCall().andAnswer(new IAnswer<Object>() {
             public Object answer() throws Throwable {
@@ -277,17 +330,23 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
     }
 
     @Test
+    public void auxiliaryPoolTest_withProbabilisticQueue() throws Exception {
+        switchToProbabilisticQueue();
+        auxiliaryPoolTest();
+    }
+    
+    @Test
     public void addressRangesTest() throws Exception {
         pool.stop();
         TimeUnit.SECONDS.sleep(2);
         assertEquals(Node.Status.INITIALIZED, pool.getStatus());
         pool.setAddressRanges("88014 - 88014, 88015-88016");
         assertTrue(pool.start());
-        assertNull(pool.getChildren("88013"));
-        assertNotNull(pool.getChildren("88014"));
-        assertEquals("88014", pool.getChildren("88014").getName());
-        assertNotNull(pool.getChildren("88015"));
-        assertNotNull(pool.getChildren("88016"));
+        assertNull(pool.getNode("88013"));
+        assertNotNull(pool.getNode("88014"));
+        assertEquals("88014", pool.getNode("88014").getName());
+        assertNotNull(pool.getNode("88015"));
+        assertNotNull(pool.getNode("88016"));
     }
 
     public static IvrEndpoint checkEndpoint(final List<String> order, final String req
@@ -337,5 +396,11 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
             }
         });
         return null;
+    }
+    
+    private void switchToProbabilisticQueue() throws NodeError {
+        pool.stop();
+        pool.setPrioritizationType(IvrEndpointPoolNode.PrioritizationType.WEIGTH);
+        assertTrue(pool.start());
     }
 }

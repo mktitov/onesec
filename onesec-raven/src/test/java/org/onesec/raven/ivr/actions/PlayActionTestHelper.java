@@ -34,7 +34,6 @@ import org.raven.tree.impl.ResourcesNode;
 public class PlayActionTestHelper extends OnesecRavenTestCase {
     protected TestEndpointConversationNode conv;
     protected ExecutorServiceNode executor;
-    protected SayNumberActionNode actionNode;
 
     @Before
     public void prepare() throws Exception {
@@ -45,7 +44,8 @@ public class PlayActionTestHelper extends OnesecRavenTestCase {
         executor.setName("executor");
         tree.getRootNode().addAndSaveChildren(executor);
         executor.setCorePoolSize(40);
-        executor.setMaximumPoolSize(40);
+        executor.setMaximumQueueSize(2);
+        executor.setMaximumPoolSize(50);
         assertTrue(executor.start());
 
         conv = new TestEndpointConversationNode();

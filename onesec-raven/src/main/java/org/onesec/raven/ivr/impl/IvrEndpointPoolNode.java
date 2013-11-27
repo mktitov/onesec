@@ -19,6 +19,7 @@ package org.onesec.raven.ivr.impl;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.PriorityBlockingQueue;
@@ -63,9 +64,13 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     private final static String STATUS_FORMAT = "<span style=\"color: %s\"><b>%s</b></span>";
     
     public enum UseCase {INCOMING_CALLS, OUTGOING_CALLS};
+    public enum PrioritizationType {STRICT, WEIGTH}
     
     @NotNull @Parameter(defaultValue="OUTGOING_CALLS")
     private UseCase useCase;
+    
+    @NotNull @Parameter(defaultValue="STRICT")
+    private PrioritizationType prioritizationType;
     
     @NotNull @Parameter(defaultValue="100")
     private Integer maxRequestQueueSize;
@@ -119,7 +124,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     private Condition endpointReleased;
     private Map<Integer, RequestInfo> busyEndpoints;
     private Map<Integer, Long> usageCounters;
-    private PriorityBlockingQueue<RequestInfo> queue;
+    private BlockingQueue<RequestInfo> queue;
     private AtomicBoolean stopManagerTask;
     private AtomicBoolean managerThreadStoped;
     private AtomicReference<String> statusMessage;
@@ -149,6 +154,10 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     @Message private static String callDescriptionMessage;
     @Message private static String yesMessage;
     @Message private static String noMessage;
+    
+    @Message private static String prioritiesRatesTableTitleMessage;
+    @Message private static String priorityColumnMessage;
+    @Message private static String rateColumnMessage;
 
     @Override
     protected void initFields() {
@@ -172,7 +181,16 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         lock = new ReentrantReadWriteLock();
         endpointReleased = lock.writeLock().newCondition();
 //        queue = new LinkedBlockingQueue<RequestInfo>(maxRequestQueueSize);
-        queue = new PriorityBlockingQueue<RequestInfo>(maxRequestQueueSize, new RequestComparator());
+        switch (prioritizationType) {
+            case STRICT : 
+                queue = new PriorityBlockingQueue<RequestInfo>(maxRequestQueueSize, new RequestComparator());
+                break;
+            case WEIGTH :
+                queue = new ProbabilisticPriorityQueue<RequestInfo>(maxRequestQueueSize);
+                break;
+            default: throw new Exception("Invalid prioritization type: "+prioritizationType);
+        }
+//        queue = new PriorityBlockingQueue<RequestInfo>(maxRequestQueueSize, new RequestComparator());
         busyEndpoints.clear();
         usageCounters.clear();
         stopManagerTask.set(false);
@@ -374,6 +392,14 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         this.useCase = useCase;
     }
 
+    public PrioritizationType getPrioritizationType() {
+        return prioritizationType;
+    }
+
+    public void setPrioritizationType(PrioritizationType prioritizationType) {
+        this.prioritizationType = prioritizationType;
+    }
+
     public ExecutorService getExecutor() {
         return executor;
     }
@@ -552,34 +578,29 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                     , terminalPoolStatusColumnMessage, usageCountColumnMessage
                     , currentUsageTimeMessage, requesterNodeMessage, requesterStatusMessage});
         long totalUsageCount = 0;
-//        lock.readLock().lock();
-//        try {
-            for (IvrEndpoint endpoint: NodeUtils.getChildsOfType(this, IvrEndpoint.class, false)) {
-                String name = getEndpointNodeStatus(endpoint);
-                String status = getEndpointState(endpoint);
-                RequestInfo ri = busyEndpoints.get(endpoint.getId());
-                String poolStatus = ri!=null? "BUSY" : "FREE";
-                poolStatus = String.format(STATUS_FORMAT, ri!=null? "blue" : "green", poolStatus);
-                long counter = getEndpointUsageCount(endpoint);
-                totalUsageCount+=counter;
-                String currentUsageTime = null; String requester = null;
-                String requesterStatus = null;
-                if (ri!=null) {
-                    currentUsageTime = ""+((System.currentTimeMillis()-ri.terminalUsageTime)/1000);
-                    requester = ri.getTaskNode().getPath();
-                    requesterStatus = ri.getStatusMessage();
-                }
-                table.addRow(new Object[]{
-                    name, status, poolStatus, counter, currentUsageTime, requester, requesterStatus});
-                
+        for (IvrEndpoint endpoint: NodeUtils.getChildsOfType(this, IvrEndpoint.class, false)) {
+            String name = getEndpointNodeStatus(endpoint);
+            String status = getEndpointState(endpoint);
+            RequestInfo ri = busyEndpoints.get(endpoint.getId());
+            String poolStatus = ri!=null? "BUSY" : "FREE";
+            poolStatus = String.format(STATUS_FORMAT, ri!=null? "blue" : "green", poolStatus);
+            long counter = getEndpointUsageCount(endpoint);
+            totalUsageCount+=counter;
+            String currentUsageTime = null; String requester = null;
+            String requesterStatus = null;
+            if (ri!=null) {
+                currentUsageTime = ""+((System.currentTimeMillis()-ri.terminalUsageTime)/1000);
+                requester = ri.getTaskNode().getPath();
+                requesterStatus = ri.getStatusMessage();
             }
-//        } finally {
-//            lock.readLock().unlock();
-//        }
+            table.addRow(new Object[]{
+                name, status, poolStatus, counter, currentUsageTime, requester, requesterStatus});
+        }
         List<ViewableObject> vos = new ArrayList<ViewableObject>(5);
+        addPriorityRatesTable(vos);
+        vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, "<b>"+totalUsageCountMessage+": </b>"+totalUsageCount));        
         vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, "<b>"+terminalsTableTitleMessage+"</b>"));
         vos.add(new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, table));
-        vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, "<b>"+totalUsageCountMessage+": </b>"+totalUsageCount));
 
         TableImpl queueTable = new TableImpl(new String[]{requesterNodeMessage, waitingTimeMessage});
         for (RequestInfo ri: queue)
@@ -590,6 +611,17 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         vos.add(new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, queueTable));
 
         return vos;        
+    }
+
+    private void addPriorityRatesTable(List<ViewableObject> vos) {
+        if (prioritizationType==PrioritizationType.WEIGTH) {
+            List<ProbabilisticPriorityQueue.PriorityRate> rates = ((ProbabilisticPriorityQueue)queue).getPriorityRatesInPercent();
+            TableImpl ratesTable = new TableImpl(new String[]{priorityColumnMessage, rateColumnMessage});
+            for (ProbabilisticPriorityQueue.PriorityRate rate: rates)
+                ratesTable.addRow(new Object[]{rate.getPriority(), rate.getRateInPercent()});
+            vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, "<b>"+prioritiesRatesTableTitleMessage+"</b>"));
+            vos.add(new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, ratesTable));
+        }
     }
     
     private List<ViewableObject> getViewableObjectsForIncomingCallsUseCase() {
@@ -812,7 +844,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         }
     }
 
-    private class RequestInfo implements Task
+    private class RequestInfo implements Task, ProbabilisticPriorityQueue.Entity
     {
         private final EndpointRequest request;
         private final long startTime;
@@ -837,6 +869,10 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
 
         public String getStatusMessage() {
             return request.getStatusMessage();
+        }
+
+        public int getPriority() {
+            return request.getPriority();
         }
 
         public void run() {

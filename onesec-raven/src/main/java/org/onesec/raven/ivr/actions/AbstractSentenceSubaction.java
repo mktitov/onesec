@@ -53,8 +53,7 @@ public abstract class AbstractSentenceSubaction implements SayAnySubaction<Subac
         this.wordsNodes = new LinkedList<Node>();
         if (params.containsKey(NODES_PARAM))
             parseNodesParam(params.get(NODES_PARAM));
-        if (defaultWordsNodes!=null && !defaultWordsNodes.isEmpty())
-            this.wordsNodes.addAll(defaultWordsNodes);
+        addDefaultWordsNodes(defaultWordsNodes);
         pauseBetweenSentences = parsePause(SENTENCE_PAUSE_PARAM);
         pauseBetweenWords = parsePause(WORD_PAUSE_PARAM);
     }
@@ -83,5 +82,12 @@ public abstract class AbstractSentenceSubaction implements SayAnySubaction<Subac
     private long parsePause(String paramName) throws SayAnyActionException {
         return !params.containsKey(paramName)? 
                 0l : new SayAnyPauseSubaction(params.get(paramName)).getResult().getPause();
+    }
+
+    private void addDefaultWordsNodes(final List<Node> defaultWordsNodes) {
+        if (defaultWordsNodes!=null)
+            for (Node node: defaultWordsNodes)
+                if (node!=null)
+                    wordsNodes.add(node);
     }
 }
