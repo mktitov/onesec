@@ -16,26 +16,38 @@
 
 package org.onesec.raven.ivr.actions;
 
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
-import org.onesec.raven.ivr.IvrEndpointConversation;
+import org.junit.Before;
+import org.onesec.raven.Constants;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class SayAnyActionTest {
+public class SayAnyActionTest extends PlayActionTestHelper {
+    private SayAnyActionNode actionNode;
     
-    public void prepare() {
-        
+    @Before
+    @Override
+    public void prepare() throws Exception {
+        super.prepare();
+        actionNode = new SayAnyActionNode();
+        actionNode.setName("say any action");        
+        testsNode.addAndSaveChildren(actionNode);
+        actionNode.getAttr(SayAnyActionNode.WORDS_NODE_ATTR).setValue(Constants.TIME_WORDS_RESOURCE);
     }
     
     @Test
-    public void test() {
-        
+    public void test() throws Exception {
+        conv.setFileName("target/say_any_1.wav");
+        assertTrue(conv.start());
+        actionNode.setActionsSequence("#wp=-200;r=(...)(...)(..)(..):9128672947");
+//        actionNode.setActionsSequence("#wp=-150;r=(\\d\\d\\d)(\\d\\d\\d)(\\d\\d)(\\d\\d):9128672947 #12 ^минут #6 ^wp=-100:часов,прошлого,года @3s $wp=-150:123456.45");
+        assertTrue(actionNode.start());
+        SayAnyAction action = (SayAnyAction) actionNode.createAction();
+        assertNotNull(action);
+        action.execute(conv);
+        waitForAction(action);
     }
  }

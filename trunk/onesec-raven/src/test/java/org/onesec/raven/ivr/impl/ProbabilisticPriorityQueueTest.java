@@ -15,6 +15,7 @@
  */
 package org.onesec.raven.ivr.impl;
 
+import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
 import org.junit.Assert;
@@ -166,15 +167,120 @@ public class ProbabilisticPriorityQueueTest extends Assert {
         assertTrue(queue.contains(ent2));
     }
     
-    //10 30 70 -> 90 70 30
+    //20 80 -> 
     @Test
     public void orderTest() {
-        
+        int c20=0; int c80=0; 
+        final int testsCount=100;
+        int counter = testsCount;
+        while (counter-- > 0) {
+            ProbabilisticPriorityQueue<Ent> queue = new ProbabilisticPriorityQueue<Ent>(200);
+            for (int i=0; i<100; ++i) {
+                queue.add(new Ent(20));
+                queue.add(new Ent(80));
+            }        
+            assertEquals(200, queue.size());
+            int i = 0;
+            while (i++ < 100) {
+                Ent e = queue.poll();
+                if (e.getPriority()==20) ++c20;
+                else ++c80;
+            }
+        }
+        c20 /= testsCount;
+        c80 /= testsCount;
+        System.out.println("c20: "+c20);
+        System.out.println("c80: "+c80);
+        assertTrue(c20>=75 && c20<=85);
+        assertTrue(c80>=15 && c80<=25);
+    }
+
+    //20 80 -> 
+    @Test
+    public void orderTest2() {
+        int c20=0; int c80=0; 
+        final int testsCount=100;
+        int counter = testsCount;
+        while (counter-- > 0) {
+            ProbabilisticPriorityQueue<Ent> queue = new ProbabilisticPriorityQueue<Ent>(300);
+            for (int i=0; i<200; ++i) {
+                queue.add(new Ent(20));
+                if (i < 20)
+                    queue.add(new Ent(80));
+            }        
+//            assertEquals(250, queue.size());
+            int i = 0;
+            while (i++ < 120) {
+                Ent e = queue.poll();
+                if (e.getPriority()==20) ++c20;
+                else ++c80;
+            }
+        }
+        c20 /= testsCount;
+        c80 /= testsCount;
+        System.out.println("c20: "+c20);
+        System.out.println("c80: "+c80);
+        assertTrue(c20>=98 && c20<=102);
+        assertTrue(c80>=18 && c80<=22);
     }
 
     @Test
-    public void iteratorTest() {
-        
+    public void iteratorGetAllValuesTest() {
+        ProbabilisticPriorityQueue<Ent> queue = new ProbabilisticPriorityQueue<Ent>(200);
+        for (int i=0; i<100; ++i) {
+            queue.add(new Ent(20));
+            queue.add(new Ent(80));
+        }        
+        int count = 0;
+        for (Iterator it=queue.iterator(); it.hasNext();) {
+            assertNotNull(it.next());
+            count++;
+        }
+        assertEquals(200, count);
+        assertEquals(200, queue.size());
+    }
+    
+    @Test
+    public void iteratorValuesOrderTest() {
+        int c20=0; int c80=0; 
+        final int testsCount=100;
+        int counter = testsCount;
+        while (counter-- > 0) {
+            ProbabilisticPriorityQueue<Ent> queue = new ProbabilisticPriorityQueue<Ent>(200);
+            for (int i=0; i<100; ++i) {
+                queue.add(new Ent(20));
+                queue.add(new Ent(80));
+            }        
+            int count = 0;
+            for (Iterator<Ent> it=queue.iterator(); it.hasNext() && count<100; ++count) {
+                if (it.next().getPriority()==20) ++c20;
+                else ++c80;
+            }
+        }
+        c20 /= testsCount;
+        c80 /= testsCount;
+        System.out.println("c20: "+c20);
+        System.out.println("c80: "+c80);
+        assertTrue(c20>=75 && c20<=85);
+        assertTrue(c80>=15 && c80<=25);
+    }
+    
+    @Test
+    public void iteratorRemoveTest() {
+        ProbabilisticPriorityQueue<Ent> queue = new ProbabilisticPriorityQueue<Ent>(2);
+        Ent e1 = new Ent(1);
+        Ent e2 = new Ent(1);
+        queue.add(e1);
+        queue.add(e2);
+        Iterator<Ent> it = queue.iterator();
+        Ent re1 = it.next();
+        assertNotNull(re1);
+        it.remove();
+        assertEquals(1, queue.size());
+        Ent re2 = it.next();
+        assertSame(re2, queue.poll());
+        assertNotSame(re1, re2);
+        assertFalse(queue.contains(re1));
     }
     
     private void executeTake(final ProbabilisticPriorityQueue<Ent> queue) {

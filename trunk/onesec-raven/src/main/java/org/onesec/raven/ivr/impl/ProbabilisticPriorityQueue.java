@@ -245,6 +245,22 @@ public class ProbabilisticPriorityQueue<T extends Entity> implements BlockingQue
         informWaiters(entityAddLock, entityAddedCond);
     }
     
+    /**
+     * Returns the list of the priorities rates in percent.
+     */
+    public List<PriorityRate> getPriorityRatesInPercent() {
+        List<Integer> priorities = getPriorities();
+        if (priorities.isEmpty()) return Collections.EMPTY_LIST;
+        else {
+            Collections.sort(priorities);
+            List<PriorityRate> res = new ArrayList<PriorityRate>(priorities.size());
+            double[] rates = getPrioritiesRatios(priorities);
+            for (int i=0; i<rates.length; i++)
+                res.add(new PriorityRate(priorities.get(i), (int) (rates[i]*100)));
+            return res;
+        }
+    }
+    
     private T getEnity() {
         T entity = null;
         List<Integer> priorities = getPriorities();
@@ -311,19 +327,31 @@ public class ProbabilisticPriorityQueue<T extends Entity> implements BlockingQue
         if (priorities.size()==1) rates = new double[]{1.0};
         else {
             double sum = 0;
-            //calculating total wieght
-            for (Integer pr: priorities) 
-                sum += pr;
-            double sum2 = 0.;
-            //inverting weights
-            for (int i=0; i<priorities.size(); ++i) {
-                double v = sum-priorities.get(i);
-                sum2 += v;
+            //calculating coefficient
+            for (int i=0; i<rates.length; i++) {
+                double v = 1/(double)priorities.get(i);
+                sum += v;
                 rates[i] = v;
             }
+            double k = 1/sum;
             //transforming weights to range from 0 to 1
-            for (int i=0; i<rates.length; ++i) 
-                rates[i] = rates[i]/sum2 + (i==0? 0.0 : rates[i-1]);
+            for (int i=0; i<rates.length; i++) 
+                rates[i] = rates[i] * k + (i==0? 0.0 : rates[i-1]);
+            
+//            double sum = 0;
+//            //calculating total wieght
+//            for (Integer pr: priorities) 
+//                sum += pr;
+//            double sum2 = 0.;
+//            //inverting weights
+//            for (int i=0; i<priorities.size(); ++i) {
+//                double v = sum-priorities.get(i);
+//                sum2 += v;
+//                rates[i] = v;
+//            }
+//            //transforming weights to range from 0 to 1
+//            for (int i=0; i<rates.length; ++i) 
+//                rates[i] = rates[i]/sum2 + (i==0? 0.0 : rates[i-1]);
         }
         return rates;
     }
@@ -385,6 +413,24 @@ public class ProbabilisticPriorityQueue<T extends Entity> implements BlockingQue
             size.decrementAndGet();
             informWaiters(entityFreeLock, entityFreedCond);
             lastIterator = null;
+        }
+    }
+    
+    public class PriorityRate {
+        private final int priority;
+        private final int rateInPercent;
+
+        public PriorityRate(int priority, int rateInPercent) {
+            this.priority = priority;
+            this.rateInPercent = rateInPercent;
+        }
+
+        public int getPriority() {
+            return priority;
+        }
+
+        public int getRateInPercent() {
+            return rateInPercent;
         }
     }
 }
