@@ -148,7 +148,7 @@ public class SayAnyAction extends AsyncAction {
     
     private void addPauseParams(Map<String, String> params, long pauseBetweenSentences, long pauseBentweenWords) {
         addParam(params, AbstractSentenceSubaction.SENTENCE_PAUSE_PARAM, Long.toString(pauseBetweenSentences));
-        addParam(params, AbstractSentenceSubaction.SENTENCE_PAUSE_PARAM, Long.toString(pauseBentweenWords));
+        addParam(params, AbstractSentenceSubaction.WORD_PAUSE_PARAM, Long.toString(pauseBentweenWords));
     }
 
     private Map<String, String> decodeParams(String[] paramsAndValue) throws Exception {
