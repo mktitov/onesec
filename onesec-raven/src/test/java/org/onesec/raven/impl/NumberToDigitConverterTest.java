@@ -315,4 +315,28 @@ public class NumberToDigitConverterTest extends Assert
         assertNotNull(list);
         assertArrayEquals(new Object[]{"100", "1'", "тыс€ча","20", "3", "рубл€", "19", "копеек"}, list.toArray());
     }
+    
+    @Test
+    public void getCurrencyDigits_1_101023_19()
+    {
+        Collection<String> list = NumberToDigitConverter.getCurrencyDigits(1101023.19);
+        assertNotNull(list);
+        assertArrayEquals(new Object[]{"1", "миллион", "100", "1'", "тыс€ча","20", "3", "рубл€", "19", "копеек"}, list.toArray());
+    }
+    
+    @Test
+    public void getCurrencyDigits_2_101023_19()
+    {
+        Collection<String> list = NumberToDigitConverter.getCurrencyDigits(2101023.19);
+        assertNotNull(list);
+        assertArrayEquals(new Object[]{"2", "миллиона", "100", "1'", "тыс€ча","20", "3", "рубл€", "19", "копеек"}, list.toArray());
+    }
+    
+    @Test
+    public void getCurrencyDigits_5_101023_19()
+    {
+        Collection<String> list = NumberToDigitConverter.getCurrencyDigits(5101023.19);
+        assertNotNull(list);
+        assertArrayEquals(new Object[]{"5", "миллионов", "100", "1'", "тыс€ча","20", "3", "рубл€", "19", "копеек"}, list.toArray());
+    }
 }

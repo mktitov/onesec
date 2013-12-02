@@ -27,6 +27,7 @@ import javax.media.rtp.SessionAddress;
 import org.onesec.raven.ivr.RTPManagerService;
 import org.onesec.raven.net.NettyEventLoopGroupProvider;
 import org.onesec.raven.net.impl.BufHolderToBufDecoder;
+import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.LoggerHelper;
@@ -38,6 +39,7 @@ import org.weda.internal.annotations.Service;
  *
  * @author Mikhail Titov
  */
+@NodeClass
 public class NettyRtpManagerConfigurator extends BaseNode implements RtpManagerConfigurator {
     
     @Service

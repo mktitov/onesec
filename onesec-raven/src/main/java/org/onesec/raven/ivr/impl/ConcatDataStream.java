@@ -204,7 +204,7 @@ public class ConcatDataStream implements PushBufferStream, Task
                                 , bufferQueue.size()
                                 , droppedPacketCount));
                     }
-                    sleepTime = (packetNumber-expectedPacketNumber)*packetLength - correction;
+                    sleepTime = (packetNumber-expectedPacketNumber)*packetLength - correction - 5;
                     if (sleepTime>0)
                         TimeUnit.MILLISECONDS.sleep(sleepTime);
                 } catch (InterruptedException ex) {

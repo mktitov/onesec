@@ -19,6 +19,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import java.util.concurrent.atomic.AtomicReference;
 import org.onesec.raven.net.NettyEventLoopGroupProvider;
+import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.tree.impl.BaseNode;
 import org.weda.annotations.constraints.NotNull;
@@ -27,6 +28,7 @@ import org.weda.annotations.constraints.NotNull;
  *
  * @author Mikhail Titov
  */
+@NodeClass
 public class NettyNioEventLoopGroupNode extends BaseNode implements NettyEventLoopGroupProvider {
     @NotNull @Parameter(defaultValue = "4")
     private Integer threadsCount;
