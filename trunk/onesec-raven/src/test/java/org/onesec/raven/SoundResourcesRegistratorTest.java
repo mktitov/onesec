@@ -35,6 +35,12 @@ public class SoundResourcesRegistratorTest extends OnesecRavenTestCase implement
         checkRes(resourceManager, "/hello", "hello_ru.wav");
         checkRes(resourceManager, "/numbers/female/1", "1_ru.wav");
         checkRes(resourceManager, "/numbers/male2/1", "1_ru.wav");
+        checkRes(resourceManager, "/numbers/male/миллион", "миллион_ru.wav");
+        checkRes(resourceManager, "/numbers/male/миллиона", "миллиона_ru.wav");
+        checkRes(resourceManager, "/numbers/male/миллионов", "миллионов_ru.wav");
+        checkRes(resourceManager, "/numbers/male2/миллион", "миллион_ru.wav");
+        checkRes(resourceManager, "/numbers/male2/миллиона", "миллиона_ru.wav");
+        checkRes(resourceManager, "/numbers/male2/миллионов", "миллионов_ru.wav");
     }
     
 //    @Test
@@ -50,7 +56,7 @@ public class SoundResourcesRegistratorTest extends OnesecRavenTestCase implement
         assertNotNull(hello);
         DataFile file = hello.getAudioFile();
         assertNotNull(file);
-        assertNotNull(filename, file.getFilename());
+        assertEquals(filename, file.getFilename());
         assertNotNull(file.getFileSize());
         assertTrue(file.getFileSize()>0);
     }

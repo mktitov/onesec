@@ -217,6 +217,9 @@ public class SoundResourcesRegistrator implements ResourceRegistrator, Constants
         "numbers/male/тыс€ч_ru",
         "numbers/male/тыс€ча_ru",
         "numbers/male/тыс€чи_ru",
+        "numbers/male/миллион_ru",
+        "numbers/male/миллиона_ru",
+        "numbers/male/миллионов_ru",
         "numbers/male2/0_ru",
         "numbers/male2/1'_ru",
         "numbers/male2/1''_ru",
@@ -265,7 +268,10 @@ public class SoundResourcesRegistrator implements ResourceRegistrator, Constants
         "numbers/male2/рубл€_ru",
         "numbers/male2/тыс€ч_ru",
         "numbers/male2/тыс€ча_ru",
-        "numbers/male2/тыс€чи_ru"        
+        "numbers/male2/тыс€чи_ru",
+        "numbers/male2/миллион_ru",
+        "numbers/male2/миллиона_ru",
+        "numbers/male2/миллионов_ru"        
     };
 
     public void registerResources(ResourceManager resourceManager) {
@@ -283,6 +289,7 @@ public class SoundResourcesRegistrator implements ResourceRegistrator, Constants
                         DataFile file = node.getAudioFile();
                         file.setFilename(resInfo.fileName);
                         file.setDataStream(is);
+                        file.setMimeType("audio/x-wav");
                         if (logger.isDebugEnabled())
                             logger.debug("Registered new resource ({})", resInfo.toString());
                     } finally  {

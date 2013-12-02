@@ -45,6 +45,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -57,6 +58,7 @@ import javax.telephony.Address;
 import javax.telephony.AddressObserver;
 import javax.telephony.Call;
 import javax.telephony.Connection;
+import javax.telephony.InvalidStateException;
 import javax.telephony.Provider;
 import javax.telephony.Terminal;
 import javax.telephony.TerminalConnection;
@@ -120,7 +122,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
 
     private Address termAddress;
     private int maxChannels = Integer.MAX_VALUE;
-    private CiscoTerminal ciscoTerm;
+    volatile private CiscoTerminal ciscoTerm;
     private boolean termInService = false;
     private boolean termAddressInService = false;
     Provider provider;
@@ -334,14 +336,18 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
     }
     
     private int getTerminalCallsCount() {
-        TerminalConnection[] connections = ciscoTerm.getTerminalConnections();
-        if (connections!=null && connections.length>0) {
-            Set<Call> _calls = new HashSet<Call>();
-            for (TerminalConnection connection: connections)
-                _calls.add(connection.getConnection().getCall());
-            return _calls.size();
+        CiscoTerminal _ciscoTerm = ciscoTerm;
+        if (_ciscoTerm==null) throw new NoSuchElementException("Terminal not started");
+        else {
+            TerminalConnection[] connections = _ciscoTerm.getTerminalConnections();
+            if (connections!=null && connections.length>0) {
+                Set<Call> _calls = new HashSet<Call>();
+                for (TerminalConnection connection: connections)
+                    _calls.add(connection.getConnection().getCall());
+                return _calls.size();
+            }
+            return 0;
         }
-        return 0;
     }
 
     public List<ViewableObject> getViewableObjects() throws Exception {

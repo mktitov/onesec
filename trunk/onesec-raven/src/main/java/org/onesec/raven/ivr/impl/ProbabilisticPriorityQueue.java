@@ -256,7 +256,7 @@ public class ProbabilisticPriorityQueue<T extends Entity> implements BlockingQue
             List<PriorityRate> res = new ArrayList<PriorityRate>(priorities.size());
             double[] rates = getPrioritiesRatios(priorities);
             for (int i=0; i<rates.length; i++)
-                res.add(new PriorityRate(priorities.get(i), (int) (rates[i]*100)));
+                res.add(new PriorityRate(priorities.get(i), (int) (rates[i]-(i>0?rates[i-1]:0)*100)));
             return res;
         }
     }
