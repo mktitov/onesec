@@ -16,6 +16,7 @@
 package org.onesec.raven.sms.impl;
 
 import com.logica.smpp.Data;
+import com.logica.smpp.pdu.Address;
 import com.logica.smpp.pdu.Request;
 import com.logica.smpp.pdu.Response;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -103,10 +104,14 @@ public class SmsTransceiverWorker implements ShortMessageListener {
         }
     }
     
-    public boolean addMessage(Long messageId, String message, String dstAddr, Object tag) {
+    public boolean addMessage(Long messageId, String message, String dstAddr, String fromAddr, Byte srcAddrTon, 
+            Byte srcAddrNpi, Object tag) 
+    {
         try {
+            final Address srcAddr = fromAddr==null? 
+                    config.getSrcAddr() : new Address(srcAddrTon, srcAddrNpi, fromAddr);
             ShortTextMessageImpl msg = new ShortTextMessageImpl(
-                    dstAddr, message, tag, messageId, messageEncoder, config, logger);
+                    dstAddr, srcAddr, message, tag, messageId, messageEncoder, config, logger);
             msg.addListener(this);
             if (!queue.addMessage(msg)) return false;
             else {

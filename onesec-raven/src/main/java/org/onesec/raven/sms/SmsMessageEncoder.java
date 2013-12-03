@@ -16,6 +16,7 @@
 
 package org.onesec.raven.sms;
 
+import com.logica.smpp.pdu.Address;
 import com.logica.smpp.pdu.SubmitSM;
 
 /**
@@ -23,5 +24,5 @@ import com.logica.smpp.pdu.SubmitSM;
  * @author Mikhail Titov
  */
 public interface SmsMessageEncoder {
-    SubmitSM[] encode(String message, String dstAddr) throws Exception;
+    SubmitSM[] encode(String message, String dstAddr, Address srcAddr) throws Exception;
 }

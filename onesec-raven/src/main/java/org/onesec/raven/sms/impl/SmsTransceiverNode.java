@@ -234,7 +234,10 @@ public class SmsTransceiverNode extends AbstractSafeDataPipe {
         final String addr = (String) rec.getValue(SmsRecordSchemaNode.ADDRESS);
         final Long id = (Long) rec.getValue(SmsRecordSchemaNode.ID);
         final RecordHolder holder = new RecordHolder(rec, context);
-        if (!_worker.addMessage(id, message, addr, holder)) {
+        final String fromAddr = (String) rec.getValue(SmsRecordSchemaNode.FROM_ADDRESS);
+        final Byte fromAddrTon = (Byte) rec.getValue(SmsRecordSchemaNode.FROM_ADDRESS_TON);
+        final Byte fromAddrNpi = (Byte) rec.getValue(SmsRecordSchemaNode.FROM_ADDRESS_NPI);
+        if (!_worker.addMessage(id, message, addr, fromAddr, srcTon, srcNpi, holder)) {
             long timeout = System.currentTimeMillis() + messageQueueWaitTimeout;
             boolean queued = false;
             do {
@@ -244,7 +247,7 @@ public class SmsTransceiverNode extends AbstractSafeDataPipe {
                     } finally {
                         dataLock.writeLock().unlock();
                     }
-                queued = _worker.addMessage(id, message, addr, holder);
+                queued = _worker.addMessage(id, message, addr, fromAddr, srcTon, srcNpi, holder);
             } while (!queued && System.currentTimeMillis() <= timeout);
             if (!queued) {
                 rec.setValue(SmsRecordSchemaNode.COMPLETION_CODE, SmsRecordSchemaNode.QUEUE_FULL_STATUS);
