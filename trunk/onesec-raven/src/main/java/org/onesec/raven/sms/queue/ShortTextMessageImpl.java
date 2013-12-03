@@ -1,5 +1,6 @@
 package org.onesec.raven.sms.queue;
 
+import com.logica.smpp.pdu.Address;
 import com.logica.smpp.pdu.SubmitSM;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,7 +31,7 @@ public class ShortTextMessageImpl implements ShortTextMessage, MessageUnitListen
     private final AtomicInteger unitsCount = new AtomicInteger(0);
     private final AtomicBoolean success = new AtomicBoolean(true);
 
-    public ShortTextMessageImpl(String dstAddr, String mes, Object tag, long id, 
+    public ShortTextMessageImpl(String dstAddr, Address srcAddr, String mes, Object tag, long id, 
             SmsMessageEncoder encoder, SmsConfig config, LoggerHelper logger) 
         throws Exception
     {
@@ -39,7 +40,7 @@ public class ShortTextMessageImpl implements ShortTextMessage, MessageUnitListen
         this.tag = tag;
         this.id = id;
         this.logger = new LoggerHelper(logger, "Message ["+id+"]. ");
-        SubmitSM[] frags = encoder.encode(mes, dstAddr);
+        SubmitSM[] frags = encoder.encode(mes, dstAddr, srcAddr);
         if (frags==null || frags.length==0)
             throw new Exception("Message encoding error. May be message is empty? Message: "+message);
         MessageUnit[] _units = new MessageUnitImpl[frags.length];

@@ -38,6 +38,9 @@ public class SmsRecordSchemaNode extends RecordSchemaNode {
     public final static String ID = "id";
     public final static String MESSAGE = "message";
     public final static String ADDRESS = "address";
+    public final static String FROM_ADDRESS = "fromAddress";
+    public final static String FROM_ADDRESS_TON = "fromAddressTon";
+    public final static String FROM_ADDRESS_NPI = "fromAddressNpi";
     public final static String COMPLETION_CODE = "completionCode";
     public final static String SEND_TIME = "sendTime";
 
@@ -49,6 +52,9 @@ public class SmsRecordSchemaNode extends RecordSchemaNode {
     @Message private static String idDisplayName;
     @Message private static String messageDisplayName;
     @Message private static String addressDisplayName;
+    @Message private static String fromAddressDisplayName;
+    @Message private static String fromAddressTonDisplayName;
+    @Message private static String fromAddressNpiDisplayName;
     @Message private static String completionCodeDisplayName;
     @Message private static String sendTimeDisplayName;
     
@@ -76,6 +82,9 @@ public class SmsRecordSchemaNode extends RecordSchemaNode {
         createField(ID, idDisplayName, RecordSchemaFieldType.LONG);
         createField(MESSAGE, messageDisplayName, RecordSchemaFieldType.STRING);
         createField(ADDRESS, addressDisplayName, RecordSchemaFieldType.STRING);
+        createField(FROM_ADDRESS, fromAddressDisplayName, RecordSchemaFieldType.STRING);
+        createField(FROM_ADDRESS_TON, fromAddressTonDisplayName, RecordSchemaFieldType.BYTE);
+        createField(FROM_ADDRESS_NPI, fromAddressNpiDisplayName, RecordSchemaFieldType.BYTE);
         createField(COMPLETION_CODE, completionCodeDisplayName, RecordSchemaFieldType.STRING);
         createField(SEND_TIME, sendTimeDisplayName, RecordSchemaFieldType.TIMESTAMP);
     }
