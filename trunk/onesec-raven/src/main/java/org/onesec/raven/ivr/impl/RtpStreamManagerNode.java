@@ -277,11 +277,11 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
 
     void releaseStream(RtpAddress stream) {
         streamsLock.writeLock().lock();
-        try{
+        try {
             Map portStreams = streams.get(stream.getAddress());
             if (portStreams!=null)
                 portStreams.remove(stream.getPort());
-        }finally{
+        } finally {
             streamsLock.writeLock().unlock();
         }
     }
@@ -313,78 +313,72 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
         }
     }
 
-    private RtpAddress createStreamOrReserveAddress(
-            boolean incomingStream, Node owner, boolean reserve)
-    {
+    private RtpAddress createStreamOrReserveAddress(boolean incomingStream, Node owner, boolean reserve) {
         if (!Status.STARTED.equals(getStatus()))
             return null;
-        try
-        {
-            streamsLock.writeLock().lock();
-            try
-            {
-                if (reserve && reservedAddresses.containsKey(owner)) {
-                    if (getLogger().isWarnEnabled())
-                        getLogger().warn("The node ({}) is already reserved the address and port ");
-                    return reservedAddresses.get(owner);
-                }
-                if (getStreamsCount() >= maxStreamCount)
-                    throw new Exception("Max streams count exceded");
-
-                RtpStream stream = null;
-                NavigableMap<Integer, RtpStream> portStreams = null;
-                InetAddress address = null;
-                int portNumber = 0;
-
-                Map<InetAddress, RtpAddressNode> avalAddresses = getAvailableAddresses();
-                for (Map.Entry<InetAddress, RtpAddressNode> addr: avalAddresses.entrySet()) {
-                    if (!streams.containsKey(addr.getKey())) {
-                        address = addr.getKey();
-                        portStreams = new TreeMap<Integer, RtpStream>();
-//                        portNumber = addr.getValue().getStartingPort();
-                        portNumber = getPortNumber(address, addr.getValue().getStartingPort()
-                                , addr.getValue().getMaxPortNumber(), portStreams);
-                        streams.put(addr.getKey(), portStreams);
-                        break;
+        try {
+            if (streamsLock.writeLock().tryLock(2000, TimeUnit.MILLISECONDS)) {
+                try {
+                    if (reserve && reservedAddresses.containsKey(owner)) {
+                        if (getLogger().isWarnEnabled())
+                            getLogger().warn("The node ({}) is already reserved the address and port ");
+                        return reservedAddresses.get(owner);
                     }
-                }
+                    if (getStreamsCountWOLock()>= maxStreamCount)
+                        throw new Exception("Max streams count exceded");
 
-                if (portStreams==null)
-                    for (Map.Entry<InetAddress, NavigableMap<Integer, RtpStream>> streamEntry: streams.entrySet())
-                        if (portStreams==null || streamEntry.getValue().size()<portStreams.size()) {
-                            portStreams = streamEntry.getValue();
-                            address = streamEntry.getKey();
-                            int startingPort = avalAddresses.get(streamEntry.getKey()).getStartingPort();
-                            int maxPortNumber = avalAddresses.get(streamEntry.getKey()).getMaxPortNumber();
-                            portNumber = getPortNumber(address, startingPort, maxPortNumber, portStreams);
+                    RtpStream stream = null;
+                    NavigableMap<Integer, RtpStream> portStreams = null;
+                    InetAddress address = null;
+                    int portNumber = 0;
+
+                    Map<InetAddress, RtpAddressNode> avalAddresses = getAvailableAddresses();
+                    for (Map.Entry<InetAddress, RtpAddressNode> addr: avalAddresses.entrySet()) {
+                        if (!streams.containsKey(addr.getKey())) {
+                            address = addr.getKey();
+                            portStreams = new TreeMap<Integer, RtpStream>();
+    //                        portNumber = addr.getValue().getStartingPort();
+                            portNumber = getPortNumber(address, addr.getValue().getStartingPort()
+                                    , addr.getValue().getMaxPortNumber(), portStreams);
+                            streams.put(addr.getKey(), portStreams);
+                            break;
                         }
+                    }
 
-                if (!reserve) {
-                    stream = incomingStream?
-                            new IncomingRtpStreamImpl(address, portNumber, getRtpConfigurator()) :
-                            new OutgoingRtpStreamImpl(address, portNumber, getRtpConfigurator());
-//                    if (incomingStream)
-//                        stream = new IncomingRtpStreamImpl(address, portNumber, getRtpConfigurator());
-//                    else
-//                        stream = new OutgoingRtpStreamImpl(address, portNumber, getRtpConfigurator());
-                    ((AbstractRtpStream)stream).setManager(this);
-                    ((AbstractRtpStream)stream).setOwner(owner);
-                    portStreams.put(portNumber, stream);
+                    if (portStreams==null)
+                        for (Map.Entry<InetAddress, NavigableMap<Integer, RtpStream>> streamEntry: streams.entrySet())
+                            if (portStreams==null || streamEntry.getValue().size()<portStreams.size()) {
+                                portStreams = streamEntry.getValue();
+                                address = streamEntry.getKey();
+                                int startingPort = avalAddresses.get(streamEntry.getKey()).getStartingPort();
+                                int maxPortNumber = avalAddresses.get(streamEntry.getKey()).getMaxPortNumber();
+                                portNumber = getPortNumber(address, startingPort, maxPortNumber, portStreams);
+                            }
 
-                    streamCreations.incrementAndGet();
+                    if (!reserve) {
+                        stream = incomingStream?
+                                new IncomingRtpStreamImpl(address, portNumber, getRtpConfigurator()) :
+                                new OutgoingRtpStreamImpl(address, portNumber, getRtpConfigurator());
+                        ((AbstractRtpStream)stream).setManager(this);
+                        ((AbstractRtpStream)stream).setOwner(owner);
+                        portStreams.put(portNumber, stream);
 
-                    return stream;
-                } else {
-                    portStreams.put(portNumber, null);
-                    RtpAddress rtpAddress = new RtpAddressImpl(address, portNumber);
-                    reservedAddresses.put(owner, rtpAddress);
+                        streamCreations.incrementAndGet();
 
-                    return rtpAddress;
+                        return stream;
+                    } else {
+                        portStreams.put(portNumber, null);
+                        RtpAddress rtpAddress = new RtpAddressImpl(address, portNumber);
+                        reservedAddresses.put(owner, rtpAddress);
+
+                        return rtpAddress;
+                    }
+                } finally {
+                    streamsLock.writeLock().unlock();
                 }
-            } finally {
-                streamsLock.writeLock().unlock();
-            }
-        } catch (Exception e) {
+            } else 
+                throw new Exception("Lock wait timeout");
+        } catch (Throwable e) {
             rejectedStreamCreations.incrementAndGet();
             if (isLogLevelEnabled(LogLevel.ERROR))
                 error(
@@ -450,18 +444,22 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
         if (!Status.STARTED.equals(getStatus()))
             return 0;
         streamsLock.readLock().lock();
-        try
-        {
-            int count = 0;
-            for (Map portStreams: streams.values())
-                count += portStreams==null? 0 : portStreams.size();
-
-            return count;
-        }
-        finally
-        {
+        try {
+            return getStreamsCountWOLock();
+//            int count = 0;
+//            for (Map portStreams: streams.values())
+//                count += portStreams==null? 0 : portStreams.size();
+//            return count;
+        } finally {
             streamsLock.readLock().unlock();
         }
+    }
+    
+    private int getStreamsCountWOLock() {
+        int count = 0;
+        for (Map portStreams: streams.values())
+            count += portStreams==null? 0 : portStreams.size();
+        return count;
     }
 
     private Map<InetAddress, RtpAddressNode> getAvailableAddresses() throws UnknownHostException
