@@ -57,8 +57,8 @@ public class  CommutationManagerCallImpl
             new AtomicReference<IvrEndpointConversation>();
     private final AtomicReference<IvrConversationsBridge> bridge = 
             new AtomicReference<IvrConversationsBridge>();
-    private ReentrantLock lock = new ReentrantLock();
-    private AtomicReference<State> state = new AtomicReference<State>(State.INIT);
+    private final ReentrantLock lock = new ReentrantLock();
+    private final AtomicReference<State> state = new AtomicReference<State>(State.INIT);
     private IvrEndpoint endpoint = null;
     private IvrEndpointConversation conversation = null;
     
