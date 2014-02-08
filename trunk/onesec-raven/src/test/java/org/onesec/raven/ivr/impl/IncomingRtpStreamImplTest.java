@@ -113,7 +113,7 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         irtp.release();
     }
 
-//    @Test
+    @Test
     public void netty_oneListenerTest() throws Exception {
         switchToNettyRtpManagerConfigurator();
         IncomingRtpStream irtp = manager.getIncomingRtpStream(manager);
@@ -127,7 +127,7 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         irtp.release();
     }
 
-    @Test
+//    @Test
     public void tenListenerTest() throws Exception
     {
         IncomingRtpStream irtp = manager.getIncomingRtpStream(manager);
