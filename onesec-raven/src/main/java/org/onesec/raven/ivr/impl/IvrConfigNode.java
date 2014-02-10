@@ -24,7 +24,7 @@ import org.raven.tree.impl.BaseNode;
  *
  * @author Mikhail Titov
  */
-@NodeClass(parentNode = ProjectNode.class)
+@NodeClass(parentNode = ProjectNode.class, anyChildTypes = true)
 public class IvrConfigNode extends BaseNode {
     
 }
