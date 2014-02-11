@@ -22,11 +22,11 @@ public class MessageUnitImpl implements MessageUnit {
     private final SubmitSM pdu;
     private final long fd;
     private final List<MessageUnitListener> listeners = new ArrayList<MessageUnitListener>(2);
+    private final SmsConfig config;
     
     private MessageUnitStatus status;
     private int attempts;
     private long xtime;
-    private SmsConfig config;
     private volatile long submitTime = 0;
     private volatile long confirmTime = 0;
 
@@ -79,7 +79,9 @@ public class MessageUnitImpl implements MessageUnit {
         if (status==DELAYED && curTime>xtime)
             changeStatusTo(READY, 0);
         if (status==SUBMITTED && curTime - xtime > config.getMaxWaitForResp()) 
-            changeStatusTo(attempts < config.getMaxSubmitAttempts()? READY : FATAL, 0);
+            changeStatusTo(attempts <= config.getMaxSubmitAttempts()? READY : FATAL, 0);
+        if (status==READY && attempts > config.getMaxSubmitAttempts())
+            changeStatusTo(FATAL, 0);
         return status;
     }
     
