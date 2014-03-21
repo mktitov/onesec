@@ -85,6 +85,7 @@ import org.onesec.core.services.ProviderRegistry;
 import org.onesec.core.services.StateListenersCoordinator;
 import static org.onesec.raven.impl.CCMUtils.*;
 import org.onesec.raven.ivr.*;
+import org.raven.conv.ConversationScenario;
 import org.raven.ds.impl.DataContextImpl;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.impl.AbstractTask;
@@ -227,6 +228,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                         , rtpStreamManager, enableIncomingRtp, address, bindings);
                 conv.addConversationListener(listener);
                 conv.addConversationListener(this);
+                scenario.conversationCreated(conv);
                 ConvHolder holder = new ConvHolder(conv, false, opponentNum);                
                 opponentNum = holder.calledNumber;
                 calls.put(call, holder);
@@ -540,11 +542,14 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                 if (holder==null && enableIncomingCalls && calls.size()<=maxChannels) {
                     if (logger.isDebugEnabled())
                         logger.debug(callLog(call, "Creating conversation"));
+                    final ConversationScenario scenario = term.getConversationScenario();
                     IvrEndpointConversationImpl conv = new IvrEndpointConversationImpl(
                             term, this, executor, term.getConversationScenario(), rtpStreamManager
                             , enableIncomingRtp, address, null);
                     conv.setCall((CallControlCall) call);
                     conv.addConversationListener(this);
+                    if (scenario instanceof IvrConversationScenario) 
+                        ((IvrConversationScenario)scenario).conversationCreated(conv);
                     calls.put(call, new ConvHolder(conv, true, null));
                 } else if (holder!=null && !holder.incoming) 
                     holder.conv.setCall((CallControlCall) call);

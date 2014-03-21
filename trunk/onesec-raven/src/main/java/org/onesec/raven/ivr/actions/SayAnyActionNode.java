@@ -16,12 +16,14 @@
 
 package org.onesec.raven.ivr.actions;
 
+import javax.script.SimpleBindings;
 import org.onesec.raven.Constants;
 import org.onesec.raven.impl.Genus;
 import org.onesec.raven.ivr.IvrAction;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
+import org.raven.conv.ConversationScenario;
 import org.raven.tree.Node;
 import org.raven.tree.ResourceManager;
 import org.raven.tree.impl.ResourceReferenceValueHandlerFactory;
@@ -41,6 +43,9 @@ public class SayAnyActionNode extends AbstractActionNode {
     
     @Service
     private static ResourceManager resourceManager;
+    
+    @Parameter
+    private Integer playAtRepetition;
     
     @Parameter(valueHandlerType=ResourceReferenceValueHandlerFactory.TYPE)
     private Node wordsNode;
@@ -81,13 +86,42 @@ public class SayAnyActionNode extends AbstractActionNode {
 
     @Override
     protected IvrAction doCreateAction() {
-        return new SayAnyAction(this, 
-                NodeUtils.getAttrValuesByPrefixAndType(this, WORDS_NODE_ATTR, Node.class),
-                NodeUtils.getAttrValuesByPrefixAndType(this, NUMBERS_NODE_ATTR, Node.class),
-                NodeUtils.getAttrValuesByPrefixAndType(this, AMOUNT_NUMBERS_NODE_ATTR, Node.class),
-                wordsSentencePause, wordsWordPause, 
-                numbersGenus, numbersSentencePause, numbersWordPause, numbersEnableZero,
-                amountWordPause, resourceManager);
+        return !checkRepetition()? 
+                null :
+                new SayAnyAction(this, 
+                    NodeUtils.getAttrValuesByPrefixAndType(this, WORDS_NODE_ATTR, Node.class),
+                    NodeUtils.getAttrValuesByPrefixAndType(this, NUMBERS_NODE_ATTR, Node.class),
+                    NodeUtils.getAttrValuesByPrefixAndType(this, AMOUNT_NUMBERS_NODE_ATTR, Node.class),
+                    wordsSentencePause, wordsWordPause, 
+                    numbersGenus, numbersSentencePause, numbersWordPause, numbersEnableZero,
+                    amountWordPause, resourceManager);
+    }
+        
+    private boolean checkRepetition() {
+        bindingSupport.enableScriptExecution();
+        try {
+            Integer _playAtRepetition = playAtRepetition;
+            if (_playAtRepetition==null)
+                return true;
+            else {
+                SimpleBindings bindings = new SimpleBindings();
+                formExpressionBindings(bindings);
+                int repetitionCount = ((Number) bindings.get(ConversationScenario.REPEITION_COUNT_PARAM)).intValue();
+                return repetitionCount-1==_playAtRepetition? true : false;
+                
+            }
+        } finally {
+            bindingSupport.reset();
+        }
+        
+    }
+
+    public Integer getPlayAtRepetition() {
+        return playAtRepetition;
+    }
+
+    public void setPlayAtRepetition(Integer playAtRepetition) {
+        this.playAtRepetition = playAtRepetition;
     }
 
     public String getActionsSequence() {

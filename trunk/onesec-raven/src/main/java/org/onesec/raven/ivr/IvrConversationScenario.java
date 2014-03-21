@@ -25,5 +25,5 @@ import org.raven.conv.ConversationScenario;
  */
 public interface IvrConversationScenario extends ConversationScenario, IvrConversationScenarioPoint
 {
-
+    public void conversationCreated(IvrEndpointConversation conversation);
 }
