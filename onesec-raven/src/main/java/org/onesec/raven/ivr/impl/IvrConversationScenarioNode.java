@@ -33,6 +33,7 @@ import org.onesec.raven.ivr.actions.StopConversationActionNode;
 import org.onesec.raven.ivr.actions.TransferCallActionNode;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
+import org.raven.conv.ConversationScenarioState;
 import org.raven.conv.impl.ConversationScenarioNode;
 import org.raven.conv.impl.GotoNode;
 import org.raven.expr.impl.IfNode;
@@ -198,8 +199,9 @@ public class IvrConversationScenarioNode extends ConversationScenarioNode
     }
 
     private void initBindings(IvrEndpointConversationEvent event) {
-        bindingSupport.put(IvrEndpointConversation.CONVERSATION_STATE_BINDING, 
-                event.getConversation().getConversationScenarioState());
-        bindingSupport.putAll(event.getConversation().getConversationScenarioState().getBindings());
+        final ConversationScenarioState state = event.getConversation().getConversationScenarioState();
+        bindingSupport.put(IvrEndpointConversation.CONVERSATION_STATE_BINDING, state);
+        if (state!=null)
+            bindingSupport.putAll(state.getBindings());
     }
 }

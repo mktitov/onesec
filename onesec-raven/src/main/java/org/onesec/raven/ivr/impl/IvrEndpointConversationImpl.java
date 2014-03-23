@@ -863,10 +863,15 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             executor.executeQuietly(new AbstractTask(owner, mess) {
                 @Override public void doRun() throws Exception {
                     for (IvrEndpointConversationListener listener:  _listeners)
-                        if (conversationStartEvent)
-                            listener.conversationStarted(event);
-                        else
-                            listener.conversationStopped((IvrEndpointConversationStoppedEvent)event);
+                        try {
+                            if (conversationStartEvent)
+                                listener.conversationStarted(event);
+                            else
+                                listener.conversationStopped((IvrEndpointConversationStoppedEvent)event);
+                        } catch (Throwable e) {
+                            if (logger.isErrorEnabled())
+                                logger.error("Error sending stop event to listener", e);
+                        }
                 }
             });
         }
@@ -880,7 +885,12 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             executor.executeQuietly(new AbstractTask(owner, "Sending conversation transfered event") {
                 @Override public void doRun() throws Exception {
                     for (IvrEndpointConversationListener listener: _listeners)
-                        listener.conversationTransfered(event);
+                        try {
+                            listener.conversationTransfered(event);
+                        } catch (Throwable e) {
+                            if (logger.isErrorEnabled())
+                                logger.error("Error sending transfer event to listener", e);
+                        }
                 }
             });
         }
@@ -894,8 +904,13 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             executor.executeQuietly(new AbstractTask(owner, "Sending dtmf received event") {
                 @Override public void doRun() throws Exception {
                     for (IvrEndpointConversationListener listener: _listeners)
-                        listener.dtmfReceived(event);
-                }
+                        try {
+                            listener.dtmfReceived(event);
+                        } catch (Throwable e) {
+                            if (logger.isErrorEnabled())
+                                logger.error("Error sending dtmfReceived event to listener", e);
+                        }
+            }
             });
         }
     }
@@ -905,7 +920,13 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         if ( !_listeners.isEmpty()) {
             IvrIncomingRtpStartedEventImpl ev = new IvrIncomingRtpStartedEventImpl(this);
             for (IvrEndpointConversationListener listener: _listeners)
-                listener.incomingRtpStarted(ev);
+                try {
+                    listener.incomingRtpStarted(ev);
+                } catch (Throwable e) {
+                    if (logger.isErrorEnabled())
+                        logger.error("Error sending incomingRtpStarted event to listener", e);
+                }
+                    
         }
     }
 
@@ -914,7 +935,13 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         if ( !_listeners.isEmpty()) {
             IvrOutgoingRtpStartedEventImpl ev = new IvrOutgoingRtpStartedEventImpl(this);
             for (IvrEndpointConversationListener listener: _listeners)
-                listener.outgoingRtpStarted(ev);
+                try {
+                    listener.outgoingRtpStarted(ev);
+                } catch (Throwable e) {
+                    if (logger.isErrorEnabled())
+                        logger.error("Error sending outgoingRtpStarted event to listener", e);
+                }
+                    
         }
     }
 
