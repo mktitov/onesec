@@ -8,21 +8,17 @@ import java.util.List;
 import org.onesec.raven.sms.MessageUnitListener;
 import org.raven.tree.impl.LoggerHelper;
 import static org.onesec.raven.sms.MessageUnitStatus.*;
+import org.onesec.raven.sms.ShortTextMessage;
 import org.onesec.raven.sms.SmsConfig;
 
 public class MessageUnitImpl implements MessageUnit {
 
-//    public static final int READY = 1;
-//    public static final int WAIT = 2;
-//    public static final int SENDED = 3;
-//    public static final int CONFIRMED = 4;
-//    public static final int FATAL = 5;
-    
     private final LoggerHelper logger;
     private final SubmitSM pdu;
     private final long fd;
     private final List<MessageUnitListener> listeners = new ArrayList<MessageUnitListener>(2);
     private final SmsConfig config;
+    private final ShortTextMessage message;
     
     private MessageUnitStatus status;
     private int attempts;
@@ -30,7 +26,8 @@ public class MessageUnitImpl implements MessageUnit {
     private volatile long submitTime = 0;
     private volatile long confirmTime = 0;
 
-    public MessageUnitImpl(SubmitSM sm, SmsConfig config, LoggerHelper logger) {
+    public MessageUnitImpl(ShortTextMessage message, SubmitSM sm, SmsConfig config, LoggerHelper logger) {
+        this.message = message;
         this.logger = logger;
         this.pdu = sm;
         this.status = READY;
@@ -44,6 +41,10 @@ public class MessageUnitImpl implements MessageUnit {
     public MessageUnit addListener(MessageUnitListener listener) {
         listeners.add(listener);
         return this;
+    }
+
+    public ShortTextMessage getMessage() {
+        return message;
     }
 
     private synchronized boolean changeStatusTo(MessageUnitStatus newStatus, long interval) {

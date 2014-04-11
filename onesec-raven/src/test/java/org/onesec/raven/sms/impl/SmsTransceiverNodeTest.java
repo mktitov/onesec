@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.junit.Test;
 import org.onesec.raven.OnesecRavenTestCase;
+import org.onesec.raven.sms.BindMode;
 import org.raven.ds.Record;
 import org.raven.ds.RecordException;
 import org.raven.log.LogLevel;
@@ -40,6 +41,7 @@ public class SmsTransceiverNodeTest extends OnesecRavenTestCase {
     private PushDataSource ds;
     private SmsTransceiverNode sender;
     private DataCollector collector;
+    private DataCollector collector2;
     
     @Before
     public void prepare() {
@@ -55,6 +57,11 @@ public class SmsTransceiverNodeTest extends OnesecRavenTestCase {
         testsNode.addAndSaveChildren(schema);
         assertTrue(schema.start());
         
+        SmsDeliveryReceiptRecordSchemaNode deliverSchema = new SmsDeliveryReceiptRecordSchemaNode();
+        deliverSchema.setName("deliver schema");
+        testsNode.addAndSaveChildren(deliverSchema);
+        assertTrue(deliverSchema.start());
+        
         ds = new PushDataSource();
         ds.setName("ds");
         testsNode.addAndSaveChildren(ds);
@@ -68,21 +75,33 @@ public class SmsTransceiverNodeTest extends OnesecRavenTestCase {
         sender.setBindAddr(privateProperties.getProperty("smsc_address"));
         sender.setBindPort(Integer.parseInt(privateProperties.getProperty("smsc_port")));
         sender.setBindTimeout(9000);
+        sender.setBindMode(BindMode.TRANSMITTER);
         sender.setReceiveTimeout(100);
         sender.setSystemId(privateProperties.getProperty("sms_system_id"));
         sender.setPassword(privateProperties.getProperty("sms_passwd"));
         sender.setAddrRange(privateProperties.getProperty("sms_addr_range"));
         sender.setFromAddr(privateProperties.getProperty("sms_from_addr"));
+        sender.setSystemType(privateProperties.getProperty("sms_systemType"));
         sender.setLogLevel(LogLevel.TRACE);
+        sender.getDeliveryReceiptChannel().setDeliveryReceiptSchema(deliverSchema);
+        sender.getDeliveryReceiptChannel().setLogLevel(LogLevel.TRACE);
         
         collector = new DataCollector();
         collector.setName("collector");
         testsNode.addAndSaveChildren(collector);
         collector.setDataSource(sender);
+        collector.setLogLevel(LogLevel.TRACE);
         assertTrue(collector.start());
+        
+        collector2 = new DataCollector();
+        collector2.setName("delivery report collector");
+        testsNode.addAndSaveChildren(collector2);
+        collector2.setDataSource(sender.getDeliveryReceiptChannel());
+        collector2.setLogLevel(LogLevel.TRACE);
+        assertTrue(collector2.start());
     }
     
-    @Test
+//    @Test
     public void startTest() throws Exception {
         assertTrue(sender.start());
         assertNotNull(sender.getAttr("bind").getValue());
@@ -91,15 +110,69 @@ public class SmsTransceiverNodeTest extends OnesecRavenTestCase {
     }
     
 //    @Test
-    public void test() throws Exception {
+    public void submitTest() throws Exception {
         assertTrue(sender.start());
         Record smsRec = createSmsRecord(1);
         ds.pushData(smsRec);
         assertTrue(collector.waitForData(5000));
-        assertSame(smsRec, collector.getLastData());
+        assertSame(smsRec, collector.getDataList().get(0));
         assertEquals(SmsRecordSchemaNode.SUCCESSFUL_STATUS, smsRec.getValue(SmsRecordSchemaNode.COMPLETION_CODE));
         assertNotNull(smsRec.getValue(SmsRecordSchemaNode.SEND_TIME));
-        Thread.sleep(1000);
+        assertNotNull(smsRec.getValue(SmsRecordSchemaNode.MESSAGE_ID));
+    }
+    
+    @Test
+    public void messageExpireTest() throws Exception {
+        sender.setBindMode(BindMode.RECEIVER_AND_TRANSMITTER);
+        assertTrue(sender.start());
+        Record smsRec = createSmsRecord(1);
+        smsRec.setValue(SmsRecordSchemaNode.NEED_DELIVERY_RECEIPT, true);
+        smsRec.setValue(SmsRecordSchemaNode.MESSAGE_EXPIRE_PERIOD, "00:00:01");
+        ds.pushData(smsRec);
+        assertTrue(collector.waitForData(5000));
+        assertSame(smsRec, collector.getDataList().get(0));
+        assertEquals(SmsRecordSchemaNode.SUCCESSFUL_STATUS, smsRec.getValue(SmsRecordSchemaNode.COMPLETION_CODE));
+        assertNotNull(smsRec.getValue(SmsRecordSchemaNode.SEND_TIME));
+        assertNotNull(smsRec.getValue(SmsRecordSchemaNode.MESSAGE_ID));
+        //
+        assertTrue(collector2.waitForData(65000));
+        assertEquals(1, collector2.getDataListSize());
+        assertTrue(collector2.getDataList().get(0) instanceof Record);
+        Record rec = (Record) collector2.getDataList().get(0);
+        assertEquals(rec.getValue(SmsDeliveryReceiptRecordSchemaNode.MESSAGE_ID), smsRec.getValue(SmsRecordSchemaNode.MESSAGE_ID));
+        System.out.println("!!! DELIVERY REPORT: "+rec);
+//        Thread.sleep(65000);
+    }
+    
+//    @Test
+    public void deliveryReceiptTest() throws Exception {
+        sender.setBindMode(BindMode.RECEIVER_AND_TRANSMITTER);
+        assertTrue(sender.start());
+        Record smsRec = createSmsRecord(1);
+        smsRec.setValue(SmsRecordSchemaNode.NEED_DELIVERY_RECEIPT, true);
+        ds.pushData(smsRec);
+        assertTrue(collector.waitForData(5000));
+        assertSame(smsRec, collector.getDataList().get(0));
+        assertEquals(SmsRecordSchemaNode.SUCCESSFUL_STATUS, smsRec.getValue(SmsRecordSchemaNode.COMPLETION_CODE));
+        assertNotNull(smsRec.getValue(SmsRecordSchemaNode.SEND_TIME));
+        assertNotNull(smsRec.getValue(SmsRecordSchemaNode.MESSAGE_ID));
+        System.out.println("\n!!! RECORD: \n"+smsRec);
+//        Thread.sleep(30000);
+        assertTrue(collector2.waitForData(10000));
+        assertEquals(1, collector2.getDataListSize());
+        assertTrue(collector2.getDataList().get(0) instanceof Record);
+        Record rec = (Record) collector2.getDataList().get(0);
+        assertEquals(rec.getValue(SmsDeliveryReceiptRecordSchemaNode.MESSAGE_ID), smsRec.getValue(SmsRecordSchemaNode.MESSAGE_ID));
+//        Thread.sleep(30000);
+    }
+    
+//    @Test
+    public void enquiryLinkTest() throws Exception {
+        sender.setEnquireInterval(10000l);
+        sender.setMaxEnquireAttempts(10);
+        sender.setRebindOnTimeoutInterval(10000);
+        assertTrue(sender.start());
+        Thread.sleep(120000);
     }
     
 //    @Test
@@ -146,7 +219,7 @@ public class SmsTransceiverNodeTest extends OnesecRavenTestCase {
         ds.pushData(rec2);
         assertTrue(collector.waitForData(10000, 2));
         assertSame(rec1, collector.getDataList().get(0));
-        assertSame(rec2, collector.getDataList().get(1));
+        assertSame(rec2, collector.getDataList().get(1));        
         assertEquals(SmsRecordSchemaNode.SUCCESSFUL_STATUS, rec1.getValue(SmsRecordSchemaNode.COMPLETION_CODE));
         assertEquals(SmsRecordSchemaNode.SUCCESSFUL_STATUS, rec2.getValue(SmsRecordSchemaNode.COMPLETION_CODE));
     }
@@ -155,8 +228,10 @@ public class SmsTransceiverNodeTest extends OnesecRavenTestCase {
         Record rec = schema.createRecord();
         rec.setValue(SmsRecordSchemaNode.ID, id);
         rec.setValue(SmsRecordSchemaNode.ADDRESS, privateProperties.getProperty("sms_dst_addr"));
-        rec.setValue(SmsRecordSchemaNode.MESSAGE, "Проверка работы SmsTransceiver'а. id="+id+". ts="+
-                new SimpleDateFormat("dd.MM.yyyy HH:mm:ss").format(new Date()));
+        String mess = "Test SmsTransceiver'а. id="+id+". ts="+
+                new SimpleDateFormat("dd.MM.yyyy HH:mm:ss").format(new Date());
+//        rec.setValue(SmsRecordSchemaNode.MESSAGE, mess + mess + mess + mess);
+        rec.setValue(SmsRecordSchemaNode.MESSAGE, mess);
         return rec;
     }
 }

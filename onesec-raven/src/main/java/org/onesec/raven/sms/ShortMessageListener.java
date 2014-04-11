@@ -16,10 +16,12 @@
 
 package org.onesec.raven.sms;
 
+import org.onesec.raven.sms.impl.SmsTransceiverNode;
+
 /**
  *
  * @author Mikhail Titov
  */
 public interface ShortMessageListener {
-    public void messageHandled(ShortTextMessage message, boolean success, Object tag);
+    public void messageHandled(ShortTextMessage message, boolean success, SmsTransceiverNode.RecordHolder tag);
 }

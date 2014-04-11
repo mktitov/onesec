@@ -93,8 +93,11 @@ public class SmsMessageEncoderImpl implements SmsMessageEncoder {
         req.setPriorityFlag(config.getPriorityFlag());
         req.setRegisteredDelivery(config.getRegisteredDelivery());
         req.setSmDefaultMsgId(config.getSmDefaultMsgId());
+//        req.setSequenceNumber(777);
+//        req.assignInitialSequenceNumber(777);
         //request.assignSequenceNumber(true);
         req.setDataCoding(config.getDataCoding());
+//        req.setRegisteredDelivery((byte)0x01);
         try {
             req.setServiceType(config.getServiceType());
             req.setScheduleDeliveryTime("");

@@ -15,6 +15,7 @@ import org.raven.tree.impl.LoggerHelper;
 import static org.onesec.raven.sms.MessageUnitStatus.*;
 import org.onesec.raven.sms.ShortMessageListener;
 import org.onesec.raven.sms.ShortTextMessage;
+import org.onesec.raven.sms.impl.SmsTransceiverNode;
 import org.weda.beans.ObjectUtils;
 
 public class OutQueue implements MessageUnitListener, ShortMessageListener {
@@ -307,7 +308,7 @@ public class OutQueue implements MessageUnitListener, ShortMessageListener {
         }
     }
 
-    public void messageHandled(ShortTextMessage msg, boolean success, Object tag) {
+    public void messageHandled(ShortTextMessage msg, boolean success, SmsTransceiverNode.RecordHolder origMessage) {
         mesCount.decrementAndGet();
         sentTime.addAndGet(msg.getHandledTime());
         if (success) successMessages.incrementAndGet();

@@ -16,12 +16,14 @@
 package org.onesec.raven.sms.impl;
 
 import com.logica.smpp.Data;
-import com.logica.smpp.pdu.Address;
+import com.logica.smpp.pdu.DeliverSM;
 import com.logica.smpp.pdu.Request;
 import com.logica.smpp.pdu.Response;
+import com.logica.smpp.pdu.SubmitSMResp;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import org.onesec.raven.sms.BindMode;
 import org.onesec.raven.sms.MessageUnit;
 import org.onesec.raven.sms.ShortMessageListener;
 import org.onesec.raven.sms.ShortTextMessage;
@@ -74,6 +76,11 @@ public class SmsTransceiverWorker implements ShortMessageListener {
     private final AtomicBoolean running = new AtomicBoolean();
     private final AtomicBoolean stopped = new AtomicBoolean();
     private final AtomicLong suspendProcessorUntil = new AtomicLong();
+    private final AtomicReference<SmsAgent> agent = new AtomicReference<SmsAgent>();
+    private final AtomicBoolean binding = new AtomicBoolean(false);
+    private final AtomicBoolean unbinding = new AtomicBoolean(false);
+    private final boolean isReceiver;
+
 
     public SmsTransceiverWorker(SmsTransceiverNode owner, SmsConfig config, ExecutorService executor) 
         throws Exception 
@@ -84,6 +91,7 @@ public class SmsTransceiverWorker implements ShortMessageListener {
         this.logger = new LoggerHelper(owner, "Transceiver. ");
         this.messageEncoder = new SmsMessageEncoderImpl(config, logger);
         this.queue = new OutQueue(config, this.logger);
+        this.isReceiver = config.getBindMode()==BindMode.RECEIVER || config.getBindMode()==BindMode.RECEIVER_AND_TRANSMITTER;
 //        createAgent();
     }
     
@@ -99,19 +107,15 @@ public class SmsTransceiverWorker implements ShortMessageListener {
         MessageProcessor _processor = messageProcessor.get();
         if (_processor==null) return "NOT_CREATED";
         else {
-            SmsAgent agent = _processor.agent.get();
-            return agent==null? "NOT_CREATED" : agent.getStatus().toString();
+            SmsAgent _agent = agent.get();
+            return _agent==null? "NOT_CREATED" : _agent.getStatus().toString();
         }
     }
     
-    public boolean addMessage(Long messageId, String message, String dstAddr, String fromAddr, Byte srcAddrTon, 
-            Byte srcAddrNpi, Object tag) 
+    public boolean addMessage(SmsTransceiverNode.RecordHolder origMessage) 
     {
         try {
-            final Address srcAddr = fromAddr==null? 
-                    config.getSrcAddr() : new Address(srcAddrTon, srcAddrNpi, fromAddr);
-            ShortTextMessageImpl msg = new ShortTextMessageImpl(
-                    dstAddr, srcAddr, message, tag, messageId, messageEncoder, config, logger);
+            ShortTextMessageImpl msg = new ShortTextMessageImpl(origMessage, messageEncoder, config, logger);
             msg.addListener(this);
             if (!queue.addMessage(msg)) return false;
             else {
@@ -121,12 +125,19 @@ public class SmsTransceiverWorker implements ShortMessageListener {
         } catch (Exception e) {
             return false;
         }
+    }        
+    
+    public void start() {
+        if (isReceiver) {
+            getAgent();
+        }
     }
     
     public void stop() {
         synchronized(stopped) {
             stopped.set(true);
             stopMessageProcessor();
+            stopAgent();
 //            stopAgent();
         }
     }
@@ -166,17 +177,93 @@ public class SmsTransceiverWorker implements ShortMessageListener {
             _processor.stop();
     }
     
-    public void messageHandled(ShortTextMessage msg, boolean success, Object tag) {
+    public void messageHandled(ShortTextMessage msg, boolean success, SmsTransceiverNode.RecordHolder origMessage) {
         if (!stopped.get())
-            owner.messageHandled(success, tag);
+            owner.messageHandled(success, origMessage);
+    }
+    
+    private void restartAgent() {
+        executor.executeQuietly(config.getRebindOnTimeoutInterval(), new AbstractTask(owner, "Waiting for agent rebind") {            
+            @Override
+            public void doRun() throws Exception {
+                getAgent();
+            }
+        });
+    }
+    
+    private void stopAgent() {
+        synchronized(unbinding) { //realy need synchronization?
+            if (unbinding.compareAndSet(false, true)) {
+                SmsAgent _agent = agent.getAndSet(null);
+                if (_agent!=null)
+                    _agent.unbind();
+            }
+        }
+    }
+    
+    private SmsAgent getAgent() {
+        if (agent.get()!=null) return agent.get();
+        else {
+            try {
+                if (binding.compareAndSet(false, true)) {
+                    unbinding.set(false);
+                    try {
+                        SmsAgent _agent = new SmsAgent(config, new AgentListener(), executor, executor, logger);
+                        if (logger.isDebugEnabled())
+                            logger.debug("SmsAgent created. Wating for IN_SERVICE");
+                        synchronized(this) {
+                            wait(SMS_AGENT_BIND_TIMEOUT);
+                        }
+                        if (agent.get()!=null) return agent.get();
+                        else throw new Exception("Bind timeout");
+                    } finally {
+                        binding.set(false);
+                    }
+                }
+                return null;
+            } catch (Exception ex) {
+                if (logger.isErrorEnabled())
+                    logger.error(
+                            String.format("Error creating SMS agent. Will try again via %s seconds"
+                                , config.getRebindOnTimeoutInterval()/1000)
+                            , ex);
+                restartAgent();
+//                restartMessageProcessor(config.getRebindOnTimeoutInterval());sd
+                return null;
+            }
+        }
+    }
+
+    private void setAgent(SmsAgent agent) {
+        boolean needNotify = false;
+        synchronized(unbinding) {
+            if (unbinding.get()) {
+                if (agent!=null) agent.unbind();
+            } else {
+                this.agent.set(agent);
+                if (agent!=null) needNotify = true;
+                else {
+                    if (logger.isWarnEnabled())
+                        logger.warn("SMS agent unexpected changed state to OUT_OF_SERVICE. "
+                                + "Restarting processor and sms agent via {} seconds", 
+                                config.getRebindOnTimeoutInterval()/1000);
+//                    restartMessageProcessor(config.getRebindOnTimeoutInterval());df
+                    restartAgent();
+                }
+            }
+        }
+        if (needNotify)
+            synchronized(this) {
+                notify();
+            }
     }
 
     private class MessageProcessor extends AbstractTask {
         private final AtomicBoolean needStop = new AtomicBoolean();
         private final LoggerHelper logger = new LoggerHelper(SmsTransceiverWorker.this.logger, "Processor. ");
-        private final AtomicReference<SmsAgent> agent = new AtomicReference<SmsAgent>();
-        private final AtomicBoolean binding = new AtomicBoolean(false);
-        private final AtomicBoolean unbinding = new AtomicBoolean(false);
+//        private final AtomicReference<SmsAgent> agent = new AtomicReference<SmsAgent>();
+//        private final AtomicBoolean binding = new AtomicBoolean(false);
+//        private final AtomicBoolean unbinding = new AtomicBoolean(false);
         
         public MessageProcessor() {
             super(owner, "Processing messages");
@@ -191,16 +278,18 @@ public class SmsTransceiverWorker implements ShortMessageListener {
             if (logger.isDebugEnabled())
                 logger.debug("Message processor task STARTED");
             try {
+//                final boolean isReceiver = config.getBindMode()==BindMode.RECEIVER || config.getBindMode()==BindMode.RECEIVER_AND_TRANSMITTER;
                 while (true) {
                     long cyclePause = 0;
                     int counter = 0;
                     while (!needStop.get() && !queue.isEmpty()) {
+//                    while (!needStop.get()) {
                        if (cyclePause > 0) {
                            Thread.sleep(cyclePause);
                             cyclePause = 0;
                        }
                        cyclePause = CYCLE_PAUSE_INTERVAL;
-                       if (trySendMessageUnit()) {
+                       if (!queue.isEmpty() && trySendMessageUnit()) {
                            ++counter;
                            if (counter > config.getOnceSend()) {
                                if (logger.isTraceEnabled())
@@ -220,13 +309,15 @@ public class SmsTransceiverWorker implements ShortMessageListener {
                 }
             } finally {
                 running.compareAndSet(true, false);
-                synchronized(unbinding) {
-                    unbinding.set(true);
-                    SmsAgent _agent = agent.getAndSet(null);
-                    if (_agent != null) {
-                        _agent.unbind();
-                    }
-                }
+                if (!isReceiver)
+                    stopAgent();
+//                synchronized(unbinding) {
+//                    unbinding.set(true);
+//                    SmsAgent _agent = agent.getAndSet(null);
+//                    if (_agent != null) {
+//                        _agent.unbind();
+//                    }
+//                }
             }
         }
 
@@ -257,67 +348,18 @@ public class SmsTransceiverWorker implements ShortMessageListener {
             }
         }
         
-        private SmsAgent getAgent() {
-            if (agent.get()!=null) return agent.get();
-            else {
-                try {
-                    if (binding.compareAndSet(false, true)) {
-                        SmsAgent _agent = new SmsAgent(config, new AgentListener(this), executor, executor, logger);
-                        if (logger.isDebugEnabled())
-                            logger.debug("SmsAgent created. Wating for IN_SERVICE");
-                        synchronized(this) {
-                            wait(SMS_AGENT_BIND_TIMEOUT);
-                        }
-                        if (agent.get()!=null) return agent.get();
-                        else throw new Exception("Bind timeout");
-                    }
-                    return null;
-                } catch (Exception ex) {
-                    if (logger.isErrorEnabled())
-                        logger.error(
-                                String.format("Error creating SMS agent. Will try again via %s seconds"
-                                    , config.getRebindOnTimeoutInterval()/1000)
-                                , ex);
-                    restartMessageProcessor(config.getRebindOnTimeoutInterval());
-                    return null;
-                }
-            }
-        }
-        
-        private void setAgent(SmsAgent agent) {
-            boolean needNotify = false;
-            synchronized(unbinding) {
-                if (unbinding.get()) {
-                    if (agent!=null) agent.unbind();
-                } else {
-                    this.agent.set(agent);
-                    if (agent!=null) needNotify = true;
-                    else {
-                        if (logger.isWarnEnabled())
-                            logger.warn("SMS agent unexpected chaneged state to OUT_OF_SERVICE. "
-                                    + "Restarting processor and sms agent via {} seconds", 
-                                    config.getRebindOnTimeoutInterval()/1000);
-                        restartMessageProcessor(config.getRebindOnTimeoutInterval());
-                    }
-                }
-            }
-            if (needNotify)
-                synchronized(this) {
-                    notify();
-                }
-        }
     }
     
     private class AgentListener implements SmsAgentListener {
         private final AtomicBoolean valid = new AtomicBoolean(true);
-        private final MessageProcessor processor;
+//        private final MessageProcessor processor;
 
-        public AgentListener(MessageProcessor processor) {
-            this.processor = processor;
-        }
+//        public AgentListener(MessageProcessor processor) {
+//            this.processor = processor;
+//        }
         
         public void inService(SmsAgent _agent) {
-            processor.setAgent(_agent);
+            setAgent(_agent);
         }
 
         public void responseReceived(SmsAgent agent, Response pdu) {
@@ -328,6 +370,10 @@ public class SmsTransceiverWorker implements ShortMessageListener {
                 switch (pdu.getCommandStatus()) {
                     case Data.ESME_ROK:
                         unit = queue.getMessageUnit(sq);
+                        if (pdu instanceof SubmitSMResp) {
+                            SubmitSMResp resp = (SubmitSMResp) pdu;
+                            unit.getMessage().setMessageId(resp.getMessageId());
+                        }
                         if (unit!=null) unit.confirmed();
                         break;
                     case Data.ESME_RTHROTTLED:
@@ -360,14 +406,31 @@ public class SmsTransceiverWorker implements ShortMessageListener {
         }
 
         public void requestReceived(SmsAgent agent, Request pdu) {
-            if (valid.get()) {
-                
+            try {
+                if (valid.get()) {
+                    if (pdu instanceof DeliverSM) {
+                        final DeliverSM deliverReq = (DeliverSM) pdu;
+                        if (deliverReq.getEsmClass() == 4) {
+//                            if (logger.isDebugEnabled()) {
+//                                logger.debug("Received delivery receipt");
+//                                logger.debug("Data: " + deliverReq.getShortMessage());
+//                                logger.debug("Receipted message id: " + deliverReq.getReceiptedMessageId());
+//                                logger.debug("APP specific map: "+deliverReq.getApplicationSpecificInfo());
+//                                logger.debug("SEQ NUM: "+deliverReq.getSequenceNumber());
+//                            }                            
+                            owner.getDeliveryReceiptChannel().sendReport(deliverReq.getShortMessage());
+                        }                        
+                    }
+                }
+            } catch (Exception e) {
+                if (logger.isErrorEnabled())
+                    logger.error("Error processing request", e);
             }
         }
 
         public void outOfService(SmsAgent _agent) {
             valid.set(false);
-            processor.setAgent(null);
+            setAgent(null);
         }
     }
     

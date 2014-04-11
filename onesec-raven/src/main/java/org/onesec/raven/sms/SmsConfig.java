@@ -34,6 +34,7 @@ public interface SmsConfig {
     public int getRebindOnTimeoutInterval();
     public int getRebindInterval();
     public int getEnquireTimeout();
+    public long getEnquireLinkInterval();
     public int getMaxEnquireAttempts();
     public int getSoTimeout(); 
     public int getReceiveTimeout();
@@ -53,6 +54,7 @@ public interface SmsConfig {
     public byte getProtocolId();
     public byte getPriorityFlag();
     public byte getRegisteredDelivery();
+    public String getMessageExpireTime();
     public byte getReplaceIfPresentFlag();
     public byte getDataCoding();
     public byte getSmDefaultMsgId();
