@@ -34,6 +34,7 @@ public class SmsConfigImpl implements SmsConfig {
     private final int bindTimeout;
     private final int rebindInterval;
     private final int rebindOnTimeoutInterval;
+    private final long enquireLinkInterval;
     private final int enquireTimeout;
     private final int maxEnquireAttempts;
     private final int soTimeout;
@@ -48,6 +49,7 @@ public class SmsConfigImpl implements SmsConfig {
     private final byte protocolId;
     private final byte priorityFlag;
     private final byte registeredDelivery;
+    private final String messageExpireTime;
     private final byte replaceIfPresentFlag;
     private final byte dataCoding;
     private final byte smDefaultMsgId;
@@ -77,6 +79,7 @@ public class SmsConfigImpl implements SmsConfig {
         bindTimeout = node.getBindTimeout();
         rebindInterval = node.getRebindInterval();
         rebindOnTimeoutInterval = node.getRebindOnTimeoutInterval();
+        enquireLinkInterval = node.getEnquireInterval();
         enquireTimeout = node.getEnquireTimeout();
         maxEnquireAttempts = node.getMaxEnquireAttempts();
         soTimeout = node.getSoTimeout();
@@ -91,6 +94,7 @@ public class SmsConfigImpl implements SmsConfig {
         protocolId = node.getProtocolId();
         priorityFlag = node.getPriorityFlag();
         registeredDelivery = node.getRegisteredDelivery();
+        messageExpireTime = node.getMessageExpireTime();
         replaceIfPresentFlag = node.getReplaceIfPresentFlag();
         dataCoding = node.getDataCoding();
         smDefaultMsgId = node.getSmDefaultMsgId();
@@ -160,6 +164,10 @@ public class SmsConfigImpl implements SmsConfig {
 
     public int getRebindOnTimeoutInterval() {
         return rebindOnTimeoutInterval;
+    }
+
+    public long getEnquireLinkInterval() {
+        return enquireLinkInterval;
     }
 
     public int getEnquireTimeout() {
@@ -236,6 +244,10 @@ public class SmsConfigImpl implements SmsConfig {
 
     public byte getRegisteredDelivery() {
         return registeredDelivery;
+    }
+
+    public String getMessageExpireTime() {
+        return messageExpireTime;
     }
 
     public byte getReplaceIfPresentFlag() {

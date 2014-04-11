@@ -16,6 +16,8 @@
 
 package org.onesec.raven.sms;
 
+import org.onesec.raven.sms.impl.SmsTransceiverNode;
+
 /**
  *
  * @author Mikhail Titov
@@ -23,7 +25,8 @@ package org.onesec.raven.sms;
 public interface ShortTextMessage {
     public MessageUnit[] getUnits();
     public long getId();
-    public Object getTag();
+    public void setMessageId(String messageId);
+    public SmsTransceiverNode.RecordHolder getOriginalMessage();
     public int getUnitsCount();
     public String getDst();
     public String getMessage();

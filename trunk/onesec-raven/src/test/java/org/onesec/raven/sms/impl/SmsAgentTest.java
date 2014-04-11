@@ -29,7 +29,6 @@ import org.junit.Before;
 import static org.junit.Assert.*;
 import org.junit.Test;
 import org.onesec.raven.NodeAdapter;
-import static org.onesec.raven.ivr.conference.impl.RealTimeConferenceMixerTest.executeTask;
 import org.onesec.raven.ivr.impl.ContainerParserDataSource;
 import org.onesec.raven.sms.BindMode;
 import org.onesec.raven.sms.SmsAgentListener;

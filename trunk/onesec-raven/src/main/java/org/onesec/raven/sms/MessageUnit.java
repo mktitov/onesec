@@ -25,6 +25,7 @@ import com.logica.smpp.pdu.SubmitSM;
 public interface MessageUnit {
 //    public boolean isLastSeg();
 //    public void ready();
+    public ShortTextMessage getMessage();
     public void submitted();
     public void fatal();
     public void confirmed();

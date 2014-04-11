@@ -36,6 +36,7 @@ public class SmsRecordSchemaNode extends RecordSchemaNode {
     public final static String SUCCESSFUL_STATUS = "SUCCESSFUL";
     
     public final static String ID = "id";
+    public final static String MESSAGE_ID = "messageId";
     public final static String MESSAGE = "message";
     public final static String ADDRESS = "address";
     public final static String FROM_ADDRESS = "fromAddress";
@@ -43,6 +44,8 @@ public class SmsRecordSchemaNode extends RecordSchemaNode {
     public final static String FROM_ADDRESS_NPI = "fromAddressNpi";
     public final static String COMPLETION_CODE = "completionCode";
     public final static String SEND_TIME = "sendTime";
+    public final static String NEED_DELIVERY_RECEIPT = "needDeliveryReceipt";
+    public final static String MESSAGE_EXPIRE_PERIOD = "messageExpirePeriod";
 
     public final static String DATABASE_TABLE_EXTENSION_NAME = "dbTable";
     public final static String DATABASE_TABLE_NAME = "RAVEN_SMS_MESSAGES";
@@ -50,6 +53,7 @@ public class SmsRecordSchemaNode extends RecordSchemaNode {
     
     @Message private static String datePattern;
     @Message private static String idDisplayName;
+    @Message private static String messageIdDisplayName;
     @Message private static String messageDisplayName;
     @Message private static String addressDisplayName;
     @Message private static String fromAddressDisplayName;
@@ -57,6 +61,8 @@ public class SmsRecordSchemaNode extends RecordSchemaNode {
     @Message private static String fromAddressNpiDisplayName;
     @Message private static String completionCodeDisplayName;
     @Message private static String sendTimeDisplayName;
+    @Message private static String needDeliveryReceiptDisplayName;
+    @Message private static String messageExpirePeriodDisplayName;
     
     @Override
     protected void doInit() throws Exception {
@@ -80,11 +86,14 @@ public class SmsRecordSchemaNode extends RecordSchemaNode {
             dbExtension.start();
         }
         createField(ID, idDisplayName, RecordSchemaFieldType.LONG);
+        createField(MESSAGE_ID, messageIdDisplayName, RecordSchemaFieldType.STRING);
         createField(MESSAGE, messageDisplayName, RecordSchemaFieldType.STRING);
         createField(ADDRESS, addressDisplayName, RecordSchemaFieldType.STRING);
         createField(FROM_ADDRESS, fromAddressDisplayName, RecordSchemaFieldType.STRING);
         createField(FROM_ADDRESS_TON, fromAddressTonDisplayName, RecordSchemaFieldType.BYTE);
         createField(FROM_ADDRESS_NPI, fromAddressNpiDisplayName, RecordSchemaFieldType.BYTE);
+        createField(NEED_DELIVERY_RECEIPT, needDeliveryReceiptDisplayName, RecordSchemaFieldType.BOOLEAN);
+        createField(MESSAGE_EXPIRE_PERIOD, messageExpirePeriodDisplayName, RecordSchemaFieldType.STRING);
         createField(COMPLETION_CODE, completionCodeDisplayName, RecordSchemaFieldType.STRING);
         createField(SEND_TIME, sendTimeDisplayName, RecordSchemaFieldType.TIMESTAMP);
     }

@@ -34,6 +34,7 @@ import com.logica.smpp.pdu.Request;
 import com.logica.smpp.pdu.Response;
 import com.logica.smpp.pdu.SubmitSM;
 import com.logica.smpp.pdu.SubmitSMResp;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.onesec.raven.sms.BindMode;
 import org.onesec.raven.sms.SmsAgentListener;
@@ -59,10 +60,11 @@ public class SmsAgent {
     private final ExecutorService executor;
     private final AtomicReference<Status> status = new AtomicReference<Status>(Status.INITIALIZING);
     private final Session session;
+    private final AtomicBoolean linkChecked = new AtomicBoolean(false);
     private final Node owner;
     private final MessageListener messageListener;
     
-    private volatile long lastInteractionTime = 0;
+    private volatile long lastInteractionTime = System.currentTimeMillis();
 
     public SmsAgent(SmsConfig config, SmsAgentListener agentListener, ExecutorService executor
             , Node owner, LoggerHelper logger) 
@@ -76,7 +78,7 @@ public class SmsAgent {
         this.messageListener = new MessageListener();
         this.session = createSession();
         bind();
-        executeCheckConnectionTask();
+        executeCheckConnectionTask(config.getMaxEnquireAttempts());
     }
 
     public Status getStatus() {
@@ -126,8 +128,12 @@ public class SmsAgent {
         executor.executeQuietly(new UnbindTask());
     }
     
-    private void executeCheckConnectionTask() {
-        executor.executeQuietly(config.getEnquireTimeout(), new CheckConnectionTask());
+    private void executeCheckConnectionTask(int triesLeft) {
+        final long delay = System.currentTimeMillis() - lastInteractionTime + config.getEnquireLinkInterval();
+        if (delay>0)
+            executor.executeQuietly(config.getEnquireLinkInterval(), new CheckConnectionTask(triesLeft));
+        else
+            executor.executeQuietly(new CheckConnectionTask(triesLeft));
     }
     
     private void fireOutOfServiceEvent() {
@@ -212,22 +218,43 @@ public class SmsAgent {
         }
         
         private void processRequest(Request req) {
-            switch (req.getCommandId()) {
-                case Data.UNBIND: changeStatusToOutOfService(); break;
-                case Data.DATA_SM:
-                case Data.DELIVER_SM: 
-                    lastInteractionTime = System.currentTimeMillis();
-                    fireMessageReceived(req, false); 
-                    break;
-                default:
-                    if (logger.isDebugEnabled())
-                        logger.debug("No handler for request: {}", req.debugString());
+            if (logger.isTraceEnabled()) {
+                logger.trace("Processing request: "+req.debugString());
+                logger.trace("Request class: "+req.getClass().getName());
+            }
+            try {
+                switch (req.getCommandId()) {
+                    case Data.UNBIND: 
+                        if (req.canResponse())
+                            session.respond(req.getResponse());
+                        changeStatusToOutOfService(); 
+                        break;
+                    case Data.ENQUIRE_LINK:
+                        if (req.canResponse())
+                            session.respond(req.getResponse());
+                    case Data.DATA_SM:
+                    case Data.DELIVER_SM: 
+                        lastInteractionTime = System.currentTimeMillis();
+                        if (req.canResponse()) {
+                            if (logger.isTraceEnabled())
+                                logger.trace("Sending auto response for request: {}"+req.getResponse().debugString());
+                            session.respond(req.getResponse());
+                        }
+                        fireMessageReceived(req, false); 
+                        break;
+                    default:
+                        if (logger.isDebugEnabled())
+                            logger.debug("No handler for request: {}", req.debugString());
+                }
+            } catch (Exception e) {
+                if (logger.isErrorEnabled())
+                    logger.error("Request processing error", e);
             }
         }
 
         public void processResponse(Response resp) {
-            if (logger.isDebugEnabled())
-                logger.debug("Processing response: "+resp.debugString());
+            if (logger.isTraceEnabled())
+                logger.trace("Processing response: "+resp.debugString());
             switch (resp.getCommandId()) {
                 case Data.BIND_RECEIVER_RESP:
                 case Data.BIND_TRANSCEIVER_RESP:
@@ -249,6 +276,7 @@ public class SmsAgent {
                             logger.error("Problem with connection testing. Link is down. Unbinding");
                         changeStatusToOutOfService();
                     } else { 
+                        linkChecked.set(true);
                         if (logger.isDebugEnabled())
                             logger.debug("Link is alive.");
                         lastInteractionTime = System.currentTimeMillis();
@@ -279,8 +307,8 @@ public class SmsAgent {
                 }
             } else if (status.compareAndSet(Status.INITIALIZING, Status.OUT_OF_SERVICE)) 
                 closeSession();
-            else if (logger.isDebugEnabled())
-                logger.debug("Can't unbind because of invalid agent status ({})", status);
+            else if (logger.isWarnEnabled())
+                logger.warn("Can't unbind because of invalid agent status ({})", status);
         }
         
         private void closeSession() throws Exception {
@@ -299,22 +327,55 @@ public class SmsAgent {
     }
     
     private class CheckConnectionTask extends AbstractTask {
+        private final int triesLeft;
 
-        public CheckConnectionTask() {
+        public CheckConnectionTask(int triesLeft) {
             super(owner, logger.logMess("Checking connection"));
+            this.triesLeft = triesLeft;
         }
 
         @Override
         public void doRun() throws Exception {
-            if (lastInteractionTime + config.getEnquireTimeout() <= System.currentTimeMillis()
+            if (lastInteractionTime + config.getEnquireLinkInterval()<= System.currentTimeMillis()
                 && status.get() == Status.IN_SERVICE) 
             {
                 if (logger.isDebugEnabled()) 
-                    logger.debug("Enquiring link");
-                session.enquireLink();
+                    logger.debug("Enquiring link. Tries left ({})", triesLeft);
+                linkChecked.set(false);
+                try {
+                    session.enquireLink();
+                } finally {
+                    executor.executeQuietly(config.getEnquireTimeout(), new WaitForEnquireLinkResp(triesLeft));
+                }                
+            } else {
+                if (status.get() != Status.OUT_OF_SERVICE)
+                    executeCheckConnectionTask(config.getMaxEnquireAttempts());                
             }
-            if (status.get() != Status.OUT_OF_SERVICE)
-                executeCheckConnectionTask();
+        }
+    }
+    
+    private class WaitForEnquireLinkResp extends AbstractTask {
+        private final int triesLeft;
+
+        public WaitForEnquireLinkResp(int triesLeft) {
+            super(owner, "Waiting for ENQUIRE_LINK_RESP");
+            this.triesLeft = triesLeft;
+        }
+
+        @Override
+        public void doRun() throws Exception {
+            if (!linkChecked.get()) {
+                if (logger.isWarnEnabled()) 
+                    logger.warn("Timeout waiting for ENQUIRE_LINK_RESP");
+                if (triesLeft==1) {
+                    if (logger.isErrorEnabled())
+                        logger.error("Link is down. Unbinding");
+                    changeStatusToOutOfService();
+                } else {
+                    executeCheckConnectionTask(triesLeft-1);
+                }
+            } else 
+                executeCheckConnectionTask(config.getMaxEnquireAttempts());
         }
     }
 }

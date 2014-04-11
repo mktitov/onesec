@@ -70,6 +70,8 @@ public class SmsTransceiverNode extends AbstractSafeDataPipe {
     @NotNull @Parameter(defaultValue = "60000", parent = "smscBindAttributes")
     private Integer rebindOnTimeoutInterval;
     @NotNull @Parameter(defaultValue = "90000", parent = "smscBindAttributes")
+    private Long enquireInterval;
+    @NotNull @Parameter(defaultValue = "100", parent = "smscBindAttributes")
     private Integer enquireTimeout;
     @NotNull @Parameter(defaultValue = "3", parent = "smscBindAttributes")
     private Integer maxEnquireAttempts;
@@ -108,6 +110,8 @@ public class SmsTransceiverNode extends AbstractSafeDataPipe {
     private Byte priorityFlag;
     @NotNull @Parameter(defaultValue = "0", parent = "smscCodingAttributes")
     private Byte registeredDelivery;
+    @NotNull @Parameter(defaultValue = "01:00:00", parent = "smscCodingAttributes")
+    private String messageExpireTime;
     @NotNull @Parameter(defaultValue = "0", parent = "smscCodingAttributes")
     private Byte replaceIfPresentFlag;
     @NotNull @Parameter(defaultValue = "8", parent = "smscCodingAttributes")
@@ -151,7 +155,7 @@ public class SmsTransceiverNode extends AbstractSafeDataPipe {
     @NotNull @Parameter(defaultValue = "1", parent = "smscQueueAttributes")
     private Long maxMessageUnitsTimeQuantity;  
     @NotNull @Parameter(defaultValue = "60000", parent = "smscQueueAttributes")
-    private Long messageQueueWaitTimeout;
+    private Long messageQueueWaitTimeout;    
     
     @NotNull @Parameter(valueHandlerType = SystemSchedulerValueHandlerFactory.TYPE)
     private ExecutorService executor;
@@ -172,9 +176,17 @@ public class SmsTransceiverNode extends AbstractSafeDataPipe {
     }
 
     @Override
+    protected void doInit() throws Exception {
+        super.doInit();
+        initNodes(false);
+    }
+
+    @Override
     protected void doStart() throws Exception {
         super.doStart();
+        initNodes(true);
         worker.set(new SmsTransceiverWorker(this, new SmsConfigImpl(this), executor));
+        worker.get().start();
     }
 
     @Override
@@ -183,6 +195,20 @@ public class SmsTransceiverNode extends AbstractSafeDataPipe {
         SmsTransceiverWorker _worker = worker.getAndSet(null);
         if (_worker!=null)
             _worker.stop();
+    }
+    
+    private void initNodes(boolean start) {
+        SmsDeliveryReceiptChannel channel = getDeliveryReceiptChannel();
+        if (channel==null) {
+            channel = new SmsDeliveryReceiptChannel();
+            addAndSaveChildren(channel);
+        }
+        if (start)
+            channel.start();
+    }
+    
+    public SmsDeliveryReceiptChannel getDeliveryReceiptChannel() {
+        return (SmsDeliveryReceiptChannel) getNode(SmsDeliveryReceiptChannel.NAME);
     }
 
     @Override
@@ -209,8 +235,7 @@ public class SmsTransceiverNode extends AbstractSafeDataPipe {
 //    public void setData(DataSource dataSource, Object data, DataContext context) {
 //    }
 //    
-    public void messageHandled(boolean success, Object tag) {
-        RecordHolder holder = (RecordHolder) tag;
+    public void messageHandled(boolean success, RecordHolder holder) {
         try {
             if (dataLock.writeLock().tryLock())
                 try {
@@ -218,9 +243,9 @@ public class SmsTransceiverNode extends AbstractSafeDataPipe {
                 } finally {
                     dataLock.writeLock().unlock();
                 }
-            holder.rec.setValue(SmsRecordSchemaNode.COMPLETION_CODE, SmsRecordSchemaNode.SUCCESSFUL_STATUS);
-            holder.rec.setValue(SmsRecordSchemaNode.SEND_TIME, new Date());
-            DataSourceHelper.sendDataToConsumers(this, holder.rec, holder.context);
+            holder.record.setValue(SmsRecordSchemaNode.COMPLETION_CODE, SmsRecordSchemaNode.SUCCESSFUL_STATUS);
+            holder.record.setValue(SmsRecordSchemaNode.SEND_TIME, new Date());
+            DataSourceHelper.sendDataToConsumers(this, holder.record, holder.context);
         } catch (RecordException e) {
             if (isLogLevelEnabled(LogLevel.ERROR)) 
                 getLogger().error("Error processing SMS record", e);
@@ -230,14 +255,15 @@ public class SmsTransceiverNode extends AbstractSafeDataPipe {
     private void queueMessage(Record rec, DataContext context, SmsTransceiverWorker _worker) 
         throws Exception 
     {
-        final String message = (String) rec.getValue(SmsRecordSchemaNode.MESSAGE);
-        final String addr = (String) rec.getValue(SmsRecordSchemaNode.ADDRESS);
-        final Long id = (Long) rec.getValue(SmsRecordSchemaNode.ID);
+//        final String message = (String) rec.getValue(SmsRecordSchemaNode.MESSAGE);
+//        final String addr = (String) rec.getValue(SmsRecordSchemaNode.ADDRESS);
+//        final Long id = (Long) rec.getValue(SmsRecordSchemaNode.ID);
         final RecordHolder holder = new RecordHolder(rec, context);
-        final String fromAddr = (String) rec.getValue(SmsRecordSchemaNode.FROM_ADDRESS);
-        final Byte fromAddrTon = (Byte) rec.getValue(SmsRecordSchemaNode.FROM_ADDRESS_TON);
-        final Byte fromAddrNpi = (Byte) rec.getValue(SmsRecordSchemaNode.FROM_ADDRESS_NPI);
-        if (!_worker.addMessage(id, message, addr, fromAddr, srcTon, srcNpi, holder)) {
+//        final String fromAddr = (String) rec.getValue(SmsRecordSchemaNode.FROM_ADDRESS);
+//        final Byte fromAddrTon = (Byte) rec.getValue(SmsRecordSchemaNode.FROM_ADDRESS_TON);
+//        final Byte fromAddrNpi = (Byte) rec.getValue(SmsRecordSchemaNode.FROM_ADDRESS_NPI);
+//        if (!_worker.addMessage(id, message, addr, fromAddr, srcTon, srcNpi, holder)) {
+        if (!_worker.addMessage(holder)) {
             long timeout = System.currentTimeMillis() + messageQueueWaitTimeout;
             boolean queued = false;
             do {
@@ -247,7 +273,8 @@ public class SmsTransceiverNode extends AbstractSafeDataPipe {
                     } finally {
                         dataLock.writeLock().unlock();
                     }
-                queued = _worker.addMessage(id, message, addr, fromAddr, srcTon, srcNpi, holder);
+//                queued = _worker.addMessage(id, message, addr, fromAddr, srcTon, srcNpi, holder);
+                queued = _worker.addMessage(holder);
             } while (!queued && System.currentTimeMillis() <= timeout);
             if (!queued) {
                 rec.setValue(SmsRecordSchemaNode.COMPLETION_CODE, SmsRecordSchemaNode.QUEUE_FULL_STATUS);
@@ -352,6 +379,14 @@ public class SmsTransceiverNode extends AbstractSafeDataPipe {
 
     public void setRebindOnTimeoutInterval(Integer rebindOnTimeoutInterval) {
         this.rebindOnTimeoutInterval = rebindOnTimeoutInterval;
+    }
+
+    public Long getEnquireInterval() {
+        return enquireInterval;
+    }
+
+    public void setEnquireInterval(Long enquireInterval) {
+        this.enquireInterval = enquireInterval;
     }
 
     public Integer getEnquireTimeout() {
@@ -464,6 +499,14 @@ public class SmsTransceiverNode extends AbstractSafeDataPipe {
 
     public void setRegisteredDelivery(Byte registeredDelivery) {
         this.registeredDelivery = registeredDelivery;
+    }
+
+    public String getMessageExpireTime() {
+        return messageExpireTime;
+    }
+
+    public void setMessageExpireTime(String messageExpireTime) {
+        this.messageExpireTime = messageExpireTime;
     }
 
     public Byte getReplaceIfPresentFlag() {
@@ -791,13 +834,21 @@ public class SmsTransceiverNode extends AbstractSafeDataPipe {
         return true;
     }
 
-    private class RecordHolder {
-        private final Record rec;
+    public static class RecordHolder {
+        private final Record record;
         private final DataContext context;
 
         public RecordHolder(Record rec, DataContext context) {
-            this.rec = rec;
+            this.record = rec;
             this.context = context;
+        }
+        
+        public Record getRecord() {
+            return record;
+        }
+
+        public DataContext getContext() {
+            return context;
         }
     }
 }
