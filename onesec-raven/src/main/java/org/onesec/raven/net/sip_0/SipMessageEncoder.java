@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Mikhail Titov.
+ * Copyright 2013 Mikhail Titov.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,32 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.onesec.raven.net.sip.impl;
+package org.onesec.raven.net.sip_0;
 
 import java.nio.ByteBuffer;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import static org.junit.Assert.*;
-import org.onesec.raven.net.impl.AbstractPacketProcessor.ProcessResult;
-import org.onesec.raven.net.sip_0.SipMessage;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class SipPacketProcessorImplTest {
-    
-    @Before
-    public void prepare() {
-        
-    }
-
-    @Test
-    public void decodeTest() {
-        
-    }
-
+public interface SipMessageEncoder {
+    /**
+     * Returns <b>true</b> if message successfully encoded to buffer or <b>false</b> if not enough space in buffer
+     */
+    public boolean encode(SipMessage message, ByteBuffer buffer);
 }

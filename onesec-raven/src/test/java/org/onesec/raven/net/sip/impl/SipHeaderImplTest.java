@@ -15,11 +15,12 @@
  */
 package org.onesec.raven.net.sip.impl;
 
+import org.onesec.raven.net.sip_0.impl_0.SipHeaderImpl;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.Assert;
 import org.junit.Test;
-import org.onesec.raven.net.sip.SipHeaderValue;
+import org.onesec.raven.net.sip_0.SipHeaderValue;
 
 /**
  *

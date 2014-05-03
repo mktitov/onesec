@@ -39,7 +39,17 @@
             <groupId>org.raven</groupId>
             <artifactId>raven-core</artifactId>
         </dependency>
-
+        
+        <dependency>
+          <groupId>javax.sip</groupId>
+          <artifactId>jain-sip-api</artifactId>
+        </dependency>
+        
+        <dependency>
+          <groupId>javax.sip</groupId>
+          <artifactId>jain-sip-ri</artifactId>
+        </dependency>
+          
         <dependency>
             <groupId>javax.media</groupId>
             <artifactId>jmf</artifactId>
