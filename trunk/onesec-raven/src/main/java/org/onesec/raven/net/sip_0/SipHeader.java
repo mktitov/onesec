@@ -13,32 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.onesec.raven.net.sip.impl;
+package org.onesec.raven.net.sip_0;
 
-import java.nio.ByteBuffer;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import static org.junit.Assert.*;
-import org.onesec.raven.net.impl.AbstractPacketProcessor.ProcessResult;
-import org.onesec.raven.net.sip_0.SipMessage;
+import java.util.Collection;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class SipPacketProcessorImplTest {
-    
-    @Before
-    public void prepare() {
-        
-    }
-
-    @Test
-    public void decodeTest() {
-        
-    }
-
+public interface SipHeader {
+    /**
+     * Returns the header name
+     */
+    public String getName();
+    /**
+     * Returns the first value of the header
+     */
+    public SipHeaderValue getValue();
+    /**
+     * Returns all header values or empty collection if header does not contains values
+     */
+    public Collection<SipHeaderValue> getValues();
 }

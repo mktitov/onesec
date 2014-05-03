@@ -15,6 +15,7 @@
  */
 package org.onesec.raven.net.sip.impl;
 
+import org.onesec.raven.net.sip_0.impl_0.AddressHeaderImpl;
 import org.junit.Test;
 import static org.junit.Assert.*;
 

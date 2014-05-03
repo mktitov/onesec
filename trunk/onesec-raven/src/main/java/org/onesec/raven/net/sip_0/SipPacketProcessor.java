@@ -13,32 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.onesec.raven.net.sip.impl;
+package org.onesec.raven.net.sip_0;
 
-import java.nio.ByteBuffer;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import static org.junit.Assert.*;
-import org.onesec.raven.net.impl.AbstractPacketProcessor.ProcessResult;
-import org.onesec.raven.net.sip_0.SipMessage;
+import org.onesec.raven.net.PacketProcessor;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class SipPacketProcessorImplTest {
-    
-    @Before
-    public void prepare() {
-        
-    }
-
-    @Test
-    public void decodeTest() {
-        
-    }
-
+public interface SipPacketProcessor extends PacketProcessor {
+    public void sendMessage(SipMessage request);
 }

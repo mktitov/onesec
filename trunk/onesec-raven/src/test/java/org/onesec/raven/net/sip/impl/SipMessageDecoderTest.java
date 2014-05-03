@@ -15,13 +15,14 @@
  */
 package org.onesec.raven.net.sip.impl;
 
+import org.onesec.raven.net.sip_0.impl_0.SipMessageDecoderImpl;
 import java.nio.ByteBuffer;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.onesec.raven.net.sip.SipMessage;
-import org.onesec.raven.net.sip.SipRequest;
-import org.onesec.raven.net.sip.SipResponse;
+import org.onesec.raven.net.sip_0.SipMessage;
+import org.onesec.raven.net.sip_0.SipRequest;
+import org.onesec.raven.net.sip_0.SipResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
