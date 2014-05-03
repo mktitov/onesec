@@ -223,6 +223,20 @@
                 <version>7.0.2</version>
                 <scope>compile</scope>
             </dependency>
+            
+            <dependency>
+              <groupId>javax.sip</groupId>
+              <artifactId>jain-sip-api</artifactId>
+              <version>1.2.1.4</version>
+              <scope>compile</scope>
+            </dependency>
+
+            <dependency>
+              <groupId>javax.sip</groupId>
+              <artifactId>jain-sip-ri</artifactId>
+              <version>1.2.167</version>
+              <scope>compile</scope>
+            </dependency>
 
             <dependency>
                 <groupId>javax.telephony</groupId>
