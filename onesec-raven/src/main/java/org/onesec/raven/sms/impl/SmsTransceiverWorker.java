@@ -79,6 +79,7 @@ public class SmsTransceiverWorker implements ShortMessageListener {
     private final AtomicReference<SmsAgent> agent = new AtomicReference<SmsAgent>();
     private final AtomicBoolean binding = new AtomicBoolean(false);
     private final AtomicBoolean unbinding = new AtomicBoolean(false);
+    private final AtomicLong lastAgentRestart = new AtomicLong();
     private final boolean isReceiver;
 
 
@@ -112,8 +113,7 @@ public class SmsTransceiverWorker implements ShortMessageListener {
         }
     }
     
-    public boolean addMessage(SmsTransceiverNode.RecordHolder origMessage) 
-    {
+    public boolean addMessage(SmsTransceiverNode.RecordHolder origMessage) {
         try {
             ShortTextMessageImpl msg = new ShortTextMessageImpl(origMessage, messageEncoder, config, logger);
             msg.addListener(this);
@@ -182,11 +182,19 @@ public class SmsTransceiverWorker implements ShortMessageListener {
             owner.messageHandled(success, origMessage);
     }
     
+    private boolean canStartAgent() {
+        return lastAgentRestart.get()+config.getRebindOnTimeoutInterval() < System.currentTimeMillis();
+    }
+    
     private void restartAgent() {
+        if (!canStartAgent())
+            return;
+        lastAgentRestart.set(System.currentTimeMillis()-1);
         executor.executeQuietly(config.getRebindOnTimeoutInterval(), new AbstractTask(owner, "Waiting for agent rebind") {            
             @Override
             public void doRun() throws Exception {
-                getAgent();
+                if (!stopped.get())
+                    getAgent();
             }
         });
     }
@@ -205,7 +213,7 @@ public class SmsTransceiverWorker implements ShortMessageListener {
         if (agent.get()!=null) return agent.get();
         else {
             try {
-                if (binding.compareAndSet(false, true)) {
+                if (canStartAgent() && binding.compareAndSet(false, true)) {
                     unbinding.set(false);
                     try {
                         SmsAgent _agent = new SmsAgent(config, new AgentListener(), executor, executor, logger);
@@ -278,12 +286,10 @@ public class SmsTransceiverWorker implements ShortMessageListener {
             if (logger.isDebugEnabled())
                 logger.debug("Message processor task STARTED");
             try {
-//                final boolean isReceiver = config.getBindMode()==BindMode.RECEIVER || config.getBindMode()==BindMode.RECEIVER_AND_TRANSMITTER;
                 while (true) {
                     long cyclePause = 0;
                     int counter = 0;
                     while (!needStop.get() && !queue.isEmpty()) {
-//                    while (!needStop.get()) {
                        if (cyclePause > 0) {
                            Thread.sleep(cyclePause);
                             cyclePause = 0;
@@ -311,13 +317,6 @@ public class SmsTransceiverWorker implements ShortMessageListener {
                 running.compareAndSet(true, false);
                 if (!isReceiver)
                     stopAgent();
-//                synchronized(unbinding) {
-//                    unbinding.set(true);
-//                    SmsAgent _agent = agent.getAndSet(null);
-//                    if (_agent != null) {
-//                        _agent.unbind();
-//                    }
-//                }
             }
         }
 

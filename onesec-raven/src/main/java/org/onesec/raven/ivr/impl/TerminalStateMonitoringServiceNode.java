@@ -18,6 +18,7 @@
 package org.onesec.raven.ivr.impl;
 
 import java.util.concurrent.atomic.AtomicLong;
+import org.onesec.raven.ivr.IvrEndpointPool;
 import org.onesec.raven.ivr.IvrTerminal;
 import org.raven.annotations.Parameter;
 import org.raven.log.LogLevel;
@@ -38,6 +39,9 @@ public class TerminalStateMonitoringServiceNode extends BaseNode
     
     @NotNull @Parameter(valueHandlerType=SystemSchedulerValueHandlerFactory.TYPE)
     private ExecutorService executor;
+    
+    @NotNull @Parameter(defaultValue = "false")
+    private Boolean monitorTerminalsInPool;
     
     private AtomicLong restartedCount;
     private AtomicLong stoppedCount;
@@ -77,44 +81,53 @@ public class TerminalStateMonitoringServiceNode extends BaseNode
         return executor;
     }
 
+    public Boolean getMonitorTerminalsInPool() {
+        return monitorTerminalsInPool;
+    }
+
+    public void setMonitorTerminalsInPool(Boolean monitorTerminalsInPool) {
+        this.monitorTerminalsInPool = monitorTerminalsInPool;
+    }
+
     public void setExecutor(ExecutorService executor) {
         this.executor = executor;
     }
     
     void startTerminal(final IvrTerminal term) {
-        if (!isStarted()) return;
-        if (isLogLevelEnabled(LogLevel.DEBUG))
-            getLogger().debug("Restarting terminal ({})", term);
-        executor.executeQuietly(new AbstractTask(this, "Restarting terminal: "+term) {
-            @Override public void doRun() throws Exception {
-                if (!ObjectUtils.in(term.getStatus(), Status.INITIALIZED, Status.STARTED)) return;
-                if (term.isStarted()) term.stop();
-                if (term.isAutoStart()) {
-                    if (term.start()) {
-                        restartedCount.incrementAndGet();
-                        if (isLogLevelEnabled(LogLevel.DEBUG))
-                            getLogger().debug("Terminal ({}) successfully restarted", term);
-                    }
-                } else if (isLogLevelEnabled(LogLevel.WARN))
-                    getLogger().warn("Can't start terminal ({}) because of autoStart==false", term.getPath());        
-            }
-        });
-        
+        if (isStarted() && (!(term.getParent() instanceof IvrEndpointPool) || monitorTerminalsInPool)) {
+            if (isLogLevelEnabled(LogLevel.DEBUG))
+                getLogger().debug("Restarting terminal ({})", term);
+            executor.executeQuietly(new AbstractTask(this, "Restarting terminal: "+term) {
+                @Override public void doRun() throws Exception {
+                    if (!ObjectUtils.in(term.getStatus(), Status.INITIALIZED, Status.STARTED)) return;
+                    if (term.isStarted()) term.stop();
+                    if (term.isAutoStart()) {
+                        if (term.start()) {
+                            restartedCount.incrementAndGet();
+                            if (isLogLevelEnabled(LogLevel.DEBUG))
+                                getLogger().debug("Terminal ({}) successfully restarted", term);
+                        }
+                    } else if (isLogLevelEnabled(LogLevel.WARN))
+                        getLogger().warn("Can't start terminal ({}) because of autoStart==false", term.getPath());        
+                }
+            });
+        }
     }
     
     void stopTerminal(final IvrTerminal term) {
-        if (!isStarted()) return;
-        executor.executeQuietly(new AbstractTask(this, "Restarting terminal: "+term) {
-            @Override public void doRun() throws Exception {
-                if (term.isStarted()) {
-                    if (isLogLevelEnabled(LogLevel.DEBUG))
-                        getLogger().debug("Stopping terminal ({})", term.getPath());
-                    term.stop();
-                    stoppedCount.incrementAndGet();
-                    if (isLogLevelEnabled(LogLevel.DEBUG))
-                        getLogger().debug("Terminal stopped ({})", term.getPath());
+        if (isStarted() && (!(term.getParent() instanceof IvrEndpointPool) || monitorTerminalsInPool)) {
+            executor.executeQuietly(new AbstractTask(this, "Restarting terminal: "+term) {
+                @Override public void doRun() throws Exception {
+                    if (term.isStarted()) {
+                        if (isLogLevelEnabled(LogLevel.DEBUG))
+                            getLogger().debug("Stopping terminal ({})", term.getPath());
+                        term.stop();
+                        stoppedCount.incrementAndGet();
+                        if (isLogLevelEnabled(LogLevel.DEBUG))
+                            getLogger().debug("Terminal stopped ({})", term.getPath());
+                    }
                 }
-            }
-        });
+            });
+        }
     }
 }

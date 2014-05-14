@@ -109,7 +109,7 @@ public class SmsTransceiverNodeTest extends OnesecRavenTestCase {
         sender.stop();
     }
     
-//    @Test
+    @Test
     public void submitTest() throws Exception {
         assertTrue(sender.start());
         Record smsRec = createSmsRecord(1);
@@ -121,7 +121,7 @@ public class SmsTransceiverNodeTest extends OnesecRavenTestCase {
         assertNotNull(smsRec.getValue(SmsRecordSchemaNode.MESSAGE_ID));
     }
     
-    @Test
+//    @Test
     public void messageExpireTest() throws Exception {
         sender.setBindMode(BindMode.RECEIVER_AND_TRANSMITTER);
         assertTrue(sender.start());
