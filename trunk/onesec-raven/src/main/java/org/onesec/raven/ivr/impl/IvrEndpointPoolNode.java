@@ -128,6 +128,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     private AtomicBoolean stopManagerTask;
     private AtomicBoolean managerThreadStoped;
     private AtomicReference<String> statusMessage;
+    private AtomicBoolean watchdogRunning;
     private final static AtomicLong requestSeq = new AtomicLong();
     private int sessionMaxRequestsPerSecond;
     private int requestsCountInSecond;
@@ -171,6 +172,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         managerThreadStoped = new AtomicBoolean(true);
         auxiliaryPoolUsageCount = new AtomicInteger(0);
         reservedEndpoints = new ConcurrentHashMap<IvrEndpoint, ReservedEndpointInfo>();
+        watchdogRunning = new AtomicBoolean();
     }
 
     @Override
@@ -694,10 +696,21 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         return statusMessage.get();
     }
 
-    public void executeScheduledJob(Scheduler scheduler)
-    {
-        if (useCase==UseCase.INCOMING_CALLS) runWatchdogForIncomingCallsUseCase();
-        else  try {
+    public void executeScheduledJob(Scheduler scheduler) {
+        if (watchdogRunning.compareAndSet(false, true)) {
+            try {
+                if (useCase==UseCase.INCOMING_CALLS) runWatchdogForIncomingCallsUseCase();
+                else  runWatchdogForOutgoingCallsUseCase();
+            } finally {
+                watchdogRunning.set(false);
+            }
+        }
+        else if (isLogLevelEnabled(LogLevel.DEBUG))
+            getLogger().debug("Can't execute watchdog task. Already executing...");
+    }
+    
+    private void runWatchdogForOutgoingCallsUseCase() {
+        try {
             if (lock.writeLock().tryLock(500, TimeUnit.MILLISECONDS)) {
                 try {
                     loadAverage.addDuration(0);
@@ -709,13 +722,13 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                             int state = endpoint.getEndpointState().getId();
                             if (endpoint.isStarted() && state==IvrEndpointState.IN_SERVICE)
                                 hasFree = true;
-                            if (   Status.INITIALIZED==endpoint.getStatus()
-                                || (   Status.STARTED==endpoint.getStatus()
+                            if (   endpoint.isInitialized()
+                                || (   endpoint.isStarted()
                                     && (state!=IvrEndpointState.IN_SERVICE || endpoint.getActiveCallsCount()>0)))
                             {
                                 if (isLogLevelEnabled(LogLevel.DEBUG))
                                     debug("Watchdog task. Restarting endpoint ({})", endpoint.getName());
-                                if (Status.STARTED==endpoint.getStatus())
+                                if (endpoint.isStarted())
                                     endpoint.stop();
                                 if (endpoint.start())
                                     ++restartedEndpoints;
