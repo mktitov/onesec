@@ -16,10 +16,12 @@
 package org.onesec.raven.sms.impl;
 
 import com.logica.smpp.Data;
+import com.logica.smpp.WrongSessionStateException;
 import com.logica.smpp.pdu.DeliverSM;
 import com.logica.smpp.pdu.Request;
 import com.logica.smpp.pdu.Response;
 import com.logica.smpp.pdu.SubmitSMResp;
+import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -44,6 +46,9 @@ public class SmsTransceiverWorker implements ShortMessageListener {
     public final static long CYCLE_PAUSE_INTERVAL = 50;
 //    public final static long RESTART_AGENT_ON_ERROR = 30; //secs
     public final static long SMS_AGENT_BIND_TIMEOUT = 10000; //ms
+    
+    public final static long SUBMIT_EXCEPTION_DELAY_INTERVAL = 3000;
+    public final static long SUBMIT_EXCEPTION_DELAY_FACTOR = 2;
     /**
      * @see OutQueue.factorQF
      */
@@ -105,12 +110,12 @@ public class SmsTransceiverWorker implements ShortMessageListener {
     }
     
     public String getSmsAgentStatus() {
-        MessageProcessor _processor = messageProcessor.get();
-        if (_processor==null) return "NOT_CREATED";
-        else {
+//        MessageProcessor _processor = messageProcessor.get();
+//        if (_processor==null) return "NOT_CREATED";
+//        else {
             SmsAgent _agent = agent.get();
             return _agent==null? "NOT_CREATED" : _agent.getStatus().toString();
-        }
+//        }
     }
     
     public boolean addMessage(SmsTransceiverNode.RecordHolder origMessage) {
@@ -216,7 +221,7 @@ public class SmsTransceiverWorker implements ShortMessageListener {
                 if (canStartAgent() && binding.compareAndSet(false, true)) {
                     unbinding.set(false);
                     try {
-                        SmsAgent _agent = new SmsAgent(config, new AgentListener(), executor, executor, logger);
+                        SmsAgent _agent = new SmsAgent(config, new AgentListener(), executor, owner, logger);
                         if (logger.isDebugEnabled())
                             logger.debug("SmsAgent created. Wating for IN_SERVICE");
                         synchronized(this) {
@@ -338,6 +343,14 @@ public class SmsTransceiverWorker implements ShortMessageListener {
                         logger.error(
                             String.format("Error submitting message unit: %s", unit.getPdu().debugString())
                             , ex);
+                    unit.delay(SUBMIT_EXCEPTION_DELAY_INTERVAL * (1 + SUBMIT_EXCEPTION_DELAY_FACTOR * unit.getAttempts()));
+                    if (ex instanceof IOException || ex instanceof WrongSessionStateException) {
+                        if (logger.isWarnEnabled())
+                            logger.warn("Detected IO exception. Waiting {} ms...", SUBMIT_EXCEPTION_DELAY_INTERVAL);
+                        try {
+                            Thread.sleep(SUBMIT_EXCEPTION_DELAY_INTERVAL);
+                        } catch (InterruptedException e) {}
+                    }
                     return false;
                 }
             } else {
@@ -369,11 +382,13 @@ public class SmsTransceiverWorker implements ShortMessageListener {
                 switch (pdu.getCommandStatus()) {
                     case Data.ESME_ROK:
                         unit = queue.getMessageUnit(sq);
-                        if (pdu instanceof SubmitSMResp) {
-                            SubmitSMResp resp = (SubmitSMResp) pdu;
-                            unit.getMessage().setMessageId(resp.getMessageId());
+                        if (unit!=null) {
+                            if (pdu instanceof SubmitSMResp) {
+                                SubmitSMResp resp = (SubmitSMResp) pdu;
+                                unit.getMessage().setMessageId(resp.getMessageId());
+                            }
+                            unit.confirmed();
                         }
-                        if (unit!=null) unit.confirmed();
                         break;
                     case Data.ESME_RTHROTTLED:
                         if (logger.isWarnEnabled())
