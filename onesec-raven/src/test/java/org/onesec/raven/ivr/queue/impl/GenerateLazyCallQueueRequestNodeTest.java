@@ -54,7 +54,7 @@ public class GenerateLazyCallQueueRequestNodeTest extends OnesecRavenTestCase {
         gen.setConversationScenario(scenario);
         gen.setQueueId("test");
         gen.setPriority(10);
-        gen.getNodeAttribute("abonentNumber").setValueHandlerType(ScriptAttributeValueHandlerFactory.TYPE);
+        gen.getAttr("abonentNumber").setValueHandlerType(ScriptAttributeValueHandlerFactory.TYPE);
         gen.setAbonentNumber("data");
         assertTrue(gen.start());
         

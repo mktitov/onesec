@@ -22,7 +22,7 @@ public class MessageUnitImpl implements MessageUnit {
     
     private MessageUnitStatus status;
     private int attempts;
-    private long xtime;
+    private volatile long xtime;
     private volatile long submitTime = 0;
     private volatile long confirmTime = 0;
 
@@ -47,23 +47,26 @@ public class MessageUnitImpl implements MessageUnit {
         return message;
     }
 
-    private synchronized boolean changeStatusTo(MessageUnitStatus newStatus, long interval) {
-        //if already in final status
-        if (status==CONFIRMED || status==FATAL)
-            return false;
-        //if same status
-        if (status==newStatus)
-            return false;
-        MessageUnitStatus oldStatus = status;
-        if (newStatus==SUBMITTED && status==READY) {
-            status = newStatus;
-            ++attempts;
-        } else if (newStatus==DELAYED && status==SUBMITTED)
-            status = newStatus;
-        else if (newStatus==CONFIRMED || newStatus==FATAL)
-            status = newStatus;
-        else if (newStatus==READY) 
-            status = newStatus;
+    private boolean changeStatusTo(MessageUnitStatus newStatus, long interval) {
+        MessageUnitStatus oldStatus;
+        synchronized(this) {
+            //if already in final status
+            if (status==CONFIRMED || status==FATAL)
+                return false;
+            //if same status
+            if (status==newStatus)
+                return false;
+            oldStatus = status;
+            if (newStatus==SUBMITTED && status==READY) {
+                status = newStatus;
+                ++attempts;
+            } else if (newStatus==DELAYED && status==SUBMITTED)
+                status = newStatus;
+            else if (newStatus==CONFIRMED || newStatus==FATAL)
+                status = newStatus;
+            else if (newStatus==READY) 
+                status = newStatus;
+        }
         if (oldStatus!=status) {
             xtime = System.currentTimeMillis()+interval;
             if (logger.isDebugEnabled())
