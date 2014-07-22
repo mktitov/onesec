@@ -68,7 +68,9 @@ public class AbonentCommutationManagerImplTest {
         
         //logging
         expect(owner.isLogLevelEnabled(anyObject(LogLevel.class))).andReturn(true).anyTimes();
+        expect(owner.getLogLevel()).andReturn(LogLevel.TRACE).anyTimes();
         expect(owner.getLogger()).andReturn(logger).anyTimes();
+        expect(owner.getName()).andReturn("88024").anyTimes();
         logger.debug(anyObject(String.class));
         expectLastCall().anyTimes();
         //handle ReadyToCommutate event
@@ -91,7 +93,7 @@ public class AbonentCommutationManagerImplTest {
                 , conversationEvent, conversation, requestListener, disconnectedEvent, convState);
         
         AbonentCommutationManagerImpl manager = new AbonentCommutationManagerImpl(abonentNumber, 
-                queueId, priority, owner, context, pool, scenario, inviteTimeout, waitTimeout);
+                queueId, priority, owner, context, pool, scenario, inviteTimeout, waitTimeout, null);
         assertEquals(queueId, manager.getQueueId());
         assertSame(context, manager.getContext());
         assertNull(manager.getConversation());

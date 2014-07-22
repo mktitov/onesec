@@ -36,6 +36,7 @@ import org.raven.ds.DataContext;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorServiceException;
 import org.raven.tree.Node;
+import org.raven.tree.impl.LoggerHelper;
 
 /**
  *
@@ -46,6 +47,7 @@ public class AbonentCommutationManagerImpl implements LazyCallQueueRequest, Abon
     private final static AtomicLong counter = new AtomicLong();
     
     private final String abonentNumber;
+    private final String callingNumber;
     private final Node owner;
     private final IvrEndpointPool endpointPool;
     private final IvrConversationScenario conversationScenario;
@@ -53,6 +55,7 @@ public class AbonentCommutationManagerImpl implements LazyCallQueueRequest, Abon
     private final long endpointWaitTimeout;
     private final DataContext context;
     private final long requestId = counter.incrementAndGet();
+    private final LoggerHelper logger;
     
     private volatile String queueId;
     private volatile int priority;
@@ -67,7 +70,7 @@ public class AbonentCommutationManagerImpl implements LazyCallQueueRequest, Abon
     public AbonentCommutationManagerImpl(String abonentNumber, String queueId, int priority
             , Node owner, DataContext context
             , IvrEndpointPool endpointPool, IvrConversationScenario conversationScenario
-            , int inviteTimeout, long endpointWaitTimeout) 
+            , int inviteTimeout, long endpointWaitTimeout, String callingNumber) 
     {
         this.abonentNumber = abonentNumber;
         this.owner = owner;
@@ -78,6 +81,8 @@ public class AbonentCommutationManagerImpl implements LazyCallQueueRequest, Abon
         this.endpointWaitTimeout = endpointWaitTimeout;
         this.priority = priority;
         this.queueId = queueId;
+        this.callingNumber = callingNumber;
+        this.logger = new LoggerHelper(owner, "[reqId: "+requestId+"; abon number: "+abonentNumber+"] ");
 //        statusMessage = "Searching for free endpoint in the pool for: "+request.toString();
     }
 
@@ -178,6 +183,8 @@ public class AbonentCommutationManagerImpl implements LazyCallQueueRequest, Abon
     }
 
     public void abonentReadyToCommutate(IvrEndpointConversation abonentConversation) {
+        if (logger.isDebugEnabled())
+            logger.debug("Abonent is ready to commutate");
         commutationManager.abonentReadyToCommutate(abonentConversation);
     }
     
@@ -193,7 +200,7 @@ public class AbonentCommutationManagerImpl implements LazyCallQueueRequest, Abon
             bindings.put(ABONENT_COMMUTATION_MANAGER_BINDING, this);
             endpoint.invite(abonentNumber, inviteTimeout, 0
                     , new ConversationListener(endpoint, endpointPool)
-                    , conversationScenario, bindings, null);
+                    , conversationScenario, bindings, callingNumber);
         }
     }
     

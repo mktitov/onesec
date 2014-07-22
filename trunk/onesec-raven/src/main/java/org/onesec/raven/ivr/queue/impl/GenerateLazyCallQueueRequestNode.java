@@ -39,6 +39,8 @@ public class GenerateLazyCallQueueRequestNode extends AbstractSafeDataPipe {
     private IvrConversationScenario conversationScenario;
     @NotNull @Parameter
     private String abonentNumber;
+    @Parameter
+    private String callingNumber;
     @NotNull @Parameter(defaultValue="40")
     private Integer inviteTimeout;
     @NotNull @Parameter(defaultValue="5000")
@@ -56,7 +58,7 @@ public class GenerateLazyCallQueueRequestNode extends AbstractSafeDataPipe {
             bindingSupport.put(DATA_CONTEXT_BINDING, context);
             AbonentCommutationManagerImpl req = new AbonentCommutationManagerImpl(abonentNumber
                     , queueId, priority, this, context, endpointPool, conversationScenario
-                    , inviteTimeout, endpointWaitTimeout);
+                    , inviteTimeout, endpointWaitTimeout, callingNumber);
             sendDataToConsumers(req, context);
         } finally {
             bindingSupport.reset();
@@ -75,6 +77,14 @@ public class GenerateLazyCallQueueRequestNode extends AbstractSafeDataPipe {
 
     public void setAbonentNumber(String abonentNumber) {
         this.abonentNumber = abonentNumber;
+    }
+
+    public String getCallingNumber() {
+        return callingNumber;
+    }
+
+    public void setCallingNumber(String callingNumber) {
+        this.callingNumber = callingNumber;
     }
 
     public IvrConversationScenario getConversationScenario() {

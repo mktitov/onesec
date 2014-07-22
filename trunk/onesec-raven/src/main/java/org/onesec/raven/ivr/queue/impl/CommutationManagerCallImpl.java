@@ -28,6 +28,7 @@ import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorServiceException;
 import org.raven.sched.impl.AbstractTask;
 import org.raven.tree.Node;
+import org.raven.tree.impl.LoggerHelper;
 import org.slf4j.Logger;
 import org.weda.beans.ObjectUtils;
 
@@ -47,7 +48,7 @@ public class  CommutationManagerCallImpl
 
     private final CallsCommutationManager manager;
     private String number;
-    private final Logger logger;
+    private final LoggerHelper logger;
     
     private final AtomicReference<String> statusMessage;
     private final AtomicBoolean canceled = new AtomicBoolean(false);
@@ -76,7 +77,8 @@ public class  CommutationManagerCallImpl
     public CommutationManagerCallImpl(CallsCommutationManager manager, String number) {
         this.manager = manager;
         this.number = number;
-        this.logger = manager.getOperator().getLogger();
+        this.logger = new LoggerHelper(manager.getOperator(), "Operator ("+manager.getOperator().getName()+"). ");
+//        this.logger = manager.getOperator().getLogger();
         this.statusMessage = new AtomicReference<String>(
                 String.format(SEARCHING_FOR_ENDPOINT_MSG, manager.getRequest().toString()));
     }
@@ -87,8 +89,8 @@ public class  CommutationManagerCallImpl
             return;
         //first, check is transition possible
         if (!TRANSITIONS.get(state.get()).contains(newState)) {
-            if (isLogLevelEnabled(LogLevel.ERROR))
-                logger.error(logMess("Invalid transition. Can't move from state (%s) to state (%s)"
+            if (logger.isErrorEnabled())
+                logger.error(String.format("Invalid transition. Can't move from state (%s) to state (%s)"
                         , state.get().name(), newState.name()));
             moveToState(State.INVALID, null, null);
         }
@@ -98,12 +100,12 @@ public class  CommutationManagerCallImpl
             switch (newState) {
                 case NO_FREE_ENDPOINTS: 
                     if (e!=null) {
-                        if (isLogLevelEnabled(LogLevel.ERROR))
-                            logger.error(logMess("Get endpoint from pool error"), e);
+                        if (logger.isErrorEnabled())
+                            logger.error("Get endpoint from pool error", e);
                         addToLog("get endpoint from pool error");
                     } else {
-                        if (isLogLevelEnabled(LogLevel.WARN))
-                            logger.warn(logMess("Can't process call queue request because of no "
+                        if (logger.isWarnEnabled())
+                            logger.warn(String.format("Can't process call queue request because of no "
                                     + "free endpoints in the pool (%s)"
                                     , manager.getEndpointPool().getName()));
                         addToLog("no free endpoints in the pool");
@@ -115,24 +117,24 @@ public class  CommutationManagerCallImpl
                     this.getRequest().addRequestWrapperListener(this);
                     break;
                 case OPERATOR_READY: 
-                    if (isLogLevelEnabled(LogLevel.DEBUG))
-                        logger.debug(logMess("Number (%s) ready to commutate", getOperatorNumber()));
+                    if (logger.isDebugEnabled())
+                        logger.debug(String.format("Number (%s) ready to commutate", getOperatorNumber()));
                     addToLog("op. number (%s) ready to commutate", getOperatorNumber());
 //                    this.getRequest().addRequestWrapperListener(this);
                     if (!getRequest().fireReadyToCommutateQueueEvent(this)) 
                         nextState = State.INVALID;
                     break;
                 case ABONENT_READY:
-                    if (isLogLevelEnabled(LogLevel.DEBUG))
-                        logger.debug(logMess("Abonent ready to commutate"));
+                    if (logger.isDebugEnabled())
+                        logger.debug("Abonent ready to commutate");
                     addToLog("abonent ready to commutate");
                     fireAbonentReadyEvent();
                     commutateCalls();
                     break;
                 case COMMUTATED: getRequest().fireCommutatedEvent(); break;
                 case HANDLED: 
-                    if (isLogLevelEnabled(LogLevel.DEBUG))
-                        logger.debug(logMess("Operator's conv. completed"));
+                    if (logger.isDebugEnabled())
+                        logger.debug("Operator's conv. completed");
                     addToLog(String.format("conv. for op.num. (%s) completed (%s)", getOperatorNumber()
                             , completionCode));
                     manager.getRequest().fireDisconnectedQueueEvent();
@@ -144,8 +146,8 @@ public class  CommutationManagerCallImpl
                                         || canceled.get();
                     if (!success) {
                         if (completionCode!=null) {
-                            if (isLogLevelEnabled(LogLevel.DEBUG))
-                                logger.debug(logMess("Operator's number (%s) not answered", getOperatorNumber()));
+                            if (logger.isDebugEnabled())
+                                logger.debug(String.format("Operator's number (%s) not answered", getOperatorNumber()));
                             addToLog("no answer from (%s)", getOperatorNumber());
                         }
                     } else if (state.get()==State.OPERATOR_READY || state.get()==State.ABONENT_READY || canceled.get())
@@ -161,8 +163,8 @@ public class  CommutationManagerCallImpl
             state.set(newState);
         } catch (Throwable ex) {
             nextState = State.INVALID;
-            if (isLogLevelEnabled(LogLevel.ERROR))
-                logger.error(logMess("Error make a transition from state (%s) to state (%s)"
+            if (logger.isErrorEnabled())
+                logger.error(String.format("Error make a transition from state (%s) to state (%s)"
                         , state.get(), newState), ex);
         }
         if (nextState!=null)
@@ -181,6 +183,8 @@ public class  CommutationManagerCallImpl
     private void callMoveToState(final State newState, final Throwable ex, final CompletionCode completionCode) {
         String mess = String.format("Making transition from state (%s) to state (%s)"
                 , getState().name(), newState.name());
+        if (logger.isDebugEnabled())
+            logger.debug(mess);
         boolean res = manager.getExecutor().executeQuietly(
                 new AbstractTask(manager.getOperator(), mess) {
                     @Override public void doRun() throws Exception {
@@ -199,9 +203,10 @@ public class  CommutationManagerCallImpl
         manager.getRequest().addToLog(String.format(mess, args));
     }
     
-    private boolean isLogLevelEnabled(LogLevel logLevel) {
-        return manager.getOperator().isLogLevelEnabled(logLevel);
-    }
+//    private boolean isLogLevelEnabled(LogLevel logLevel) {
+////        logger.is
+//        return manager.getOperator().isLogLevelEnabled(logLevel);
+//    }
 
     public boolean isCommutationValid() {
         return getState()!=State.INVALID;
@@ -278,7 +283,7 @@ public class  CommutationManagerCallImpl
 
     public void commutateCalls() throws IvrConversationBridgeExeption {
         IvrConversationsBridge _bridge = manager.getConversationsBridgeManager().createBridge(
-                getRequest().getConversation(), operatorConversation.get(), logMess(""));
+                getRequest().getConversation(), operatorConversation.get(), logger.getPrefix());
         bridge.set(_bridge);
         _bridge.addBridgeListener(this);
         _bridge.activateBridge();
@@ -303,9 +308,9 @@ public class  CommutationManagerCallImpl
 
     public void bridgeDeactivated(IvrConversationsBridge bridge) { }
 
-    String logMess(String message, Object... args) {
-        return manager.getRequest().logMess("Operator ("+manager.getOperator().getName()+"). "+message, args);
-    }
+//    String logMess(String message, Object... args) {
+//        return manager.getRequest().logMess("Operator ("+manager.getOperator().getName()+"). "+message, args);
+//    }
 
     public long getWaitTimeout() {
         return manager.getWaitTimeout();

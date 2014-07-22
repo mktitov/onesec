@@ -32,6 +32,10 @@ public interface CommutationManagerCall
      * Returns the operator number (the B number)
      */
     public String getOperatorNumber();
+//    /**
+//     * Returns the operator's display number. The phone number that abonent will see at phone display (B number)
+//     */
+//    public String getOperatorDisplayNumber();
     /**
      * Returns operator's conversation
      */
