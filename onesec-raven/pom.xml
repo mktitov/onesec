@@ -1,44 +1,48 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-    <modelVersion>4.0.0</modelVersion>
-    <groupId>org.onesec</groupId>
-    <artifactId>onesec-raven</artifactId>
-    <packaging>jar</packaging>
-    <version>1.0-SNAPSHOT</version>
-    <name>onesec-raven</name>
-    <url>http://onesec.sourceforge.org</url>
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.onesec</groupId>
+  <artifactId>onesec-raven</artifactId>
+  <packaging>jar</packaging>
+  <version>1.0-SNAPSHOT</version>
+  <name>onesec-raven</name>
+  <url>http://onesec.sourceforge.org</url>
     
-    <parent>
-        <groupId>org.onesec</groupId>
-        <artifactId>onesec-project</artifactId>
-        <version>1.0-SNAPSHOT</version>
-        <relativePath>../onesec-project</relativePath>
-    </parent>
+  <parent>
+    <groupId>org.onesec</groupId>
+    <artifactId>onesec-project</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <relativePath>../onesec-project</relativePath>
+  </parent>
+  <scm>
+    <connection>scm:svn:https://onesec.googlecode.com/svn/trunk/onesec-raven</connection>
+    <url>https://onesec.googlecode.com/svn/trunk/onesec-raven</url>
+  </scm>
 
-    <pluginRepositories>
-      <!--
+  <pluginRepositories>
+    <!--
     <pluginRepository>
       <id>tapestry.formos</id>
       <url>http://tapestry.formos.com/maven-snapshot-repository/</url>
     </pluginRepository>
     -->
     <pluginRepository>
-        <id>apache.snapshots</id>
-        <url>http://people.apache.org/repo/m2-snapshot-repository/</url>
+      <id>apache.snapshots</id>
+      <url>http://people.apache.org/repo/m2-snapshot-repository/</url>
     </pluginRepository>
     
-    </pluginRepositories>
+  </pluginRepositories>
     
-    <dependencies>
-        <dependency>
-            <groupId>org.onesec</groupId>
-            <artifactId>onesec-core</artifactId>
-        </dependency>
+  <dependencies>
+    <dependency>
+      <groupId>org.onesec</groupId>
+      <artifactId>onesec-core</artifactId>
+    </dependency>
         
-        <dependency>
-            <groupId>org.raven</groupId>
-            <artifactId>raven-core</artifactId>
-        </dependency>
+    <dependency>
+      <groupId>org.raven</groupId>
+      <artifactId>raven-core</artifactId>
+    </dependency>
         
         <dependency>
           <groupId>javax.sip</groupId>
@@ -55,66 +59,98 @@
             <artifactId>jmf</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>javax.media</groupId>
-            <artifactId>mp3plugin</artifactId>
-        </dependency>
+    <dependency>
+      <groupId>javax.media</groupId>
+      <artifactId>mp3plugin</artifactId>
+    </dependency>
 
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-        </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+    </dependency>
         
-        <dependency>
-            <groupId>com.logica</groupId>
-            <artifactId>smpp</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-all</artifactId> <!-- Use 'netty-all' for 4.0 or above -->
-        </dependency>            
-<!--        <dependency>
-            <groupId>net.sf.fmj</groupId>
-            <artifactId>fmj</artifactId>
-        </dependency>
--->
-        <dependency>
-            <groupId>org.easymock</groupId>
-            <artifactId>easymock</artifactId>
-            <scope>compile</scope>
-        </dependency>
-    </dependencies>
+    <dependency>
+      <groupId>com.logica</groupId>
+      <artifactId>smpp</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-all</artifactId> <!-- Use 'netty-all' for 4.0 or above -->
+    </dependency>            
+    <!--        <dependency>
+                <groupId>net.sf.fmj</groupId>
+                <artifactId>fmj</artifactId>
+            </dependency>
+    -->
+    <dependency>
+      <groupId>org.easymock</groupId>
+      <artifactId>easymock</artifactId>
+      <scope>compile</scope>
+    </dependency>
+  </dependencies>
     
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.weda</groupId>
-                <artifactId>weda-maven-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <artifactId>maven-compiler-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <configuration>
-                    <trimStackTrace>false</trimStackTrace>
-                   <redirectTestOutputToFile>false</redirectTestOutputToFile>
-                </configuration>
-            </plugin>
-            <plugin>
-                <artifactId>maven-jar-plugin</artifactId>
-                <configuration>
-                    <archive>
-                        <manifestEntries>
-                            <Tapestry-Module-Classes>org.onesec.raven.OnesecRavenModule</Tapestry-Module-Classes>
-                        </manifestEntries>
-                    </archive>
-                </configuration>
-            </plugin>
-            <plugin>
-                <artifactId>maven-source-plugin</artifactId>
-            </plugin>
-        </plugins>
-    </build>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>buildnumber-maven-plugin</artifactId>
+        <version>1.3</version>
+        <executions>
+          <execution>
+            <phase>validate</phase>
+            <goals>
+              <goal>create</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <doCheck>false</doCheck>
+          <doUpdate>false</doUpdate>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.weda</groupId>
+        <artifactId>weda-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <trimStackTrace>false</trimStackTrace>
+          <redirectTestOutputToFile>false</redirectTestOutputToFile>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <archive>
+            <manifestEntries>
+              <Tapestry-Module-Classes>org.onesec.raven.OnesecRavenModule</Tapestry-Module-Classes>
+            </manifestEntries>
+          </archive>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-source-plugin</artifactId>
+      </plugin>
+    </plugins>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <includes>
+          <include>raven-module-version.properties</include>
+        </includes>
+        <filtering>true</filtering>
+      </resource>
+      <resource>
+        <directory>src/main/resources</directory>
+        <excludes>
+          <exclude>raven.properties</exclude>
+        </excludes>
+      </resource>        
+    </resources>        
+  </build>
     
 </project>
