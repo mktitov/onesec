@@ -303,11 +303,11 @@ public class NodeAdapter implements Node {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    public boolean addDependentNode(Node dependentNode) {
+    public boolean addDependentNode(Node dependentNode, Object depenencyOwner) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    public boolean removeDependentNode(Node dependentNode) {
+    public boolean removeDependentNode(Node dependentNode, Object depenencyOwner) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
