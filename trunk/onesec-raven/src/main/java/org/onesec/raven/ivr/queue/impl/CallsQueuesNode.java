@@ -245,16 +245,20 @@ public class CallsQueuesNode  extends BaseNode implements DataPipe, Schedulable
     }
 
     public void setData(DataSource dataSource, Object data, DataContext context) {
-        if (!(data instanceof CallQueueRequest))
-            return;
         try {
-            queueCall((CallQueueRequest)data);
-        } catch (CallQueueException ex) {
-            if (isLogLevelEnabled(LogLevel.ERROR))
-                getLogger().error(
-                        logMess((CallQueueRequest)data, "Error processing request from %s"
-                            , dataSource.getPath())
-                        , ex);
+            if (!(data instanceof CallQueueRequest))
+                return;
+            try {
+                queueCall((CallQueueRequest)data);
+            } catch (CallQueueException ex) {
+                if (isLogLevelEnabled(LogLevel.ERROR))
+                    getLogger().error(
+                            logMess((CallQueueRequest)data, "Error processing request from %s"
+                                , dataSource.getPath())
+                            , ex);
+            }
+        } finally {
+            DataSourceHelper.executeContextCallbacks(this, context, data);
         }
     }
     

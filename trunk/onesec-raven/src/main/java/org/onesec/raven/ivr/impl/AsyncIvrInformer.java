@@ -66,6 +66,7 @@ import org.weda.beans.ObjectUtils;
 import org.weda.internal.annotations.Message;
 import static org.onesec.raven.ivr.impl.IvrInformerRecordSchemaNode.*;
 import org.raven.BindingNames;
+import org.raven.ds.impl.DataSourceHelper;
 
 /**
  *
@@ -529,15 +530,21 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
 
     public void setData(DataSource dataSource, Object data, DataContext context)
     {
-        if (!Status.STARTED.equals(getStatus()) || !informAllowed.get())
+        if (!isStarted() || !informAllowed.get()) {
+            DataSourceHelper.executeContextCallbacks(this, context, data);
             return;
+        }
         
         TimeWindowNode timeWindow = TimeWindowHelper.getTimeWindowForCurrentDate(this);
-        if (timeWindow==null)
+        if (timeWindow==null) {
+            DataSourceHelper.executeContextCallbacks(this, context, data);
             return;
+        }
         
-        if (data!=null && !(data instanceof Record))
+        if (data!=null && !(data instanceof Record)) {
+            DataSourceHelper.executeContextCallbacks(this, context, data);
             return;
+        }
         
         Record rec = (Record) data;
         if (isLogLevelEnabled(LogLevel.DEBUG))
@@ -581,8 +588,16 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
                     dataLock.writeLock().unlock();
                     bindingSupport.reset();
                 }
+            } else {
+                String mess = "Timeout submiting inform request to informer";
+                context.addError(this, "Timeout submiting inform request to informer");
+                DataSourceHelper.executeContextCallbacks(this, context, data);
+                if (isLogLevelEnabled(LogLevel.ERROR))
+                    getLogger().error(mess);
             }
         } catch (Exception ex) {
+            context.addError(this, "Error while triyng to inform abonent");
+            DataSourceHelper.executeContextCallbacks(this, context, data);
             if (isLogLevelEnabled(LogLevel.ERROR))
                 error("Error while triyng to inform abonent: "+getRecordInfo(rec), ex);
         }
@@ -808,8 +823,11 @@ public class AsyncIvrInformer extends BaseNode implements DataSource, DataConsum
         if (sessions.size()>=maxSessions)
             sessionRemoved.await();
 
-        if (!informAllowed.get())
+        if (!informAllowed.get()) {
+            for (Record rec: records)
+                DataSourceHelper.executeContextCallbacks(this, context, rec);
             return null;
+        }
 
         Long id = converter.convert(Long.class, records.iterator().next().getValue(ID_FIELD), null);
         IvrInformerSession session = new IvrInformerSession(records, this, maxInviteDuration

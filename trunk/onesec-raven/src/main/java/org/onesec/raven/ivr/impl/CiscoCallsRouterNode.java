@@ -33,6 +33,7 @@ import org.raven.annotations.Parameter;
 import org.raven.ds.DataConsumer;
 import org.raven.ds.DataContext;
 import org.raven.ds.DataSource;
+import org.raven.ds.impl.DataSourceHelper;
 import org.raven.log.LogLevel;
 import org.raven.table.TableImpl;
 import org.raven.tree.Node;
@@ -124,17 +125,26 @@ public class CiscoCallsRouterNode extends BaseNode implements IvrTerminal, Calls
     }
 
     public void setData(DataSource dataSource, Object data, DataContext context) {
-        if (data==null || getStatus()!=Node.Status.STARTED)
-            return;
-        if (!(data instanceof CallRouteRule))
-            if (isLogLevelEnabled(LogLevel.ERROR))
-            getLogger().error("Invalid data type expected ({}) but received ({})",
-                    CallRouteRule.class.getName(), data.getClass().getName());
-        if (isLogLevelEnabled(LogLevel.DEBUG))
-            getLogger().debug("Received route rule: "+data);
-        CiscoJtapiRouteTerminal terminal = term.get();
-        if (terminal!=null)
-            terminal.registerRoute((CallRouteRule)data);
+        try {
+            if (data==null || !isStarted()) {            
+                return;
+            }
+            if (!(data instanceof CallRouteRule)) {
+                String mess = String.format("Invalid data type expected (%s) but received (%s)",
+                            CallRouteRule.class.getName(), data.getClass().getName());
+                if (isLogLevelEnabled(LogLevel.ERROR))
+                    getLogger().error(mess);
+                context.addError(this, mess);
+                return;
+            }
+            if (isLogLevelEnabled(LogLevel.DEBUG))
+                getLogger().debug("Received route rule: "+data);
+            CiscoJtapiRouteTerminal terminal = term.get();
+            if (terminal!=null)
+                terminal.registerRoute((CallRouteRule)data);
+        } finally {
+            DataSourceHelper.executeContextCallbacks(this, context, data);
+        }
     }
 
     public Object refereshData(Collection<NodeAttribute> sessionAttributes) {

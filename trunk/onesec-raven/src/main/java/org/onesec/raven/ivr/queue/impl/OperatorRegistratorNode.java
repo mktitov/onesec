@@ -27,6 +27,7 @@ import org.raven.ds.DataConsumer;
 import org.raven.ds.DataContext;
 import org.raven.ds.DataSource;
 import org.raven.ds.impl.DataContextImpl;
+import org.raven.ds.impl.DataSourceHelper;
 import org.raven.expr.BindingSupport;
 import org.raven.expr.impl.BindingSupportImpl;
 import org.raven.log.LogLevel;
@@ -67,13 +68,17 @@ public class OperatorRegistratorNode extends BaseNode implements DataConsumer, O
     }
 
     public void setData(DataSource dataSource, Object data, DataContext context) {
-        if (data==null)
-            return;
-        //parsing data
-        Map<String, String> map = converter.convert(Map.class, data, null);
-        AuthInfo authInfo = dataStore.get();
-        authInfo.authenticated = true;
-        authInfo.operatorDesc.setDesc(map.get(OPERATOR_DESC_FIELD));
+        try {
+            if (data==null)
+                return;
+            //parsing data
+            Map<String, String> map = converter.convert(Map.class, data, null);
+            AuthInfo authInfo = dataStore.get();
+            authInfo.authenticated = true;
+            authInfo.operatorDesc.setDesc(map.get(OPERATOR_DESC_FIELD));
+        } finally {
+            DataSourceHelper.executeContextCallbacks(this, context, data);
+        }
     }
 
     public Object refereshData(Collection<NodeAttribute> sessionAttributes) {
