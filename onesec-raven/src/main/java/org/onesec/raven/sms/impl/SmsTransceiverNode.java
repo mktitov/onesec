@@ -219,11 +219,14 @@ public class SmsTransceiverNode extends AbstractSafeDataPipe {
             try {
                 Record rec = converter.convert(Record.class, data, null);
                 SmsTransceiverWorker _worker = worker.get();
-                if (_worker==null)
+                if (_worker==null) {
+                    DataSourceHelper.executeContextCallbacks(this, context, data);
                     return;
+                }
                 queueMessage(rec, context, _worker);
             } catch (Throwable e) {
                 context.addError(this, new Exception("Error processing sms request", e));
+                DataSourceHelper.executeContextCallbacks(this, context, data);
             }
         }
     }
