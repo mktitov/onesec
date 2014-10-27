@@ -754,15 +754,19 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     }
     
     private void runWatchdogForIncomingCallsUseCase() {
-        for (IvrEndpoint endpoint: NodeUtils.getChildsOfType(this, IvrEndpoint.class, false))
+        for (IvrEndpoint endpoint: NodeUtils.getChildsOfType(this, IvrEndpoint.class, false)) {
+            int stateId = endpoint.getEndpointState().getId();
+            List<CiscoJtapiTerminal.CallInfo> callsInfo = ((IvrEndpointNode)endpoint).getCallsInfo();
             if (   !reservedEndpoints.containsKey(endpoint)
                 && (   (endpoint.isInitialized() && endpoint.isAutoStart())
-                    || (endpoint.isStarted() && endpoint.getEndpointState().getId()==IvrEndpointState.OUT_OF_SERVICE)))
+                    || (endpoint.isStarted() && stateId ==IvrEndpointState.OUT_OF_SERVICE))
+                    || (endpoint.isStarted() && stateId==IvrEndpointState.IN_SERVICE && callsInfo!=null && !callsInfo.isEmpty()))
             {
                 if (endpoint.isStarted())
                     endpoint.stop();
                 endpoint.start();
             }
+        }
     }
     
     public void run() {
