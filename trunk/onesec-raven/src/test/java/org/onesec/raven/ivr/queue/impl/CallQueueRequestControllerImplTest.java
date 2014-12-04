@@ -192,7 +192,7 @@ public class CallQueueRequestControllerImplTest extends OnesecRavenTestCase
         
         EventTestHelper control = new EventTestHelper();
        
-        DisconnectedQueueEventImpl event = new DisconnectedQueueEventImpl(control.queue, 1);
+        DisconnectedQueueEventImpl event = new DisconnectedQueueEventImpl(control.queue, 1, "");
         control.req.callQueueChangeEvent(event);
         expectLastCall().times(2);
 

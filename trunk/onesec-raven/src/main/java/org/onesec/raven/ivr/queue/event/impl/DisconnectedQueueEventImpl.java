@@ -23,9 +23,15 @@ import org.onesec.raven.ivr.queue.event.DisconnectedQueueEvent;
  *
  * @author Mikhail Titov
  */
-public class DisconnectedQueueEventImpl extends CallQueueEventImpl implements DisconnectedQueueEvent
-{
-    public DisconnectedQueueEventImpl(CallsQueue callsQueue, long requestId) {
+public class DisconnectedQueueEventImpl extends CallQueueEventImpl implements DisconnectedQueueEvent {
+    private final String cause;
+    
+    public DisconnectedQueueEventImpl(CallsQueue callsQueue, long requestId, String cause) {
         super(callsQueue, requestId);
+        this.cause = cause;
+    }
+
+    public String getCause() {
+        return cause;
     }
 }

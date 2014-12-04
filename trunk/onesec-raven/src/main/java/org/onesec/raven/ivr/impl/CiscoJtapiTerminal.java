@@ -821,9 +821,11 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
         int cause = ev.getCallControlCause();
         CompletionCode code = CompletionCode.OPPONENT_UNKNOWN_ERROR;
         switch (cause) {
+            case 17: //USERBUSY
             case CallCtlConnFailedEv.CAUSE_BUSY:
                 code = CompletionCode.OPPONENT_BUSY;
                 break;
+            case 19: //NOANSWERFROMUSER
             case CallCtlConnFailedEv.CAUSE_CALL_NOT_ANSWERED:
             case CallCtlConnFailedEv.CAUSE_NORMAL:
                 code = CompletionCode.OPPONENT_NOT_ANSWERED;

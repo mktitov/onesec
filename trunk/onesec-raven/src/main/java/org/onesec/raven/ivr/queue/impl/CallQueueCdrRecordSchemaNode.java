@@ -49,6 +49,7 @@ public class CallQueueCdrRecordSchemaNode extends RecordSchemaNode
     public final static String DISCONNECTED_TIME = "disconnectedTime";
     public final static String CONVERSATION_START_TIME = "conversationStartTime";
     public final static String CONVERSATION_DURATION = "conversationDuration";
+    public final static String COMPLETION_CODE = "completionCode";
 
     public final static String DATABASE_TABLE_EXTENSION_NAME = "dbTable";
     public final static String DATABASE_TABLE_NAME = "RAVEN_CALL_QUEUE_CDR";
@@ -74,6 +75,7 @@ public class CallQueueCdrRecordSchemaNode extends RecordSchemaNode
     @Message private static String conversationStartTimeDisplayName;
     @Message private static String conversationDurationDisplayName;
     @Message private static String operatorBusyTimerDisplayName;
+    @Message private static String completionCodeDisplayName;
 
     @Override
     protected void doInit() throws Exception {
@@ -119,6 +121,7 @@ public class CallQueueCdrRecordSchemaNode extends RecordSchemaNode
                 , RecordSchemaFieldType.TIMESTAMP);
         createField(CONVERSATION_DURATION, conversationDurationDisplayName
                 , RecordSchemaFieldType.INTEGER);
+        createField(COMPLETION_CODE, completionCodeDisplayName, RecordSchemaFieldType.STRING);
     }
 
     protected void createField(String name, String displayName, RecordSchemaFieldType fieldType) {

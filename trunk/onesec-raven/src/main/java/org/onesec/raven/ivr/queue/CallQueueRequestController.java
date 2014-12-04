@@ -86,7 +86,7 @@ public interface CallQueueRequestController extends CallQueueRequest
     /**
      * Fires when commutation was disconnected
      */
-    public void fireDisconnectedQueueEvent();
+    public void fireDisconnectedQueueEvent(String cause);
     /**
      * Fires when request assigned to operator
      */

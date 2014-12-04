@@ -84,7 +84,7 @@ public class CallQueueRequestImpl implements QueuedCallStatus
         listeners.add(listener);
         listener.conversationAssigned(conversation);
         if (canceledFlag.get())
-            listener.requestCanceled();
+            listener.requestCanceled("CANCELED");
     }
 
     public synchronized Status getStatus() {
@@ -161,12 +161,12 @@ public class CallQueueRequestImpl implements QueuedCallStatus
 
     public void cancel() {
         if (canceledFlag.compareAndSet(false, true))
-            fireRequestCanceled();
+            fireRequestCanceled("CANCELED");
     }
     
-    private void fireRequestCanceled() {
+    private void fireRequestCanceled(String cause) {
         for (CallQueueRequestListener listener: listeners)
-            listener.requestCanceled();
+            listener.requestCanceled(cause);
     }
 
     public boolean isCanceled() {
