@@ -30,7 +30,8 @@ public class CallQueueRequestImplTest
     public void cancelTest()
     {
         CallQueueRequestListener listener = createMock(CallQueueRequestListener.class);
-        listener.requestCanceled();
+        listener.conversationAssigned(null);
+        listener.requestCanceled("CANCELED");
         replay(listener);
         CallQueueRequestImpl req = new CallQueueRequestImpl(null, 1, "1", null, true, true, null);
         req.addRequestListener(listener);

@@ -137,7 +137,7 @@ public class  CommutationManagerCallImpl
                         logger.debug("Operator's conv. completed");
                     addToLog(String.format("conv. for op.num. (%s) completed (%s)", getOperatorNumber()
                             , completionCode));
-                    manager.getRequest().fireDisconnectedQueueEvent();
+                    manager.getRequest().fireDisconnectedQueueEvent(completionCode.name());
                     nextState = State.INVALID;
                     break;
                 case INVALID: 
@@ -150,8 +150,10 @@ public class  CommutationManagerCallImpl
                                 logger.debug(String.format("Operator's number (%s) not answered", getOperatorNumber()));
                             addToLog("no answer from (%s)", getOperatorNumber());
                         }
-                    } else if (state.get()==State.OPERATOR_READY || state.get()==State.ABONENT_READY || canceled.get())
-                        manager.getRequest().fireDisconnectedQueueEvent();
+                    } else if (state.get()==State.OPERATOR_READY || state.get()==State.ABONENT_READY || canceled.get()) {
+                        final String cause = completionCode==null? "SYSTEM_ERROR" : completionCode.name();
+                        manager.getRequest().fireDisconnectedQueueEvent(cause);
+                    }
                     manager.callFinished(this, success);
                     if (endpoint!=null) {
                         if (conversation!=null)

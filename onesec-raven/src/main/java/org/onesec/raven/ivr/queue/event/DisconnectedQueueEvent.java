@@ -22,5 +22,8 @@ package org.onesec.raven.ivr.queue.event;
  * @author Mikhail Titov
  */
 public interface DisconnectedQueueEvent extends CallQueueEvent {
-
+    /**
+     * Returns the disconnection cause
+     */
+    public String getCause();
 }

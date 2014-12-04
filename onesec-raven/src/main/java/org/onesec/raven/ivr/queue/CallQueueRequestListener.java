@@ -28,7 +28,7 @@ public interface CallQueueRequestListener
     /**
      * Fires when request canceled
      */
-    public void requestCanceled();
+    public void requestCanceled(String cause);
     /**
      * Fires when conversation assigned to the request
      */

@@ -43,6 +43,7 @@ import org.raven.log.LogLevel;
 import static org.onesec.raven.ivr.queue.impl.CallQueueCdrRecordSchemaNode.*;
 import static org.onesec.raven.ivr.queue.impl.CallsQueuesNode.*;
 import org.raven.ds.RecordSchema;
+import org.raven.ds.RecordSchemaField;
 
 /**
  *
@@ -57,6 +58,7 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
     private final AtomicBoolean cdrSent = new AtomicBoolean(false);
     private final Set<RequestControllerListener> listeners = new HashSet<RequestControllerListener>();
     private volatile Record cdr;
+    private volatile Map<String, RecordSchemaField> cdrFields;
     private final boolean lazyRequest;
     private final Set<String> eventTypes;
     private final RecordSchema cdrSchema;
@@ -103,6 +105,7 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
         if (cdrSchema!=null) {
             cdrSent.set(false);
             cdr = cdrSchema.createRecord();
+            cdrFields = cdr.getSchema().getFieldsMap();
             cdr.setValue(QUEUED_TIME, getTimestamp());
             cdr.setValue(PRIORITY, request.getPriority());
         } else
@@ -143,12 +146,12 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
         return request.isCanceled();
     }
     
-    private void invalidate() {
+    private void invalidate(String cause) {
         if (valid.compareAndSet(true, false)){
             if (owner.isLogLevelEnabled(LogLevel.DEBUG))
                 owner.getLogger().debug(logMess("Conversation stopped by abonent"));
             addToLog("conversation stopped by abonent");
-            fireDisconnectedQueueEvent();
+            fireDisconnectedQueueEvent(cause);
             fireRequestInvalidated();
         }
     }
@@ -304,6 +307,9 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
                         cdr.setValue(TRANSFERED, 'T');
                         addToLog(String.format("transfered to op. (%s) number (%s)"
                                 , transferEvent.getOperatorId(), transferEvent.getOperatorNumber()));
+                    } else {
+                        if (cdrFields.containsKey(COMPLETION_CODE)) 
+                            cdr.setValue(COMPLETION_CODE, ((DisconnectedQueueEvent)event).getCause());
                     }
                     Timestamp ts = getTimestamp();
                     if (cdr.getValue(DISCONNECTED_TIME)==null) {
@@ -419,11 +425,11 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
         callQueueChangeEvent(new CallQueuedEventImpl(queue, requestId, queue.getName()));
     }
     
-    public void fireDisconnectedQueueEvent(){
+    public void fireDisconnectedQueueEvent(String cause){
         owner.getRequests().remove(requestId);
         if (queue!=null)
             queue.updateCallDuration(getCallDuration());
-        callQueueChangeEvent(new DisconnectedQueueEventImpl(queue, requestId));
+        callQueueChangeEvent(new DisconnectedQueueEventImpl(queue, requestId, cause));
     }
 
     public boolean fireReadyToCommutateQueueEvent(CommutationManagerCall operator) {
@@ -503,8 +509,8 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
     
     private class RequestListener implements CallQueueRequestListener {
 
-        public void requestCanceled() {
-            invalidate();
+        public void requestCanceled(String cause) {
+            invalidate(cause);
         }
 
         public void conversationAssigned(IvrEndpointConversation conv) {
@@ -534,7 +540,7 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
 //
         public void listenerAdded(IvrEndpointConversationEvent event) {
             if (!lazyRequest && event.getConversation().getState().getId()==IvrEndpointConversationState.INVALID)
-                invalidate();
+                invalidate("INVALID_REQUEST");
         }
 
         public void incomingRtpStarted(IvrIncomingRtpStartedEvent event) { }
@@ -544,7 +550,7 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
         public void conversationStarted(IvrEndpointConversationEvent event) { }
 
         public void conversationStopped(IvrEndpointConversationStoppedEvent event) {
-            invalidate();
+            invalidate(event.getCompletionCode().name());
         }
 
         public void conversationTransfered(IvrEndpointConversationTransferedEvent event) { }

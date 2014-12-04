@@ -284,7 +284,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
 
         //HANDLED
         request.addToLog("conv. for op.num. (88024) completed (COMPLETED_BY_OPPONENT)");
-        request.fireDisconnectedQueueEvent();
+        request.fireDisconnectedQueueEvent("");
         
         //INVALID
         request.removeRequestWrapperListener(isA(RequestControllerListener.class));

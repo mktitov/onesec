@@ -178,7 +178,7 @@ public class AbonentCommutationManagerImpl implements LazyCallQueueRequest, Abon
         } catch (ExecutorServiceException ex) {
             if (owner.isLogLevelEnabled(LogLevel.ERROR))
                 owner.getLogger().error(logMess("Error while requesting endpoint from the pool"), ex);
-            fireRequestCanceledEvent();
+            fireRequestCanceledEvent("TERMINAL_POOL_ERROR");
         }
     }
 
@@ -209,10 +209,10 @@ public class AbonentCommutationManagerImpl implements LazyCallQueueRequest, Abon
                 +String.format(message, args);
     }
     
-    private void fireRequestCanceledEvent() {
+    private void fireRequestCanceledEvent(String cause) {
         synchronized(listeners) {
             for (CallQueueRequestListener listener: listeners)
-                listener.requestCanceled();
+                listener.requestCanceled(cause);
         }
     }
     
@@ -271,7 +271,7 @@ public class AbonentCommutationManagerImpl implements LazyCallQueueRequest, Abon
         public void conversationStopped(IvrEndpointConversationStoppedEvent event) {
             endpointPool.releaseEndpoint(endpoint);
             if (!conversationStarted)
-                fireRequestCanceledEvent();
+                fireRequestCanceledEvent(event.getCompletionCode().name());
         }
     }
 }
