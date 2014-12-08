@@ -24,12 +24,10 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.onesec.raven.ivr.*;
 import org.onesec.raven.ivr.impl.IvrEndpointConversationListenerAdapter;
 import org.onesec.raven.ivr.queue.*;
-import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorServiceException;
 import org.raven.sched.impl.AbstractTask;
 import org.raven.tree.Node;
 import org.raven.tree.impl.LoggerHelper;
-import org.slf4j.Logger;
 import org.weda.beans.ObjectUtils;
 
 /**
@@ -137,7 +135,7 @@ public class  CommutationManagerCallImpl
                         logger.debug("Operator's conv. completed");
                     addToLog(String.format("conv. for op.num. (%s) completed (%s)", getOperatorNumber()
                             , completionCode));
-                    manager.getRequest().fireDisconnectedQueueEvent(completionCode.name());
+                    manager.getRequest().fireDisconnectedQueueEvent(completionCode==null?null:completionCode.name());
                     nextState = State.INVALID;
                     break;
                 case INVALID: 
