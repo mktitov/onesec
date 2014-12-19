@@ -314,7 +314,7 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
     }
 
     private RtpAddress createStreamOrReserveAddress(boolean incomingStream, Node owner, boolean reserve) {
-        if (!Status.STARTED.equals(getStatus()))
+        if (!isStarted())
             return null;
         try {
             if (streamsLock.writeLock().tryLock(2000, TimeUnit.MILLISECONDS)) {
