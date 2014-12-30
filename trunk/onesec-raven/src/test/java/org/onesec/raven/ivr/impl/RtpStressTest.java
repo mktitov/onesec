@@ -144,12 +144,12 @@ public class RtpStressTest extends RtpManagerTestCase {
         
     }
     
-    @Test
+//    @Test
     public void standartRtpConnectorTest() throws Exception{
         createStreams();
     }
     
-//    @Test
+    @Test
     public void nettyRtpConnectorTest() throws Exception {
         manager.stop();
         switchToNettyRtpManagerConfigurator();
