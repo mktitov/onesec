@@ -20,7 +20,7 @@ import javax.media.Time;
 import javax.media.protocol.PushBufferDataSource;
 import javax.media.protocol.PushBufferStream;
 import org.onesec.raven.ivr.RealTimeDataSourceMarker;
-import org.raven.tree.Node;
+import org.raven.tree.impl.LoggerHelper;
 import org.slf4j.Logger;
 
 /**
@@ -30,14 +30,14 @@ import org.slf4j.Logger;
 public class RealTimeDataSource extends PushBufferDataSource implements RealTimeDataSourceMarker {
 
     private final PushBufferDataSource source;
+    private final LoggerHelper logger;
 //    private final RealTimeDataStream[] streams;
-    private final Node owner;
-    private final String logPrefix;
+//    private final Node owner;
+//    private final String logPrefix;
 
-    public RealTimeDataSource(PushBufferDataSource source, Node owner, String logPrefix) {
+    public RealTimeDataSource(PushBufferDataSource source, LoggerHelper logger) {
         this.source = source;
-        this.owner = owner;
-        this.logPrefix = logPrefix;
+        this.logger = new LoggerHelper(logger, " RealTimeSource. ");
 //        streams = new RealTimeDataStream[]{new RealTimeDataStream(this, source.getStreams()[0])};
     }
     
@@ -90,11 +90,11 @@ public class RealTimeDataSource extends PushBufferDataSource implements RealTime
         return source.getDuration();
     }
     
-    String logMess(String mess, Object... args) {
-        return (logPrefix==null? "" : logPrefix)+" RealTimeSource. "+String.format(mess, args);
-    }
+//    String logMess(String mess, Object... args) {
+//        return (logPrefix==null? "" : logPrefix)+" RealTimeSource. "+String.format(mess, args);
+//    }
     
     Logger getLogger() {
-        return owner.getLogger();
+        return logger;
     }
 }

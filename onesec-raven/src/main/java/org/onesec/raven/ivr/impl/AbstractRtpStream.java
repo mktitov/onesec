@@ -22,8 +22,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import org.onesec.raven.ivr.RtpStream;
 import org.onesec.raven.rtp.RtpManagerConfigurator;
-import org.raven.log.LogLevel;
 import org.raven.tree.Node;
+import org.raven.tree.impl.LoggerHelper;
 
 /**
  *
@@ -40,12 +40,13 @@ public abstract class AbstractRtpStream implements RtpStream
     protected String remoteHost;
     protected int remotePort;
 
-    private AtomicLong handledPackets;
-    private AtomicLong handledBytes;
+    private final AtomicLong handledPackets;
+    private final AtomicLong handledBytes;
     private RtpStreamManagerNode manager;
     protected Node owner;
-    protected String logPrefix;
-    private AtomicBoolean released;
+//    protected String logPrefix;
+    private final AtomicBoolean released;
+    protected volatile LoggerHelper logger;
 
     public AbstractRtpStream(InetAddress address, int port, String streamType, RtpManagerConfigurator configurator)
     {
@@ -97,14 +98,18 @@ public abstract class AbstractRtpStream implements RtpStream
     {
         this.manager = manager;
     }
-
-    public String getLogPrefix() {
-        return logPrefix;
+    
+    protected RtpStreamManagerNode getManager() {
+        return manager;
     }
 
-    public void setLogPrefix(String logPrefix) {
-        this.logPrefix = logPrefix;
-    }
+//    public String getLogPrefix() {
+//        return logPrefix;
+//    }
+
+//    public void setLogPrefix(String logPrefix) {
+//        this.logPrefix = logPrefix;
+//    }
 
     protected void incHandledPacketsBy(long packets)
     {
@@ -120,27 +125,36 @@ public abstract class AbstractRtpStream implements RtpStream
 
     public void release() {
         if (!released.compareAndSet(false, true)) {
-            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                owner.getLogger().debug(logMess("Can't release stream because of already released"));
+            if (logger.isDebugEnabled())
+                logger.debug("Can't release stream because of already released");
             return;
         }
         try {
-            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                owner.getLogger().debug(logMess("Releasing stream..."));
+            if (logger.isDebugEnabled())
+                logger.debug("Releasing stream...");
             doRelease();
-            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                owner.getLogger().debug(logMess("Stream realeased"));
+            if (logger.isDebugEnabled())
+                logger.debug("Stream realeased");
             manager.releaseStream(this);
         } catch(Exception e) {
-            if (owner.isLogLevelEnabled(LogLevel.ERROR))
-                owner.getLogger().error("Error releasing RTP stream", e);
+            if (logger.isErrorEnabled())
+                logger.error("Error releasing RTP stream", e);
         }
     }
     
-    protected String logMess(String mess, Object... args)
-    {
-        return (logPrefix==null? "" : logPrefix)+streamType+". "+String.format(mess, args);
+//    protected String logMess(String mess, Object... args)
+//    {
+//        return (logPrefix==null? "" : logPrefix)+streamType+". "+String.format(mess, args);
+//    }
+    
+//    private LoggerHelper createLogger(LoggerHelper) {
+//        return new LoggerHelper()
+//    }
+
+    public void setLogger(LoggerHelper logger) {
+        this.logger = new LoggerHelper(logger, streamType+". ");
     }
+        
 
     public abstract void doRelease() throws Exception;
 }

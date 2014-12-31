@@ -24,21 +24,21 @@ public interface InOutRtpStream extends RtpStream, RtpStreamManager {
      * Creates full duplex channel to this remote host and port
      */
     public void open(String remoteHost, int remotePort) throws RtpStreamException;
-    /**
-     * Returns amount of bytes handled by inbound stream.
-     */
-    public long getInboundHandledBytes();
-    /**
-     * Returns amount of packets handled by inbound stream.
-     */
-    public long getInboundHandledPackets();
-    /**
-     * Returns amount of bytes handled by outbound stream.
-     */
-    public long getOutboundHandledBytes();
-    /**
-     * Returns amount of packets handled by outbound stream.
-     */
-    public long getOutboundHandledPackets();
+//    /**
+//     * Returns amount of bytes handled by inbound stream.
+//     */
+//    public long getInboundHandledBytes();
+//    /**
+//     * Returns amount of packets handled by inbound stream.
+//     */
+//    public long getInboundHandledPackets();
+//    /**
+//     * Returns amount of bytes handled by outbound stream.
+//     */
+//    public long getOutboundHandledBytes();
+//    /**
+//     * Returns amount of packets handled by outbound stream.
+//     */
+//    public long getOutboundHandledPackets();
 
 }

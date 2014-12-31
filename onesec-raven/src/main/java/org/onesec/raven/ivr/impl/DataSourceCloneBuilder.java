@@ -29,6 +29,7 @@ import javax.media.protocol.PushBufferDataSource;
 import javax.media.protocol.PushBufferStream;
 import org.raven.log.LogLevel;
 import org.raven.tree.Node;
+import org.raven.tree.impl.LoggerHelper;
 
 /**
  *
@@ -39,22 +40,22 @@ public class DataSourceCloneBuilder implements BufferTransferHandler {
     private final PushBufferDataSource source;
     private final Set<DataSourceClone> clones = new HashSet<DataSourceClone>();
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
-    private final Node owner;
-    private final String logPrefix;
+//    private final Node owner;
+//    private final String logPrefix;
+    private final LoggerHelper logger;
     private Buffer bufferToSend;
 
-    public DataSourceCloneBuilder(PushBufferDataSource source, Node owner, String logPrefix) {
+    public DataSourceCloneBuilder(PushBufferDataSource source, LoggerHelper logger) {
         this.source = source;
-        this.owner = owner;
-        this.logPrefix = logPrefix;
+        this.logger = new LoggerHelper(logger, "DataSourceCloneBuilder. ");
         this.source.getStreams()[0].setTransferHandler(this);
-        if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-            owner.getLogger().debug(logMess("Created"));
+        if (logger.isDebugEnabled())
+            logger.debug("Created");
     }
     
     public PushBufferDataSource createClone() {
-        if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-            owner.getLogger().debug(logMess("Creating new clone"));
+        if (logger.isDebugEnabled())
+            logger.debug("Creating new clone");
         lock.writeLock().lock();
         try {
             DataSourceClone clone = new DataSourceClone();
@@ -66,8 +67,8 @@ public class DataSourceCloneBuilder implements BufferTransferHandler {
     }
     
     private void removeClone(DataSourceClone clone) {
-        if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-            owner.getLogger().debug(logMess("Removing clone"));
+        if (logger.isDebugEnabled())
+            logger.debug("Removing clone");
         lock.writeLock().lock();
         try {
             clones.remove(clone);
@@ -77,15 +78,15 @@ public class DataSourceCloneBuilder implements BufferTransferHandler {
     }
     
     public void open() throws IOException {
-        if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-            owner.getLogger().debug(logMess("Initializing"));
+        if (logger.isDebugEnabled())
+            logger.debug("Initializing");
         source.connect();
         source.start();
     }
     
     public void close() {
-        if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-            owner.getLogger().debug(logMess("Closing"));
+        if (logger.isDebugEnabled())
+            logger.debug("Closing");
         try {
             try {
                 source.stop();
@@ -115,9 +116,9 @@ public class DataSourceCloneBuilder implements BufferTransferHandler {
         }
     }
     
-    String logMess(String mess, Object... args) {
-        return (logPrefix==null? "" : logPrefix)+"DataSourceCloneBuilder. "+String.format(mess, args);
-    }
+//    String logMess(String mess, Object... args) {
+//        return (logPrefix==null? "" : logPrefix)+"DataSourceCloneBuilder. "+String.format(mess, args);
+//    }
     
     private class DataSourceClone extends PushBufferDataSource {
         

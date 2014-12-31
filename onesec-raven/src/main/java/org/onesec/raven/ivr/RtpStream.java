@@ -17,6 +17,8 @@
 
 package org.onesec.raven.ivr;
 
+import org.raven.tree.impl.LoggerHelper;
+
 /**
  * The base contract for {@link OutgoingRtpStream} and {@link IncomingRtpStream} rtp streams.
  * @author Mikhail Titov
@@ -32,14 +34,14 @@ public interface RtpStream extends RtpAddress
      * Releases rtp stream
      */
     public void release();
-    /**
-     * Returns amount of bytes handled by stream.
-     */
-    public long getHandledBytes();
-    /**
-     * Returns amount of packets handled by stream.
-     */
-    public long getHandledPackets();
+//    /**
+//     * Returns amount of bytes handled by stream.
+//     */
+//    public long getHandledBytes();
+//    /**
+//     * Returns amount of packets handled by stream.
+//     */
+//    public long getHandledPackets();
     /**
      * Returns the address of the remote side
      */
@@ -53,5 +55,6 @@ public interface RtpStream extends RtpAddress
      */
     public long getCreationTime();
     
-    public void setLogPrefix(String prefix);
+//    public void setLogPrefix(String prefix);
+    public void setLogger(LoggerHelper logger);
 }
