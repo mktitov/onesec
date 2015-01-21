@@ -27,6 +27,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import org.onesec.raven.ivr.InOutRtpStream;
 import org.onesec.raven.ivr.IncomingRtpStream;
 import org.onesec.raven.ivr.OutgoingRtpStream;
 import org.onesec.raven.ivr.RTPManagerService;
@@ -44,6 +45,7 @@ import org.raven.tree.NodeAttribute;
 import org.raven.tree.Viewable;
 import org.raven.tree.ViewableObject;
 import org.raven.tree.impl.BaseNode;
+import org.raven.tree.impl.LoggerHelper;
 import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
 import org.raven.tree.impl.ViewableObjectImpl;
 import org.weda.annotations.constraints.NotNull;
@@ -57,6 +59,8 @@ import org.weda.internal.annotations.Service;
 @NodeClass
 public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, Viewable
 {
+    private enum StreamType {INBOUND, OUTBOUND, INOUT};
+    
     @Service
     private static RTPManagerService rtpManagerService;
     
@@ -91,6 +95,7 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
     @Message private static String rejectedStreamsMessage;
     @Message private static String incomingStreamMessage ;
     @Message private static String outgoingStreamMessage ;
+    @Message private static String inOutStreamMessage;
     @Message private static String localAddressMessage;
     @Message private static String localPortMessage;
     @Message private static String remoteAddressMessage;
@@ -175,6 +180,7 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
                     creationTimeMessage, durationMessage, streamOwnerMessage};
                 TableImpl inStreams = new TableImpl(colnames);
                 TableImpl outStreams = new TableImpl(colnames);
+                TableImpl inOutStreams = new TableImpl(colnames);
                 SimpleDateFormat fmt = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
                 for (Map.Entry<InetAddress, NavigableMap<Integer, RtpStream>> addr: streams.entrySet()){
                     NavigableMap<Integer, RtpStream> ports = addr.getValue();
@@ -182,8 +188,10 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
                         for (RtpStream stream: ports.values())
                             if (stream instanceof OutgoingRtpStream)
                                 outStreams.addRow(createRowFromStream(stream, fmt));
-                            else
+                            else if (stream instanceof IncomingRtpStream)
                                 inStreams.addRow(createRowFromStream(stream, fmt));
+                            else
+                                inOutStreams.addRow(createRowFromStream(stream, fmt));
                 }
                 vos = new ArrayList<ViewableObject>();
                 vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, statMessage));
@@ -194,6 +202,8 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
                 vos.add(new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, outStreams));
                 vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, incomingStreamMessage));
                 vos.add(new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, inStreams));
+                vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, inOutStreamMessage));
+                vos.add(new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, inOutStreams));
             } finally {
                 streamsLock.readLock().unlock();
             }
@@ -231,21 +241,22 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
 
     public IncomingRtpStream getIncomingRtpStream(Node owner)
     {
-        return (IncomingRtpStream)createStreamOrReserveAddress(true, owner, false);
+        return (IncomingRtpStream)createStreamOrReserveAddress(StreamType.INBOUND, owner, false);
     }
 
-    public OutgoingRtpStream getOutgoingRtpStream(Node owner)
-    {
-        return (OutgoingRtpStream)createStreamOrReserveAddress(false, owner, false);
+    public OutgoingRtpStream getOutgoingRtpStream(Node owner) {
+        return (OutgoingRtpStream)createStreamOrReserveAddress(StreamType.OUTBOUND, owner, false);
     }
 
-    public RtpAddress reserveAddress(Node node)
-    {
-        return createStreamOrReserveAddress(false, node, true);
+    public InOutRtpStream getInOutRtpStream(Node owner) {
+        return (InOutRtpStream)createStreamOrReserveAddress(StreamType.INOUT, owner, false);
+    }
+    
+    public RtpAddress reserveAddress(Node node) {
+        return createStreamOrReserveAddress(StreamType.OUTBOUND, node, true);
     }
 
-    public void unreserveAddress(Node node)
-    {
+    public void unreserveAddress(Node node) {
         streamsLock.writeLock().lock();
         try{
             RtpAddress rtpAddress = reservedAddresses.remove(node);
@@ -313,7 +324,7 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
         }
     }
 
-    private RtpAddress createStreamOrReserveAddress(boolean incomingStream, Node owner, boolean reserve) {
+    private RtpAddress createStreamOrReserveAddress(StreamType streamType, Node owner, boolean reserve) {
         if (!isStarted())
             return null;
         try {
@@ -356,15 +367,7 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
                             }
 
                     if (!reserve) {
-                        stream = incomingStream?
-                                new IncomingRtpStreamImpl(address, portNumber, getRtpConfigurator()) :
-                                new OutgoingRtpStreamImpl(address, portNumber, getRtpConfigurator());
-                        ((AbstractRtpStream)stream).setManager(this);
-                        ((AbstractRtpStream)stream).setOwner(owner);
-                        portStreams.put(portNumber, stream);
-
-                        streamCreations.incrementAndGet();
-
+                        stream = createStream(streamType, stream, address, portNumber, owner, portStreams);
                         return stream;
                     } else {
                         portStreams.put(portNumber, null);
@@ -384,10 +387,34 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
                 error(
                     String.format(
                         "Error creating %s RTP stream. %s"
-                        , incomingStream? "incoming" : "outgoing", e.getMessage())
+                        , streamType, e.getMessage())
                     , e);
             return null;
         }
+    }
+
+    private RtpStream createStream(StreamType streamType, RtpStream stream, InetAddress address, 
+            int portNumber, Node owner, NavigableMap<Integer, RtpStream> portStreams) 
+    {
+        switch(streamType) {
+            case INBOUND:
+                stream = new IncomingRtpStreamImpl(address, portNumber, getRtpConfigurator());
+                break;
+            case OUTBOUND:
+                stream = new OutgoingRtpStreamImpl(address, portNumber, getRtpConfigurator());
+                break;
+            case INOUT:
+                stream = new InOutRtpStreamImpl(address, portNumber, getRtpConfigurator());
+                break;
+        }
+        //                        stream = incomingStream?
+//                                new IncomingRtpStreamImpl(address, portNumber, getRtpConfigurator()) :
+//                                new OutgoingRtpStreamImpl(address, portNumber, getRtpConfigurator());
+        ((AbstractRtpStream)stream).setManager(this);
+        ((AbstractRtpStream)stream).setOwner(owner);
+        portStreams.put(portNumber, stream);
+        streamCreations.incrementAndGet();
+        return stream;
     }
     
     private int getPortNumber(InetAddress addr, int startingPort, int maxPortNumber

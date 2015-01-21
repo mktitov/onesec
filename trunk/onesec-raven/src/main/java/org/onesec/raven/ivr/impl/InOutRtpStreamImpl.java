@@ -34,26 +34,32 @@ import org.raven.tree.Node;
 public class InOutRtpStreamImpl extends AbstractRtpStream implements InOutRtpStream {
     private volatile RTPManager rtpManager;
     private final AtomicReference<InboundStream> inStream = new AtomicReference<InboundStream>();
+    private final AtomicReference<OutboundStream> outStream = new AtomicReference<OutboundStream>();
 
     public InOutRtpStreamImpl(InetAddress address, int port, RtpManagerConfigurator configurator) {
-        super(address, port, "IN/OUT", configurator);
+        super(address, port, "(In/Out)bound RTP", configurator);
     }
 
     public void open(String remoteHost, int remotePort) throws RtpStreamException {
-        try {
-            this.remoteHost = remoteHost;
-            this.remotePort = remotePort;
-            if (logger.isDebugEnabled())
-                logger.debug(String.format(
-                        "Trying to open IN/OUT RTP channel with the remote host (%s:%s)"
-                        , remoteHost, remotePort));
-            rtpManager = rtpManagerConfigurator.configureInboundManager(
-                    address, port, InetAddress.getByName(remoteHost), remotePort, logger);
-        } catch(Exception e) {
-            throw new RtpStreamException(logger.logMess(
-                        "Error creating receiver for RTP stream from remote host (%s)"
-                        , remoteHost)
-                    , e);
+        synchronized(this) {
+            try {
+                this.remoteHost = remoteHost;
+                this.remotePort = remotePort;
+                if (logger.isDebugEnabled())
+                    logger.debug(String.format(
+                            "Trying to open IN/OUT RTP channel with the remote host (%s:%s)"
+                            , remoteHost, remotePort));
+                rtpManager = rtpManagerConfigurator.configureInboundManager(
+                        address, port, InetAddress.getByName(remoteHost), remotePort, logger);
+                InboundStream _inStream = inStream.get();
+                if (_inStream.waitingForOpen)
+                    _inStream.open();
+            } catch(Exception e) {
+                throw new RtpStreamException(logger.logMess(
+                            "Error creating receiver for RTP stream from remote host (%s)"
+                            , remoteHost)
+                        , e);
+            }
         }
     }
 
@@ -86,6 +92,14 @@ public class InOutRtpStreamImpl extends AbstractRtpStream implements InOutRtpStr
     }
 
     public OutgoingRtpStream getOutgoingRtpStream(Node owner) {
+        OutboundStream stream =  outStream.get();
+        releaseStream(stream);
+        stream = new OutboundStream(address, port, getManager());
+        outStream.set(stream);
+        return stream;
+    }
+
+    public InOutRtpStream getInOutRtpStream(Node owner) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
@@ -96,8 +110,36 @@ public class InOutRtpStreamImpl extends AbstractRtpStream implements InOutRtpStr
     public void unreserveAddress(Node node) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
+    
+    private class OutboundStream extends OutgoingRtpStreamImpl {
+
+        public OutboundStream(InetAddress address, int portNumber, RtpStreamManagerNode manager) {
+            super(address, portNumber, null);
+            setManager(manager);
+        }
+
+        @Override
+        protected RTPManager createRtpManager() throws Exception {
+            if (rtpManager==null)
+                throw new Exception("Can't create RTPManager because of InOutRtpStream not opened");
+            return rtpManager;
+        }
+
+        @Override
+        public void doRelease() throws Exception {
+            super.doRelease();
+            outStream.compareAndSet(this, null);
+        }                
+
+        @Override
+        protected void releaseRtpManager() {
+            //
+        }                        
+    }
 
     private class InboundStream extends IncomingRtpStreamImpl {
+        private volatile boolean waitingForOpen = true;
+        private volatile boolean opened = false;
 
         public InboundStream(InetAddress addr, int port, RtpStreamManagerNode manager) {
             super(addr, port, null);
@@ -115,22 +157,34 @@ public class InOutRtpStreamImpl extends AbstractRtpStream implements InOutRtpStr
         }
         
         public void open() {
-            if (logger.isDebugEnabled())
-                logger.debug(String.format(
-                            "Trying to open incoming RTP stream, using existed RTPManager, "
-                                    + "from the remote host (%s) and port (%s)"
-                            , remoteHost, remotePort));
-            rtpManager.addReceiveStreamListener(this);
+            synchronized(InOutRtpStreamImpl.this) {
+                if (rtpManager==null) {
+                    waitingForOpen = true;
+                    if (logger.isDebugEnabled())
+                        logger.debug("Can't open connection, because of RTPManager not initialized. Waiting...");
+                } else {
+                    waitingForOpen = false;
+                    if (logger.isDebugEnabled())
+                        logger.debug(String.format(
+                                    "Trying to open incoming RTP stream, using existed RTPManager, "
+                                            + "from the remote host (%s) and port (%s)"
+                                    , remoteHost, remotePort));
+                    rtpManager.addReceiveStreamListener(this);
+                }
+            }
         }
 
         @Override
         public void release() {
-            if (inStream.compareAndSet(this, null)) {
-                if (logger.isDebugEnabled())
-                    logger.debug("Releasing stream...");
-                rtpManager.removeReceiveStreamListener(this);            
-                if (logger.isDebugEnabled())
-                    logger.debug("Stream released");
+            synchronized(this) {               
+                if (inStream.compareAndSet(this, null)) {
+                    if (logger.isDebugEnabled())
+                        logger.debug("Releasing stream...");
+                    if (rtpManager!=null)
+                        rtpManager.removeReceiveStreamListener(this);            
+                    if (logger.isDebugEnabled())
+                        logger.debug("Stream released");
+                }
             }
         }
     }

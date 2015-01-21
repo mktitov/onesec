@@ -42,7 +42,7 @@ public class OutgoingRtpStreamImpl extends AbstractRtpStream implements Outgoing
 
     public OutgoingRtpStreamImpl(InetAddress address, int portNumber, RtpManagerConfigurator configurator)
     {
-        super(address, portNumber, "Outgoing RTP", configurator);
+        super(address, portNumber, "Outbound RTP", configurator);
     }
 
 //    public long getHandledBytes()
@@ -54,6 +54,12 @@ public class OutgoingRtpStreamImpl extends AbstractRtpStream implements Outgoing
 //    {
 //        return 0;
 //    }
+    
+    protected RTPManager createRtpManager() throws Exception {
+        return rtpManagerConfigurator.configureOutboundManager(
+                address, port, InetAddress.getByName(remoteHost), remotePort, logger);
+        
+    }
 
     public void open(String remoteHost, int remotePort, AudioStream audioStream) throws RtpStreamException {
         try {
@@ -64,8 +70,7 @@ public class OutgoingRtpStreamImpl extends AbstractRtpStream implements Outgoing
                         "Trying to open outgoing RTP stream to the remote host (%s) using port (%s)"
                         , remoteHost, remotePort));
             this.audioStream = audioStream;
-            rtpManager = rtpManagerConfigurator.configureOutboundManager(
-                    address, port, InetAddress.getByName(remoteHost), remotePort, logger);
+            rtpManager = createRtpManager();
             sendStream = rtpManager.createSendStream(audioStream.getDataSource(), 0);
             sendStream.setBitRate(1);
             BufferControl control = (BufferControl)rtpManager.getControl(BufferControl.class.getName());
@@ -82,6 +87,10 @@ public class OutgoingRtpStreamImpl extends AbstractRtpStream implements Outgoing
                         , remoteHost, remotePort)
                     , e);
         }
+    }
+    
+    protected void releaseRtpManager() {
+        rtpManager.dispose();
     }
 
     @Override
@@ -104,9 +113,8 @@ public class OutgoingRtpStreamImpl extends AbstractRtpStream implements Outgoing
                 rtpManager.removeTargets("disconnected");
             }
         } finally {
-            rtpManager.dispose();
-        }
-        
+            releaseRtpManager();
+        }        
     }
 
     public void start() throws RtpStreamException {

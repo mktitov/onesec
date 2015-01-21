@@ -166,4 +166,8 @@ public class TestIvrEndpoint extends BaseNode implements IvrEndpoint
     public Collection<NodeAttribute> generateAttributes() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
+
+    public Boolean getShareInboundOutboundPort() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
 }

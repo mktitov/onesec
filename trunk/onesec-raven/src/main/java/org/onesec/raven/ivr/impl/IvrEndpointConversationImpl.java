@@ -76,10 +76,12 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     private final LoggerHelper logger;
     private final ExecutorService executor;
     private final ConversationScenario scenario;
-    private final RtpStreamManager streamManager;
+    private final RtpStreamManager mainStreamManager;
+    private volatile RtpStreamManager streamManager;
     private final boolean enableIncomingRtpStream;
     private final AtomicBoolean audioStreamJustCreated = new AtomicBoolean();
     private final String terminalAddress;
+    private final boolean sharePort;
     private Map<String, Object> additionalBindings;
     private Codec codec;
     private int packetSize;
@@ -112,7 +114,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             , ConversationScenario scenario, RtpStreamManager streamManager
             , boolean enableIncomingRtpStream
             , String terminalAddress
-            , Map<String, Object> additionalBindings)
+            , Map<String, Object> additionalBindings
+            , boolean sharePort)
         throws Exception
     {
         this.owner = owner;
@@ -120,10 +123,11 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         this.logger = new LoggerHelper(owner, null);
         this.executor = executor;
         this.scenario = scenario;
-        this.streamManager = streamManager;
+        this.mainStreamManager = streamManager;
         this.additionalBindings = additionalBindings;
         this.enableIncomingRtpStream = enableIncomingRtpStream;
         this.terminalAddress = terminalAddress;
+        this.sharePort = sharePort;
 
         state = new IvrEndpointConversationStateImpl(this);
         state.setState(INVALID);
@@ -214,6 +218,13 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                     state.setState(CONNECTING);
                 break;
         }
+        if (sharePort && inRtpStatus==RtpStatus.INVALID && outRtpStatus==RtpStatus.INVALID && streamManager!=null) {
+            try {
+                ((RtpStream)streamManager).release();
+            } finally {
+                streamManager = null;
+            }
+        }
     }
 
     public void setCall(CallControlCall call) throws IvrEndpointConversationException {
@@ -247,6 +258,16 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             lock.writeLock().unlock();
         }
     }
+    
+    private RtpStreamManager getStreamManager() {
+        if (!sharePort)
+            return mainStreamManager;
+        else {
+            if (streamManager==null)
+                streamManager = mainStreamManager.getInOutRtpStream(owner);
+            return streamManager;
+        }
+    }
 
     public IncomingRtpStream initIncomingRtp() throws IvrEndpointConversationException {
         lock.writeLock().lock();
@@ -257,7 +278,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             if (inRtpStatus!=RtpStatus.INVALID)
                 throw new IvrEndpointConversationRtpStateException(
                         "Can't create incoming RTP stream", "INVALID", inRtpStatus.name());
-            inRtp = streamManager.getIncomingRtpStream(owner);
+            inRtp = getStreamManager().getIncomingRtpStream(owner);
             inRtp.setLogger(new LoggerHelper(logger, callId));
             inRtpStatus = RtpStatus.CREATED;
             if (logger.isDebugEnabled())
@@ -286,7 +307,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             this.packetSize = packetSize;
             this.maxSendAheadPacketsCount = maxSendAheadPacketsCount;
             this.codec = codec;
-            outRtp = streamManager.getOutgoingRtpStream(owner);
+            outRtp = getStreamManager().getOutgoingRtpStream(owner);
             if (outRtp!=null) {
 //                outRtp.setLogPrefix(callId+" : ");
                 outRtp.setLogger(new LoggerHelper(logger, callId+" : "));

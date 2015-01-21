@@ -48,7 +48,8 @@ public abstract class AbstractRtpStream implements RtpStream
     private final AtomicBoolean released;
     protected volatile LoggerHelper logger;
 
-    public AbstractRtpStream(InetAddress address, int port, String streamType, RtpManagerConfigurator configurator)
+    public AbstractRtpStream(InetAddress address, int port, String streamType, 
+            RtpManagerConfigurator configurator)
     {
         this.address = address;
         this.port = port;
@@ -74,6 +75,8 @@ public abstract class AbstractRtpStream implements RtpStream
     void setOwner(Node owner)
     {
         this.owner = owner;
+        if (logger==null)
+            this.logger = new LoggerHelper(owner, streamType);
     }
 
     public InetAddress getAddress()

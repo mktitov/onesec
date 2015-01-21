@@ -65,7 +65,7 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
 
     public IncomingRtpStreamImpl(InetAddress address, int port, RtpManagerConfigurator configurator)
     {
-        super(address, port, "Incoming RTP", configurator);
+        super(address, port, "Inbound RTP", configurator);
         
         status = Status.INITIALIZING;
         consumers = new LinkedList<Consumer>();
