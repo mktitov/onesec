@@ -37,6 +37,11 @@ public interface RtpStreamManager
      */
     public OutgoingRtpStream getOutgoingRtpStream(Node owner);
     /**
+     * Returns In/Out RTP stream. The stream must be {@link RtpStream#release() released}
+     * after use.
+     */
+    public InOutRtpStream getInOutRtpStream(Node owner);    
+    /**
      * Reserves the address by the node passed in the parameter. Next time the call of the method
      * {@link #getOutgoingRtpStream(Node)} returns the stream with the address and port reserved by
      * this method.

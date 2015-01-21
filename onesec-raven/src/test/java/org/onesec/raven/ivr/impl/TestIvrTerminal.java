@@ -92,4 +92,8 @@ public class TestIvrTerminal extends BaseNode implements IvrMediaTerminal {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
+    public Boolean getShareInboundOutboundPort() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
 }
