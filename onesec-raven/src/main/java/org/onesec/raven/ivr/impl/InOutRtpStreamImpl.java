@@ -120,8 +120,10 @@ public class InOutRtpStreamImpl extends AbstractRtpStream implements InOutRtpStr
 
         @Override
         protected RTPManager createRtpManager() throws Exception {
-            if (rtpManager==null)
-                throw new Exception("Can't create RTPManager because of InOutRtpStream not opened");
+            if (rtpManager==null) {
+                InOutRtpStreamImpl.this.open(remoteHost, remotePort);
+//                throw new Exception("Can't create RTPManager because of InOutRtpStream not opened");
+            }
             return rtpManager;
         }
 

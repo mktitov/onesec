@@ -58,7 +58,8 @@ import org.onesec.raven.ivr.SendMessageDirection;
  * @author Mikhail Titov
  */
 public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
-    private final static String TEST_NUMBER = "631799";
+//    private final static String TEST_NUMBER = "631798";
+    private final static String TEST_NUMBER = "68000"; //звонить на 88137
     private final static String RP_TEST_NUMBER = "631690";
     
     private ProviderRegistry providerRegistry;
@@ -93,13 +94,15 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         assertTrue(callOperator.start());
 
         ProviderNode provider = new ProviderNode();
-        provider.setName("631609 provider");
+        provider.setName("Provider");
         callOperator.getProvidersNode().addAndSaveChildren(provider);
-        provider.setFromNumber(88000);
-        provider.setToNumber(631799);
-        provider.setHost("10.0.137.125");
-        provider.setPassword(privateProperties.getProperty("ccm_dialer_proxy_kom"));
-        provider.setUser("ccm_dialer_proxy_kom");
+        provider.setFromNumber(68000);
+        provider.setToNumber(68009);
+//        provider.setFromNumber(68000);
+//        provider.setToNumber(68009);
+        provider.setHost(privateProperties.getProperty("ccm_addr"));
+        provider.setPassword(privateProperties.getProperty("ccm_pwd"));
+        provider.setUser(privateProperties.getProperty("ccm_user"));
         assertTrue(provider.start());
         
 //        provider = new ProviderNode();
@@ -160,12 +163,12 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
 
     //В данном тесте необходимо самому позвонить на номер, указанный в тесте. Должны услышать:
     //  Пароли не совпадают
-//    @Test(timeout=50000)
+    @Test(timeout=50000)
     public void incomingCallTest() throws Exception {
         waitForProvider();
         createSimpleScenario();
 
-        IvrMediaTerminal term = trainTerminal(TEST_NUMBER, scenario, true, true);
+        IvrMediaTerminal term = trainTerminal(TEST_NUMBER, scenario, true, true, true);
         IvrEndpointConversationListener listener = trainListener();
         replay(term, listener);
 
@@ -202,7 +205,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
     
     //В данном тесте система позвонит, на указанный адрес. Необходимо взять трубку. 
     //в течении секунды вызов должен переадресоваться на 88028
-    @Test(timeout=70000)
+//    @Test(timeout=70000)
     public void transferTest() throws Exception {
         waitForProvider();
         createSimpleScenarioWithPause();
@@ -725,8 +728,14 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         return listener;
     }
 
-    private TestTerminal trainTerminal(String address, IvrConversationScenario scenario, boolean enableInCalls
-            , boolean enableInRtp)
+    private TestTerminal trainTerminal(String address, IvrConversationScenario scenario, 
+            boolean enableInCalls, boolean enableInRtp)
+    {
+        return trainTerminal(address, scenario, enableInCalls, enableInRtp, false);
+    }
+    
+    private TestTerminal trainTerminal(String address, IvrConversationScenario scenario, 
+            boolean enableInCalls, boolean enableInRtp, boolean sharePorts)
     {
         TestTerminal term = createMock((TestTerminal.class));
         expect(term.getLogger()).andReturn(termNode).anyTimes();
@@ -735,7 +744,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         expect(term.getObjectDescription()).andReturn("Terminal").anyTimes();
         expect(term.getAddress()).andReturn(address);
         expect(term.getCodec()).andReturn(Codec.AUTO);
-        expect(term.getConversationScenario()).andReturn(scenario);
+        expect(term.getConversationScenario()).andReturn(scenario).anyTimes();
         expect(term.getEnableIncomingCalls()).andReturn(enableInCalls);
         expect(term.getEnableIncomingRtp()).andReturn(enableInRtp);
         expect(term.getExecutor()).andReturn(executor);
@@ -745,7 +754,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         expect(term.getPath()).andReturn(termNode.getPath()).anyTimes();
         expect(term.getLogLevel()).andReturn(LogLevel.TRACE).anyTimes();
         expect(term.getName()).andReturn("Terminal "+address).anyTimes();
-
+        expect(term.getShareInboundOutboundPort()).andReturn(sharePorts).anyTimes();
         return term;
     }
 
