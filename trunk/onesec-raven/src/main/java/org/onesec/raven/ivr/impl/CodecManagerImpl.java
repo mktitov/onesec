@@ -31,7 +31,10 @@ import org.onesec.raven.codec.AlawEncoder;
 import org.onesec.raven.codec.AlawPacketizer;
 import org.onesec.raven.codec.UlawPacketizer;
 import org.onesec.raven.codec.g729.G729Decoder;
+import org.onesec.raven.codec.g729.G729Depacketizer;
+import org.onesec.raven.codec.g729.G729FullDecoder;
 import org.onesec.raven.codec.g729.G729Encoder;
+import org.onesec.raven.codec.g729.G729Packetizer;
 import org.onesec.raven.ivr.CodecConfig;
 import org.onesec.raven.ivr.CodecManager;
 import org.onesec.raven.ivr.CodecManagerException;
@@ -78,26 +81,54 @@ public class CodecManagerImpl implements CodecManager {
                 , PlugInManager.CODEC);
         logger.debug("ALAW packetizer codec ({}) successfully added", AlawPacketizer.class.getName());
 
-        G729Encoder g = new G729Encoder();
+//        G729FullEncoder g = new G729FullEncoder();
+//        PlugInManager.addPlugIn(G729FullEncoder.class.getName()
+//                , g.getSupportedInputFormats()
+//                , g.getSupportedOutputFormats(null)
+//                , PlugInManager.CODEC);
+//        logger.debug("G729 encoder/packetizer ({}) successfully added", G729FullEncoder.class.getName());
+        
+        G729Encoder ge = new G729Encoder();
         PlugInManager.addPlugIn(G729Encoder.class.getName()
-                , g.getSupportedInputFormats()
-                , g.getSupportedOutputFormats(null)
+                , ge.getSupportedInputFormats()
+                , ge.getSupportedOutputFormats(null)
                 , PlugInManager.CODEC);
-        logger.debug("G729 encoder/packetizer ({}) successfully added", G729Encoder.class.getName());
+        logger.debug("G729 encoder ({}) successfully added", G729Encoder.class.getName());
+        
+        G729Packetizer gp = new G729Packetizer();
+        PlugInManager.addPlugIn(G729Packetizer.class.getName()
+                , gp.getSupportedInputFormats()
+                , gp.getSupportedOutputFormats(null)
+                , PlugInManager.CODEC);
+        logger.debug("G729 encoder ({}) successfully added", G729Packetizer.class.getName());
         
         AlawDepacketizer adep = new AlawDepacketizer();
         PlugInManager.addPlugIn(AlawDepacketizer.class.getName(), adep.getSupportedInputFormats(), 
                 adep.getSupportedOutputFormats(null), PlugInManager.CODEC);
 
-        G729Decoder d = new G729Decoder();
+//        G729FullDecoder d = new G729FullDecoder();
+//        PlugInManager.addPlugIn(G729FullDecoder.class.getName()
+//                , d.getSupportedInputFormats()
+//                , d.getSupportedOutputFormats(null)
+//                , PlugInManager.CODEC);
+//        logger.debug("G729 decoder/depacketizer ({}) successfully added", G729FullDecoder.class.getName());
+
+        G729Decoder gd = new G729Decoder();
         PlugInManager.addPlugIn(G729Decoder.class.getName()
-                , d.getSupportedInputFormats()
-                , d.getSupportedOutputFormats(null)
+                , gd.getSupportedInputFormats()
+                , gd.getSupportedOutputFormats(null)
                 , PlugInManager.CODEC);
-        logger.debug("G729 decoder/depacketizer ({}) successfully added", G729Decoder.class.getName());
+        logger.debug("G729 decoder ({}) successfully added", G729Decoder.class.getName());
+        
+        G729Depacketizer gdp = new G729Depacketizer();
+        PlugInManager.addPlugIn(G729Depacketizer.class.getName()
+                , gdp.getSupportedInputFormats()
+                , gdp.getSupportedOutputFormats(null)
+                , PlugInManager.CODEC);
+        logger.debug("G729 depacketizer ({}) successfully added", G729Depacketizer.class.getName());
 
         alawRtpFormat = p.getSupportedOutputFormats(null)[0];
-        g729RtpFormat = g.getSupportedOutputFormats(null)[0];
+        g729RtpFormat = gp.getSupportedOutputFormats(null)[0];
 
         PlugInManager.commit();
         

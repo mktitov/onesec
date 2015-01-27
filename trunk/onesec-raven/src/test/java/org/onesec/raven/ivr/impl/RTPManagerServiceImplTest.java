@@ -32,8 +32,8 @@ import org.onesec.raven.codec.AlawAudioFormat;
 import org.onesec.raven.codec.AlawEncoder;
 import org.onesec.raven.codec.AlawPacketizer;
 import org.onesec.raven.codec.UlawPacketizer;
-import org.onesec.raven.codec.g729.G729Decoder;
-import org.onesec.raven.codec.g729.G729Encoder;
+import org.onesec.raven.codec.g729.G729FullDecoder;
+import org.onesec.raven.codec.g729.G729FullEncoder;
 import org.onesec.raven.ivr.RTPManagerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -82,8 +82,8 @@ public class RTPManagerServiceImplTest extends OnesecRavenTestCase
         checkCodec(AudioFormat.ULAW, AudioFormat.ULAW_RTP, UlawPacketizer.class);
         checkCodec(AudioFormat.LINEAR, AudioFormat.ALAW, AlawEncoder.class);
         checkCodec(AudioFormat.ALAW, AlawAudioFormat.ALAW_RTP, AlawPacketizer.class);
-        checkCodec(AudioFormat.LINEAR, AudioFormat.G729_RTP, G729Encoder.class);
-        checkCodec(AudioFormat.G729_RTP, AudioFormat.LINEAR, G729Decoder.class);
+        checkCodec(AudioFormat.LINEAR, AudioFormat.G729_RTP, G729FullEncoder.class);
+        checkCodec(AudioFormat.G729_RTP, AudioFormat.LINEAR, G729FullDecoder.class);
     }
 
     @Test

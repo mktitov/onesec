@@ -114,6 +114,9 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     @NotNull @Parameter(defaultValue="false")
     private Boolean enableIncomingCalls;
     
+    @NotNull @Parameter(defaultValue="false")
+    private Boolean shareInboundOutboundPort;
+    
     @Parameter
     private Integer maxRequestsPerSecond;
     
@@ -472,6 +475,14 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
 
     public void setEnableIncomingCalls(Boolean enableIncomingCalls) {
         this.enableIncomingCalls = enableIncomingCalls;
+    }
+
+    public Boolean getShareInboundOutboundPort() {
+        return shareInboundOutboundPort;
+    }
+
+    public void setShareInboundOutboundPort(Boolean shareInboundOutboundPort) {
+        this.shareInboundOutboundPort = shareInboundOutboundPort;
     }
 
     public Boolean getEnableIncomingRtp() {
@@ -844,6 +855,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
                     term.setRtpMaxSendAheadPacketsCount(null);
                     term.setRtpPacketSize(null);
                     term.setCallsRouter(null);
+                    term.setShareInboundOutboundPort(null);
                     term.setLogLevel(getLogLevel());
                     term.start();
                 }

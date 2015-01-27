@@ -29,5 +29,5 @@ public interface CodecManager {
     public Demultiplexer buildDemultiplexer(String contentType);
     public Multiplexer buildMultiplexer(String contentType);
     public Format getAlawRtpFormat();
-    public Format getG729RtpFormat();
+    public Format getG729RtpFormat();    
 }
