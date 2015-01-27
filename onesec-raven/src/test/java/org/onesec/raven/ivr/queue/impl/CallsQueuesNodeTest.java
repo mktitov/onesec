@@ -59,6 +59,9 @@ import org.raven.tree.Node;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static org.onesec.raven.ivr.queue.impl.CallQueueCdrRecordSchemaNode.*;
+import org.onesec.raven.net.impl.NettyNioEventLoopGroupNode;
+import org.onesec.raven.rtp.NettyRtpManagerConfigurator;
+import org.onesec.raven.rtp.RtpManagerConfigurator;
 
 /**
  *
@@ -327,7 +330,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         prepareRealTest();
 
 //        TimeUnit.SECONDS.sleep(60);
-        TimeUnit.SECONDS.sleep(1200);
+        TimeUnit.SECONDS.sleep(60);
 
         Logger log = LoggerFactory.getLogger(Node.class);
         log.debug("!! Finising test !!");
@@ -346,9 +349,21 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
 
     private void prepareRealTest() throws Exception
     {
+        NettyNioEventLoopGroupNode eventLoop = new NettyNioEventLoopGroupNode();
+        eventLoop.setName("Netty event loop");
+        testsNode.addAndSaveChildren(eventLoop);
+        assertTrue(eventLoop.start());
+        
+        NettyRtpManagerConfigurator rtpConfigurator = new NettyRtpManagerConfigurator();
+        rtpConfigurator.setName("Netty rtp configurator");
+        testsNode.addAndSaveChildren(rtpConfigurator);
+        rtpConfigurator.setEventLoopGroupProvider(eventLoop);
+        assertTrue(rtpConfigurator.start());
+        
         RtpStreamManagerNode manager = new RtpStreamManagerNode();
         manager.setName("rtpManager");
         tree.getRootNode().addAndSaveChildren(manager);
+        manager.setRtpManagerConfigurator(rtpConfigurator);
         assertTrue(manager.start());
 
         RtpAddressNode address = new RtpAddressNode();
@@ -356,6 +371,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         manager.addAndSaveChildren(address);
         address.setStartingPort(16384);
         assertTrue(address.start());
+        
 
         CCMCallOperatorNode callOperator = new CCMCallOperatorNode();
         callOperator.setName("call operator");
@@ -373,13 +389,15 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
 //        assertTrue(provider.start());
 
         ProviderNode provider = new ProviderNode();
-        provider.setName("631609 provider");
+        provider.setName("TEST provider");
         callOperator.getProvidersNode().addAndSaveChildren(provider);
-        provider.setFromNumber(631605);
-        provider.setToNumber(631799);
-        provider.setHost("10.0.137.125");
-        provider.setPassword(privateProperties.getProperty("ccm_dialer_proxy_kom"));
-        provider.setUser("ccm_dialer_proxy_kom");
+        provider.setFromNumber(68000);
+        provider.setToNumber(68009);
+//        provider.setFromNumber(68000);
+//        provider.setToNumber(68009);
+        provider.setHost(privateProperties.getProperty("ccm_addr"));
+        provider.setPassword(privateProperties.getProperty("ccm_pwd"));
+        provider.setUser(privateProperties.getProperty("ccm_user"));
         assertTrue(provider.start());
 
         ExecutorServiceNode executor = new ExecutorServiceNode();
@@ -408,8 +426,8 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
 //        createEndpoint(tree.getRootNode(), executor, manager, abonentScenario, "88013");
         createMultichannelEndpoint(executor, manager, abonentScenario);
 //        createEndpoint(pool, executor, manager, null, "88013");
-        createEndpoint(pool, executor, manager, null, "631799");
-        createEndpoint(pool, executor, manager, null, "631798");
+        createEndpoint(pool, executor, manager, null, "68001");
+        createEndpoint(pool, executor, manager, null, "68002");
         
         assertTrue(pool.start());
         
@@ -516,7 +534,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         endpoint.setName("endpoint");
         tree.getRootNode().addAndSaveChildren(endpoint);
         endpoint.setLogLevel(LogLevel.TRACE);
-        endpoint.setAddress("631616");
+        endpoint.setAddress("68000");
         endpoint.setConversationScenario(scenario);
         endpoint.setExecutor(executor);
         endpoint.setRtpStreamManager(manager);
@@ -537,6 +555,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         endpoint.setAddress(address);
         endpoint.setLogLevel(LogLevel.TRACE);
         endpoint.setEnableIncomingRtp(Boolean.TRUE);
+        endpoint.setShareInboundOutboundPort(Boolean.TRUE);
         assertTrue(endpoint.start());
         endpoints.add(endpoint);
     }

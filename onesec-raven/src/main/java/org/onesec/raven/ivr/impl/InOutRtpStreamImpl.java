@@ -66,6 +66,12 @@ public class InOutRtpStreamImpl extends AbstractRtpStream implements InOutRtpStr
     @Override
     public void doRelease() throws Exception {
         releaseStream(inStream.get());
+        releaseStream(outStream.get());
+        RTPManager _rtpManager = rtpManager;
+        if (_rtpManager!=null) {            
+            _rtpManager.dispose();
+            
+        }
     }
 
 //    public long getHandledBytes() {

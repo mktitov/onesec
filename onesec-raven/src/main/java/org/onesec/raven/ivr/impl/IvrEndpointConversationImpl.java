@@ -279,7 +279,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 throw new IvrEndpointConversationRtpStateException(
                         "Can't create incoming RTP stream", "INVALID", inRtpStatus.name());
             inRtp = getStreamManager().getIncomingRtpStream(owner);
-            inRtp.setLogger(new LoggerHelper(logger, callId));
+            inRtp.setLogger(new LoggerHelper(logger, callId+" : "));
             inRtpStatus = RtpStatus.CREATED;
             if (logger.isDebugEnabled())
                 logger.debug(callLog("Incoming RTP successfully created"));

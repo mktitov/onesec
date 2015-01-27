@@ -24,19 +24,17 @@ import javax.media.format.AudioFormat;
  *
  * @author Mikhail Titov
  */
-public class G729AudioFormat extends AudioFormat
+public class G729AudioFormat extends AudioFormat 
 {
     private double koef = 0d;
 
-    public G729AudioFormat(Format format)
-    {
-        super(G729_RTP);
+    public G729AudioFormat(String g729format, Format format) {
+        super(g729format);
         copy(format);
     }
 
     @Override
-    public long computeDuration(long length)
-    {
+    public long computeDuration(long length) {
         if (koef==0d)
             koef = (64000000 / sampleSizeInBits / channels / sampleRate);
         return (long) (length * koef * 1000L);

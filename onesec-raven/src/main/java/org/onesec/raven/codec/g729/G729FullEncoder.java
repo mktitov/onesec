@@ -1,38 +1,39 @@
 /*
- * Copyright 2015 Mikhail Titov.
+ * SIP Communicator, the OpenSource Java VoIP and Instant Messaging client.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Distributable under LGPL license.
+ * See terms of license at gnu.org.
  */
 package org.onesec.raven.codec.g729;
 
 import java.awt.Component;
-import javax.media.Buffer;
-import javax.media.Format;
-import static javax.media.PlugIn.BUFFER_PROCESSED_OK;
-import static javax.media.PlugIn.INPUT_BUFFER_NOT_CONSUMED;
-import static javax.media.PlugIn.OUTPUT_BUFFER_NOT_FILLED;
-import javax.media.ResourceUnavailableException;
-import javax.media.format.AudioFormat;
+import java.util.*;
+
+import javax.media.*;
+import javax.media.control.PacketSizeControl;
+import javax.media.format.*;
 
 /**
- *
- * @author Mikhail Titov
- * Breaking class G729Encoder written by Lubomir Marinov on two parts: Encoder, Packetizer
+ * @author Lubomir Marinov
  */
-public class G729Encoder  extends AbstractCodecExt {
+public class G729FullEncoder extends AbstractCodecExt implements PacketSizeControl
+{
+    private static final short BIT_1 = Ld8k.BIT_1;
+
     private static final int L_FRAME = Ld8k.L_FRAME;
+//    private static final int L_FRAME = 160;
+
     private static final int SERIAL_SIZE = Ld8k.SERIAL_SIZE;
+//    private static final int SERIAL_SIZE = 162;
+
     private static final int INPUT_FRAME_SIZE_IN_BYTES = 2 * L_FRAME;
+
+    private static final int OUTPUT_FRAME_SIZE_IN_BYTES = L_FRAME / 8;
+//    private static final int OUTPUT_FRAME_SIZE_IN_BYTES = 20;
+
+    private int packetSize = 160;
+    private int frameCount = packetSize/80;
+    private int currentFrame;
 
     private Coder coder;
 
@@ -58,10 +59,10 @@ public class G729Encoder  extends AbstractCodecExt {
     /**
      * Initializes a new <code>G729Encoder</code> instance.
      */
-    public G729Encoder() {
+    public G729FullEncoder() {
         super("G.729 Encoder", AudioFormat.class
             , new AudioFormat[]{new G729AudioFormat(
-                    AudioFormat.G729, new AudioFormat(AudioFormat.G729, 8000, 8, 1))});
+                    AudioFormat.G729_RTP, new AudioFormat(AudioFormat.G729_RTP, 8000, 8, 1))});
 
         supportedInputFormats = new AudioFormat[]{
             new AudioFormat(AudioFormat.LINEAR, 8000, 16, 1, AudioFormat.LITTLE_ENDIAN, AudioFormat.SIGNED)
@@ -71,16 +72,26 @@ public class G729Encoder  extends AbstractCodecExt {
     }
 
     @Override
-    public Format setOutputFormat(Format format) {
-        if (format instanceof AudioFormat && AudioFormat.G729.equals(format.getEncoding()))
-            format = new G729AudioFormat(AudioFormat.G729, format);
+    public Format setOutputFormat(Format format)
+    {
+        if (format instanceof AudioFormat && AudioFormat.G729_RTP.equals(format.getEncoding()))
+            format = new G729AudioFormat(AudioFormat.G729_RTP, format);
         return super.setOutputFormat(format);
+    }
+
+    @Override
+    protected void discardOutputBuffer(Buffer outputBuffer)
+    {
+        super.discardOutputBuffer(outputBuffer);
+
+        currentFrame = 0;
     }
 
     /*
      * Implements AbstractCodecExt#doClose().
      */
-    protected void doClose() {
+    protected void doClose()
+    {
         prevInput = null;
         prevInputLength = 0;
 
@@ -99,12 +110,15 @@ public class G729Encoder  extends AbstractCodecExt {
         sp16 = new short[L_FRAME];
         serial = new short[SERIAL_SIZE];
         coder = new Coder();
+
+        currentFrame = 0;
     }
 
     /*
      * Implements AbstractCodecExt#doProcess(Buffer, Buffer).
      */
-    protected int doProcess(Buffer inputBuffer, Buffer outputBuffer) {
+    protected int doProcess(Buffer inputBuffer, Buffer outputBuffer)
+    {
         byte[] input = (byte[]) inputBuffer.getData();
 
         int inputLength = inputBuffer.getLength();
@@ -138,19 +152,49 @@ public class G729Encoder  extends AbstractCodecExt {
         inputOffset += readBytes;
         inputBuffer.setOffset(inputOffset);
 
-        coder.process(sp16, serial);        
+        coder.process(sp16, serial);
+
+//        byte[] output = validateByteArraySize(
+//                    outputBuffer,
+//                    outputBuffer.getOffset() + 2 * OUTPUT_FRAME_SIZE_IN_BYTES);
+        byte[] output = validateByteArraySize(
+                    outputBuffer,
+                    outputBuffer.getOffset() + frameCount * OUTPUT_FRAME_SIZE_IN_BYTES);
+
+        packetize(serial, output, outputBuffer.getOffset() + OUTPUT_FRAME_SIZE_IN_BYTES * currentFrame);
         
-        outputBuffer.setLength(SERIAL_SIZE);
+        outputBuffer.setLength(outputBuffer.getLength() + OUTPUT_FRAME_SIZE_IN_BYTES);
+
         outputBuffer.setFormat(outputFormat);
-        outputBuffer.setData(serial);
 
         int processResult = BUFFER_PROCESSED_OK;
 
+        if (currentFrame == (frameCount-1))
+            currentFrame = 0;
+        else
+        {
+            ++currentFrame;
+            processResult |= OUTPUT_BUFFER_NOT_FILLED;
+        }
         if (inputLength > 0)
             processResult |= INPUT_BUFFER_NOT_CONSUMED;
         return processResult;
     }
 
+    private void packetize(short[] serial, byte[] outputFrame, int outputFrameOffset)
+    {
+        Arrays.fill(outputFrame, outputFrameOffset, outputFrameOffset + L_FRAME / 8, (byte) 0);
+
+        for (int s = 0; s < L_FRAME; s++)
+            if (BIT_1 == serial[2 + s])
+            {
+                int o = outputFrameOffset + s / 8;
+                int output = outputFrame[o];
+
+                output |= 1 << (7 - (s % 8));
+                outputFrame[o] = (byte) (output & 0xFF);
+            }
+    }
 
     private static int readShorts(byte[] input, int inputOffset, short[] output, int outputOffset, int outputLength)
     {
@@ -159,8 +203,20 @@ public class G729Encoder  extends AbstractCodecExt {
         return outputLength;
     }
 
+    public int setPacketSize(int numBytes)
+    {
+        packetSize = numBytes;
+        frameCount = packetSize/80;
+        return packetSize;
+    }
+
+    public int getPacketSize() 
+    {
+        return packetSize;
+    }
+
     public Component getControlComponent()
     {
         throw new UnsupportedOperationException("Not supported yet.");
-    }    
+    }
 }
