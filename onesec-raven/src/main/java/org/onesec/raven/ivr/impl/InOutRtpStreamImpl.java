@@ -43,6 +43,8 @@ public class InOutRtpStreamImpl extends AbstractRtpStream implements InOutRtpStr
     public void open(String remoteHost, int remotePort) throws RtpStreamException {
         synchronized(this) {
             try {
+                if (rtpManager!=null)
+                    return;
                 this.remoteHost = remoteHost;
                 this.remotePort = remotePort;
                 if (logger.isDebugEnabled())
@@ -183,18 +185,31 @@ public class InOutRtpStreamImpl extends AbstractRtpStream implements InOutRtpStr
         }
 
         @Override
-        public void release() {
-            synchronized(this) {               
-                if (inStream.compareAndSet(this, null)) {
-                    if (logger.isDebugEnabled())
-                        logger.debug("Releasing stream...");
-                    if (rtpManager!=null)
-                        rtpManager.removeReceiveStreamListener(this);            
-                    if (logger.isDebugEnabled())
-                        logger.debug("Stream released");
-                }
-            }
+        public void doRelease() throws Exception {
+            super.doRelease();
+            inStream.compareAndSet(this, null);
         }
+
+        @Override
+        protected void releaseRtpManager() {
+        }
+
+
+//        @Override
+//        public void release() {
+//            synchronized(this) {               
+//                if (inStream.compareAndSet(this, null)) {
+//                    if (logger.isDebugEnabled())
+//                        logger.debug("Releasing stream...");
+//                    if (rtpManager!=null) {
+//                        rtpManager.removeReceiveStreamListener(this);            
+//                        rtpManager.removeTargets("Disconnected");
+//
+//                    } if (logger.isDebugEnabled())
+//                        logger.debug("Stream released");
+//                }
+//            }
+//        }
     }
     
 }
