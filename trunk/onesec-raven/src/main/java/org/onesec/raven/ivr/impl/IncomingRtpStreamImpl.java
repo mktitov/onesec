@@ -94,9 +94,13 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
                 }
             }
         } finally {
-            if (rtpManager!=null)
-                rtpManager.dispose();
+            releaseRtpManager();
         }
+    }
+    
+    protected void releaseRtpManager() {
+        if (rtpManager!=null)
+            rtpManager.dispose();        
     }
 
     public void open(String remoteHost) throws RtpStreamException {
