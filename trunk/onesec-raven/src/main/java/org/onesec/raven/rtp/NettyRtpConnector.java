@@ -74,8 +74,8 @@ public class NettyRtpConnector implements RTPConnector {
     
     private void closeChannel(ChannelFuture channel) {
         try {
-            getChannel(channel).close();
-        } catch (IOException ex) {
+            getChannel(channel).close().await();
+        } catch (Exception ex) {
             if (logger.isErrorEnabled())
                 logger.error("Close channel error", ex);
         }
