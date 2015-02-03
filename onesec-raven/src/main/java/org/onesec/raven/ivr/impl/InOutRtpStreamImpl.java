@@ -24,6 +24,7 @@ import org.onesec.raven.ivr.OutgoingRtpStream;
 import org.onesec.raven.ivr.RtpAddress;
 import org.onesec.raven.ivr.RtpStream;
 import org.onesec.raven.ivr.RtpStreamException;
+import org.onesec.raven.ivr.RtpStreamManager;
 import org.onesec.raven.rtp.RtpManagerConfigurator;
 import org.raven.tree.Node;
 
@@ -89,7 +90,7 @@ public class InOutRtpStreamImpl extends AbstractRtpStream implements InOutRtpStr
         releaseStream(stream);
 //        if (stream!=null)
 //            stream.release();
-        stream = new InboundStream(address, port, getManager());
+        stream = new InboundStream(address, port, this);
         inStream.set(stream);
         return stream;
     }
@@ -102,12 +103,12 @@ public class InOutRtpStreamImpl extends AbstractRtpStream implements InOutRtpStr
     public OutgoingRtpStream getOutgoingRtpStream(Node owner) {
         OutboundStream stream =  outStream.get();
         releaseStream(stream);
-        stream = new OutboundStream(address, port, getManager());
+        stream = new OutboundStream(address, port, this);
         outStream.set(stream);
         return stream;
     }
 
-    public InOutRtpStream getInOutRtpStream(Node owner) {
+    public InOutRtpStream getInOutRtpStream(Node owner) {        
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
@@ -118,10 +119,21 @@ public class InOutRtpStreamImpl extends AbstractRtpStream implements InOutRtpStr
     public void unreserveAddress(Node node) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
+
+    public void incHandledBytes(RtpStream stream, long bytes) {
+        getManager().incHandledBytes(stream, bytes);
+    }
+
+    public void incHandledPackets(RtpStream stream, long packets) {
+        getManager().incHandledPackets(stream, packets);
+    }
+
+    public void releaseStream(RtpAddress stream) {
+    }
     
     private class OutboundStream extends OutgoingRtpStreamImpl {
 
-        public OutboundStream(InetAddress address, int portNumber, RtpStreamManagerNode manager) {
+        public OutboundStream(InetAddress address, int portNumber, RtpStreamManager manager) {
             super(address, portNumber, null);
             setManager(manager);
         }
@@ -151,7 +163,7 @@ public class InOutRtpStreamImpl extends AbstractRtpStream implements InOutRtpStr
         private volatile boolean waitingForOpen = true;
         private volatile boolean opened = false;
 
-        public InboundStream(InetAddress addr, int port, RtpStreamManagerNode manager) {
+        public InboundStream(InetAddress addr, int port, RtpStreamManager manager) {
             super(addr, port, null);
             setManager(manager);
         }

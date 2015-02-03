@@ -21,6 +21,7 @@ import java.net.InetAddress;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import org.onesec.raven.ivr.RtpStream;
+import org.onesec.raven.ivr.RtpStreamManager;
 import org.onesec.raven.rtp.RtpManagerConfigurator;
 import org.raven.tree.Node;
 import org.raven.tree.impl.LoggerHelper;
@@ -42,7 +43,7 @@ public abstract class AbstractRtpStream implements RtpStream
 
     private final AtomicLong handledPackets;
     private final AtomicLong handledBytes;
-    private RtpStreamManagerNode manager;
+    private RtpStreamManager manager;
     protected Node owner;
 //    protected String logPrefix;
     private final AtomicBoolean released;
@@ -97,12 +98,12 @@ public abstract class AbstractRtpStream implements RtpStream
         return remotePort;
     }
 
-    void setManager(RtpStreamManagerNode manager)
+    void setManager(RtpStreamManager manager)
     {
         this.manager = manager;
     }
     
-    protected RtpStreamManagerNode getManager() {
+    protected RtpStreamManager getManager() {
         return manager;
     }
 

@@ -54,4 +54,7 @@ public interface RtpStreamManager
      * @param node
      */
     public void unreserveAddress(Node node);
+    void incHandledBytes(RtpStream stream, long bytes);
+    void incHandledPackets(RtpStream stream, long packets);
+    public void releaseStream(RtpAddress stream);
 }

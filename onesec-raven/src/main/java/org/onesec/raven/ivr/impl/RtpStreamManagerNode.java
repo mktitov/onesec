@@ -270,7 +270,7 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
         }
     }
 
-    void incHandledBytes(RtpStream stream, long bytes)
+    public void incHandledBytes(RtpStream stream, long bytes)
     {
         if (stream instanceof OutgoingRtpStream)
             sendedBytes.addAndGet(bytes);
@@ -278,7 +278,7 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
             recievedBytes.addAndGet(bytes);
     }
 
-    void incHandledPackets(RtpStream stream, long packets)
+    public void incHandledPackets(RtpStream stream, long packets)
     {
         if (stream instanceof OutgoingRtpStream)
             sendedPackets.addAndGet(packets);
@@ -286,7 +286,7 @@ public class RtpStreamManagerNode extends BaseNode implements RtpStreamManager, 
             recievedPackets.addAndGet(packets);
     }
 
-    void releaseStream(RtpAddress stream) {
+    public void releaseStream(RtpAddress stream) {
         streamsLock.writeLock().lock();
         try {
             Map portStreams = streams.get(stream.getAddress());
