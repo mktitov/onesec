@@ -141,6 +141,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
     private final ReadWriteLock listenersLock = new ReentrantReadWriteLock();
     private final AtomicBoolean stopping = new AtomicBoolean();
     private final boolean sharePort;
+    private final boolean startRtpImmediatelly;
 
     @Message private static String callIdColumnMessage;
     @Message private static String callInfoColumnMessage;
@@ -164,6 +165,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
         this.enableIncomingRtp = term.getEnableIncomingRtp();
         this.enableIncomingCalls = term.getEnableIncomingCalls();
         this.sharePort = term.getShareInboundOutboundPort();
+        this.startRtpImmediatelly = term.getStartRtpImmediatelly();
         this.term = term;
         this.logger = new LoggerHelper(term, null);
         this.callsRouter = callsRouter;
@@ -228,7 +230,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
 //                activeCalls.incrementAndGet();
                 call = provider.createCall();
                 conv = new IvrEndpointConversationImpl(term, this, executor, scenario
-                        , rtpStreamManager, enableIncomingRtp, address, bindings, sharePort);
+                        , rtpStreamManager, enableIncomingRtp, address, bindings, sharePort, startRtpImmediatelly);
                 conv.addConversationListener(listener);
                 conv.addConversationListener(this);
                 scenario.conversationCreated(conv);
@@ -548,7 +550,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                     final ConversationScenario scenario = term.getConversationScenario();
                     IvrEndpointConversationImpl conv = new IvrEndpointConversationImpl(
                             term, this, executor, term.getConversationScenario(), rtpStreamManager
-                            , enableIncomingRtp, address, null, sharePort);
+                            , enableIncomingRtp, address, null, sharePort, startRtpImmediatelly);
                     conv.setCall((CallControlCall) call);
                     conv.addConversationListener(this);
                     if (scenario instanceof IvrConversationScenario) 

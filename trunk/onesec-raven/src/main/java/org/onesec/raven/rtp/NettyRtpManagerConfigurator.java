@@ -59,7 +59,7 @@ public class NettyRtpManagerConfigurator extends BaseNode implements RtpManagerC
             InetAddress remoteAddress, int remotePort, LoggerHelper logger) 
         throws Exception 
     {
-        return remotePort != SessionAddress.ANY_PORT?
+        return remotePort != SessionAddress.ANY_PORT || remoteAddress==null?
                 createStaticManager(localAddress, localPort, remoteAddress, remotePort, logger) :
                 createManagerForUnknownRemotePort(localAddress, localPort, remoteAddress, logger);
     }

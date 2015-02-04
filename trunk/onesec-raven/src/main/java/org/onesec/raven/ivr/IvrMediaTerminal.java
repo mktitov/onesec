@@ -35,4 +35,5 @@ public interface IvrMediaTerminal extends IvrTerminal
     public Boolean getEnableIncomingRtp();
     public Boolean getEnableIncomingCalls();
     public Boolean getShareInboundOutboundPort();
+    public Boolean getStartRtpImmediatelly();
 }

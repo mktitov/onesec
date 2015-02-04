@@ -44,7 +44,7 @@ public abstract class InboundChannelInitializator extends ChannelInboundHandlerA
             final InetSocketAddress senderSocket = ((DatagramPacket)msg).sender();
             if (logger.isTraceEnabled()) 
                 logger.debug("Received initial packet from ({})", senderSocket.toString());
-            if (sender.equals(senderSocket.getAddress())) {
+            if (sender==null || sender.equals(senderSocket.getAddress())) {
                 initChannel(senderSocket, ctx.channel());
                 ctx.pipeline().remove(this);
                 ctx.fireChannelRead(msg);

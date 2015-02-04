@@ -82,6 +82,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     private final AtomicBoolean audioStreamJustCreated = new AtomicBoolean();
     private final String terminalAddress;
     private final boolean sharePort;
+    private final boolean startRtpImmediatelly;
     private Map<String, Object> additionalBindings;
     private Codec codec;
     private int packetSize;
@@ -115,7 +116,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             , boolean enableIncomingRtpStream
             , String terminalAddress
             , Map<String, Object> additionalBindings
-            , boolean sharePort)
+            , boolean sharePort, boolean startRtpImmediatelly)
         throws Exception
     {
         this.owner = owner;
@@ -128,6 +129,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         this.enableIncomingRtpStream = enableIncomingRtpStream;
         this.terminalAddress = terminalAddress;
         this.sharePort = sharePort;
+        this.startRtpImmediatelly = this.startRtpImmediatelly;
 
         state = new IvrEndpointConversationStateImpl(this);
         state.setState(INVALID);
@@ -378,6 +380,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     }
 
     private boolean isAllLogicalConnectionEstablished() {
+        if (startRtpImmediatelly)
+            return true;
         Connection[] cons = call.getConnections();
         if (cons!=null) {
             if (logger.isDebugEnabled())
