@@ -255,19 +255,21 @@ public class ConcatDataStream implements PushBufferStream, Task
         final long currTime = System.currentTimeMillis();
         final SimpleDateFormat fmt = new SimpleDateFormat("HH:mm:ss");
         final long maxSkewDur = maxSkewTime-startTime;
+        final double avgSkew = expectedPacketNumber==0? 0 : skew/(double)expectedPacketNumber;
+        final double avgTransferTime = packetNumber==0? 0 : transferTimeSum/(double)packetNumber;
         return String.format(
                 "\n\tstartTime: %s; dur: %s sec; skew: %s; maxSkew: %s; maxSkewTime: %s; avgSkew: %.2f; "+
                 "\n\texpectedPackets: %s; sentPackets: %s; missedPackets: %s; droppedPackets: %s; "+
                 "siliencePacktes: %s; "+
-                "\n\tavgTransferTime: %s; maxTransferTime: %s; "+
+                "\n\tavgTransferTime: %.2f; maxTransferTime: %s; "+
                 "emptyBufferEvents: %s; buffersSize: %s"
                 , fmt.format(new Date(startTime))
                 , (currTime-startTime)/1000, skew, maxSkew
                 , fmt.format(new Date(maxSkewTime))+"/"+maxSkewDur/1000+"."+maxSkewDur%1000
-                , skew/(double)expectedPacketNumber
+                , avgSkew
                 , expectedPacketNumber, sendedPackets.get(), missedPackets, droppedPacketCount
                 , silencePacketCount.get()
-                , transferTimeSum/packetNumber, maxTransferTime, emptyBufferEventCount, bufferQueue.size());
+                , avgTransferTime, maxTransferTime, emptyBufferEventCount, bufferQueue.size());
     }
 
 }
