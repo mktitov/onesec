@@ -38,13 +38,13 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
     private final Node owner;
     private final long createdTimestamp;
     private final String logPrefix;
-    private AtomicLong activatingTimestamp;
-    private AtomicLong activatedTimestamp;
-    private LinkedList<IvrConversationsBridgeListener> listeners;
+    private final AtomicLong activatingTimestamp;
+    private final AtomicLong activatedTimestamp;
+    private final LinkedList<IvrConversationsBridgeListener> listeners;
     private BridgeConnection conn1;
     private BridgeConnection conn2;
     private boolean activated = false;
-    private AtomicReference<IvrConversationsBridgeStatus> status;
+    private final AtomicReference<IvrConversationsBridgeStatus> status;
     private final boolean passDtmf;
 //    private final ReentrantLock lock = new ReentrantLock();
 
@@ -204,7 +204,7 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
         private final IvrEndpointConversation conv1;
         private final IvrEndpointConversation conv2;
         private final AtomicReference<AudioStream> audioStream = new AtomicReference<AudioStream>();
-        private AtomicReference<IncomingRtpStream> inRtp = new AtomicReference<IncomingRtpStream>();
+        private final AtomicReference<IncomingRtpStream> inRtp = new AtomicReference<IncomingRtpStream>();
         private volatile ConnectionState state = ConnectionState.INITIALIZING;
 
         public BridgeConnection(IvrEndpointConversation conv1, IvrEndpointConversation conv2) {

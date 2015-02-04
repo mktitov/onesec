@@ -81,6 +81,9 @@ public abstract class AbstractEndpointNode extends BaseNode
     
     @NotNull @Parameter(defaultValue="false")
     private Boolean shareInboundOutboundPort;
+    
+    @NotNull @Parameter(defaultValue="false")
+    private Boolean startRtpImmediatelly;
 
     protected AtomicReference<CiscoJtapiTerminal> term;
 
@@ -231,5 +234,13 @@ public abstract class AbstractEndpointNode extends BaseNode
 
     public void setShareInboundOutboundPort(Boolean shareInboundOutboundPort) {
         this.shareInboundOutboundPort = shareInboundOutboundPort;
+    }    
+
+    public Boolean getStartRtpImmediatelly() {
+        return startRtpImmediatelly;
+    }
+
+    public void setStartRtpImmediatelly(Boolean startRtpImmediatelly) {
+        this.startRtpImmediatelly = startRtpImmediatelly;
     }    
 }
