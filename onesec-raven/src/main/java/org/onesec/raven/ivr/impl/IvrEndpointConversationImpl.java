@@ -129,7 +129,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         this.enableIncomingRtpStream = enableIncomingRtpStream;
         this.terminalAddress = terminalAddress;
         this.sharePort = sharePort;
-        this.startRtpImmediatelly = this.startRtpImmediatelly;
+        this.startRtpImmediatelly = startRtpImmediatelly;
 
         state = new IvrEndpointConversationStateImpl(this);
         state.setState(INVALID);
