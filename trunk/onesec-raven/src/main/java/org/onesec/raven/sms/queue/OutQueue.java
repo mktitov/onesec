@@ -75,7 +75,7 @@ public class OutQueue implements MessageUnitListener, ShortMessageListener {
 
     public OutQueue(SmsConfig config, LoggerHelper logger) {
         this.config = config;
-        this.logger = new LoggerHelper(logger, "Queue. ");
+        this.logger = new LoggerHelper(logger, "Outbound queue. ");
     }
     
     public void clear() {

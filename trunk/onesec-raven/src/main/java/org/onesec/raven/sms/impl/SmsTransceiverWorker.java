@@ -424,16 +424,26 @@ public class SmsTransceiverWorker implements ShortMessageListener {
                 if (valid.get()) {
                     if (pdu instanceof DeliverSM) {
                         final DeliverSM deliverReq = (DeliverSM) pdu;
-                        if (deliverReq.getEsmClass() == 4) {
-//                            if (logger.isDebugEnabled()) {
-//                                logger.debug("Received delivery receipt");
-//                                logger.debug("Data: " + deliverReq.getShortMessage());
-//                                logger.debug("Receipted message id: " + deliverReq.getReceiptedMessageId());
-//                                logger.debug("APP specific map: "+deliverReq.getApplicationSpecificInfo());
-//                                logger.debug("SEQ NUM: "+deliverReq.getSequenceNumber());
-//                            }                            
-                            owner.getDeliveryReceiptChannel().sendReport(deliverReq.getShortMessage());
-                        }                        
+                        switch (deliverReq.getEsmClass()) {
+                            case 4: 
+                                owner.getDeliveryReceiptChannel().sendReport(deliverReq.getShortMessage());
+                                break;
+                            case 0:
+                            case 0x40:
+                                //processing incoming message
+                                
+                                break;
+                        }
+//                        if (deliverReq.getEsmClass() == 4) {
+////                            if (logger.isDebugEnabled()) {
+////                                logger.debug("Received delivery receipt");
+////                                logger.debug("Data: " + deliverReq.getShortMessage());
+////                                logger.debug("Receipted message id: " + deliverReq.getReceiptedMessageId());
+////                                logger.debug("APP specific map: "+deliverReq.getApplicationSpecificInfo());
+////                                logger.debug("SEQ NUM: "+deliverReq.getSequenceNumber());
+////                            }                            
+//                            owner.getDeliveryReceiptChannel().sendReport(deliverReq.getShortMessage());
+//                        }                        
                     }
                 }
             } catch (Exception e) {

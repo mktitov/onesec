@@ -258,9 +258,9 @@ public class UDH {
 	public static byte[] from7bit(byte[] src)
 	    {
 	    	double x = java.lang.Math.ceil(((double)8)/7*src.length);
-	    	System.out.println("X="+x);
+//	    	System.out.println("X="+x);
 	    	byte[] dst = new byte[(int)x]; 
-	    	System.out.println("dstsize"+dst.length);
+//	    	System.out.println("dstsize"+dst.length);
 	    	int notEmptyBits=0;
 	    	int bc=0;
 	    	byte toNext=0,a,b;
