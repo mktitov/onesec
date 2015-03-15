@@ -16,27 +16,29 @@
 package org.onesec.raven.sms.queue;
 
 import com.logica.smpp.pdu.DeliverSM;
-import org.raven.ds.DataProcessor;
+import org.raven.ds.impl.AbstractDataProcessorLogic;
 import org.raven.tree.impl.LoggerHelper;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class InQueue implements DataProcessor {
+public class InQueue extends AbstractDataProcessorLogic {
     private final LoggerHelper logger;
 
     public InQueue(LoggerHelper logger) {
         this.logger = new LoggerHelper(logger, "Inbound queue. ");
     }
     
-    public boolean processData(Object message) throws Exception {
+    public boolean processData(Object message) {
         if (message instanceof DeliverSM)
             processDeliverSMMessage((DeliverSM) message);
         return true;
     }
     
     private void processDeliverSMMessage(DeliverSM pdu) {
-        
+        //pdu is simple SMS
+        //pdu is SAR
+        //pdu is UDH
     }
 }
