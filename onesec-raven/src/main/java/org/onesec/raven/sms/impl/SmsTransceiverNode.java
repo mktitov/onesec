@@ -210,6 +210,10 @@ public class SmsTransceiverNode extends AbstractSafeDataPipe {
     public SmsDeliveryReceiptChannel getDeliveryReceiptChannel() {
         return (SmsDeliveryReceiptChannel) getNode(SmsDeliveryReceiptChannel.NAME);
     }
+    
+    public SmsIncomingMessageChannel getIncomingMessageChannel() {
+        return (SmsIncomingMessageChannel) getNode(SmsIncomingMessageChannel.NAME);
+    }
 
     @Override
     protected void doSetData(DataSource dataSource, Object data, DataContext context) throws Exception {
