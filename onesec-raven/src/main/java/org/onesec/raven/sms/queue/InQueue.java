@@ -26,13 +26,17 @@ import com.logica.smpp.util.ByteBuffer;
 import com.logica.smpp.util.NotEnoughDataInByteBufferException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import org.onesec.raven.sms.impl.SmsIncomingMessageChannel;
 import org.onesec.raven.sms.sm.udh.UDH;
 import org.onesec.raven.sms.sm.udh.UDHData;
+import org.raven.RavenRuntimeException;
+import org.raven.ds.DataProcessorFacade;
 import org.raven.ds.impl.AbstractDataProcessorLogic;
+import org.raven.sched.ExecutorServiceException;
 import org.raven.tree.impl.LoggerHelper;
 
 /**
@@ -40,24 +44,46 @@ import org.raven.tree.impl.LoggerHelper;
  * @author Mikhail Titov
  */
 public class InQueue extends AbstractDataProcessorLogic {
+    public final static String CHECK_MESSAGE_RECEIVE_TIMEOUT = "CHECK_MESSAGE_RECEIVE_TIMEOUT";
     
     private final LoggerHelper logger;
     private final Map<String, Message> messages = new HashMap<String, Message>();
     private final String defaultCp;
     private final SmsIncomingMessageChannel messageChannel;
+    private final long messageReceiveTimeout;
 
     public InQueue(final LoggerHelper logger, final String defaultCp, 
-            final SmsIncomingMessageChannel messageChannel) 
+            final SmsIncomingMessageChannel messageChannel, long messageReceiveTimeout) 
     {
-        this.logger = new LoggerHelper(logger, "Inbound queue. ");
+        this.logger = new LoggerHelper(logger, "Inbound queue processor. ");
         this.defaultCp = defaultCp;
         this.messageChannel = messageChannel;
+        this.messageReceiveTimeout = messageReceiveTimeout;
     }
-    
+
+    @Override
+    protected void init(DataProcessorFacade facade) {
+        try {
+            facade.sendRepeatedly(messageReceiveTimeout, messageReceiveTimeout, 0, CHECK_MESSAGE_RECEIVE_TIMEOUT);
+        } catch (ExecutorServiceException ex) {
+            if (logger.isErrorEnabled())
+                logger.error("Error initializing inbound queue", ex);
+            throw new RavenRuntimeException("Error initializing inbound queue", ex);
+        }
+    }
+
     public boolean processData(Object message) {
         try {
+            if (logger.isDebugEnabled())
+                logger.debug("Processing message: "+message);
             if (message instanceof Request)
                 processRequest((Request) message);
+            else if (message==CHECK_MESSAGE_RECEIVE_TIMEOUT)
+                checkMessagesTimeout();
+            else {
+                if (logger.isDebugEnabled())
+                    logger.warn("Received UNRECOGNIZED message. Ignoring...");
+            }
         } catch (Exception e) {
             if (logger.isErrorEnabled())
                 logger.error("Error processing message: "+message, e);
@@ -65,8 +91,24 @@ public class InQueue extends AbstractDataProcessorLogic {
         return true;
     }
     
+    private void checkMessagesTimeout() {
+        if (messages.isEmpty())
+            return;
+        final Iterator<Map.Entry<String, Message>> it = messages.entrySet().iterator();
+        final long curTime = System.currentTimeMillis();
+        while (it.hasNext()) {
+            final Map.Entry<String, Message> entry = it.next();
+            if (entry.getValue().created+messageReceiveTimeout < curTime) {
+                if (logger.isWarnEnabled())
+                    logger.warn("Reached CONCATENATED_MESSAGE_RECEIVE_TIMEOUT({}ms) for message: {}"
+                            , messageReceiveTimeout, entry.getValue());
+                it.remove();
+            }
+        }
+    }
+    
     private void processRequest(Request request) throws Exception {
-        if (!(request instanceof DataSM) || !(request instanceof DeliverSM)) {
+        if (!(request instanceof DataSM) && !(request instanceof DeliverSM)) {
             if (logger.isWarnEnabled())
                 logger.warn("Unknown pdu type: "+request.getClass().getName());
             return;
@@ -94,9 +136,12 @@ public class InQueue extends AbstractDataProcessorLogic {
     private static class Message {
         private final List<MessagePart> parts = new LinkedList<MessagePart>();
         private final int expectedPartsCount;
+        private final long created;
 
         public Message(MessagePart messagePart) {
             this.expectedPartsCount = messagePart.getMessageSegCount();
+            this.created = messagePart.receiveTs;
+            parts.add(messagePart);
         }
         
         public MessagePart addMessagePart(MessagePart messagePart) {
@@ -111,6 +156,14 @@ public class InQueue extends AbstractDataProcessorLogic {
             } 
             return null;
         }
+
+        @Override
+        public String toString() {
+            final MessagePart mess = parts.get(0);
+            return String.format(
+                    "Concatenated message: id=%s, srcAddr=%s, dstAddr=%s, expectedPartsCount=%s, receivedPartsCount=%s "
+                    , mess.messageId, mess.srcAddress, mess.dstAddress, expectedPartsCount, parts.size());
+        }                
     }
     
     public static class MessagePart implements Comparable<MessagePart> {
@@ -138,7 +191,7 @@ public class InQueue extends AbstractDataProcessorLogic {
             MessagePart part = new MessagePart();
             ByteBuffer buf = null;
             try {
-                pdu.getBShortMessage().getClone();
+                buf = pdu.getBShortMessage().getClone();
                 if(buf==null) 
                     buf = pdu.getMessagePayload().getClone();
             } catch (ValueNotSetException e) {}
@@ -152,18 +205,20 @@ public class InQueue extends AbstractDataProcessorLogic {
             part.srcNpi = pdu.getSourceAddr().getNpi();
             part.srcTon = pdu.getSourceAddr().getTon();
             
-            part.dstAddress = pdu.getSourceAddr().getAddress();
+            part.dstAddress = pdu.getDestAddr().getAddress();
             part.dstNpi = pdu.getDestAddr().getNpi();
             part.dstTon = pdu.getDestAddr().getTon();
             
-            part.messageId = getSarMessageId(pdu);
+            try {
+                part.messageId = (int)pdu.getSarMsgRefNum();
+            } catch (ValueNotSetException e) {}
             if (part.messageId!=null) {
-                part.messageSegNum = getSarMessageSegNum(pdu);
-                part.messageSegCount = getSarMessageSegCount(pdu);
+                part.messageSegNum = pdu.getSarSegmentSeqnum();
+                part.messageSegCount = pdu.getSarTotalSegments();
             } else {
                 decodeUdh(part.esmClass, part, buf);
-                part.message = UDH.getMesText(buf.getBuffer(), part.dataCoding, defaultCp);
             }
+            part.message = UDH.getMesText(buf.getBuffer(), part.dataCoding, defaultCp);
             return part;
         }
         
@@ -183,7 +238,7 @@ public class InQueue extends AbstractDataProcessorLogic {
             part.srcNpi = pdu.getSourceAddr().getNpi();
             part.srcTon = pdu.getSourceAddr().getTon();
             
-            part.dstAddress = pdu.getSourceAddr().getAddress();
+            part.dstAddress = pdu.getDestAddr().getAddress();
             part.dstNpi = pdu.getDestAddr().getNpi();
             part.dstTon = pdu.getDestAddr().getTon();
             

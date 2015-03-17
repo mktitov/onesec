@@ -41,6 +41,10 @@ public class SmsIncomingMessageChannel extends AbstractDataSource {
     @NotNull @Parameter(valueHandlerType = RecordSchemaValueTypeHandlerFactory.TYPE)
     private RecordSchemaNode incomingShortMessageSchema;
 
+    public SmsIncomingMessageChannel() {
+        super(NAME);
+    }
+
     @Override
     public boolean gatherDataForConsumer(DataConsumer dataConsumer, DataContext context) throws Exception {
         throw new UnsupportedOperationException("Pull operation not supported by this data source");
@@ -73,6 +77,8 @@ public class SmsIncomingMessageChannel extends AbstractDataSource {
                 rec.setValue(DST_TON, message.getDstTon());
                 rec.setValue(MESSAGE, message.getMessage());
                 rec.setValue(RECEIVE_TS, message.getReceiveTs());
+                rec.setValue(ESM_CLASS, message.getEsmClass());
+                rec.setValue(DATA_CODING, message.getDataCoding());
                 DataSourceHelper.sendDataToConsumers(this, rec, new DataContextImpl(), (DataConsumer)getParent());
             } catch (RecordException e) {
                 if (isLogLevelEnabled(LogLevel.ERROR))
