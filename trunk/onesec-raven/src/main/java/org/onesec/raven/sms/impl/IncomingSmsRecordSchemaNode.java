@@ -40,6 +40,8 @@ public class IncomingSmsRecordSchemaNode extends RecordSchemaNode {
     public final static String DST_TON = "dstTon";
     public final static String MESSAGE = "message";
     public final static String RECEIVE_TS = "receiveTs";
+    public final static String DATA_CODING = "dataCoding";
+    public final static String ESM_CLASS = "esmClass";
     
     public final static String DATABASE_COLUMN_EXTENSION_NAME = "dbColumn";
     
@@ -67,6 +69,8 @@ public class IncomingSmsRecordSchemaNode extends RecordSchemaNode {
         createField(DST_ADDRESS, RecordSchemaFieldType.STRING);
         createField(DST_TON, RecordSchemaFieldType.BYTE);
         createField(DST_NPI, RecordSchemaFieldType.BYTE);
+        createField(ESM_CLASS, RecordSchemaFieldType.BYTE);
+        createField(DATA_CODING, RecordSchemaFieldType.BYTE);
         createField(MESSAGE, RecordSchemaFieldType.STRING);
         createField(RECEIVE_TS, RecordSchemaFieldType.TIMESTAMP);        
     }    

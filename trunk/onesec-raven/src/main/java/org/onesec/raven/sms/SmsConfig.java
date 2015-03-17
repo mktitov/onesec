@@ -87,4 +87,10 @@ public interface SmsConfig {
     public long getMaxMessageUnitsPerTimeUnit();
     public TimeUnit getMaxMessageUnitsTimeUnit();
     public long getMaxMessageUnitsTimeQuantity();
+    /**
+     * Timeout in milliseconds for receive of all parts of the concatenated message
+     */
+    public long getConcatenatedMessageReceiveTimeout();
+    public TimeUnit getConcatenatedMessageReceiveTimeoutTimeUnit();
+    public int getMaxInboundQueueSize();
 }

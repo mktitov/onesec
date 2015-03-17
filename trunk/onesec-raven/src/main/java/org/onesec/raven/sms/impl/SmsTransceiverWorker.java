@@ -32,8 +32,12 @@ import org.onesec.raven.sms.ShortTextMessage;
 import org.onesec.raven.sms.SmsAgentListener;
 import org.onesec.raven.sms.SmsConfig;
 import org.onesec.raven.sms.SmsMessageEncoder;
+import org.onesec.raven.sms.queue.InQueue;
 import org.onesec.raven.sms.queue.OutQueue;
 import org.onesec.raven.sms.queue.ShortTextMessageImpl;
+import org.raven.ds.DataProcessorFacade;
+import org.raven.ds.impl.AsyncDataProcessorConfig;
+import org.raven.ds.impl.DataProcessorFacadeImpl;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.impl.AbstractTask;
 import org.raven.tree.impl.LoggerHelper;
@@ -73,6 +77,7 @@ public class SmsTransceiverWorker implements ShortMessageListener {
     private final SmsConfig config;
     private final ExecutorService executor;
     private final OutQueue queue;
+    private final DataProcessorFacade inQueue;
     private final LoggerHelper logger;
     private final SmsMessageEncoder messageEncoder;
 //    private final AtomicReference<SmsAgent> agent = new AtomicReference<SmsAgent>();
@@ -97,7 +102,19 @@ public class SmsTransceiverWorker implements ShortMessageListener {
         this.logger = new LoggerHelper(owner, "Transceiver. ");
         this.messageEncoder = new SmsMessageEncoderImpl(config, logger);
         this.queue = new OutQueue(config, this.logger);
-        this.isReceiver = config.getBindMode()==BindMode.RECEIVER || config.getBindMode()==BindMode.RECEIVER_AND_TRANSMITTER;
+        this.isReceiver =    config.getBindMode()==BindMode.RECEIVER 
+                          || config.getBindMode()==BindMode.RECEIVER_AND_TRANSMITTER;
+        if (isReceiver) {
+            LoggerHelper inQueueLogger = new LoggerHelper(logger, "Inbound queue facade. ");
+            InQueue inQueueProcessor = new InQueue(logger, config.getMessageCP(), 
+                    owner.getIncomingMessageChannel(), 
+                    config.getConcatenatedMessageReceiveTimeoutTimeUnit().toMillis(
+                            config.getConcatenatedMessageReceiveTimeout()));
+            inQueue = new DataProcessorFacadeImpl(
+                    new AsyncDataProcessorConfig(owner, inQueueProcessor, executor, inQueueLogger)
+                        .withQueueSize(config.getMaxInboundQueueSize()));
+        } else
+            inQueue = null;
 //        createAgent();
     }
     
@@ -143,6 +160,8 @@ public class SmsTransceiverWorker implements ShortMessageListener {
             stopped.set(true);
             stopMessageProcessor();
             stopAgent();
+            if (inQueue!=null)
+                inQueue.terminate();
 //            stopAgent();
         }
     }
@@ -421,6 +440,11 @@ public class SmsTransceiverWorker implements ShortMessageListener {
 
         public void requestReceived(SmsAgent agent, Request pdu) {
             try {
+                if (!isReceiver) {
+                    if (logger.isWarnEnabled())
+                        logger.warn("Transceiver not registered as RECEIVER but request was received: "+pdu.debugString());
+                    return;
+                }
                 if (valid.get()) {
                     if (pdu instanceof DeliverSM) {
                         final DeliverSM deliverReq = (DeliverSM) pdu;
@@ -431,7 +455,9 @@ public class SmsTransceiverWorker implements ShortMessageListener {
                             case 0:
                             case 0x40:
                                 //processing incoming message
-                                
+                                if (logger.isDebugEnabled())
+                                    logger.debug("Processing incoming SMS: "+pdu.debugString());
+                                inQueue.send(pdu);
                                 break;
                         }
 //                        if (deliverReq.getEsmClass() == 4) {

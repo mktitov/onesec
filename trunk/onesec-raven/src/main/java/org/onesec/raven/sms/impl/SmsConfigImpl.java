@@ -70,6 +70,9 @@ public class SmsConfigImpl implements SmsConfig {
     private final long maxMessageUnitsPerTimeUnit;
     private final TimeUnit maxMessageUnitsTimeUnit;
     private final long maxMessageUnitsTimeQuantity;
+    private final long concatenatedMessageReceiveTimeout;
+    private final TimeUnit concatenatedMessageReceiveTimeoutTimeUnit;
+    private final int maxInboundQueueSize;
 
     public SmsConfigImpl(SmsTransceiverNode node) throws Exception {
         bindMode = node.getBindMode();
@@ -116,6 +119,10 @@ public class SmsConfigImpl implements SmsConfig {
         maxMessageUnitsPerTimeUnit = node.getMaxMessageUnitsPerTimeUnit();
         maxMessageUnitsTimeUnit = node.getMaxMessageUnitsTimeUnit();
         maxMessageUnitsTimeQuantity = node.getMaxMessageUnitsTimeQuantity();
+        
+        concatenatedMessageReceiveTimeout = node.getConcatenatedMessageReceiveTimeout();
+        concatenatedMessageReceiveTimeoutTimeUnit = node.getConcatenatedMessageReceiveTimeoutTimeUnit();
+        maxInboundQueueSize = node.getMaxInboundQueueSize();
     }
 
     public BindMode getBindMode() {
@@ -321,5 +328,16 @@ public class SmsConfigImpl implements SmsConfig {
     public long getMaxMessageUnitsTimeQuantity() {
         return maxMessageUnitsTimeQuantity;
     }
-    
+
+    public long getConcatenatedMessageReceiveTimeout() {
+        return concatenatedMessageReceiveTimeout;
+    }    
+
+    public TimeUnit getConcatenatedMessageReceiveTimeoutTimeUnit() {
+        return concatenatedMessageReceiveTimeoutTimeUnit;
+    }
+
+    public int getMaxInboundQueueSize() {
+        return maxInboundQueueSize;
+    }    
 }

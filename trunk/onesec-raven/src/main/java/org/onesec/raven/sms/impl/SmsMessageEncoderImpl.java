@@ -111,7 +111,7 @@ public class SmsMessageEncoderImpl implements SmsMessageEncoder {
         return req;
     }
     
-    private ByteBuffer createMessageBuffer(String shortMessage) {
+    public ByteBuffer createMessageBuffer(String shortMessage) {
         if (shortMessage==null || shortMessage.isEmpty())
             return null;
         try {
@@ -180,7 +180,7 @@ public class SmsMessageEncoderImpl implements SmsMessageEncoder {
         return messParts;
     }
     
-    private List<ByteBuffer> getFragments(ByteBuffer message) throws Exception {
+    public List<ByteBuffer> getFragments(ByteBuffer message) throws Exception {
         int maxSize = UDH.SM_DATA_LENGTH - 8;
         int segCnt = (int) ceil(((double)message.length()) / maxSize);
         ArrayList<ByteBuffer> fragments = new ArrayList<ByteBuffer>(segCnt);

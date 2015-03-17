@@ -155,7 +155,18 @@ public class SmsTransceiverNode extends AbstractSafeDataPipe {
     @NotNull @Parameter(defaultValue = "1", parent = "smscQueueAttributes")
     private Long maxMessageUnitsTimeQuantity;  
     @NotNull @Parameter(defaultValue = "60000", parent = "smscQueueAttributes")
-    private Long messageQueueWaitTimeout;    
+    private Long messageQueueWaitTimeout;
+    
+    @Parameter(valueHandlerType = ChildAttributesValueHandlerFactory.TYPE)
+    private String smscInboundQueueAttributes;
+    @NotNull @Parameter(defaultValue = "5", parent = "smscInboundQueueAttributes")
+    private Long concatenatedMessageReceiveTimeout;
+    @NotNull @Parameter(defaultValue = "MINUTES", parent = "smscInboundQueueAttributes")
+    private TimeUnit concatenatedMessageReceiveTimeoutTimeUnit;
+    @NotNull @Parameter(defaultValue = "64", parent = "smscInboundQueueAttributes")
+    private Integer maxInboundQueueSize;
+    
+    
     
     @NotNull @Parameter(valueHandlerType = SystemSchedulerValueHandlerFactory.TYPE)
     private ExecutorService executor;
@@ -203,8 +214,15 @@ public class SmsTransceiverNode extends AbstractSafeDataPipe {
             channel = new SmsDeliveryReceiptChannel();
             addAndSaveChildren(channel);
         }
-        if (start)
+        SmsIncomingMessageChannel inChannel = getIncomingMessageChannel();
+        if (inChannel==null) {
+            inChannel = new SmsIncomingMessageChannel();
+            addAndSaveChildren(inChannel);
+        }
+        if (start) {
             channel.start();
+            inChannel.start();
+        }
     }
     
     public SmsDeliveryReceiptChannel getDeliveryReceiptChannel() {
@@ -730,6 +748,38 @@ public class SmsTransceiverNode extends AbstractSafeDataPipe {
 
     public void setSmscBindAttributes(String smscBindAttributes) {
         this.smscBindAttributes = smscBindAttributes;
+    }
+
+    public String getSmscInboundQueueAttributes() {
+        return smscInboundQueueAttributes;
+    }
+
+    public void setSmscInboundQueueAttributes(String smscInboundQueueAttributes) {
+        this.smscInboundQueueAttributes = smscInboundQueueAttributes;
+    }
+
+    public Long getConcatenatedMessageReceiveTimeout() {
+        return concatenatedMessageReceiveTimeout;
+    }
+
+    public void setConcatenatedMessageReceiveTimeout(Long concatenatedMessageReceiveTimeout) {
+        this.concatenatedMessageReceiveTimeout = concatenatedMessageReceiveTimeout;
+    }
+
+    public TimeUnit getConcatenatedMessageReceiveTimeoutTimeUnit() {
+        return concatenatedMessageReceiveTimeoutTimeUnit;
+    }
+
+    public void setConcatenatedMessageReceiveTimeoutTimeUnit(TimeUnit concatenatedMessageReceiveTimeoutTimeUnit) {
+        this.concatenatedMessageReceiveTimeoutTimeUnit = concatenatedMessageReceiveTimeoutTimeUnit;
+    }
+
+    public Integer getMaxInboundQueueSize() {
+        return maxInboundQueueSize;
+    }
+
+    public void setMaxInboundQueueSize(Integer maxInboundQueueSize) {
+        this.maxInboundQueueSize = maxInboundQueueSize;
     }
 
     @Parameter(readOnly = true)
