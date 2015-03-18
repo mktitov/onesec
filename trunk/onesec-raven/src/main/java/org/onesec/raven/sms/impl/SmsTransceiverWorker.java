@@ -36,7 +36,7 @@ import org.onesec.raven.sms.queue.InQueue;
 import org.onesec.raven.sms.queue.OutQueue;
 import org.onesec.raven.sms.queue.ShortTextMessageImpl;
 import org.raven.ds.DataProcessorFacade;
-import org.raven.ds.impl.AsyncDataProcessorConfig;
+import org.raven.ds.impl.DataProcessorFacadeConfig;
 import org.raven.ds.impl.DataProcessorFacadeImpl;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.impl.AbstractTask;
@@ -111,7 +111,7 @@ public class SmsTransceiverWorker implements ShortMessageListener {
                     config.getConcatenatedMessageReceiveTimeoutTimeUnit().toMillis(
                             config.getConcatenatedMessageReceiveTimeout()));
             inQueue = new DataProcessorFacadeImpl(
-                    new AsyncDataProcessorConfig(owner, inQueueProcessor, executor, inQueueLogger)
+                    new DataProcessorFacadeConfig(owner, inQueueProcessor, executor, inQueueLogger)
                         .withQueueSize(config.getMaxInboundQueueSize()));
         } else
             inQueue = null;
