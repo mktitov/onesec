@@ -72,7 +72,7 @@ public class InQueue extends AbstractDataProcessorLogic {
         }
     }
 
-    public boolean processData(Object message) {
+    public Object processData(Object message) {
         try {
             if (logger.isDebugEnabled())
                 logger.debug("Processing message: "+message);
@@ -88,7 +88,7 @@ public class InQueue extends AbstractDataProcessorLogic {
             if (logger.isErrorEnabled())
                 logger.error("Error processing message: "+message, e);
         }
-        return true;
+        return null;
     }
     
     private void checkMessagesTimeout() {
