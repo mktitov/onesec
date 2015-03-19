@@ -23,10 +23,12 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.onesec.raven.sms.BindMode;
+import org.onesec.raven.sms.queue.InQueue;
 import org.onesec.raven.sms.queue.OutQueue;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.ds.DataContext;
+import org.raven.ds.DataProcessorFacade;
 import org.raven.ds.DataSource;
 import org.raven.ds.Record;
 import org.raven.ds.RecordException;
@@ -866,9 +868,54 @@ public class SmsTransceiverNode extends AbstractSafeDataPipe {
         return _worker==null? null : _worker.getSmsAgentStatus();
     }
     
+    @Parameter(readOnly = true)
+    public Long getInboundQueueReceivedPackets() {
+        return getStatFromInQueue(InQueue.GET_RECEIVED_PACKETS);
+    }
+    
+    @Parameter(readOnly = true)
+    public Long getInboundQueueReceivedMessages() {
+        return getStatFromInQueue(InQueue.GET_RECEIVED_MESSAGES);
+    }
+    
+    @Parameter(readOnly = true)
+    public Long getInboundQueueReceivedDataSMPackets() {
+        return getStatFromInQueue(InQueue.GET_RECEIVED_DATASM_PACKETS);
+    }      
+    
+    @Parameter(readOnly = true)
+    public Long getInboundQueueReceivedDeliverySMPackets() {
+        return getStatFromInQueue(InQueue.GET_RECEIVED_DELIVERYSM_PACKETS);
+    }      
+    
+    @Parameter(readOnly = true)
+    public Long getInboundQueueReceivedSarPackets() {
+        return getStatFromInQueue(InQueue.GET_RECEIVED_SAR_PACKETS);
+    }      
+    
+    @Parameter(readOnly = true)
+    public Long getInboundQueueReceivedUdhPackets() {
+        return getStatFromInQueue(InQueue.GET_RECEIVED_UDH_PACKETS);
+    }      
+    
+    @Parameter(readOnly = true)
+    public Long getInboundQueueProcessingErrors() {
+        return getStatFromInQueue(InQueue.GET_PROCESSING_ERRORS);
+    }      
+    
     private OutQueue getQueue() {
         SmsTransceiverWorker _worker = worker.get();
         return _worker==null? null : _worker.getQueue();
+    }
+    
+    private Long getStatFromInQueue(Object statType) {
+        SmsTransceiverWorker _worker = worker.get();
+        if (_worker==null)
+            return null;
+        DataProcessorFacade inQueue = _worker.getInboundQueue();
+        if (inQueue==null)
+            return null;
+        return (Long) inQueue.ask(statType).getOrElse(null, 500);
     }
 
     public Map<String, NodeAttribute> getRefreshAttributes() throws Exception {

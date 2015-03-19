@@ -35,27 +35,37 @@ import org.onesec.raven.sms.sm.udh.UDH;
 import org.onesec.raven.sms.sm.udh.UDHData;
 import org.raven.RavenRuntimeException;
 import org.raven.ds.DataProcessorFacade;
-import org.raven.ds.impl.AbstractDataProcessorLogic;
+import org.raven.ds.impl.AbstractDataProcessorWithLogger;
 import org.raven.sched.ExecutorServiceException;
-import org.raven.tree.impl.LoggerHelper;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class InQueue extends AbstractDataProcessorLogic {
+public class InQueue extends AbstractDataProcessorWithLogger {
     public final static String CHECK_MESSAGE_RECEIVE_TIMEOUT = "CHECK_MESSAGE_RECEIVE_TIMEOUT";
+    public final static String GET_RECEIVED_PACKETS = "GET_RECEIVED_PACKETS";
+    public final static String GET_RECEIVED_MESSAGES = "GET_RECEIVED_MESSAGES";
+    public final static String GET_RECEIVED_DATASM_PACKETS = "GET_RECEIVED_DATASM_PACKETS";
+    public final static String GET_RECEIVED_DELIVERYSM_PACKETS = "GET_RECEIVED_DELIVERYSM_PACKETS";
+    public final static String GET_RECEIVED_UDH_PACKETS = "GET_RECEIVED_UDH_PACKETS";
+    public final static String GET_RECEIVED_SAR_PACKETS = "GET_RECEIVED_SAR_PACKETS";
+    public final static String GET_PROCESSING_ERRORS = "GET_PROCESSING_ERRORS";
     
-    private final LoggerHelper logger;
     private final Map<String, Message> messages = new HashMap<String, Message>();
     private final String defaultCp;
     private final SmsIncomingMessageChannel messageChannel;
     private final long messageReceiveTimeout;
+    private long receivedPackets;
+    private long receivedMessages;
+    private long dataSMpackets;
+    private long deliverySMpackets;
+    private long udhPackets;
+    private long sarPackets;
+    private long processingErrors;
 
-    public InQueue(final LoggerHelper logger, final String defaultCp, 
-            final SmsIncomingMessageChannel messageChannel, long messageReceiveTimeout) 
+    public InQueue(final String defaultCp, final SmsIncomingMessageChannel messageChannel, final long messageReceiveTimeout) 
     {
-        this.logger = new LoggerHelper(logger, "Inbound queue processor. ");
         this.defaultCp = defaultCp;
         this.messageChannel = messageChannel;
         this.messageReceiveTimeout = messageReceiveTimeout;
@@ -80,15 +90,30 @@ public class InQueue extends AbstractDataProcessorLogic {
                 processRequest((Request) message);
             else if (message==CHECK_MESSAGE_RECEIVE_TIMEOUT)
                 checkMessagesTimeout();
+            else if (message==GET_RECEIVED_MESSAGES)
+                return receivedMessages;
+            else if (message==GET_RECEIVED_PACKETS)
+                return receivedPackets;
+            else if (message==GET_RECEIVED_DATASM_PACKETS)
+                return dataSMpackets;
+            else if (message==GET_RECEIVED_DELIVERYSM_PACKETS)
+                return deliverySMpackets;
+            else if (message==GET_PROCESSING_ERRORS)
+                return processingErrors;
+            else if (message==GET_RECEIVED_UDH_PACKETS)
+                return udhPackets;
+            else if (message==GET_RECEIVED_SAR_PACKETS)
+                return sarPackets;
             else {
                 if (logger.isDebugEnabled())
                     logger.warn("Received UNRECOGNIZED message. Ignoring...");
             }
         } catch (Exception e) {
+            processingErrors++;
             if (logger.isErrorEnabled())
                 logger.error("Error processing message: "+message, e);
         }
-        return null;
+        return VOID;
     }
     
     private void checkMessagesTimeout() {
@@ -113,9 +138,18 @@ public class InQueue extends AbstractDataProcessorLogic {
                 logger.warn("Unknown pdu type: "+request.getClass().getName());
             return;
         }
+        if (request instanceof DeliverSM)
+            deliverySMpackets++;
+        else
+            dataSMpackets++;
+        receivedPackets++;
         MessagePart messagePart = request instanceof DeliverSM?
                 MessagePart.decode((DeliverSM) request, defaultCp) :
                 MessagePart.decode((DataSM) request, defaultCp);
+        if (messagePart.sarPacket)
+            sarPackets++;
+        else if (messagePart.udhPacket)
+            udhPackets++;
         if (messagePart.isConcatenated()) {
             final String key = messagePart.getKey();
             Message message = messages.get(key);
@@ -125,10 +159,12 @@ public class InQueue extends AbstractDataProcessorLogic {
                 MessagePart readyMessage = message.addMessagePart(messagePart);
                 if (readyMessage!=null) {
                     messages.remove(key);
+                    receivedMessages++;
                     messageChannel.sendMessage(readyMessage);
                 }
             }
         } else {
+            receivedMessages++;
             messageChannel.sendMessage(messagePart);
         }
     }
@@ -184,6 +220,8 @@ public class InQueue extends AbstractDataProcessorLogic {
         private String dstAddress;
         private byte dstNpi;
         private byte dstTon;
+        private boolean sarPacket = false;
+        private boolean udhPacket = false;
         
         private String message;
         
@@ -215,6 +253,7 @@ public class InQueue extends AbstractDataProcessorLogic {
             if (part.messageId!=null) {
                 part.messageSegNum = pdu.getSarSegmentSeqnum();
                 part.messageSegCount = pdu.getSarTotalSegments();
+                part.sarPacket=true;
             } else {
                 decodeUdh(part.esmClass, part, buf);
             }
@@ -262,7 +301,8 @@ public class InQueue extends AbstractDataProcessorLogic {
                         part.messageSegCount = (short) udhd.getConcatMsgCount();
                         part.messageSegNum = (short) udhd.getConcatMsgCur();
                     }
-                    buf.removeBuffer(udhd.getUdhLength());                    
+                    buf.removeBuffer(udhd.getUdhLength());
+                    part.udhPacket = true;
                 } else {
                     throw new Exception("Invalid UDH");
                 }

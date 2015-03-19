@@ -24,5 +24,5 @@ import com.logica.smpp.pdu.SubmitSM;
  * @author Mikhail Titov
  */
 public interface SmsMessageEncoder {
-    SubmitSM[] encode(String message, String dstAddr, Address srcAddr) throws Exception;
+    SubmitSM[] encode(String message, String dstAddr, Address srcAddr, byte dataCoding) throws Exception;
 }

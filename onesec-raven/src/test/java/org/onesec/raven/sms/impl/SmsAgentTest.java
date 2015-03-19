@@ -167,7 +167,7 @@ public class SmsAgentTest extends ServiceTestCase {
 //                    SubmitSM[] frags = encoder.encode("Тестовое сообщение 1 Тестовое сообщение 2 Тестовое сообщение 3 Тестовое сообщение 4 Тестовое сообщение 5"
 //                            , privateProperties.getProperty("sms_dst_addr"));
                     SubmitSM[] frags = encoder.encode(
-                            "Test", privateProperties.getProperty("sms_dst_addr"), config.getSrcAddr());
+                            "Test", privateProperties.getProperty("sms_dst_addr"), config.getSrcAddr(), config.getDataCoding());
                     System.out.println(String.format("\n\nSUBMITING (%s) fragments.\n\n", frags.length));
                     for (SubmitSM frag: frags)
                         agent.submit(frag);
