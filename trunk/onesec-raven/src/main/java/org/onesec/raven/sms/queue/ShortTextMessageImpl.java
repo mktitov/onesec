@@ -57,11 +57,13 @@ public class ShortTextMessageImpl implements ShortTextMessage, MessageUnitListen
             srcNpi = srcNpi==null? config.getSrcAddr().getNpi() : srcNpi;
             srcAddr = new Address(srcTon, srcNpi, fromAddr);
         }
-        
+        Byte dataCoding = (Byte) rec.getValue(SmsRecordSchemaNode.DATA_CODING);
+        if (dataCoding==null)
+            dataCoding = config.getDataCoding();
         this.id = (Long) rec.getValue(SmsRecordSchemaNode.ID);
         this.logger = new LoggerHelper(logger, "Message ["+id+"]. ");
         
-        SubmitSM[] frags = encoder.encode(message, dst, srcAddr);
+        SubmitSM[] frags = encoder.encode(message, dst, srcAddr, dataCoding);
         if (frags==null || frags.length==0)
             throw new Exception("Message encoding error. May be message is empty? Message: "+message);
         MessageUnit[] _units = new MessageUnitImpl[frags.length];

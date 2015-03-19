@@ -46,42 +46,42 @@ public class SmsMessageEncoderImpl implements SmsMessageEncoder {
     }
 
 
-    public SubmitSM[] encode(String message, String dstAddr, Address srcAddr) throws Exception {
+    public SubmitSM[] encode(String message, String dstAddr, Address srcAddr, byte dataCoding) throws Exception {
         Address dst = new Address(config.getDstTon(), config.getDstNpi(), dstAddr);
-        List<SubmitSM> parts = encodeMessage(message, dst, srcAddr);
+        List<SubmitSM> parts = encodeMessage(message, dst, srcAddr, dataCoding);
         return parts==null || parts.isEmpty()? null : parts.toArray(new SubmitSM[parts.size()]);
     }
     
-    private List<SubmitSM> encodeMessage(String message, Address dstAddr, Address srcAddr) throws Exception {
-        ByteBuffer mesBuf = createMessageBuffer(message);
+    private List<SubmitSM> encodeMessage(String message, Address dstAddr, Address srcAddr, byte dataCoding) throws Exception {
+        ByteBuffer mesBuf = createMessageBuffer(message, dataCoding);
         if (mesBuf==null)
             return null;
         if (mesBuf.length() <= UDH.SM_DATA_LENGTH) 
-            return Arrays.asList(createMessagePart(mesBuf, dstAddr, srcAddr, true));
+            return Arrays.asList(createMessagePart(mesBuf, dstAddr, srcAddr, dataCoding, true));
         switch (config.getLongSmMode()) {
-            case 1: return Arrays.asList(createMessagePart(mesBuf, dstAddr, srcAddr, false));
-            case 2: return sliceMessage(mesBuf, dstAddr, srcAddr);
-            default: return createUDHMessage(mesBuf, dstAddr, srcAddr);
+            case 1: return Arrays.asList(createMessagePart(mesBuf, dstAddr, srcAddr, dataCoding, false));
+            case 2: return sliceMessage(mesBuf, dstAddr, srcAddr, dataCoding);
+            default: return createUDHMessage(mesBuf, dstAddr, srcAddr, dataCoding);
         }
     }
     
-    private List<SubmitSM> createUDHMessage(ByteBuffer mesBuf, Address dstAddr, Address srcAddr) throws Exception {
+    private List<SubmitSM> createUDHMessage(ByteBuffer mesBuf, Address dstAddr, Address srcAddr, byte dataCoding) throws Exception {
         UDHData udhd = new UDHData();
         udhd.setMesData(mesBuf);
         if (config.getLongSmMode() != 2) 
             udhd.setUse16bitRef(true);
-        boolean f16 = config.getDataCoding() == (byte) 0x08;
+        boolean f16 = dataCoding == (byte) 0x08;
         List<ByteBuffer> buffers = udhd.getAllData(f16);
         List<SubmitSM> messParts = new ArrayList<SubmitSM>(buffers.size());
         for (ByteBuffer bb : buffers) {
-            SubmitSM req = createMessagePart(bb, dstAddr, srcAddr, true);
+            SubmitSM req = createMessagePart(bb, dstAddr, srcAddr,  dataCoding, true);
             req.setEsmClass((byte) 0x40);
             messParts.add(req);
         }
         return messParts;
     }
     
-    private SubmitSM createMessagePart(ByteBuffer mesBuf, Address dstAddr, Address srcAddr, boolean shortMes) 
+    private SubmitSM createMessagePart(ByteBuffer mesBuf, Address dstAddr, Address srcAddr, byte dataCoding, boolean shortMes) 
             throws Exception 
     {
         SubmitSM req = new SubmitSM();
@@ -96,7 +96,7 @@ public class SmsMessageEncoderImpl implements SmsMessageEncoder {
 //        req.setSequenceNumber(777);
 //        req.assignInitialSequenceNumber(777);
         //request.assignSequenceNumber(true);
-        req.setDataCoding(config.getDataCoding());
+        req.setDataCoding(dataCoding);
 //        req.setRegisteredDelivery((byte)0x01);
         try {
             req.setServiceType(config.getServiceType());
@@ -111,12 +111,12 @@ public class SmsMessageEncoderImpl implements SmsMessageEncoder {
         return req;
     }
     
-    public ByteBuffer createMessageBuffer(String shortMessage) {
+    public ByteBuffer createMessageBuffer(String shortMessage, byte dataCoding) {
         if (shortMessage==null || shortMessage.isEmpty())
             return null;
         try {
             ByteBuffer mesBuf = new ByteBuffer();
-            if (config.getDataCoding() == 0) {
+            if (dataCoding == 0) {
                 byte[] messBytes = shortMessage.getBytes(config.getMessageCP());
                 if (config.isUse7bit()) {
                     if (messBytes.length > UDH.SM_DATA_LENGTH && config.getLongSmMode() == 2) {
@@ -129,7 +129,7 @@ public class SmsMessageEncoderImpl implements SmsMessageEncoder {
                 mesBuf.appendBytes(messBytes);
             } else {
                 String respCP = Data.ENC_ASCII;
-                switch (config.getDataCoding()) {
+                switch (dataCoding) {
                     case 0x08: respCP = Data.ENC_UTF16_BE; break;
                     case 0x07: respCP = "ISO-8859-8"; break;
                     case 0x06: respCP = "ISO-8859-5"; break;
@@ -161,14 +161,14 @@ public class SmsMessageEncoderImpl implements SmsMessageEncoder {
         }
     }
 
-    private List<SubmitSM> sliceMessage(ByteBuffer mesBuf, Address dstAddr, Address srcAddr) throws Exception {
+    private List<SubmitSM> sliceMessage(ByteBuffer mesBuf, Address dstAddr, Address srcAddr, byte dataCoding) throws Exception {
         List<ByteBuffer> frags = getFragments(mesBuf);
         int segCnt = frags.size();
         int segCur = 1;
         short seqNum = getNextSarMessageRefNum();
         List<SubmitSM> messParts = new ArrayList<SubmitSM>(segCnt);
         for (ByteBuffer bb : frags) {
-            SubmitSM req = createMessagePart(bb, dstAddr, srcAddr, true);
+            SubmitSM req = createMessagePart(bb, dstAddr, srcAddr, dataCoding, true);
             req.setSarMsgRefNum(seqNum);
             req.setSarTotalSegments((short) segCnt);
             req.setSarSegmentSeqnum((short) segCur);

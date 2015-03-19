@@ -105,14 +105,13 @@ public class SmsTransceiverWorker implements ShortMessageListener {
         this.isReceiver =    config.getBindMode()==BindMode.RECEIVER 
                           || config.getBindMode()==BindMode.RECEIVER_AND_TRANSMITTER;
         if (isReceiver) {
-            LoggerHelper inQueueLogger = new LoggerHelper(logger, "Inbound queue facade. ");
-            InQueue inQueueProcessor = new InQueue(logger, config.getMessageCP(), 
+            InQueue inQueueProcessor = new InQueue(config.getMessageCP(), 
                     owner.getIncomingMessageChannel(), 
                     config.getConcatenatedMessageReceiveTimeoutTimeUnit().toMillis(
                             config.getConcatenatedMessageReceiveTimeout()));
-            inQueue = new DataProcessorFacadeImpl(
-                    new DataProcessorFacadeConfig(owner, inQueueProcessor, executor, inQueueLogger)
-                        .withQueueSize(config.getMaxInboundQueueSize()));
+            inQueue = new DataProcessorFacadeConfig(
+                        owner, inQueueProcessor, executor, new LoggerHelper(logger, "Inbound queue "))
+                    .withQueueSize(config.getMaxInboundQueueSize()).build();
         } else
             inQueue = null;
 //        createAgent();
@@ -120,6 +119,10 @@ public class SmsTransceiverWorker implements ShortMessageListener {
     
     public OutQueue getQueue() {
         return queue;
+    }
+    
+    public DataProcessorFacade getInboundQueue() {
+        return inQueue;
     }
     
     public boolean isProcessorActive() {

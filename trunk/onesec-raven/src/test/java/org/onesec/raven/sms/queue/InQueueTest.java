@@ -81,10 +81,11 @@ public class InQueueTest extends OnesecRavenTestCase {
         collector.setDataSource(channel);
         assertTrue(collector.start());
         
-        queue = new InQueue(logger, "utf-8", channel, 50);
+        queue = new InQueue("utf-8", channel, 50);
+        queue.setLogger(logger);
     }
     
-//    @Test
+    @Test
     public void normalSmsTest() throws Exception {
         mocks = createControl();
         SmsConfig smsConfig = createSmsConfig((byte)0);
@@ -98,7 +99,7 @@ public class InQueueTest extends OnesecRavenTestCase {
         
     }
     
-//    @Test
+    @Test
     public void udhSmsTest() throws Exception {
         mocks = createControl();
         SmsConfig smsConfig = createSmsConfig((byte)0);
@@ -106,7 +107,7 @@ public class InQueueTest extends OnesecRavenTestCase {
         
         SmsMessageEncoderImpl encoder = createMessageEncoder(smsConfig);        
         String message = StringUtils.repeat("Test", 50);
-        ByteBuffer buf = encoder.createMessageBuffer(message);
+        ByteBuffer buf = encoder.createMessageBuffer(message, smsConfig.getDataCoding());
         UDHData udhd = new UDHData();
         udhd.setMesData(buf);
         List<ByteBuffer> buffers = udhd.getAllData(false);
@@ -125,7 +126,7 @@ public class InQueueTest extends OnesecRavenTestCase {
         mocks.verify();
     }
     
-//    @Test
+    @Test
     public void sarSmsTest() throws Exception {
         mocks = createControl();
         SmsConfig smsConfig = createSmsConfig((byte)0);

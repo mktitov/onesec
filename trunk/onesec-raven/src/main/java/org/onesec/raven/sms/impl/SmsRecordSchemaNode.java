@@ -42,6 +42,7 @@ public class SmsRecordSchemaNode extends RecordSchemaNode {
     public final static String FROM_ADDRESS = "fromAddress";
     public final static String FROM_ADDRESS_TON = "fromAddressTon";
     public final static String FROM_ADDRESS_NPI = "fromAddressNpi";
+    public final static String DATA_CODING = "dataCoding";
     public final static String COMPLETION_CODE = "completionCode";
     public final static String SEND_TIME = "sendTime";
     public final static String NEED_DELIVERY_RECEIPT = "needDeliveryReceipt";
@@ -92,6 +93,7 @@ public class SmsRecordSchemaNode extends RecordSchemaNode {
         createField(FROM_ADDRESS, fromAddressDisplayName, RecordSchemaFieldType.STRING);
         createField(FROM_ADDRESS_TON, fromAddressTonDisplayName, RecordSchemaFieldType.BYTE);
         createField(FROM_ADDRESS_NPI, fromAddressNpiDisplayName, RecordSchemaFieldType.BYTE);
+        createField(DATA_CODING, "dataCoding", RecordSchemaFieldType.BYTE);
         createField(NEED_DELIVERY_RECEIPT, needDeliveryReceiptDisplayName, RecordSchemaFieldType.BOOLEAN);
         createField(MESSAGE_EXPIRE_PERIOD, messageExpirePeriodDisplayName, RecordSchemaFieldType.STRING);
         createField(COMPLETION_CODE, completionCodeDisplayName, RecordSchemaFieldType.STRING);
