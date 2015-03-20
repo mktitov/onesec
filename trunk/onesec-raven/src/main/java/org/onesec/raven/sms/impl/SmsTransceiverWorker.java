@@ -164,7 +164,7 @@ public class SmsTransceiverWorker implements ShortMessageListener {
             stopMessageProcessor();
             stopAgent();
             if (inQueue!=null)
-                inQueue.terminate();
+                inQueue.stop();
 //            stopAgent();
         }
     }

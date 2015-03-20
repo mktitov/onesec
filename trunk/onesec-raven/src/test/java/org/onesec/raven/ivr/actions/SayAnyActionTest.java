@@ -38,7 +38,7 @@ public class SayAnyActionTest extends PlayActionTestHelper {
         actionNode.getAttr(SayAnyActionNode.WORDS_NODE_ATTR).setValue(Constants.TIME_WORDS_RESOURCE);
     }
     
-    @Test
+//    @Test
     public void test() throws Exception {
         conv.setFileName("target/say_any_1.wav");
         assertTrue(conv.start());
@@ -50,4 +50,18 @@ public class SayAnyActionTest extends PlayActionTestHelper {
         action.execute(conv);
         waitForAction(action);
     }
+    
+    @Test
+    public void test2() throws Exception {
+        conv.setFileName("target/say_any_2.wav");
+        assertTrue(conv.start());
+        actionNode.setActionsSequence("$z=y:0");
+//        actionNode.setActionsSequence("#wp=-150;r=(\\d\\d\\d)(\\d\\d\\d)(\\d\\d)(\\d\\d):9128672947 #12 ^минут #6 ^wp=-100:часов,прошлого,года @3s $wp=-150:123456.45");
+        assertTrue(actionNode.start());
+        SayAnyAction action = (SayAnyAction) actionNode.createAction();
+        assertNotNull(action);
+        action.execute(conv);
+        waitForAction(action);
+    }
+    
  }

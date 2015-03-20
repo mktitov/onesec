@@ -28,12 +28,14 @@ import org.onesec.raven.ivr.impl.SentenceImpl;
 import org.onesec.raven.ivr.impl.SubactionSentencesResultImpl;
 import org.raven.tree.Node;
 import org.raven.tree.ResourceManager;
+import org.weda.beans.ObjectUtils;
 
 /**
  *
  * @author Mikhail Titov
  */
 public class SayAnyAmountSubaction extends AbstractSentenceSubaction {
+    public static final String ZERO_PARAM = "z";
     private final SubactionSentencesResult result;
 
     public SayAnyAmountSubaction(String value, Map<String, String> params, 
@@ -51,8 +53,15 @@ public class SayAnyAmountSubaction extends AbstractSentenceSubaction {
 
     private List<AudioFile> parseAmount(String value) throws SayAnyActionException {
         List<AudioFile> files = new LinkedList<AudioFile>();
-        for (String word: NumberToDigitConverter.getCurrencyDigits(Double.parseDouble(value)))
+        final boolean enableZero = parseEnableZero();
+        for (String word: NumberToDigitConverter.getCurrencyDigits(Double.parseDouble(value), enableZero))
             files.add(getAudioNode(word));
         return files;
     }
+    
+    private boolean parseEnableZero() {
+        return !params.containsKey(ZERO_PARAM)?
+                false : ObjectUtils.in(params.get(ZERO_PARAM).toLowerCase(), "y", "yes", "true", "t");
+    }
+    
 }

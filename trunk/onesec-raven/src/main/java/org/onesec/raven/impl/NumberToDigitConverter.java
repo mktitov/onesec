@@ -81,12 +81,16 @@ public class NumberToDigitConverter {
 //    }
 
     public static List<String> getCurrencyDigits(double amount) {
+        return getCurrencyDigits(amount, false);
+    }
+    
+    public static List<String> getCurrencyDigits(double amount, boolean enableZero) {
         long rub = (long) amount;
         long kop = (long) (Math.round((amount - rub) * 100));
 
         List<String> res = null;
 
-        List<String> rubDigits = getDigits(rub, Genus.MALE);
+        List<String> rubDigits = getDigits(rub, Genus.MALE, enableZero&&rub==0&&kop==0);
         if (rubDigits!=null && !rubDigits.isEmpty()) {
             String rubString = "рублей";
             String lastElem = rubDigits.get(rubDigits.size()-1);
