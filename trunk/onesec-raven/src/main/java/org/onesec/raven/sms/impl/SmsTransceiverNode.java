@@ -28,7 +28,7 @@ import org.onesec.raven.sms.queue.OutQueue;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.ds.DataContext;
-import org.raven.ds.DataProcessorFacade;
+import org.raven.dp.DataProcessorFacade;
 import org.raven.ds.DataSource;
 import org.raven.ds.Record;
 import org.raven.ds.RecordException;

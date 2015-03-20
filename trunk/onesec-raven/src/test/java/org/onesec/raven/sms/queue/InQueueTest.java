@@ -34,7 +34,7 @@ import static org.onesec.raven.sms.impl.IncomingSmsRecordSchemaNode.*;
 import org.onesec.raven.sms.impl.SmsIncomingMessageChannel;
 import org.onesec.raven.sms.impl.SmsMessageEncoderImpl;
 import org.onesec.raven.sms.sm.udh.UDHData;
-import org.raven.ds.DataProcessorFacade;
+import org.raven.dp.DataProcessorFacade;
 import org.raven.ds.Record;
 import org.raven.ds.RecordException;
 import org.raven.test.DataCollector;

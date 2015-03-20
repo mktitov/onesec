@@ -34,8 +34,8 @@ import org.onesec.raven.sms.impl.SmsIncomingMessageChannel;
 import org.onesec.raven.sms.sm.udh.UDH;
 import org.onesec.raven.sms.sm.udh.UDHData;
 import org.raven.RavenRuntimeException;
-import org.raven.ds.DataProcessorFacade;
-import org.raven.ds.impl.AbstractDataProcessorWithLogger;
+import org.raven.dp.DataProcessorFacade;
+import org.raven.dp.impl.AbstractDataProcessorWithLogger;
 import org.raven.sched.ExecutorServiceException;
 
 /**
