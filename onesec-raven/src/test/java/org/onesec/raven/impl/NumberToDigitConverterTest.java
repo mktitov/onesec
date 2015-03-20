@@ -213,6 +213,29 @@ public class NumberToDigitConverterTest extends Assert
     }
 
     @Test
+    public void getCurrencyDigits_0()
+    {
+        Collection<String> list = NumberToDigitConverter.getCurrencyDigits(0.);
+        assertNull(list);
+    }
+    
+    @Test
+    public void getCurrencyDigits_0_enableZero()
+    {
+        Collection<String> list = NumberToDigitConverter.getCurrencyDigits(0., true);
+        assertNotNull(list);
+        assertArrayEquals(new Object[]{"0", "рублей"}, list.toArray());
+    }
+
+    @Test
+    public void getCurrencyDigits_0_enableZero2()
+    {
+        Collection<String> list = NumberToDigitConverter.getCurrencyDigits(0.1, true);
+        assertNotNull(list);
+        assertArrayEquals(new Object[]{"10", "копеек"}, list.toArray());
+    }
+
+    @Test
     public void getCurrencyDigits_1()
     {
         Collection<String> list = NumberToDigitConverter.getCurrencyDigits(1.);

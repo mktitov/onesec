@@ -31,6 +31,8 @@ public class SayAnyAmountSubactionTest extends SentenceSubactionTestHelper {
     
     @Before
     public void prepare() throws DataFileException {
+        createFile(testsNode, "0");
+        createFile(testsNode, "рублей");
         createFile(testsNode, "20");
         createFile(testsNode, "3");
         createFile(testsNode, "рубля");
@@ -44,5 +46,14 @@ public class SayAnyAmountSubactionTest extends SentenceSubactionTestHelper {
                 Arrays.asList((Node)testsNode), resourceManager);
         SubactionSentencesResult res = action.getResult();
         checkSentences(arrOfArr(arr("20", "3", "рубля", "30", "копеек")), res.getSentences());
+    }
+    
+    @Test
+    public void zeroTest() throws SayAnyActionException {
+        params.put(SayAnyAmountSubaction.ZERO_PARAM, "y");
+        SayAnyAmountSubaction action = new SayAnyAmountSubaction("0", params, testsNode, 
+                Arrays.asList((Node)testsNode), resourceManager);
+        SubactionSentencesResult res = action.getResult();
+        checkSentences(arrOfArr(arr("0", "рублей")), res.getSentences());
     }
 }

@@ -43,7 +43,7 @@ public class SayAmountAction extends AbstractSayWordsAction {
         actionNode.getBindingSupport().enableScriptExecution();
         try {
             actionNode.getBindingSupport().putAll(conversation.getConversationScenarioState().getBindings());
-            return Arrays.asList((List)NumberToDigitConverter.getCurrencyDigits(actionNode.getAmount()));
+            return Arrays.asList((List)NumberToDigitConverter.getCurrencyDigits(actionNode.getAmount(), false));
         } finally {
             actionNode.getBindingSupport().reset();
         }

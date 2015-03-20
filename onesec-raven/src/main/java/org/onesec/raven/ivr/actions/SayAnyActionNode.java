@@ -78,6 +78,9 @@ public class SayAnyActionNode extends AbstractActionNode {
     @NotNull @Parameter(defaultValue = "false")
     private Boolean numbersEnableZero;
     
+    @NotNull @Parameter(defaultValue = "false")
+    private Boolean amountEnableZero;
+    
     @NotNull @Parameter(defaultValue = "-100")
     private Long amountWordPause;
     
@@ -94,7 +97,7 @@ public class SayAnyActionNode extends AbstractActionNode {
                     NodeUtils.getAttrValuesByPrefixAndType(this, AMOUNT_NUMBERS_NODE_ATTR, Node.class),
                     wordsSentencePause, wordsWordPause, 
                     numbersGenus, numbersSentencePause, numbersWordPause, numbersEnableZero,
-                    amountWordPause, resourceManager);
+                    amountWordPause, amountEnableZero, resourceManager);
     }
         
     private boolean checkRepetition() {
@@ -202,6 +205,14 @@ public class SayAnyActionNode extends AbstractActionNode {
 
     public void setNumbersEnableZero(Boolean numbersEnableZero) {
         this.numbersEnableZero = numbersEnableZero;
+    }
+
+    public Boolean getAmountEnableZero() {
+        return amountEnableZero;
+    }
+
+    public void setAmountEnableZero(Boolean amountEnableZero) {
+        this.amountEnableZero = amountEnableZero;
     }
 
     public Long getAmountWordPause() {
