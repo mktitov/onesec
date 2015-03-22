@@ -34,6 +34,7 @@ import static org.onesec.raven.sms.impl.IncomingSmsRecordSchemaNode.*;
 import org.onesec.raven.sms.impl.SmsIncomingMessageChannel;
 import org.onesec.raven.sms.impl.SmsMessageEncoderImpl;
 import org.onesec.raven.sms.sm.udh.UDHData;
+import org.raven.dp.DataProcessorContext;
 import org.raven.dp.DataProcessorFacade;
 import org.raven.ds.Record;
 import org.raven.ds.RecordException;
@@ -152,9 +153,10 @@ public class InQueueTest extends OnesecRavenTestCase {
     public void longMessageTimeoutTest() throws Exception {
         mocks = createControl();
         DataProcessorFacade facade = mocks.createMock(DataProcessorFacade.class);
+        DataProcessorContext context = mocks.createMock(DataProcessorContext.class);
         facade.sendRepeatedly(50l, 50l, 0, InQueue.CHECK_MESSAGE_RECEIVE_TIMEOUT);
         mocks.replay();
-        queue.setFacade(facade);
+        queue.init(facade, context);
         mocks.verify();
         
         List<String> bufs = Arrays.asList("Test1", "Test2");

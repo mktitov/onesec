@@ -121,6 +121,7 @@
           <trimStackTrace>false</trimStackTrace>
           <redirectTestOutputToFile>false</redirectTestOutputToFile>
         </configuration>
+        <version>2.15</version>
       </plugin>
       <plugin>
         <artifactId>maven-jar-plugin</artifactId>

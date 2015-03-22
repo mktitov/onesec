@@ -34,6 +34,7 @@ import org.onesec.raven.sms.impl.SmsIncomingMessageChannel;
 import org.onesec.raven.sms.sm.udh.UDH;
 import org.onesec.raven.sms.sm.udh.UDHData;
 import org.raven.RavenRuntimeException;
+import org.raven.dp.DataProcessorContext;
 import org.raven.dp.DataProcessorFacade;
 import org.raven.dp.impl.AbstractDataProcessorWithLogger;
 import org.raven.sched.ExecutorServiceException;
@@ -72,7 +73,8 @@ public class InQueue extends AbstractDataProcessorWithLogger {
     }
 
     @Override
-    protected void init(DataProcessorFacade facade) {
+    public void init(DataProcessorFacade facade, DataProcessorContext context) {
+        super.init(facade, context); 
         try {
             facade.sendRepeatedly(messageReceiveTimeout, messageReceiveTimeout, 0, CHECK_MESSAGE_RECEIVE_TIMEOUT);
         } catch (ExecutorServiceException ex) {
