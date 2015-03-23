@@ -30,12 +30,14 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import org.onesec.raven.net.impl.AbstractDataProcessor;
 import org.onesec.raven.sms.impl.SmsIncomingMessageChannel;
 import org.onesec.raven.sms.sm.udh.UDH;
 import org.onesec.raven.sms.sm.udh.UDHData;
 import org.raven.RavenRuntimeException;
 import org.raven.dp.DataProcessorContext;
 import org.raven.dp.DataProcessorFacade;
+import org.raven.dp.impl.AbstractDataProcessorLogic;
 import org.raven.dp.impl.AbstractDataProcessorWithLogger;
 import org.raven.sched.ExecutorServiceException;
 
@@ -43,7 +45,7 @@ import org.raven.sched.ExecutorServiceException;
  *
  * @author Mikhail Titov
  */
-public class InQueue extends AbstractDataProcessorWithLogger {
+public class InQueue extends AbstractDataProcessorLogic {
     public final static String CHECK_MESSAGE_RECEIVE_TIMEOUT = "CHECK_MESSAGE_RECEIVE_TIMEOUT";
     public final static String GET_RECEIVED_PACKETS = "GET_RECEIVED_PACKETS";
     public final static String GET_RECEIVED_MESSAGES = "GET_RECEIVED_MESSAGES";
@@ -78,16 +80,16 @@ public class InQueue extends AbstractDataProcessorWithLogger {
         try {
             facade.sendRepeatedly(messageReceiveTimeout, messageReceiveTimeout, 0, CHECK_MESSAGE_RECEIVE_TIMEOUT);
         } catch (ExecutorServiceException ex) {
-            if (logger.isErrorEnabled())
-                logger.error("Error initializing inbound queue", ex);
+            if (getLogger().isErrorEnabled())
+                getLogger().error("Error initializing inbound queue", ex);
             throw new RavenRuntimeException("Error initializing inbound queue", ex);
         }
     }
 
     public Object processData(Object message) {
         try {
-            if (logger.isDebugEnabled())
-                logger.debug("Processing message: "+message);
+            if (getLogger().isDebugEnabled())
+                getLogger().debug("Processing message: "+message);
             if (message instanceof Request)
                 processRequest((Request) message);
             else if (message==CHECK_MESSAGE_RECEIVE_TIMEOUT)
@@ -106,14 +108,12 @@ public class InQueue extends AbstractDataProcessorWithLogger {
                 return udhPackets;
             else if (message==GET_RECEIVED_SAR_PACKETS)
                 return sarPackets;
-            else {
-                if (logger.isDebugEnabled())
-                    logger.warn("Received UNRECOGNIZED message. Ignoring...");
-            }
+            else 
+                return unhandled();
         } catch (Exception e) {
             processingErrors++;
-            if (logger.isErrorEnabled())
-                logger.error("Error processing message: "+message, e);
+            if (getLogger().isErrorEnabled())
+                getLogger().error("Error processing message: "+message, e);
         }
         return VOID;
     }
@@ -126,8 +126,8 @@ public class InQueue extends AbstractDataProcessorWithLogger {
         while (it.hasNext()) {
             final Map.Entry<String, Message> entry = it.next();
             if (entry.getValue().created+messageReceiveTimeout < curTime) {
-                if (logger.isWarnEnabled())
-                    logger.warn("Reached CONCATENATED_MESSAGE_RECEIVE_TIMEOUT({}ms) for message: {}"
+                if (getLogger().isWarnEnabled())
+                    getLogger().warn("Reached CONCATENATED_MESSAGE_RECEIVE_TIMEOUT({}ms) for message: {}"
                             , messageReceiveTimeout, entry.getValue());
                 it.remove();
             }
@@ -136,8 +136,8 @@ public class InQueue extends AbstractDataProcessorWithLogger {
     
     private void processRequest(Request request) throws Exception {
         if (!(request instanceof DataSM) && !(request instanceof DeliverSM)) {
-            if (logger.isWarnEnabled())
-                logger.warn("Unknown pdu type: "+request.getClass().getName());
+            if (getLogger().isWarnEnabled())
+                getLogger().warn("Unknown pdu type: "+request.getClass().getName());
             return;
         }
         if (request instanceof DeliverSM)

@@ -38,6 +38,7 @@ import org.raven.dp.DataProcessorContext;
 import org.raven.dp.DataProcessorFacade;
 import org.raven.ds.Record;
 import org.raven.ds.RecordException;
+import org.raven.sched.ExecutorServiceException;
 import org.raven.test.DataCollector;
 import org.raven.tree.impl.LoggerHelper;
 /**
@@ -83,29 +84,37 @@ public class InQueueTest extends OnesecRavenTestCase {
         assertTrue(collector.start());
         
         queue = new InQueue("utf-8", channel, 50);
-        queue.setLogger(logger);
+//        queue.setLogger(logger);
     }
     
     @Test
     public void normalSmsTest() throws Exception {
         mocks = createControl();
-        SmsConfig smsConfig = createSmsConfig((byte)0);
+        DataProcessorContext ctx = createDataProcessorContext();
+        DataProcessorFacade facade = createDataProcessorFacade();
+//        SmsConfig smsConfig = createSmsConfig((byte)0);
+        mocks.replay();
+        
         DeliverSM pdu = new DeliverSM();
         prepareDeliverSM(pdu);
         pdu.setShortMessage("TEST");
         
+        queue.init(facade, ctx);
         queue.processData(pdu);
         assertEquals(1, collector.getDataListSize());
         checkRecord(collector.getDataList().get(0), "TEST", null, 0, (byte)0, (byte)0);
-        
+        mocks.verify();
     }
     
     @Test
     public void udhSmsTest() throws Exception {
         mocks = createControl();
         SmsConfig smsConfig = createSmsConfig((byte)0);
+        DataProcessorContext ctx = createDataProcessorContext();
+        DataProcessorFacade facade = createDataProcessorFacade();
         mocks.replay();
         
+        queue.init(facade, ctx);
         SmsMessageEncoderImpl encoder = createMessageEncoder(smsConfig);        
         String message = StringUtils.repeat("Test", 50);
         ByteBuffer buf = encoder.createMessageBuffer(message, smsConfig.getDataCoding());
@@ -131,10 +140,14 @@ public class InQueueTest extends OnesecRavenTestCase {
     public void sarSmsTest() throws Exception {
         mocks = createControl();
         SmsConfig smsConfig = createSmsConfig((byte)0);
+        DataProcessorContext ctx = createDataProcessorContext();
+        DataProcessorFacade facade = createDataProcessorFacade();
+        mocks.replay();
         SmsMessageEncoderImpl encoder = createMessageEncoder(smsConfig);
         List<String> bufs = Arrays.asList("Test1", "Test2");
         assertEquals(2, bufs.size());
         
+        queue.init(facade, ctx);
         for (int i=0; i<bufs.size(); ++i) {
             DeliverSM pdu = new DeliverSM();
             prepareDeliverSM(pdu);
@@ -152,11 +165,10 @@ public class InQueueTest extends OnesecRavenTestCase {
     @Test
     public void longMessageTimeoutTest() throws Exception {
         mocks = createControl();
-        DataProcessorFacade facade = mocks.createMock(DataProcessorFacade.class);
-        DataProcessorContext context = mocks.createMock(DataProcessorContext.class);
-        facade.sendRepeatedly(50l, 50l, 0, InQueue.CHECK_MESSAGE_RECEIVE_TIMEOUT);
+        DataProcessorContext ctx = createDataProcessorContext();
+        DataProcessorFacade facade = createDataProcessorFacade();
         mocks.replay();
-        queue.init(facade, context);
+        queue.init(facade, ctx);
         mocks.verify();
         
         List<String> bufs = Arrays.asList("Test1", "Test2");
@@ -222,5 +234,17 @@ public class InQueueTest extends OnesecRavenTestCase {
     
     private SmsMessageEncoderImpl createMessageEncoder(SmsConfig config) {
         return new SmsMessageEncoderImpl(config, logger);
+    }
+    
+    private DataProcessorContext createDataProcessorContext() {
+        DataProcessorContext ctx = mocks.createMock(DataProcessorContext.class);
+        expect(ctx.getLogger()).andReturn(logger).anyTimes();
+        return ctx;
+    }
+    
+    private DataProcessorFacade createDataProcessorFacade() throws ExecutorServiceException {
+        DataProcessorFacade facade = mocks.createMock(DataProcessorFacade.class);
+        facade.sendRepeatedly(50l, 50l, 0, InQueue.CHECK_MESSAGE_RECEIVE_TIMEOUT);
+        return facade;
     }
 }
