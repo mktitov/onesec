@@ -110,7 +110,7 @@ public class SmsTransceiverWorker implements ShortMessageListener {
                     config.getConcatenatedMessageReceiveTimeoutTimeUnit().toMillis(
                             config.getConcatenatedMessageReceiveTimeout()));
             inQueue = new DataProcessorFacadeConfig(
-                        owner, inQueueProcessor, executor, new LoggerHelper(logger, "Inbound queue "))
+                        "Inbound queue", owner, inQueueProcessor, executor, logger)
                     .withQueueSize(config.getMaxInboundQueueSize()).build();
         } else
             inQueue = null;
