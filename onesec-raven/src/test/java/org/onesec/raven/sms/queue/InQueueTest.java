@@ -194,6 +194,34 @@ public class InQueueTest extends OnesecRavenTestCase {
     }
     
     @Test
+    public void sarDataSmSmsTest() throws Exception {
+        mocks = createControl();
+        SmsConfig smsConfig = createSmsConfig((byte)0);
+        DataProcessorContext ctx = createDataProcessorContext();
+        DataProcessorFacade facade = createDataProcessorFacade();
+        mocks.replay();
+        SmsMessageEncoderImpl encoder = createMessageEncoder(smsConfig);
+        
+        String message = StringUtils.repeat("Test", 50);
+        ByteBuffer buf = encoder.createMessageBuffer(message, smsConfig.getDataCoding());
+        List<ByteBuffer> bufs = encoder.getFragments(buf);
+        
+        queue.init(facade, ctx);
+        for (int i=0; i<bufs.size(); ++i) {
+            DataSM pdu = new DataSM();
+            prepareDataSM(pdu);
+            pdu.setSarMsgRefNum((short)1);
+            pdu.setSarSegmentSeqnum((short)i);
+            pdu.setSarTotalSegments((short)2);
+            pdu.setMessagePayload(bufs.get(i));
+            queue.processData(pdu);
+        }
+        assertEquals(1, collector.getDataListSize());
+        checkRecord(collector.getDataList().get(0), message, 1, 2, (byte)0, (byte)0);
+        
+    }
+    
+    @Test
     public void longMessageTimeoutTest() throws Exception {
         mocks = createControl();
         DataProcessorContext ctx = createDataProcessorContext();

@@ -161,7 +161,7 @@ public class SmsMessageEncoderImpl implements SmsMessageEncoder {
         }
     }
 
-    private List<SubmitSM> sliceMessage(ByteBuffer mesBuf, Address dstAddr, Address srcAddr, byte dataCoding) throws Exception {
+    public List<SubmitSM> sliceMessage(ByteBuffer mesBuf, Address dstAddr, Address srcAddr, byte dataCoding) throws Exception {
         List<ByteBuffer> frags = getFragments(mesBuf);
         int segCnt = frags.size();
         int segCur = 1;
