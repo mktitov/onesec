@@ -20,6 +20,7 @@ import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.apache.commons.lang.StringUtils;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.ds.DataConsumer;
@@ -81,7 +82,11 @@ public class SmsDeliveryReceiptChannel extends AbstractDataSource {
             if (matcher.matches()) {
                 Record rec = deliveryReceiptSchema.createRecord();
                 SimpleDateFormat fmt = new SimpleDateFormat("yyMMddHHmm");
-                rec.setValue(MESSAGE_ID, Long.toHexString(new Long(matcher.group(MESSAGE_ID))));
+                String messageId = matcher.group(MESSAGE_ID);
+                if (StringUtils.isNumeric(messageId))
+                    rec.setValue(MESSAGE_ID, Long.toHexString(new Long(messageId)));
+                else
+                    rec.setValue(MESSAGE_ID, messageId);
                 rec.setValue(SUBMIT_DATE, fmt.parse(matcher.group(SUBMIT_DATE)));
                 rec.setValue(DONE_DATE, fmt.parse(matcher.group(DONE_DATE)));
                 rec.setValue(STATUS, matcher.group(STATUS));
