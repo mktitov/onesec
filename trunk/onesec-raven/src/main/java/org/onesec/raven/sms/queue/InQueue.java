@@ -18,6 +18,7 @@ package org.onesec.raven.sms.queue;
 import com.logica.smpp.Data;
 import com.logica.smpp.pdu.DeliverSM;
 import com.logica.smpp.pdu.DataSM;
+import com.logica.smpp.pdu.PDU;
 import com.logica.smpp.pdu.Request;
 import com.logica.smpp.pdu.ValueNotSetException;
 import com.logica.smpp.pdu.tlv.TLVShort;
@@ -30,7 +31,6 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import org.onesec.raven.net.impl.AbstractDataProcessor;
 import org.onesec.raven.sms.impl.SmsIncomingMessageChannel;
 import org.onesec.raven.sms.sm.udh.UDH;
 import org.onesec.raven.sms.sm.udh.UDHData;
@@ -38,7 +38,6 @@ import org.raven.RavenRuntimeException;
 import org.raven.dp.DataProcessorContext;
 import org.raven.dp.DataProcessorFacade;
 import org.raven.dp.impl.AbstractDataProcessorLogic;
-import org.raven.dp.impl.AbstractDataProcessorWithLogger;
 import org.raven.sched.ExecutorServiceException;
 
 /**
@@ -86,10 +85,11 @@ public class InQueue extends AbstractDataProcessorLogic {
         }
     }
 
+    @Override
     public Object processData(Object message) {
         try {
             if (getLogger().isDebugEnabled())
-                getLogger().debug("Processing message: "+message);
+                getLogger().debug("Processing message: "+messageToStr(message));
             if (message instanceof Request)
                 processRequest((Request) message);
             else if (message==CHECK_MESSAGE_RECEIVE_TIMEOUT)
@@ -116,6 +116,10 @@ public class InQueue extends AbstractDataProcessorLogic {
                 getLogger().error("Error processing message: "+message, e);
         }
         return VOID;
+    }
+    
+    private String messageToStr(Object message) {
+        return message instanceof PDU? ((PDU)message).debugString() : message.toString();
     }
     
     private void checkMessagesTimeout() {
@@ -283,14 +287,18 @@ public class InQueue extends AbstractDataProcessorLogic {
             part.dstNpi = pdu.getDestAddr().getNpi();
             part.dstTon = pdu.getDestAddr().getTon();
             
-            part.messageId = getSarMessageId(pdu);
+            try {
+                part.messageId = (int)pdu.getSarMsgRefNum();
+            } catch (ValueNotSetException e) {}
             if (part.messageId!=null) {
-                part.messageSegNum = getSarMessageSegNum(pdu);
-                part.messageSegCount = getSarMessageSegCount(pdu);
+                part.messageSegNum = pdu.getSarSegmentSeqnum();
+                part.messageSegCount = pdu.getSarTotalSegments();
+                part.sarPacket=true;
             } else {
                 decodeUdh(part.esmClass, part, buf);
-                part.message = UDH.getMesText(buf.getBuffer(), part.dataCoding, defaultCp);
             }
+            part.message = UDH.getMesText(buf.getBuffer(), part.dataCoding, defaultCp);
+                       
             return part;
         }
         
@@ -318,22 +326,7 @@ public class InQueue extends AbstractDataProcessorLogic {
                 buf.removeBuffer(512);
             return buf;
         }
-        
-        private static Integer getSarMessageId(Request pdu) throws ValueNotSetException {
-            TLVShort sarMsgId = (TLVShort) pdu.getExtraOptional(Data.OPT_PAR_SAR_MSG_REF_NUM);
-            return sarMsgId!=null && sarMsgId.hasValue()? -1*sarMsgId.getValue() : null;
-        }
-        
-        private static short getSarMessageSegCount(Request pdu) throws ValueNotSetException {
-            TLVUByte segCount = (TLVUByte) pdu.getExtraOptional(Data.OPT_PAR_SAR_TOT_SEG);
-            return segCount.getValue();
-        }
-        
-        private static short getSarMessageSegNum(Request pdu) throws ValueNotSetException {
-            TLVUByte segNum = (TLVUByte) pdu.getExtraOptional(Data.OPT_PAR_SAR_SEG_SNUM);
-            return segNum.getValue();
-        }
-        
+               
         private boolean isConcatenated() {
             return messageId!=null && messageSegCount>1;
         }

@@ -16,6 +16,7 @@
 package org.onesec.raven.sms.queue;
 
 import com.logica.smpp.pdu.Address;
+import com.logica.smpp.pdu.DataSM;
 import com.logica.smpp.pdu.DeliverSM;
 import com.logica.smpp.util.ByteBuffer;
 import java.util.ArrayList;
@@ -137,6 +138,36 @@ public class InQueueTest extends OnesecRavenTestCase {
     }
     
     @Test
+    public void udhDataSmSmsTest() throws Exception {
+        mocks = createControl();
+        SmsConfig smsConfig = createSmsConfig((byte)0);
+        DataProcessorContext ctx = createDataProcessorContext();
+        DataProcessorFacade facade = createDataProcessorFacade();
+        mocks.replay();
+        
+        queue.init(facade, ctx);
+        SmsMessageEncoderImpl encoder = createMessageEncoder(smsConfig);        
+        String message = StringUtils.repeat("Test", 50);
+        ByteBuffer buf = encoder.createMessageBuffer(message, smsConfig.getDataCoding());
+        UDHData udhd = new UDHData();
+        udhd.setMesData(buf);
+        List<ByteBuffer> buffers = udhd.getAllData(false);
+        assertEquals(2, buffers.size());
+        
+        for (int i=0; i<buffers.size(); ++i) {
+            DataSM pdu = new DataSM();
+            prepareDataSM(pdu);
+            pdu.setMessagePayload(buffers.get(i));
+            pdu.setEsmClass((byte)0x40);
+            queue.processData(pdu);
+        }
+        assertEquals(1, collector.getDataListSize());
+        checkRecord(collector.getDataList().get(0), message, 0, 2, (byte)0, (byte)0x40);
+        
+        mocks.verify();
+    }
+    
+    @Test
     public void sarSmsTest() throws Exception {
         mocks = createControl();
         SmsConfig smsConfig = createSmsConfig((byte)0);
@@ -221,6 +252,13 @@ public class InQueueTest extends OnesecRavenTestCase {
         pdu.setEsmClass((byte)0x00);
         pdu.setProtocolId((byte)0);
         pdu.setPriorityFlag((byte)0);
+        pdu.setDataCoding((byte)0);
+    }
+    
+    private void prepareDataSM(DataSM pdu) throws Exception {
+        pdu.setDestAddr(new Address((byte)1, (byte)2, "1234"));
+        pdu.setSourceAddr(new Address((byte)2, (byte)1, "4321"));
+        pdu.setEsmClass((byte)0x00);
         pdu.setDataCoding((byte)0);
     }
     
