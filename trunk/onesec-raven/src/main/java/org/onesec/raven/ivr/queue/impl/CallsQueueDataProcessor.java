@@ -15,6 +15,7 @@
  */
 package org.onesec.raven.ivr.queue.impl;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -24,6 +25,7 @@ import org.onesec.raven.ivr.queue.CallsQueueOnBusyBehaviour;
 import org.onesec.raven.ivr.queue.CallsQueueOperatorRef;
 import org.onesec.raven.ivr.queue.CallsQueuePrioritySelector;
 import org.raven.dp.impl.AbstractDataProcessorLogic;
+import org.raven.sched.ExecutorServiceException;
 import org.raven.sched.impl.AbstractTask;
 import org.raven.tree.Node;
 import org.raven.util.NodeUtils;
@@ -33,10 +35,16 @@ import org.raven.util.NodeUtils;
  * @author Mikhail Titov
  */
 public class CallsQueueDataProcessor extends AbstractDataProcessorLogic {
+    public final static String GET_REQUESTS = "GET_REQUESTS";
+    
+    private final static long MIN_REQUEST_REPROCESS_INTERVAL = 1000; //минимальный интервал повторной попытки обработки запроса очередью
+    private final static long TICK_INTERVAL = 100;
+    private final static String PROCESS_REQUEST = "PROCESS_REQUEST";
     private final static CallsQueueRequestComparator requestComparator = new CallsQueueRequestComparator();
     private final LinkedList<CallQueueRequestController> queue = new LinkedList<>();
     private final int maxQueueSize;
     private CallsQueueNode callsQueue;
+    private boolean wating = false;
 
     public CallsQueueDataProcessor(int maxQueueSize) {
         this.maxQueueSize = maxQueueSize;
@@ -51,16 +59,24 @@ public class CallsQueueDataProcessor extends AbstractDataProcessorLogic {
 
     @Override
     public Object processData(Object message) throws Exception {
-        if (message instanceof CallQueueRequestController)
+        if (message instanceof CallQueueRequestController) {
             addRequestToQueue((CallQueueRequestController)message);
+            if (!wating) 
+                processQueue();
+        } else if (PROCESS_REQUEST==message) {
+            processQueue();
+        } else if (GET_REQUESTS==message) {
+            return queue.isEmpty()? Collections.EMPTY_LIST : new ArrayList<>(queue);
+        } else 
+            return unhandled();
         return VOID;
     }
 
-    private void addRequestToQueue(CallQueueRequestController request) {
+    private void addRequestToQueue(CallQueueRequestController request) throws Exception {
         CallsQueue oldQueue = request.getCallsQueue();
         request.setCallsQueue(callsQueue);
         if (getLogger().isDebugEnabled()) 
-            getLogger().debug("Request {} to the queue", this==oldQueue?"returned":"added");       
+            getLogger().debug(request.logMess("Request %s to the queue", this==oldQueue?"returned":"added"));       
         
         queue.offer(request);
         if (queue.size() > 1) {
@@ -72,23 +88,35 @@ public class CallsQueueDataProcessor extends AbstractDataProcessorLogic {
         } else {
             request.fireCallQueuedEvent();
             fireQueueNumberChangedEvents();
-        }       
+        }
     }
     
-    private void processQueue() {
+    private void processQueue() throws Exception {
+        wating = false;
         CallQueueRequestController request = queue.peek();
-        if (request!=null) {
+        while ( (request=queue.peek())!=null ) {
             if (!request.isValid() || !processRequest(request)) {
                 queue.poll();
                 fireQueueNumberChangedEvents();
-                //нужно обработать следующий запрос
             } else {
                 //запрос остался в очереди пытаемся его обработать через некоторое время
+                sendTickEvent();
+                return;
             }
         } 
     }
     
+    private void sendTickEvent() throws ExecutorServiceException {
+        wating = true;
+        getFacade().sendDelayed(TICK_INTERVAL, PROCESS_REQUEST);
+    }
+    
     private boolean processRequest(CallQueueRequestController request) {
+        if (System.currentTimeMillis()-request.getLastQueuedTime()<MIN_REQUEST_REPROCESS_INTERVAL) {
+            if (getLogger().isDebugEnabled())
+                getLogger().debug(request.logMess("Suspending... Time not come. Left %sms"));
+            return true;
+        }
         boolean leaveInQueue = false;
         if (getLogger().isDebugEnabled())
             getLogger().debug(request.logMess("Processing request"));
@@ -102,21 +130,7 @@ public class CallsQueueDataProcessor extends AbstractDataProcessorLogic {
                 getLogger().debug(request.logMess(
                         "Request mapped to the (%s) priority selector"
                         , selector.getName()));
-            //looking up for operator that will process the request
-            List<CallsQueueOperatorRef> operatorRefs = selector.getOperatorsRefs();
-            boolean processed = false;
-            int startIndex = selector.getStartIndex(request, operatorRefs.size());
-            if (startIndex<operatorRefs.size())
-                for (int i=startIndex; i<operatorRefs.size(); ++i){
-                    request.incOperatorHops();
-                    if (operatorRefs.get(i).processRequest(callsQueue, request)) {
-                        request.setOperatorIndex(i);
-                        processed = true;
-                        selector.rebuildIndex(operatorRefs, i);
-                        break;
-                    }
-                }
-            if (!processed) {
+            if (!dispatchToOperator(request, selector)) {
                 //if no operators found then processing onBusyBehaviour
                 if (getLogger().isDebugEnabled())
                     getLogger().debug(request.logMess("Not found free operator to process request"));
@@ -130,6 +144,21 @@ public class CallsQueueDataProcessor extends AbstractDataProcessorLogic {
         }        
         return leaveInQueue;
     }
+    
+    private boolean dispatchToOperator(CallQueueRequestController request, CallsQueuePrioritySelector selector) {
+        List<CallsQueueOperatorRef> operatorRefs = selector.getOperatorsRefs();
+        int startIndex = selector.getStartIndex(request, operatorRefs.size());
+        if (startIndex<operatorRefs.size())
+            for (int i=startIndex; i<operatorRefs.size(); ++i){
+                request.incOperatorHops();
+                if (operatorRefs.get(i).processRequest(callsQueue, request)) {
+                    request.setOperatorIndex(i);
+                    selector.rebuildIndex(operatorRefs, i);
+                    return true;
+                }
+            }
+        return false;
+    } 
     
     private CallsQueuePrioritySelector searchForPrioritySelector(CallQueueRequestController request)
     {
