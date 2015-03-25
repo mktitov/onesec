@@ -15,14 +15,11 @@
  */
 package org.onesec.raven.sms.queue;
 
-import com.logica.smpp.Data;
 import com.logica.smpp.pdu.DeliverSM;
 import com.logica.smpp.pdu.DataSM;
 import com.logica.smpp.pdu.PDU;
 import com.logica.smpp.pdu.Request;
 import com.logica.smpp.pdu.ValueNotSetException;
-import com.logica.smpp.pdu.tlv.TLVShort;
-import com.logica.smpp.pdu.tlv.TLVUByte;
 import com.logica.smpp.util.ByteBuffer;
 import com.logica.smpp.util.NotEnoughDataInByteBufferException;
 import java.util.Collections;
@@ -78,6 +75,8 @@ public class InQueue extends AbstractDataProcessorLogic {
         super.init(facade, context); 
         try {
             facade.sendRepeatedly(messageReceiveTimeout, messageReceiveTimeout, 0, CHECK_MESSAGE_RECEIVE_TIMEOUT);
+            if (getLogger().isInfoEnabled())
+                getLogger().info("Started");
         } catch (ExecutorServiceException ex) {
             if (getLogger().isErrorEnabled())
                 getLogger().error("Error initializing inbound queue", ex);
