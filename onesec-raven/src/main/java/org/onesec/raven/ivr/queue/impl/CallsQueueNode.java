@@ -34,6 +34,8 @@ import org.onesec.raven.ivr.queue.CallsQueueOperatorRef;
 import org.onesec.raven.ivr.queue.CallsQueuePrioritySelector;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
+import org.raven.dp.DataProcessorFacade;
+import org.raven.dp.impl.DataProcessorFacadeConfig;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.ManagedTask;
@@ -46,6 +48,7 @@ import org.raven.tree.NodeAttribute;
 import org.raven.tree.Viewable;
 import org.raven.tree.ViewableObject;
 import org.raven.tree.impl.BaseNode;
+import org.raven.tree.impl.LoggerHelper;
 import org.raven.tree.impl.ViewableObjectImpl;
 import org.raven.util.NodeUtils;
 import org.weda.annotations.constraints.NotNull;
@@ -56,7 +59,7 @@ import org.weda.internal.annotations.Message;
  * @author Mikhail Titov
  */
 @NodeClass(parentNode=CallsQueuesContainerNode.class)
-public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask, Viewable
+public class CallsQueueNode extends BaseNode implements CallsQueue, Viewable
 {
     @NotNull @Parameter(defaultValue="10")
     private Integer maxQueueSize;
@@ -86,6 +89,7 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask,
     @Message private static String yesMessage;
     @Message private static String noMessage;
     
+    private AtomicReference<DataProcessorFacade> processor;
 
     private AtomicReference<String> statusMessage;
     private AtomicBoolean stopProcessing;
@@ -100,6 +104,7 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask,
     @Override
     protected void initFields() {
         super.initFields();
+        processor = new AtomicReference<>();
         statusMessage = new AtomicReference<String>("Waiting for request...");
         stopProcessing = new AtomicBoolean(true);
         processingThreadRunning = new AtomicBoolean(false);
@@ -113,76 +118,101 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask,
     @Override
     protected void doStart() throws Exception {
         super.doStart();
-        if (processingThreadRunning.get())
-            throw new Exception(
-                    "Can't start calls queue because of processing thread is still running");
-        queue = new LinkedList();
+//        if (processingThreadRunning.get())
+//            throw new Exception(
+//                    "Can't start calls queue because of processing thread is still running");
+//        queue = new LinkedList();
         resetStat();
-        stopProcessing.set(false);
-        executor.execute(this);
+        processor.set(new DataProcessorFacadeConfig(
+                "Queue", this, new CallsQueueDataProcessor(maxQueueSize), executor, new LoggerHelper(this, null)).build());
+//        stopProcessing.set(false);
+//        executor.execute(this);
     }
 
     @Override
     protected void doStop() throws Exception {
         super.doStop();
-        stopProcessing.set(true);
-        while(processingThreadRunning.get())
-            TimeUnit.MILLISECONDS.sleep(100);
+        DataProcessorFacade _processor = processor.getAndSet(null);
+        if (_processor!=null)
+            _processor.askStop(1000).get();
+//        stopProcessing.set(true);
+//        while(processingThreadRunning.get())
+//            TimeUnit.MILLISECONDS.sleep(100);
     }
 
-    public TaskRestartPolicy getTaskRestartPolicy() {
-        return TaskRestartPolicy.RESTART_NODE;
-    }
-    
-    public void queueCall(CallQueueRequestController request) 
-    {
-        if (!Status.STARTED.equals(getStatus()) || stopProcessing.get()) {
+//    public TaskRestartPolicy getTaskRestartPolicy() {
+//        return TaskRestartPolicy.RESTART_NODE;
+//    }
+//    
+    @Override
+    public void queueCall(CallQueueRequestController request) {
+        DataProcessorFacade _processor = processor.get();
+        if (_processor!=null)
+            _processor.send(request);
+        else {
             request.addToLog(String.format("Queue (%s) not ready", getName()));
             request.fireRejectedQueueEvent();
         }
-        
-        CallsQueue oldQueue = request.getCallsQueue();
-        request.setCallsQueue(this);
-        if (isLogLevelEnabled(LogLevel.DEBUG)) 
-            getLogger().debug(logMess(request, "Request %s to the queue", this==oldQueue?"returned":"added"));
-        
-//        if (request.getRequestId()==0)
-//            request.setRequestId(requestIdSeq.getAndIncrement());
-        addRequestToQueue(request);
     }
     
-    private void addRequestToQueue(CallQueueRequestController request)
-    {
-        lock.writeLock().lock();
-        try {
-            queue.offer(request);
-            if (queue.size()>1)
-                Collections.sort(queue, requestComparator);
-            if (queue.size()>maxQueueSize) {
-                CallQueueRequestController rejReq = queue.removeLast();
-                executor.executeQuietly(new RejectTask(this, rejReq, "queue size was exceeded"));
-            } else {
-                request.fireCallQueuedEvent();
-                fireQueueNumberChangedEvents();
-            }
-            requestAddedCondition.signal();
-        } finally {
-            lock.writeLock().unlock();
-        }
-    }
-
+//    public void queueCall2(CallQueueRequestController request) 
+//    {
+//        if (!Status.STARTED.equals(getStatus()) || stopProcessing.get()) {
+//            request.addToLog(String.format("Queue (%s) not ready", getName()));
+//            request.fireRejectedQueueEvent();
+//        }
+//        
+//        CallsQueue oldQueue = request.getCallsQueue();
+//        request.setCallsQueue(this);
+//        if (isLogLevelEnabled(LogLevel.DEBUG)) 
+//            getLogger().debug(logMess(request, "Request %s to the queue", this==oldQueue?"returned":"added"));
+//        
+////        if (request.getRequestId()==0)
+////            request.setRequestId(requestIdSeq.getAndIncrement());
+//        addRequestToQueue(request);
+//    }
+//    
+//    private void addRequestToQueue(CallQueueRequestController request)
+//    {
+//        lock.writeLock().lock();
+//        try {
+//            queue.offer(request);
+//            if (queue.size()>1)
+//                Collections.sort(queue, requestComparator);
+//            if (queue.size()>maxQueueSize) {
+//                CallQueueRequestController rejReq = queue.removeLast();
+//                executor.executeQuietly(new RejectTask(this, rejReq, "queue size was exceeded"));
+//            } else {
+//                request.fireCallQueuedEvent();
+//                fireQueueNumberChangedEvents();
+//            }
+//            requestAddedCondition.signal();
+//        } finally {
+//            lock.writeLock().unlock();
+//        }
+//    }
+//
+    
     public Collection<CallQueueRequestController> getRequests() {
-        try {
-            if (lock.readLock().tryLock(500, TimeUnit.MILLISECONDS)) {
-                try {
-                    return new ArrayList<CallQueueRequestController>(queue);
-                } finally {
-                    lock.readLock().unlock();
-                }
-            }
-        } catch (InterruptedException e) { }
+        DataProcessorFacade _processor = processor.get();
+        if (_processor!=null)
+            return (Collection<CallQueueRequestController>) _processor.ask(CallsQueueDataProcessor.GET_REQUESTS).getOrElse(Collections.EMPTY_LIST, 1000);
         return Collections.EMPTY_LIST;
     }
+    
+    
+//    public Collection<CallQueueRequestController> getRequests() {
+//        try {
+//            if (lock.readLock().tryLock(500, TimeUnit.MILLISECONDS)) {
+//                try {
+//                    return new ArrayList<CallQueueRequestController>(queue);
+//                } finally {
+//                    lock.readLock().unlock();
+//                }
+//            }
+//        } catch (InterruptedException e) { }
+//        return Collections.EMPTY_LIST;
+//    }
 
     @Parameter(readOnly=true)
     public int getAvgCallDuration() {
@@ -193,10 +223,10 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, ManagedTask,
     @Parameter(readOnly=true)
     public int getActiveOperatorsCount() {
         Set<Integer> opers = new HashSet<Integer>();
-        for (Node priority: getChildrens())
+        for (Node priority: getNodes())
             for (CallsQueueOperatorRefNode ref: NodeUtils.getChildsOfType(priority, CallsQueueOperatorRefNode.class)) {
                 CallsQueueOperator oper = ref.getOperator();
-                if (Status.STARTED.equals(oper.getStatus()) && oper.isActive())
+                if (oper.isStarted() && oper.isActive())
                     opers.add(oper.getId());
             }
         return opers.size();

@@ -37,7 +37,6 @@ import org.onesec.raven.sms.queue.OutQueue;
 import org.onesec.raven.sms.queue.ShortTextMessageImpl;
 import org.raven.dp.DataProcessorFacade;
 import org.raven.dp.impl.DataProcessorFacadeConfig;
-import org.raven.dp.impl.DataProcessorFacadeImpl;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.impl.AbstractTask;
 import org.raven.tree.impl.LoggerHelper;
