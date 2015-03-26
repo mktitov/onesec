@@ -17,32 +17,39 @@
 package org.onesec.raven.ivr.queue.impl;
 
 import java.util.List;
-import java.util.concurrent.TimeUnit;
+import java.util.Set;
 import static org.mockito.Mockito.*;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.InOrder;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
+import org.junit.runner.RunWith;
 import org.onesec.raven.ivr.queue.*;
-import org.raven.RavenUtils;
 import org.raven.log.LogLevel;
 import org.raven.sched.impl.ExecutorServiceNode;
+import mockit.integration.junit4.JMockit;
+import mockit.*;
+import org.onesec.raven.OnesecRavenModule;
+import org.onesec.raven.OnesecRavenModuleTest;
+import org.raven.RavenUtils;
 import org.raven.table.Table;
-import org.raven.test.RavenCoreTestCase;
-import org.raven.tree.Node;
 import org.raven.tree.Viewable;
 import org.raven.tree.ViewableObject;
-
 /**
  *
  * @author Mikhail Titov
  */
-public class CallsQueueNodeTest extends RavenCoreTestCase
+@RunWith(JMockit.class)
+public class CallsQueueNodeTest extends OnesecRavenModuleTest
 {
+    
     private CallsQueueNode queue;
     private CallsQueueNode queuesManager;
     private ExecutorServiceNode executor;
+
+    @Override
+    protected void configureRegistry(Set<Class> builder) {
+        OnesecRavenModule.ENABLE_LOADING_SOUND_RESOURCE = false;
+        super.configureRegistry(builder); //To change body of generated methods, choose Tools | Templates.
+    }
     
     
     @Before
@@ -65,46 +72,48 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
     }
     
     @Test
-    public void successQueued() throws InterruptedException {
-        
-        CallQueueRequestController req = mock(CallQueueRequestController.class);
+    public void successQueued(@Mocked final CallQueueRequestController req) throws InterruptedException {        
         trainRequest(req);
+        new Expectations() {{
+            req.getCallsQueue(); result = null;
+        }};   
         assertTrue(queue.start());
         queue.queueCall(req);
-        
-        verify(req, timeout(100)).getCallsQueue();
-        verify(req, timeout(100)).setCallsQueue(queue);
-        verify(req, timeout(100)).setPositionInQueue(1);
-        verify(req, timeout(100)).fireCallQueuedEvent();
+        Thread.sleep(100);
+        new Verifications() {{
+            req.getCallsQueue(); 
+            req.setCallsQueue(queue);
+            req.setPositionInQueue(1);
+            req.fireCallQueuedEvent();
+        }};
     }    
     
     @Test
-    public void getViewableObjects() throws Exception {
-        
-        CallQueueRequestController req = mock(CallQueueRequestController.class);
-        CallsQueue targetQueue = mock(CallsQueue.class);
+    public void getViewableObjects(
+            @Mocked final CallQueueRequestController req,
+            @Mocked final CallsQueue targetQueue) 
+        throws Exception 
+    {
         
         trainRequest(req);
-        when(targetQueue.getName()).thenReturn("target queue");
-//        expect(req.getCallsQueue()).andReturn(null);
-//        req.setCallsQueue(queue);
-//        req.setRequestId(1);
-//        req.setPositionInQueue(1);
-//        req.fireCallQueuedEvent();
-        when(req.isValid()).thenReturn(Boolean.TRUE);
-        
-        when(req.getRequestId()).thenReturn(1l);
-        when(req.getPriority()).thenReturn(2);
-        when(req.getLastQueuedTime()).thenReturn(System.currentTimeMillis());
-        when(req.getTargetQueue()).thenReturn(targetQueue);
-        when(req.getOnBusyBehaviourStep()).thenReturn(0);
-        when(req.getOperatorIndex()).thenReturn(1);
-        
-//        replay(req, targetQueue);
-        
+        new Expectations() {{
+            targetQueue.getName(); result = "target queue";
+            req.isValid(); result = true;
+            req.getRequestId(); result = 1;
+            req.getPriority(); result = 2;
+            req.getLastQueuedTime(); result = System.currentTimeMillis();
+            req.getTargetQueue(); result = targetQueue;
+            req.getOnBusyBehaviourStep(); result = 0;
+            req.getOperatorIndex(); result = 1;
+        }};
+                
         assertTrue(queue.start());
         queue.queueCall(req);
-        verify(req, timeout(100)).fireCallQueuedEvent();
+        Thread.sleep(50);
+        
+        new Verifications() {{
+            req.fireCallQueuedEvent();
+        }};
         
         List<ViewableObject> vos = queue.getViewableObjects(null);
         assertNotNull(vos);
@@ -116,9 +125,50 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         Table tab = (Table) vos.get(1).getData();
         List<Object[]> rows = RavenUtils.tableAsList(tab);
         assertEquals(1, rows.size());
-        
-//        verify(req, targetQueue);
     }
+    
+    
+//    @Test
+//    public void getViewableObjects() throws Exception {
+//        
+//        CallQueueRequestController req = mock(CallQueueRequestController.class);
+//        CallsQueue targetQueue = mock(CallsQueue.class);
+//        
+//        trainRequest(req);
+//        when(targetQueue.getName()).thenReturn("target queue");
+////        expect(req.getCallsQueue()).andReturn(null);
+////        req.setCallsQueue(queue);
+////        req.setRequestId(1);
+////        req.setPositionInQueue(1);
+////        req.fireCallQueuedEvent();
+//        when(req.isValid()).thenReturn(Boolean.TRUE);
+//        
+//        when(req.getRequestId()).thenReturn(1l);
+//        when(req.getPriority()).thenReturn(2);
+//        when(req.getLastQueuedTime()).thenReturn(System.currentTimeMillis());
+//        when(req.getTargetQueue()).thenReturn(targetQueue);
+//        when(req.getOnBusyBehaviourStep()).thenReturn(0);
+//        when(req.getOperatorIndex()).thenReturn(1);
+//        
+////        replay(req, targetQueue);
+//        
+//        assertTrue(queue.start());
+//        queue.queueCall(req);
+//        verify(req, timeout(100)).fireCallQueuedEvent();
+//        
+//        List<ViewableObject> vos = queue.getViewableObjects(null);
+//        assertNotNull(vos);
+//        assertEquals(4, vos.size());
+//        assertEquals(Viewable.RAVEN_TEXT_MIMETYPE, vos.get(0).getMimeType());
+//        assertEquals(Viewable.RAVEN_TABLE_MIMETYPE, vos.get(1).getMimeType());
+//        assertEquals(Viewable.RAVEN_TEXT_MIMETYPE, vos.get(2).getMimeType());
+//        assertEquals(Viewable.RAVEN_TABLE_MIMETYPE, vos.get(3).getMimeType());
+//        Table tab = (Table) vos.get(1).getData();
+//        List<Object[]> rows = RavenUtils.tableAsList(tab);
+//        assertEquals(1, rows.size());
+//        
+//        verify(req, targetQueue);
+//    }
 //    
 //    @Test
 //    public void rejectedByMaxQueueSize() throws Exception {
@@ -573,31 +623,48 @@ public class CallsQueueNodeTest extends RavenCoreTestCase
         return selector;
     }
     
-    private void trainRequest(CallQueueRequestController req) {
-        Answer<String> logAnswer = new Answer<String>() {
-            @Override
-            public String answer(InvocationOnMock inv) throws Throwable {
-                
-                System.out.println("ARGS SIZE: "+inv.getArguments().length);
-//                if (inv.getArguments().length==2)
-                    return String.format(inv.getArgumentAt(0, String.class), inv.getArgumentAt(1, Object.class));
-//                else
-//                    return inv.getArgumentAt(0, String.class);
-            }
-        };
-//        for (int i=0; i<100; i++)
-            when(req.logMess(anyString(), any())).thenAnswer(new Answer<String>() {
-            @Override
-            public String answer(InvocationOnMock inv) throws Throwable {
-                
-                System.out.println("ARGS SIZE: "+inv.getArguments().length);
-//                if (inv.getArguments().length==2)
-                    return String.format(inv.getArgumentAt(0, String.class), inv.getArgumentAt(1, Object.class));
-//                else
-//                    return inv.getArgumentAt(0, String.class);
-            }
-        }).thenAnswer(logAnswer);
-        
+    private void trainRequest(final CallQueueRequestController req) {
+        new Expectations() {{
+            req.logMess(anyString, any); minTimes = 0; result = new Delegate<String>() {
+                public String logMess(String format, Object... args) {
+                    System.out.println("DELIGATING!!!");
+                    return String.format(format, args);
+                }
+            };
+            req.logMess(anyString); minTimes = 0; result = new Delegate<String>() {
+                public String logMess(String format, Object... args) {
+                    System.out.println("DELIGATING!!!");
+                    return format;
+                }
+            };
+        }};
     }
+    
+//    private void trainRequest(CallQueueRequestController req) {
+//        Answer<String> logAnswer = new Answer<String>() {
+//            @Override
+//            public String answer(InvocationOnMock inv) throws Throwable {
+//                
+//                System.out.println("ARGS SIZE: "+inv.getArguments().length);
+////                if (inv.getArguments().length==2)
+//                    return String.format(inv.getArgumentAt(0, String.class), inv.getArgumentAt(1, Object.class));
+////                else
+////                    return inv.getArgumentAt(0, String.class);
+//            }
+//        };
+////        for (int i=0; i<100; i++)
+//            when(req.logMess(anyString(), any())).thenAnswer(new Answer<String>() {
+//            @Override
+//            public String answer(InvocationOnMock inv) throws Throwable {
+//                
+//                System.out.println("ARGS SIZE: "+inv.getArguments().length);
+////                if (inv.getArguments().length==2)
+//                    return String.format(inv.getArgumentAt(0, String.class), inv.getArgumentAt(1, Object.class));
+////                else
+////                    return inv.getArgumentAt(0, String.class);
+//            }
+//        }).thenAnswer(logAnswer);
+//        
+//    }
     
 }
