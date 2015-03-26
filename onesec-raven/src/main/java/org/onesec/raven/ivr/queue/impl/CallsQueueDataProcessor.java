@@ -59,6 +59,8 @@ public class CallsQueueDataProcessor extends AbstractDataProcessorLogic {
 
     @Override
     public Object processData(Object message) throws Exception {
+        if (getLogger().isDebugEnabled())
+            getLogger().debug("Processing message: "+message);
         if (message instanceof CallQueueRequestController) {
             addRequestToQueue((CallQueueRequestController)message);
             if (!wating) 
@@ -93,9 +95,10 @@ public class CallsQueueDataProcessor extends AbstractDataProcessorLogic {
     
     private void processQueue() throws Exception {
         wating = false;
-        CallQueueRequestController request = queue.peek();
+        CallQueueRequestController request;
         while ( (request=queue.peek())!=null ) {
             if (!request.isValid() || !processRequest(request)) {
+                //если запрос не валидный или обработался успешно удаляем его из очереди
                 queue.poll();
                 fireQueueNumberChangedEvents();
             } else {
@@ -114,7 +117,7 @@ public class CallsQueueDataProcessor extends AbstractDataProcessorLogic {
     private boolean processRequest(CallQueueRequestController request) {
         if (System.currentTimeMillis()-request.getLastQueuedTime()<MIN_REQUEST_REPROCESS_INTERVAL) {
             if (getLogger().isDebugEnabled())
-                getLogger().debug(request.logMess("Suspending... Time not come. Left %sms"));
+                getLogger().debug(request.logMess("Suspending... Time not come."));
             return true;
         }
         boolean leaveInQueue = false;
