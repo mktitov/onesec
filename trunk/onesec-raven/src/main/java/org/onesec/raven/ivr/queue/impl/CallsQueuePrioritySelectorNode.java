@@ -59,7 +59,7 @@ public class CallsQueuePrioritySelectorNode extends BaseNode implements CallsQue
     
     private void initNodes() {
         onBusyBehaviour = 
-                (CallsQueueOnBusyBehaviourNode)getChildren(CallsQueueOnBusyBehaviourNode.NAME);
+                (CallsQueueOnBusyBehaviourNode)getNode(CallsQueueOnBusyBehaviourNode.NAME);
         if (onBusyBehaviour==null){
             onBusyBehaviour = new CallsQueueOnBusyBehaviourNode();
             addAndSaveChildren(onBusyBehaviour);

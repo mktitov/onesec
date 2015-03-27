@@ -40,6 +40,9 @@ import org.weda.annotations.constraints.NotNull;
  */
 @NodeClass(parentNode=CallsQueueOperatorsNode.class)
 public class CallsQueueOperatorNode extends AbstractOperatorNode {
+    //время (сек.) на которое оператор заблокируется (перейдет в состояние busy) в случае не успешного звонка
+    public final static Integer ON_UNSUCCESS_CALL_BUSY_TIMEOUT = 1; 
+    
     @NotNull @Parameter
     private String phoneNumbers;
     @Parameter
@@ -164,15 +167,15 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
     @Override
     protected void doRequestProcessed(CallsCommutationManager manager, boolean callHandled) {
         if (commutationManager.compareAndSet(manager, null)) {
-            if (callHandled) 
-                startBusyTimer();
+            startBusyTimer(callHandled? busyTimer : ON_UNSUCCESS_CALL_BUSY_TIMEOUT);
+                
             busy.set(false);
             request.set(null);
         }
     }
     
-    private void startBusyTimer() {
-        Integer timeout = busyTimer;
+    private void startBusyTimer(Integer timeout) {
+//        Integer timeout = busyTimer;
         if (timeout!=null && busyByBusyTimer.compareAndSet(false, true)) {
             if (getExecutor().executeQuietly(timeout*1000, new BusyTimerTask())) { 
                 busyTimerEndTime.set(System.currentTimeMillis()+timeout*1000);

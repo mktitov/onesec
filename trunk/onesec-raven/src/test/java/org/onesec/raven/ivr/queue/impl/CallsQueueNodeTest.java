@@ -16,9 +16,9 @@
  */
 package org.onesec.raven.ivr.queue.impl;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-import static org.mockito.Mockito.*;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -73,7 +73,7 @@ public class CallsQueueNodeTest extends OnesecRavenModuleTest
     
     @Test
     public void successQueued(@Mocked final CallQueueRequestController req) throws InterruptedException {        
-        trainRequest(req);
+        trainRequest(req, "Req#1");
         new Expectations() {{
             req.getCallsQueue(); result = null;
         }};   
@@ -91,11 +91,12 @@ public class CallsQueueNodeTest extends OnesecRavenModuleTest
     @Test
     public void getViewableObjects(
             @Mocked final CallQueueRequestController req,
-            @Mocked final CallsQueue targetQueue) 
+            @Mocked final CallsQueue targetQueue,
+            @Mocked final CallsQueueOnBusyBehaviour onBusyBehaviour) 
         throws Exception 
     {
-        
-        trainRequest(req);
+        addPrioritySelector("p1", 2, null);
+        trainRequest(req, "Req#1");
         new Expectations() {{
             targetQueue.getName(); result = "target queue";
             req.isValid(); result = true;
@@ -103,8 +104,11 @@ public class CallsQueueNodeTest extends OnesecRavenModuleTest
             req.getPriority(); result = 2;
             req.getLastQueuedTime(); result = System.currentTimeMillis();
             req.getTargetQueue(); result = targetQueue;
-            req.getOnBusyBehaviourStep(); result = 0;
             req.getOperatorIndex(); result = 1;
+            req.getOnBusyBehaviourStep(); result = 0;
+            //оставляем запрос в очереди, чтобы getViewableObjects показал запрос в таблице
+            req.getOnBusyBehaviour(); result = onBusyBehaviour;
+            onBusyBehaviour.handleBehaviour(queue, req); result = true; 
         }};
                 
         assertTrue(queue.start());
@@ -127,263 +131,240 @@ public class CallsQueueNodeTest extends OnesecRavenModuleTest
         assertEquals(1, rows.size());
     }
     
+    @Test
+    public void rejectedByMaxQueueSize(
+            @Mocked final CallQueueRequestController req1,
+            @Mocked final CallQueueRequestController req2,
+            @Mocked final CallsQueueOnBusyBehaviour onBusyBehaviour
+    ) throws Exception 
+    {
+        trainRequest(req1, "Req#1");
+        trainRequest(req2, "Req#2");
+        new Expectations(){{
+            req1.isValid(); result = true;
+            req1.setCallsQueue(queue);
+            req1.getCallsQueue(); result = null;
+            req1.getRequestId(); result = 1;
+            req1.getPriority(); result = 1;
+            //оставляем запрос в очереди, чтобы req1 не влез в очередь
+            req1.getOnBusyBehaviour(); result = onBusyBehaviour;
+            onBusyBehaviour.handleBehaviour(queue, req1); result = true; 
+            
+            req2.getCallsQueue(); result=null;
+            req2.setCallsQueue(queue);
+            req2.getRequestId(); result = 2;
+            req2.getPriority(); result =1;
+        }};
+        
+        addPrioritySelector("p1", 1, null);        
+        queue.setMaxQueueSize(1);        
+        assertTrue(queue.start());
+        queue.queueCall(req1);
+        queue.queueCall(req2);
+        Thread.sleep(100);
+        
+        new Verifications() {{
+            req2.addToLog("queue size was exceeded");
+            req2.fireRejectedQueueEvent();            
+        }};
+        queue.stop();
+    }    
     
-//    @Test
-//    public void getViewableObjects() throws Exception {
-//        
-//        CallQueueRequestController req = mock(CallQueueRequestController.class);
-//        CallsQueue targetQueue = mock(CallsQueue.class);
-//        
-//        trainRequest(req);
-//        when(targetQueue.getName()).thenReturn("target queue");
-////        expect(req.getCallsQueue()).andReturn(null);
-////        req.setCallsQueue(queue);
-////        req.setRequestId(1);
-////        req.setPositionInQueue(1);
-////        req.fireCallQueuedEvent();
-//        when(req.isValid()).thenReturn(Boolean.TRUE);
-//        
-//        when(req.getRequestId()).thenReturn(1l);
-//        when(req.getPriority()).thenReturn(2);
-//        when(req.getLastQueuedTime()).thenReturn(System.currentTimeMillis());
-//        when(req.getTargetQueue()).thenReturn(targetQueue);
-//        when(req.getOnBusyBehaviourStep()).thenReturn(0);
-//        when(req.getOperatorIndex()).thenReturn(1);
-//        
-////        replay(req, targetQueue);
-//        
-//        assertTrue(queue.start());
-//        queue.queueCall(req);
-//        verify(req, timeout(100)).fireCallQueuedEvent();
-//        
-//        List<ViewableObject> vos = queue.getViewableObjects(null);
-//        assertNotNull(vos);
-//        assertEquals(4, vos.size());
-//        assertEquals(Viewable.RAVEN_TEXT_MIMETYPE, vos.get(0).getMimeType());
-//        assertEquals(Viewable.RAVEN_TABLE_MIMETYPE, vos.get(1).getMimeType());
-//        assertEquals(Viewable.RAVEN_TEXT_MIMETYPE, vos.get(2).getMimeType());
-//        assertEquals(Viewable.RAVEN_TABLE_MIMETYPE, vos.get(3).getMimeType());
-//        Table tab = (Table) vos.get(1).getData();
-//        List<Object[]> rows = RavenUtils.tableAsList(tab);
-//        assertEquals(1, rows.size());
-//        
-//        verify(req, targetQueue);
-//    }
-//    
-//    @Test
-//    public void rejectedByMaxQueueSize() throws Exception {
-////        executor.stop();
-//        
-//        CallQueueRequestController req = createMock(CallQueueRequestController.class);
-//        CallQueueRequestController req1 = createMock(CallQueueRequestController.class);
-//        req.setCallsQueue(queue);
-//        expect(req.getCallsQueue()).andReturn(null);
-////        req.setRequestId(1);
-//        expect(req.getPriority()).andReturn(1).anyTimes();
-//        expect(req.getRequestId()).andReturn(1l).anyTimes();
-//        req.setPositionInQueue(1);
-//        req.fireCallQueuedEvent();
-//        
-//        expect(req1.getCallsQueue()).andReturn(null);
-//        req1.setCallsQueue(queue);
-////        req1.setRequestId(2);
-//        expect(req1.getPriority()).andReturn(1).anyTimes();
-//        expect(req1.getRequestId()).andReturn(2l).anyTimes();
-//        req1.addToLog(eq("queue size was exceeded"));
-//        req1.fireRejectedQueueEvent();
-//        
-//        replay(req, req1);
-//        queue.setMaxQueueSize(1);
-//        assertTrue(queue.start());
-//        queue.queueCall(req);
-////        executor.start();
-//        queue.queueCall(req1);
-//        Thread.sleep(500);
-//        verify(req, req1);
-//    }
+    @Test()
+    public void rejectedByNotFoundPrioritySelector(
+            @Mocked final CallQueueRequestController req
+    ) throws InterruptedException 
+    {
+        trainRequest(req, "Req#1");
+        new Expectations() {{
+            req.isValid(); result = true;
+            req.setCallsQueue(queue);
+            req.getCallsQueue(); result = null;
+            req.setPositionInQueue(1);
+            req.fireCallQueuedEvent();
+        }};
+        
+        assertTrue(queue.start());
+        queue.queueCall(req);
+        Thread.sleep(100);
+        
+        new Verifications(){{
+            req.addToLog("not found priority selector");
+            req.fireRejectedQueueEvent();
+        }};
+        queue.stop();
+    }
     
-//    @Test(timeout=5000)
-//    public void rejectedByNotFoundPrioritySelector() throws InterruptedException {
-//        CallQueueRequestController req = createMock(CallQueueRequestController.class);
-//        expect(req.getCallsQueue()).andReturn(null);
-//        req.setCallsQueue(queue);
-////        req.setRequestId(1);
-//        req.setPositionInQueue(1);
-//        req.fireCallQueuedEvent();
-//        req.addToLog("not found priority selector");
-//        req.fireRejectedQueueEvent();
-//        expect(req.isValid()).andReturn(Boolean.TRUE);
-//        expect(req.logMess("Processing request...")).andReturn("");
-//        replay(req);
-//
-//        queue.setLogLevel(LogLevel.NONE);
-//        assertTrue(queue.start());
-//        queue.queueCall(req);
-////        queue.run();
-//        TimeUnit.MILLISECONDS.sleep(500);
-//        queue.stop();
-//        assertEquals(Node.Status.INITIALIZED, queue.getStatus());
-//        while (queue.processingThreadRunning.get())
-//            TimeUnit.MILLISECONDS.sleep(100);
-//        
-//        verify(req);
-//    }
-//    
-//    @Test
-//    public void rejectedByNoOperatorsNoOnBusyBehaviour() throws InterruptedException {
-//        executor.stop();
-//        
-//        CallsQueuePrioritySelectorNode selector = new CallsQueuePrioritySelectorNode();
-//        selector.setName("selector 1");
-//        queue.addAndSaveChildren(selector);
-//        selector.setPriority(1);
-//        assertTrue(selector.start());
-//        
-//        CallQueueRequestController req = createMock(CallQueueRequestController.class);
-//        expect(req.getCallsQueue()).andReturn(null);
-//        req.setCallsQueue(queue);
-////        expect(req.getRequestId()).andReturn(0l);
-////        req.setRequestId(1);
-//        req.setPositionInQueue(1);
-//        expect(req.getPriority()).andReturn(1).anyTimes();
-//        req.fireCallQueuedEvent();
-//        expect(req.isValid()).andReturn(Boolean.TRUE);
-//        expect(req.logMess("Processing request...")).andReturn("");
-//        expect(req.getOperatorIndex()).andReturn(-1).anyTimes();
-//        expect(req.getOnBusyBehaviour()).andReturn(null);
-//        req.setOnBusyBehaviour(isA(CallsQueueOnBusyBehaviour.class));
-//        expect(req.getOnBusyBehaviourStep()).andReturn(0);
-//        req.setOnBusyBehaviourStep(1);
-//        req.addToLog(CallsQueueOnBusyBehaviourNode.REACHED_THE_END_OF_SEQ);
-//        req.fireRejectedQueueEvent();
-//        replay(req);
-//        
-//        assertTrue(queue.start());
-//        queue.queueCall(req);
-//        assertEquals(1, queue.queue.size());
-//        queue.processRequest();
-//        assertEquals(0, queue.queue.size());
-//        
-//        verify(req);
-//    }
-//    
-//    @Test
-//    public void processedByOperatorTest() throws Exception
-//    {
-//        executor.stop();
-//        TestPrioritySelector selector = addPrioritySelector("selector 1", 1, null);
-//        
-//        CallQueueRequestController req = createMock(CallQueueRequestController.class);
-//        CallsQueueOperatorRef operatorRef = createMock(CallsQueueOperatorRef.class);
-//        CallsQueueOperator operator = createMock(CallsQueueOperator.class);
-//        
-//        expect(req.getCallsQueue()).andReturn(null);
-//        req.setCallsQueue(queue);
-////        expect(req.getRequestId()).andReturn(0l);
-////        req.setRequestId(1);
-//        req.setPositionInQueue(1);
-//        req.fireCallQueuedEvent();
-//        expect(req.isValid()).andReturn(Boolean.TRUE);
-//        expect(req.logMess("Processing request...")).andReturn("");
-//        req.incOperatorHops(); expectLastCall().anyTimes();
-//        expect(req.getPriority()).andReturn(1).anyTimes();
-//        expect(req.getOperatorIndex()).andReturn(-1);
-//        
-//        expect(operatorRef.processRequest(queue, req)).andReturn(Boolean.TRUE);
-//        req.setOperatorIndex(0);
-//
-//        replay(req, operatorRef, operator);
-//        
-//        assertTrue(queue.start());
-//        selector.addOperatorRef(operatorRef);
-//        queue.queueCall(req);
-//        assertEquals(1, queue.queue.size());
-//        queue.processRequest();
-//        assertEquals(0, queue.queue.size());
-//        
-//        verify(req, operatorRef, operator);
-//    }
-//    
-//    @Test
-//    public void leaveInQueueTest() throws Exception {
-//        executor.stop();
-//        
-//        CallQueueRequestController req = createMock(CallQueueRequestController.class);
-//        CallsQueueOnBusyBehaviour onBusyBehaviour = createMock(CallsQueueOnBusyBehaviour.class);
-//        
-//        expect(req.getCallsQueue()).andReturn(null);
-//        req.setCallsQueue(queue);
-////        expect(req.getRequestId()).andReturn(0l);
-////        req.setRequestId(1);
-//        req.setPositionInQueue(1);
-//        req.fireCallQueuedEvent();
-//        expect(req.isValid()).andReturn(Boolean.TRUE);
-//        expect(req.logMess("Processing request...")).andReturn("");
-//        expect(req.getPriority()).andReturn(1).anyTimes();
-//        expect(req.getOperatorIndex()).andReturn(-1);
-//        expect(req.getOnBusyBehaviour()).andReturn(null);
-//        req.setOnBusyBehaviour(onBusyBehaviour);
-//        expect(onBusyBehaviour.handleBehaviour(
-//                isA(CallsQueue.class), isA(CallQueueRequestController.class))).andReturn(Boolean.TRUE);
-//
-//        replay(req, onBusyBehaviour);
-//        
-//        addPrioritySelector("selector 1", 1, onBusyBehaviour);
-//        assertTrue(queue.start());
-//        queue.queueCall(req);
-//        assertEquals(1, queue.queue.size());
-//        queue.processRequest();
-//        assertEquals(1, queue.queue.size());
-//        
-//        verify(req, onBusyBehaviour);
-//    }
-//    
-//    @Test
-//    public void orderChangeAfterProcessTest() throws Exception {
-//        executor.stop();
-//        
-//        CallQueueRequestController req = createMock("req", CallQueueRequestController.class);
-//        CallQueueRequestController req1 = createMock("req1", CallQueueRequestController.class);
-//        CallsQueueOnBusyBehaviour onBusyBehaviour = createMock(CallsQueueOnBusyBehaviour.class);
-//        
-//        expect(req.getCallsQueue()).andReturn(null);
-//        req.setCallsQueue(queue);
-////        expect(req.getRequestId()).andReturn(0l);
-////        req.setRequestId(1);
-//        req.setPositionInQueue(1);
-//        expectLastCall().anyTimes();
-//        req.fireCallQueuedEvent();        
-//        expect(req.isValid()).andReturn(Boolean.TRUE);
-//        expect(req.logMess("Processing request...")).andReturn("");
-//        expect(req.getPriority()).andReturn(1).anyTimes();
-//        expect(req.getOperatorIndex()).andReturn(-1);
-//        expect(req.getOnBusyBehaviour()).andReturn(null);
-//        req.setOnBusyBehaviour(onBusyBehaviour);
-//        expect(onBusyBehaviour.handleBehaviour(
-//                isA(CallsQueue.class), isA(CallQueueRequestController.class))).andReturn(Boolean.FALSE);
-//        
-//        expect(req1.getCallsQueue()).andReturn(null);
-//        req1.setCallsQueue(queue);
-////        expect(req1.getRequestId()).andReturn(0l);
-////        req1.setRequestId(2);
-//        expect(req1.getPriority()).andReturn(2).anyTimes();
-//        req1.setPositionInQueue(2);
-//        req1.fireCallQueuedEvent();
-//        req1.setPositionInQueue(1);
-//
-//        replay(req, req1, onBusyBehaviour);
-//        
-//        addPrioritySelector("selector 1", 1, onBusyBehaviour);
-//        assertTrue(queue.start());
-//        queue.queueCall(req);
-//        queue.queueCall(req1);
-//        assertEquals(2, queue.queue.size());
-//        queue.processRequest();
-//        assertEquals(1, queue.queue.size());
-//        
-//        verify(req, req1, onBusyBehaviour);
-//    }
-//
+    @Test
+    public void rejectedByNoOperatorsNoOnBusyBehaviour(
+            @Mocked final CallQueueRequestController req
+    ) throws InterruptedException 
+    {
+        trainRequest(req, "Req#1");
+        new Expectations() {{
+            req.isValid(); result = true;
+            req.setCallsQueue(queue);
+            req.getCallsQueue(); result = null;
+            req.setPositionInQueue(1);
+            req.fireCallQueuedEvent();
+            req.getPriority(); result = 1;
+            req.getOnBusyBehaviour(); result = null;
+            req.getOnBusyBehaviourStep(); result = 0;
+            req.setOnBusyBehaviour((CallsQueueOnBusyBehaviour)any);
+        }};
+        
+        CallsQueuePrioritySelectorNode selector = new CallsQueuePrioritySelectorNode();
+        selector.setName("selector 1");
+        queue.addAndSaveChildren(selector);
+        selector.setPriority(1);
+        assertTrue(selector.start());        
+        assertTrue(queue.start());
+        
+        queue.queueCall(req);
+        
+        queue.stop();        
+//        Thread.sleep(100);
+        
+        new Verifications(){{
+            req.addToLog(CallsQueueOnBusyBehaviourNode.REACHED_THE_END_OF_SEQ);
+            req.fireRejectedQueueEvent();
+            req.setOnBusyBehaviourStep(1);
+        }};
+        
+    }
+    
+    @Test
+    public void processedByOperatorTest(
+            @Mocked final CallQueueRequestController req,
+            @Mocked final CallsQueueOperatorRef operatorRef
+    ) throws Exception
+    {
+        TestPrioritySelector selector = addPrioritySelector("selector 1", 1, null);
+        selector.addOperatorRef(operatorRef);
+        trainRequest(req, "Req#1");
+        new Expectations(){{
+            req.isValid(); result = true;
+            req.setCallsQueue(queue);
+            req.getCallsQueue(); result = null;
+            req.setPositionInQueue(1);
+            req.fireCallQueuedEvent();
+            req.getPriority(); result = 1;
+            req.getOperatorIndex(); result = -1;            
+            operatorRef.processRequest(queue, req); result = true;
+        }};
+        
+        assertTrue(queue.start());
+        queue.queueCall(req);
+        assertTrue(queue.getRequests().isEmpty());
+        queue.stop();
+        
+        new Verifications() {{
+            req.setOperatorIndex(0);
+        }};
+        
+    }    
+    
+    @Test
+    public void leaveInQueueTest(
+            @Mocked final CallQueueRequestController req,
+            @Mocked final CallsQueueOnBusyBehaviour onBusyBehaviour
+    ) throws Exception 
+    {
+        addPrioritySelector("p1", 2, null);
+        trainRequest(req, "Req#1");
+        new Expectations() {{
+            req.isValid(); result = true;
+            req.getPriority(); result = 2;
+            req.getOnBusyBehaviour(); result = onBusyBehaviour;
+            onBusyBehaviour.handleBehaviour(queue, req); result = true; 
+        }};
+                
+        assertTrue(queue.start());
+        queue.queueCall(req);
+        Collection<CallQueueRequestController> requests = queue.getRequests();
+        assertEquals(1, requests.size());
+        assertSame(req, requests.iterator().next());
+        queue.stop();
+        
+        new Verifications() {{
+            req.fireCallQueuedEvent();
+        }};        
+    }   
+    
+    @Test
+    public void orderChangeAfterProcessTest(
+            @Mocked final CallQueueRequestController req1,
+            @Mocked final CallQueueRequestController req2,
+            @Mocked final CallsQueueOnBusyBehaviour onBusyBehaviour            
+    ) throws Exception 
+    {
+        addPrioritySelector("p1", 1, null);
+        trainRequest(req1, "Req#1");
+        trainRequest(req2, "Req#2");
+        new Expectations() {{
+            req1.isValid(); result = true;
+            req1.getPriority(); result = 1;
+            req1.getOnBusyBehaviour(); result = onBusyBehaviour;
+            onBusyBehaviour.handleBehaviour(queue, req1); returns(true, false); 
+            
+            req2.isValid(); result = true;
+            req2.getPriority(); result = 2;
+        }};
+        assertTrue(queue.start());
+        queue.queueCall(req1);
+        queue.queueCall(req2);        
+        Thread.sleep(CallsQueueDataProcessor.TICK_INTERVAL+20);
+        queue.stop();
+        new Verifications() {{
+            req2.setPositionInQueue(2);
+            req2.fireCallQueuedEvent();
+            req2.setPositionInQueue(1);
+        }};
+    }    
+
+    @Test
+    public void operatorIndexTest(
+            @Mocked final CallQueueRequestController req,
+            @Mocked final CallsQueueOperatorRef operatorRef,
+            @Mocked final CallsQueueOperatorRef operatorRef1,
+            @Mocked final CallsQueueOnBusyBehaviour onBusyBehaviour            
+    ) throws Exception 
+    {
+        trainRequest(req, "Req#1");
+        TestPrioritySelector selector = addPrioritySelector("selector1", 1, null);
+        new Expectations() {{
+            req.isValid(); result = true;
+            req.getPriority(); result = 1;
+            req.getOperatorIndex(); returns(-1,0,1);
+            req.incOperatorHops();
+            operatorRef.processRequest(queue, req); result = true;
+            operatorRef1.processRequest(queue, req); result = true;            
+            req.getOnBusyBehaviour(); result = onBusyBehaviour;
+            onBusyBehaviour.handleBehaviour(queue, req); result = true; 
+        }};
+        
+        selector.addOperatorRef(operatorRef);
+        selector.addOperatorRef(operatorRef1);
+        assertTrue(queue.start());
+        
+        queue.queueCall(req);        
+        assertTrue(queue.getRequests().isEmpty());
+
+        //return request to the queue
+        queue.queueCall(req);
+        assertTrue(queue.getRequests().isEmpty());
+
+        //return request to the queue
+        queue.queueCall(req);
+        assertEquals(1, queue.getRequests().size());
+        
+        
+        new Verifications() {{
+            req.setOperatorIndex(0);
+            req.setOperatorIndex(1);
+        }};
+    }
+
 //    @Test
 //    public void operatorIndexTest() throws Exception {
 //        executor.stop();
@@ -623,18 +604,16 @@ public class CallsQueueNodeTest extends OnesecRavenModuleTest
         return selector;
     }
     
-    private void trainRequest(final CallQueueRequestController req) {
+    private void trainRequest(final CallQueueRequestController req, final String name) {
         new Expectations() {{
             req.logMess(anyString, any); minTimes = 0; result = new Delegate<String>() {
                 public String logMess(String format, Object... args) {
-                    System.out.println("DELIGATING!!!");
-                    return String.format(format, args);
+                    return String.format(name+": "+ format, args);
                 }
             };
             req.logMess(anyString); minTimes = 0; result = new Delegate<String>() {
                 public String logMess(String format, Object... args) {
-                    System.out.println("DELIGATING!!!");
-                    return format;
+                    return name+": "+ format;
                 }
             };
         }};

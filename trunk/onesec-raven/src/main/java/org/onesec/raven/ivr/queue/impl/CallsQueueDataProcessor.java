@@ -37,8 +37,8 @@ import org.raven.util.NodeUtils;
 public class CallsQueueDataProcessor extends AbstractDataProcessorLogic {
     public final static String GET_REQUESTS = "GET_REQUESTS";
     
-    private final static long MIN_REQUEST_REPROCESS_INTERVAL = 1000; //минимальный интервал повторной попытки обработки запроса очередью
-    private final static long TICK_INTERVAL = 100;
+//    private final static long MIN_REQUEST_REPROCESS_INTERVAL = 1000; //минимальный интервал повторной попытки обработки запроса очередью
+    public final static long TICK_INTERVAL = 100;
     private final static String PROCESS_REQUEST = "PROCESS_REQUEST";
     private final static CallsQueueRequestComparator requestComparator = new CallsQueueRequestComparator();
     private final LinkedList<CallQueueRequestController> queue = new LinkedList<>();
@@ -86,6 +86,8 @@ public class CallsQueueDataProcessor extends AbstractDataProcessorLogic {
         }
         if (queue.size() > maxQueueSize) {
             CallQueueRequestController rejReq = queue.removeLast();
+            if (getLogger().isDebugEnabled())
+                getLogger().debug(rejReq.logMess("Rejectected. Queue size was exceeded"));
             sendReject(rejReq, "queue size was exceeded");
         } else {
             request.fireCallQueuedEvent();
@@ -93,11 +95,16 @@ public class CallsQueueDataProcessor extends AbstractDataProcessorLogic {
         }
     }
     
-    private void processQueue() throws Exception {
+    private void processQueue() throws Exception {        
         wating = false;
+        if (getLogger().isDebugEnabled())
+            getLogger().debug("Processing requests from queue. Queue size: "+queue.size());
         CallQueueRequestController request;
         while ( (request=queue.peek())!=null ) {
-            if (!request.isValid() || !processRequest(request)) {
+            final boolean valid = request.isValid();
+            if (!valid && getLogger().isDebugEnabled())
+                getLogger().debug(request.logMess("Removed. Not valid request"));
+            if (!valid || !processRequest(request)) {
                 //если запрос не валидный или обработался успешно удаляем его из очереди
                 queue.poll();
                 fireQueueNumberChangedEvents();
@@ -115,11 +122,6 @@ public class CallsQueueDataProcessor extends AbstractDataProcessorLogic {
     }
     
     private boolean processRequest(CallQueueRequestController request) {
-        if (System.currentTimeMillis()-request.getLastQueuedTime()<MIN_REQUEST_REPROCESS_INTERVAL) {
-            if (getLogger().isDebugEnabled())
-                getLogger().debug(request.logMess("Suspending... Time not come."));
-            return true;
-        }
         boolean leaveInQueue = false;
         if (getLogger().isDebugEnabled())
             getLogger().debug(request.logMess("Processing request"));
@@ -143,6 +145,8 @@ public class CallsQueueDataProcessor extends AbstractDataProcessorLogic {
                     request.setOnBusyBehaviour(onBusyBehaviour);
                 }
                 leaveInQueue = onBusyBehaviour.handleBehaviour(callsQueue, request);
+                if (leaveInQueue && getLogger().isDebugEnabled())
+                    getLogger().debug(request.logMess("Leaved in queue by busy behaviour"));
             }
         }        
         return leaveInQueue;
@@ -178,7 +182,7 @@ public class CallsQueueDataProcessor extends AbstractDataProcessorLogic {
         return null;
     }
     
-    private void sendReject(CallQueueRequestController req, String message) {
+    private void sendReject(CallQueueRequestController req, String message) {        
         getContext().getExecutor().executeQuietly(new RejectTask(getContext().getOwner(), req, message));
     }
     
