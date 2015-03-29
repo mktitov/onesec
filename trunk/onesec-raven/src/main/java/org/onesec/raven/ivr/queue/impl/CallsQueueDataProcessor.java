@@ -145,8 +145,12 @@ public class CallsQueueDataProcessor extends AbstractDataProcessorLogic {
                     request.setOnBusyBehaviour(onBusyBehaviour);
                 }
                 leaveInQueue = onBusyBehaviour.handleBehaviour(callsQueue, request);
-                if (leaveInQueue && getLogger().isDebugEnabled())
-                    getLogger().debug(request.logMess("Leaved in queue by busy behaviour"));
+                if (getLogger().isDebugEnabled()) {
+                    if (leaveInQueue)
+                        getLogger().debug(request.logMess("Leaved in queue by busy behaviour"));
+                    else 
+                        getLogger().debug(request.logMess("Rejected from the queue by busy behaviour"));
+                }
             }
         }        
         return leaveInQueue;
@@ -161,6 +165,8 @@ public class CallsQueueDataProcessor extends AbstractDataProcessorLogic {
                 if (operatorRefs.get(i).processRequest(callsQueue, request)) {
                     request.setOperatorIndex(i);
                     selector.rebuildIndex(operatorRefs, i);
+                    if (getLogger().isDebugEnabled())
+                        getLogger().debug(request.logMess("Assigned to operator references: "+operatorRefs.get(i)));
                     return true;
                 }
             }
