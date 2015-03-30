@@ -110,7 +110,7 @@ public class SmsAgent {
     }
     
     private Session createSession() {
-        TCPIPConnection connection = new TCPIPConnection(config.getBindAddr(), config.getBindPort());
+        TcpConnection connection = new TcpConnection(config.getBindAddr(), config.getBindPort(), logger);
         connection.setReceiveTimeout(config.getBindTimeout());
         connection.setCommsTimeout(config.getSoTimeout());
         Session _session = new Session(connection);
