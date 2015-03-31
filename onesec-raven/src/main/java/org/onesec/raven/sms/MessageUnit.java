@@ -30,6 +30,7 @@ public interface MessageUnit {
     public void fatal();
     public void confirmed();
     public void delay(long interval);
+    public void tryWhenReady();
     public SubmitSM getPdu();
     public String getDst();
     public MessageUnitStatus getStatus();

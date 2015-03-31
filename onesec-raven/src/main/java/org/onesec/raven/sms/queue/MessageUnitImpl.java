@@ -60,7 +60,7 @@ public class MessageUnitImpl implements MessageUnit {
             if (newStatus==SUBMITTED && status==READY) {
                 status = newStatus;
                 ++attempts;
-            } else if (newStatus==DELAYED && status==SUBMITTED)
+            } else if ((newStatus==DELAYED || newStatus==TRY_WHEN_READY) && status==SUBMITTED)
                 status = newStatus;
             else if (newStatus==CONFIRMED || newStatus==FATAL)
                 status = newStatus;
@@ -81,6 +81,8 @@ public class MessageUnitImpl implements MessageUnit {
     public MessageUnitStatus checkStatus() {
         long curTime = System.currentTimeMillis();
         if (status==DELAYED && curTime>xtime)
+            changeStatusTo(READY, 0);
+        if (status==TRY_WHEN_READY)
             changeStatusTo(READY, 0);
         if (status==SUBMITTED && curTime - xtime > config.getMaxWaitForResp()) 
             changeStatusTo(attempts <= config.getMaxSubmitAttempts()? READY : FATAL, 0);
@@ -127,6 +129,11 @@ public class MessageUnitImpl implements MessageUnit {
         confirmTime = System.currentTimeMillis();
         changeStatusTo(CONFIRMED, 0);
 //        confirmed(System.currentTimeMillis());
+    }
+
+    @Override
+    public void tryWhenReady() {
+        changeStatusTo(TRY_WHEN_READY, 0);
     }
     
     public long getConfirmTime() {

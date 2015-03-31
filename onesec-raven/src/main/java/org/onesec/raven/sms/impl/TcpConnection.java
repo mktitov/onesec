@@ -252,8 +252,9 @@ public class TcpConnection extends Connection
     @Override
     public void close() throws IOException
     {
+        if (!opened)
+            return ;
         IOException exception = null;
-
         if (connType == CONN_CLIENT) {
             try {
                 inputStream.close();

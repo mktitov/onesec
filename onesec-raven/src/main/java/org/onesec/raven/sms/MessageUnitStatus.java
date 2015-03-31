@@ -21,5 +21,5 @@ package org.onesec.raven.sms;
  * @author Mikhail Titov
  */
 public enum MessageUnitStatus {
-    READY, DELAYED, SUBMITTED, CONFIRMED, FATAL
+    READY, DELAYED, SUBMITTED, CONFIRMED, FATAL, TRY_WHEN_READY
 }
