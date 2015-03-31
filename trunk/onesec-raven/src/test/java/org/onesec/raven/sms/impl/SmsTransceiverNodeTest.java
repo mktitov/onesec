@@ -15,13 +15,20 @@
  */
 package org.onesec.raven.sms.impl;
 
+import java.io.OutputStream;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Set;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.junit.Test;
+import org.onesec.raven.OnesecRavenModule;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.sms.BindMode;
 import org.raven.ds.Record;
@@ -42,7 +49,13 @@ public class SmsTransceiverNodeTest extends OnesecRavenTestCase {
     private SmsTransceiverNode sender;
     private DataCollector collector;
     private DataCollector collector2;
-    
+
+    @Override
+    protected void configureRegistry(Set<Class> builder) {
+        OnesecRavenModule.ENABLE_LOADING_SOUND_RESOURCE = false;
+        super.configureRegistry(builder);
+    }
+
     @Before
     public void prepare() {
         executor = new ExecutorServiceNode();
@@ -107,6 +120,18 @@ public class SmsTransceiverNodeTest extends OnesecRavenTestCase {
         assertNotNull(sender.getAttr("bind").getValue());
         Thread.sleep(1000);
         sender.stop();
+    }
+    
+    @Test
+    public void tcpFINTest() throws Exception {
+        InetAddress localhost = Inet4Address.getLocalHost();
+        ServerFINTest finTest = new ServerFINTest(1234, localhost);
+        finTest.start();
+        sender.setBindAddr(localhost.getHostAddress());
+        sender.setBindPort(1234);
+        sender.setBindMode(BindMode.RECEIVER_AND_TRANSMITTER);
+        sender.start();
+        Thread.sleep(10000);
     }
     
     @Test
@@ -234,4 +259,48 @@ public class SmsTransceiverNodeTest extends OnesecRavenTestCase {
         rec.setValue(SmsRecordSchemaNode.MESSAGE, mess);
         return rec;
     }
+    
+    private class ServerFINTest extends Thread {
+        private final int port;
+        private final InetAddress addr;
+
+        public ServerFINTest(int port, InetAddress addr) {
+            this.port = port;
+            this.addr = addr;
+        }
+
+        @Override
+        public void run() {
+            try {
+                ServerSocket server = new ServerSocket(port, 50, addr);
+                System.out.println("SERVER socket created. Waiting for connection");
+                Socket socket = server.accept();
+                System.out.println("SERVER accepted connection. Wating 1 sec...");
+                OutputStream out = socket.getOutputStream();
+                Thread.sleep(1000);
+                System.out.println("Closing connection");
+                socket.shutdownOutput();
+//                serverLog("Sending 1");
+//                out.write(1);
+//                Thread.sleep(1000);
+//                serverLog("Sending 2");
+//                out.write(2);
+//                Thread.sleep(1000);
+//                serverLog("Sending 3");
+//                out.write(3);
+//                serverLog("Closing output stream...");
+//                socket.shutdownOutput();
+//                Thread.sleep(2000);
+//                serverLog("Closing socket and server socket");
+                socket.close();
+                server.close();
+//                serverLog("Server accept process stopped");
+            } catch (Exception e) {
+                System.out.println("Exception in SERVER socket: "+e.getMessage());
+                e.printStackTrace(System.out);
+                
+            }
+        }
+    }
+    
 }

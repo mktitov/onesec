@@ -1,13 +1,15 @@
 package org.onesec.raven.sms.queue;
 
+import java.util.Deque;
 import org.onesec.raven.sms.MessageUnit;
 import org.onesec.raven.sms.MessageUnitListener;
 import org.onesec.raven.sms.MessageUnitStatus;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Map;
-import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import org.onesec.raven.sms.SmsConfig;
@@ -54,7 +56,7 @@ public class OutQueue implements MessageUnitListener, ShortMessageListener {
     private final Map<Integer, MessageUnit> delivered = new ConcurrentHashMap<Integer, MessageUnit>();
     private final ConcurrentHashMap<String, Long> blockedNums = new ConcurrentHashMap<String, Long>();
 //    private final LinkedBlockingQueue<MessageUnit> queue = new LinkedBlockingQueue<MessageUnit>();
-    private final Queue<MessageUnit> queue = new ConcurrentLinkedQueue<MessageUnit>();
+    private final Deque<MessageUnit> queue = new ConcurrentLinkedDeque<MessageUnit>();
     private final AtomicInteger mesCount = new AtomicInteger(0);
 //    private final AtomicInteger submittedCount = new AtomicInteger(0);
     private final LoggerHelper logger;
@@ -72,6 +74,7 @@ public class OutQueue implements MessageUnitListener, ShortMessageListener {
     private final AtomicLong successMessages = new AtomicLong();
     private final AtomicLong unsuccessMessages = new AtomicLong();
     private final AtomicLong sentTime = new AtomicLong();
+    private final AtomicBoolean suspended = new AtomicBoolean();
 
     public OutQueue(SmsConfig config, LoggerHelper logger) {
         this.config = config;
@@ -81,6 +84,18 @@ public class OutQueue implements MessageUnitListener, ShortMessageListener {
     public void clear() {
         queue.clear();
         submitted.clear();
+    }
+    
+    public void suspend() {
+        suspended.set(true);
+        if (logger.isDebugEnabled())
+            logger.debug("Queue suspended");
+    }
+    
+    public void unsuspend() {
+        suspended.set(false);
+        if (logger.isDebugEnabled())
+            logger.debug("Queue unsuspended");
     }
 
     //public static MessageUnit[] noack
@@ -158,9 +173,29 @@ public class OutQueue implements MessageUnitListener, ShortMessageListener {
     public MessageUnit getMessageUnit(int sequenceNumber) {
         return submitted.get(sequenceNumber);
     }
+    
+    public void queueFullOn(int sequenceNumber) {
+        MessageUnit unit = getMessageUnit(sequenceNumber);
+        if (unit!=null) {
+            //moving all message units to the end of queue
+            LinkedList<MessageUnit> messageUnits = new LinkedList<>();
+            for (Iterator<MessageUnit> it=queue.iterator(); it.hasNext();) {
+                final MessageUnit mesUnit = it.next();
+                if (mesUnit.getMessage()==unit.getMessage()) {
+                    messageUnits.add(mesUnit);
+                    it.remove();
+                }
+            }
+//            for (MessageUnit mesUnit: messageUnits)
+//                queue.add(mesUnit);
+            queue.addAll(messageUnits);
+            if (logger.isDebugEnabled())
+                logger.debug("Message moved to the end of the queue: "+unit.getMessage());
+        }
+    }
 
     public MessageUnit getNext() {
-        if (checkSubmitted()) 
+        if (!suspended.get() && checkSubmitted()) 
             for (Iterator<MessageUnit> it=queue.iterator(); it.hasNext();) {
                 MessageUnit unit = it.next();
                 if (isDirectionAvailable(unit.getDst()) && unit.checkStatus()==READY)
@@ -281,6 +316,7 @@ public class OutQueue implements MessageUnitListener, ShortMessageListener {
                 submittedInPeriod.incrementAndGet();
                 break;
             case DELAYED: blockDirection(unit.getDst(), unit.getXTime()); break; //block direction
+//            case TRY_WHEN_READY: moveMessageToEndOfTheQueue(); break;
             case CONFIRMED: 
                 confirmedUnits.incrementAndGet(); 
                 confirmTime.addAndGet(unit.getConfirmTime());

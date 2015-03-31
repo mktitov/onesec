@@ -16,6 +16,10 @@
 package org.onesec.raven.sms.queue;
 
 import java.util.concurrent.TimeUnit;
+import mockit.Expectations;
+import mockit.Mocked;
+import mockit.Verifications;
+import mockit.integration.junit4.JMockit;
 import org.easymock.IMocksControl;
 import org.junit.After;
 import org.junit.Assert;
@@ -29,11 +33,13 @@ import org.raven.tree.impl.LoggerHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static org.easymock.EasyMock.*;
+import org.junit.runner.RunWith;
 import org.onesec.raven.sms.MessageUnitStatus;
 /**
  *
  * @author Mikhail Titov
  */
+@RunWith(JMockit.class)
 public class OutQueueTest extends Assert {
     private final static Logger logger = LoggerFactory.getLogger(OutQueueTest.class);
     private static LoggerHelper loggerHelper = new LoggerHelper(LogLevel.TRACE, "SMS. ", null, logger);
@@ -89,6 +95,55 @@ public class OutQueueTest extends Assert {
         assertEquals(0, queue.howManyUnconfirmed());
         assertNull(queue.getNext());
         assertTrue(queue.isEmpty());
+    }
+    
+    @Test
+    public void queueFullOnTest(
+            @Mocked final ShortTextMessage mess1,
+            @Mocked final ShortTextMessage mess2,
+            @Mocked final MessageUnit unit1_1,
+            @Mocked final MessageUnit unit1_2,
+            @Mocked final MessageUnit unit2_1,
+            @Mocked final SmsConfig config
+    ) throws Exception {
+        mocks = null;
+        final OutQueue queue = new OutQueue(config, loggerHelper);
+        new Expectations() {{
+            config.getMaxUnconfirmed(); result = 1;
+            config.getMaxMessagesInQueue(); result = 10;
+            mess1.getUnits(); result = new MessageUnit[]{unit1_1, unit1_2};
+            mess2.getUnits(); result = new MessageUnit[]{unit2_1};
+//            unit1_1.toString(); result = "unit1_1";
+            unit1_1.addListener((OutQueue)any); result = unit1_1; times = 1;
+            unit1_2.addListener((OutQueue)any); result = unit1_2; times = 1;
+            unit2_1.addListener((OutQueue)any); result = unit2_1; times = 1;
+            unit1_1.checkStatus(); returns(MessageUnitStatus.READY, MessageUnitStatus.READY, MessageUnitStatus.CONFIRMED);
+            unit1_2.checkStatus(); result = MessageUnitStatus.READY;
+            unit2_1.checkStatus(); returns(MessageUnitStatus.READY, MessageUnitStatus.CONFIRMED);
+            unit1_1.getSequenceNumber(); result = 1;
+            unit1_2.getSequenceNumber(); result = 2;
+            unit2_1.getSequenceNumber(); result = 3;
+            unit1_1.getMessage(); result = mess1;
+            unit1_2.getMessage(); result = mess1;
+            unit2_1.getMessage(); result = mess2;
+            unit1_1.getDst(); result = "123";
+            unit1_2.getDst(); result = "123";
+            unit2_1.getDst(); result = "321";
+            
+        }};
+
+        queue.addMessage(mess1);
+        queue.addMessage(mess2);
+        assertEquals(1, queue.getNext().getSequenceNumber());
+        queue.statusChanged(unit1_1, MessageUnitStatus.READY, MessageUnitStatus.SUBMITTED);
+        queue.queueFullOn(1);
+        queue.statusChanged(unit1_1, MessageUnitStatus.SUBMITTED, MessageUnitStatus.TRY_WHEN_READY);
+        assertEquals(3, queue.getNext().getSequenceNumber());
+        assertEquals(1, queue.getNext().getSequenceNumber());
+        assertEquals(2, queue.getNext().getSequenceNumber());
+        new Verifications(){{
+            
+        }};
     }
     
     @Test

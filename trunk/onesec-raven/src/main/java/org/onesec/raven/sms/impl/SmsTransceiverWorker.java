@@ -172,6 +172,7 @@ public class SmsTransceiverWorker implements ShortMessageListener {
         if (!stopped.get() && !isProcessorSuspended() && running.compareAndSet(false, true)) {
             stopMessageProcessor();
             messageProcessor.set(new MessageProcessor());
+            queue.unsuspend();
             if (!executor.executeQuietly(messageProcessor.get()))
                 running.set(false);
         }
@@ -199,8 +200,10 @@ public class SmsTransceiverWorker implements ShortMessageListener {
     
     private void stopMessageProcessor() {
         MessageProcessor _processor = messageProcessor.getAndSet(null);
-        if (_processor!=null)
+        if (_processor!=null) {
+            queue.suspend();
             _processor.stop();
+        }
     }
     
     public void messageHandled(ShortTextMessage msg, boolean success, SmsTransceiverNode.RecordHolder origMessage) {
@@ -414,24 +417,31 @@ public class SmsTransceiverWorker implements ShortMessageListener {
                     case Data.ESME_RTHROTTLED:
                         if (logger.isWarnEnabled())
                             logger.warn("Received THROTTLED event from SMSC");
-                        if (config.getMesThrottledDelay()>0) {
-                            unit = queue.getMessageUnit(sq);
-                            if (unit!=null) 
-                                unit.delay(config.getMesThrottledDelay() * (1 + factorTH * unit.getAttempts()));
-                        }
                         if (config.getThrottledDelay() > 0) 
                             restartMessageProcessor(config.getThrottledDelay());
+                        unit = queue.getMessageUnit(sq);
+                        if (unit!=null) {
+//                            final long messDelay = Math.max(config.getMesThrottledDelay(), config.getThrottledDelay());
+                            if (config.getMesThrottledDelay()>0) 
+                                unit.delay(config.getMesThrottledDelay() * (1 + factorTH * unit.getAttempts()));
+                            else
+                                unit.tryWhenReady();
+                        }
                         break;
                     case Data.ESME_RMSGQFUL:
                         if (logger.isWarnEnabled())
                             logger.warn("Received QUEUE_FULL event from SMSC");
-                        if (config.getMesQueueFullDelay() > 0) {
-                            unit = queue.getMessageUnit(sq);
-                            if (unit!=null) 
-                                unit.delay(config.getMesQueueFullDelay() * (1 + factorQF * unit.getAttempts()));
-                        }
                         if (config.getQueueFullDelay() > 0) 
                             restartMessageProcessor(config.getQueueFullDelay());
+                        queue.queueFullOn(sq);
+                        unit = queue.getMessageUnit(sq);
+                        if (unit!=null) {
+//                            final long messDelay = Math.max(config.getMesQueueFullDelay(), config.getQueueFullDelay());
+                            if (config.getMesQueueFullDelay() > 0) 
+                                unit.delay(config.getMesQueueFullDelay() * (1 + factorQF * unit.getAttempts()));
+                            else
+                                unit.tryWhenReady();                            
+                        }
                         break;
                     default:
                         unit = queue.getMessageUnit(sq);
