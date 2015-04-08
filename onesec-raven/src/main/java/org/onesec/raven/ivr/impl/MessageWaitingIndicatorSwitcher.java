@@ -23,11 +23,16 @@ import javax.telephony.AddressObserver;
 import javax.telephony.events.AddrEv;
 import org.onesec.core.services.ProviderRegistry;
 import org.raven.annotations.NodeClass;
+import org.raven.annotations.Parameter;
 import org.raven.ds.DataContext;
 import org.raven.ds.DataSource;
 import org.raven.ds.impl.AbstractSafeDataPipe;
 import org.raven.expr.BindingSupport;
+import org.raven.sched.ExecutorService;
+import org.raven.sched.impl.AbstractTask;
+import org.raven.sched.impl.SystemSchedulerValueHandlerFactory;
 import org.raven.tree.impl.LoggerHelper;
+import org.weda.annotations.constraints.NotNull;
 import org.weda.internal.annotations.Service;
 
 /**
@@ -41,6 +46,28 @@ public class MessageWaitingIndicatorSwitcher extends AbstractSafeDataPipe {
     
     @Service
     protected static ProviderRegistry providerRegistry;
+    
+    @NotNull @Parameter(valueHandlerType = SystemSchedulerValueHandlerFactory.TYPE)
+    private ExecutorService executor;
+    
+    @NotNull @Parameter(defaultValue = "500")
+    private Long switchTimeout;
+
+    public ExecutorService getExecutor() {
+        return executor;
+    }
+
+    public void setExecutor(ExecutorService executor) {
+        this.executor = executor;
+    }
+
+    public Long getSwitchTimeout() {
+        return switchTimeout;
+    }
+
+    public void setSwitchTimeout(Long switchTimeout) {
+        this.switchTimeout = switchTimeout;
+    }
 
     @Override
     protected void doSetData(DataSource dataSource, Object data, DataContext context) throws Exception {
@@ -54,6 +81,7 @@ public class MessageWaitingIndicatorSwitcher extends AbstractSafeDataPipe {
                 throw new Exception("Field 'switch' can not be null");
             Address addr = providerRegistry.getProviderController(address).getProvider().getAddress(address);
             Switcher switcher = new Switcher((CiscoAddress)addr, switchStatus);
+            executor.executeQuietly(switchTimeout, switcher);
             switcher.switchIndicator();
         }
         sendDataToConsumers(data, context);
@@ -63,13 +91,14 @@ public class MessageWaitingIndicatorSwitcher extends AbstractSafeDataPipe {
     protected void doAddBindingsForExpression(DataSource dataSource, Object data, DataContext context, BindingSupport bindingSupport) {
     }
     
-    private class Switcher implements AddressObserver {
+    private class Switcher extends AbstractTask implements AddressObserver {
         private final CiscoAddress address;
         private final boolean indicator;
         private final LoggerHelper logger;
         private volatile boolean finished = false;
 
         public Switcher(CiscoAddress address, boolean indicator) {
+            super(MessageWaitingIndicatorSwitcher.this, "MWI switch timeout for "+address);
             this.address = address;
             this.indicator = indicator;
             this.logger = new LoggerHelper(MessageWaitingIndicatorSwitcher.this, 
@@ -107,9 +136,19 @@ public class MessageWaitingIndicatorSwitcher extends AbstractSafeDataPipe {
             } finally {
                 address.removeObserver(Switcher.this);
                 finished = true;
+                cancel();
             }
         }
-        
+
+        @Override
+        public void doRun() throws Exception {
+            if (!finished) {
+                if (logger.isWarnEnabled())
+                    logger.warn("Timeout waiting for switch MWI on "+address+". Canceling");
+                address.removeObserver(this);
+            }
+        }
+
         private String eventsToString(Object[] events) {
             StringBuilder buf = new StringBuilder();
             for (int i=0; i<events.length; ++i)

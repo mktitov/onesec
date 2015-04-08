@@ -31,6 +31,8 @@ import org.raven.log.LogLevel;
 import org.raven.test.PushDataSource;
 import static org.raven.RavenUtils.*;
 import static org.onesec.raven.ivr.impl.MessageWaitingIndicatorSwitcher.*;
+import org.raven.sched.ExecutorService;
+import org.raven.sched.impl.ExecutorServiceNode;
 /**
  *
  * @author Mikhail Titov
@@ -42,9 +44,15 @@ public class MessageWaitingIndicatorSwitcherTest extends OnesecRavenTestCase {
     private StateListenersCoordinator stateListenersCoordinator;
     private MessageWaitingIndicatorSwitcher switcher;
     private PushDataSource ds;
+    private ExecutorService executor;
 
     @Before
     public void prepare() {
+        executor = new ExecutorServiceNode();
+        executor.setName("executor");
+        testsNode.addAndSaveChildren(executor);
+        assertTrue(executor.start());
+        
         CCMCallOperatorNode callOperator = new CCMCallOperatorNode();
         callOperator.setName("call operator");
         testsNode.addAndSaveChildren(callOperator);
@@ -70,6 +78,7 @@ public class MessageWaitingIndicatorSwitcherTest extends OnesecRavenTestCase {
         testsNode.addAndSaveChildren(switcher);
         switcher.setDataSource(ds);
         switcher.setLogLevel(LogLevel.TRACE);
+        switcher.setExecutor(executor);
         assertTrue(switcher.start());
         
         providerRegistry = registry.getService(ProviderRegistry.class);
@@ -81,13 +90,15 @@ public class MessageWaitingIndicatorSwitcherTest extends OnesecRavenTestCase {
     /*
      * В этом тесте message waiting indiciator должен загореться на телефоне TEST_NUMBER
      */
-//    @Test
+    @Test
     public void switchOn() throws Exception {
         waitForProvider();
+        switcher.setSwitchTimeout(10000l);
         ds.pushData(asMap(
                 pair(ADDRESS_FIELD, (Object)TEST_NUMBER), 
                 pair(INDICATOR_FIELD, (Object)true)));
         Thread.sleep(1000);
+        Thread.sleep(60000);
     }
     
     /*
