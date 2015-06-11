@@ -57,7 +57,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
     private final ExecutorService executorService;
     private final CodecManager codecManager;
     private final ConcatDataStream[] streams;
-    private final Queue<Buffer> buffers = new ConcurrentLinkedQueue<Buffer>();
+    private final Queue<Buffer> buffers = new ConcurrentLinkedQueue<>();
     private final AtomicReference<SourceProcessor> sourceProcessorRef = 
             new AtomicReference<SourceProcessor>();
     private final AtomicBoolean stopped = new AtomicBoolean(false);
