@@ -261,7 +261,7 @@
             <dependency>
                 <groupId>io.netty</groupId>
                 <artifactId>netty-all</artifactId> <!-- Use 'netty-all' for 4.0 or above -->
-                <version>4.0.13.Final</version>
+                <version>4.0.27.Final</version>
                 <scope>compile</scope>
             </dependency>
             
