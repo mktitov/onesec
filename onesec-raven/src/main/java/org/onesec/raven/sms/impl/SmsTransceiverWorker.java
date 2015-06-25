@@ -147,6 +147,8 @@ public class SmsTransceiverWorker implements ShortMessageListener {
                 return true;
             }
         } catch (Exception e) {
+            if (logger.isErrorEnabled())
+                logger.error(String.format("Error add message (%s) to OUTBOUND queue", origMessage.getRecord()), e);
             return false;
         }
     }        
