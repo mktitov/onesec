@@ -1,0 +1,496 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nodes>
+  <node name="Conference" class="org.raven.template.impl.TemplateNode">
+    <attribute name="logLevel">
+      <value><![CDATA[WARN]]></value>
+    </attribute>
+    <attribute name="executeAfter" valueHandler="Script">
+      <value></value>
+    </attribute>
+    <node name="Variables" class="org.raven.template.impl.TemplateVariablesNode">
+      <attribute name="recordingStoragePath" type="java.lang.String" required="true">
+        <description><![CDATA[Каталог в котором будут сохранятся записи конференций]]></description>
+      </attribute>
+      <attribute name="executor" type="org.raven.tree.Node" required="true" valueHandler="SystemScheduler">
+        <description><![CDATA[Исполнитель]]></description>
+      </attribute>
+      <attribute name="scheduler" type="org.raven.tree.Node" required="true" valueHandler="SystemScheduler">
+        <description><![CDATA[Шедулер]]></description>
+      </attribute>
+    </node>
+    <node name="Entry" class="org.raven.template.impl.TemplateEntry">
+      <node name="Conference" class="org.raven.tree.impl.ContainerNode">
+        <attribute name="logLevel">
+          <value><![CDATA[WARN]]></value>
+        </attribute>
+        <node name="Scenario" class="org.onesec.raven.ivr.impl.IvrConversationScenarioNode">
+          <attribute name="logLevel">
+            <value><![CDATA[WARN]]></value>
+          </attribute>
+          <attribute name="validDtmfs">
+            <value></value>
+          </attribute>
+          <node name="Action groups" class="org.onesec.raven.ivr.impl.ActionGroupsNode">
+            <attribute name="logLevel">
+              <value><![CDATA[WARN]]></value>
+            </attribute>
+          </node>
+          <node name="Play greeting" class="org.onesec.raven.ivr.actions.PlayAudioActionNode">
+            <attribute name="logLevel">
+              <value><![CDATA[WARN]]></value>
+            </attribute>
+            <attribute name="playAtRepetition">
+              <value><![CDATA[0]]></value>
+            </attribute>
+            <attribute name="audioFile" valueHandler="ResourceReference">
+              <value><![CDATA[/"Resources"/"IVR"/"sounds"/"conference"/"male"/"greeting"/]]></value>
+            </attribute>
+          </node>
+          <node name="get conference id and access code" class="org.onesec.raven.ivr.impl.IvrConversationScenarioPointNode">
+            <attribute name="logLevel">
+              <value><![CDATA[WARN]]></value>
+            </attribute>
+            <attribute name="validDtmfs">
+              <value><![CDATA[*1234567890]]></value>
+            </attribute>
+            <node name="get id" class="org.onesec.raven.ivr.actions.CollectDtmfsActionNode">
+              <attribute name="dtmfsBindingName">
+                <value><![CDATA[conferenceIdDtmfs]]></value>
+              </attribute>
+              <attribute name="bindingScope">
+                <value><![CDATA[CONVERSATION]]></value>
+              </attribute>
+              <attribute name="logLevel">
+                <value><![CDATA[WARN]]></value>
+              </attribute>
+              <attribute name="autoJoin">
+                <value><![CDATA[false]]></value>
+              </attribute>
+              <attribute name="autoStopDelayUnit">
+                <value><![CDATA[SECONDS]]></value>
+              </attribute>
+              <attribute name="maxDtmfsCount">
+                <value></value>
+              </attribute>
+              <attribute name="joinSeparator">
+                <value></value>
+              </attribute>
+              <attribute name="autoStopDelay">
+                <value></value>
+              </attribute>
+              <attribute name="postProcess" valueHandler="Script">
+                <value></value>
+              </attribute>
+              <attribute name="stopDtmf">
+                <value><![CDATA[*]]></value>
+              </attribute>
+              <attribute name="usePostProcess">
+                <value><![CDATA[false]]></value>
+              </attribute>
+              <node name="enter access code" class="org.onesec.raven.ivr.impl.IvrConversationScenarioPointNode">
+                <attribute name="logLevel">
+                  <value><![CDATA[WARN]]></value>
+                </attribute>
+                <attribute name="validDtmfs">
+                  <value></value>
+                </attribute>
+                <node name="get access code" class="org.onesec.raven.ivr.actions.CollectDtmfsActionNode">
+                  <attribute name="dtmfsBindingName">
+                    <value><![CDATA[conferenceAccessCodeDtmfs]]></value>
+                  </attribute>
+                  <attribute name="bindingScope">
+                    <value><![CDATA[CONVERSATION]]></value>
+                  </attribute>
+                  <attribute name="logLevel">
+                    <value><![CDATA[WARN]]></value>
+                  </attribute>
+                  <attribute name="autoJoin">
+                    <value><![CDATA[false]]></value>
+                  </attribute>
+                  <attribute name="autoStopDelayUnit">
+                    <value><![CDATA[SECONDS]]></value>
+                  </attribute>
+                  <attribute name="maxDtmfsCount">
+                    <value></value>
+                  </attribute>
+                  <attribute name="joinSeparator">
+                    <value></value>
+                  </attribute>
+                  <attribute name="autoStopDelay">
+                    <value></value>
+                  </attribute>
+                  <attribute name="postProcess" valueHandler="Script">
+                    <value></value>
+                  </attribute>
+                  <attribute name="stopDtmf">
+                    <value><![CDATA[*]]></value>
+                  </attribute>
+                  <attribute name="usePostProcess">
+                    <value><![CDATA[false]]></value>
+                  </attribute>
+                  <node name="set id and access code" class="org.onesec.raven.ivr.actions.ExecuteExpressionActionNode">
+                    <attribute name="logLevel">
+                      <value><![CDATA[WARN]]></value>
+                    </attribute>
+                    <attribute name="expression" valueHandler="Script">
+                      <value><![CDATA[conversationState.bindings.with{
+  conferenceId = conferenceIdDtmfs.join()
+  conferenceAccessCode = conferenceAccessCodeDtmfs.join()
+  conferenceAccessCodeDtmfs.clear()
+  conferenceIdDtmfs.clear()
+}]]></value>
+                    </attribute>
+                  </node>
+                  <node name="goto join to conference" class="org.raven.conv.impl.GotoNode">
+                    <attribute name="logLevel">
+                      <value><![CDATA[WARN]]></value>
+                    </attribute>
+                    <attribute name="conversationPoint" valueHandler="NodeReference">
+                      <value><![CDATA[../../../../../join to conference]]></value>
+                    </attribute>
+                  </node>
+                  <node name="Error actions" class="org.onesec.raven.ivr.actions.CollectDtmfsErrorHandler">
+                    <attribute name="logLevel">
+                      <value><![CDATA[WARN]]></value>
+                    </attribute>
+                  </node>
+                </node>
+                <node name="play Enter access code" class="org.onesec.raven.ivr.actions.PlayAudioActionNode">
+                  <attribute name="logLevel">
+                    <value><![CDATA[WARN]]></value>
+                  </attribute>
+                  <attribute name="playAtRepetition">
+                    <value><![CDATA[0]]></value>
+                  </attribute>
+                  <attribute name="audioFile" valueHandler="ResourceReference">
+                    <value><![CDATA[/"Resources"/"IVR"/"sounds"/"conference"/"male"/"enter_access_code"/]]></value>
+                  </attribute>
+                </node>
+                <node name="pause 10 sec" class="org.onesec.raven.ivr.actions.PauseActionNode">
+                  <attribute name="logLevel">
+                    <value><![CDATA[WARN]]></value>
+                  </attribute>
+                  <attribute name="interval">
+                    <value><![CDATA[10000]]></value>
+                  </attribute>
+                </node>
+                <node name="play Enter access code 2" class="org.onesec.raven.ivr.actions.PlayAudioActionNode">
+                  <attribute name="logLevel">
+                    <value><![CDATA[WARN]]></value>
+                  </attribute>
+                  <attribute name="playAtRepetition">
+                    <value><![CDATA[0]]></value>
+                  </attribute>
+                  <attribute name="audioFile" valueHandler="ResourceReference">
+                    <value><![CDATA[/"Resources"/"IVR"/"sounds"/"conference"/"male"/"enter_access_code"/]]></value>
+                  </attribute>
+                </node>
+                <node name="pause 5 sec" class="org.onesec.raven.ivr.actions.PauseActionNode">
+                  <attribute name="logLevel">
+                    <value><![CDATA[WARN]]></value>
+                  </attribute>
+                  <attribute name="interval">
+                    <value><![CDATA[50000]]></value>
+                  </attribute>
+                </node>
+                <node name="stop" class="org.onesec.raven.ivr.actions.StopConversationActionNode">
+                  <attribute name="logLevel">
+                    <value><![CDATA[WARN]]></value>
+                  </attribute>
+                </node>
+              </node>
+              <node name="Error actions" class="org.onesec.raven.ivr.actions.CollectDtmfsErrorHandler">
+                <attribute name="logLevel">
+                  <value><![CDATA[WARN]]></value>
+                </attribute>
+              </node>
+            </node>
+            <node name="play Enter conference id" class="org.onesec.raven.ivr.actions.PlayAudioActionNode">
+              <attribute name="logLevel">
+                <value><![CDATA[WARN]]></value>
+              </attribute>
+              <attribute name="playAtRepetition">
+                <value><![CDATA[0]]></value>
+              </attribute>
+              <attribute name="audioFile" valueHandler="ResourceReference">
+                <value><![CDATA[/"Resources"/"IVR"/"sounds"/"conference"/"male"/"enter_id"/]]></value>
+              </attribute>
+            </node>
+            <node name="pause 10 sec" class="org.onesec.raven.ivr.actions.PauseActionNode">
+              <attribute name="logLevel">
+                <value><![CDATA[WARN]]></value>
+              </attribute>
+              <attribute name="interval">
+                <value><![CDATA[10000]]></value>
+              </attribute>
+            </node>
+            <node name="play Enter conference 2" class="org.onesec.raven.ivr.actions.PlayAudioActionNode">
+              <attribute name="logLevel">
+                <value><![CDATA[WARN]]></value>
+              </attribute>
+              <attribute name="playAtRepetition">
+                <value><![CDATA[0]]></value>
+              </attribute>
+              <attribute name="audioFile" valueHandler="ResourceReference">
+                <value><![CDATA[/"Resources"/"IVR"/"sounds"/"conference"/"male"/"enter_id"/]]></value>
+              </attribute>
+            </node>
+            <node name="pause 5 sec" class="org.onesec.raven.ivr.actions.PauseActionNode">
+              <attribute name="logLevel">
+                <value><![CDATA[WARN]]></value>
+              </attribute>
+              <attribute name="interval">
+                <value><![CDATA[5000]]></value>
+              </attribute>
+            </node>
+            <node name="stop" class="org.onesec.raven.ivr.actions.StopConversationActionNode">
+              <attribute name="logLevel">
+                <value><![CDATA[WARN]]></value>
+              </attribute>
+            </node>
+          </node>
+          <node name="join to conference" class="org.onesec.raven.ivr.impl.IvrConversationScenarioPointNode">
+            <attribute name="logLevel">
+              <value><![CDATA[WARN]]></value>
+            </attribute>
+            <attribute name="validDtmfs">
+              <value><![CDATA[12]]></value>
+            </attribute>
+            <node name="join" class="org.onesec.raven.ivr.conference.actions.JoinToConferenceActionNode">
+              <attribute name="logLevel">
+                <value><![CDATA[WARN]]></value>
+              </attribute>
+              <attribute name="conferenceId" valueHandler="Script">
+                <value><![CDATA[conferenceId]]></value>
+              </attribute>
+              <attribute name="autoConnect">
+                <value><![CDATA[false]]></value>
+              </attribute>
+              <attribute name="conferenceManager" valueHandler="NodeReference">
+                <value><![CDATA[../../../Conference manager]]></value>
+              </attribute>
+              <attribute name="autoUnmute">
+                <value><![CDATA[true]]></value>
+              </attribute>
+              <attribute name="accessCode" valueHandler="Script">
+                <value><![CDATA[conferenceAccessCode]]></value>
+              </attribute>
+            </node>
+            <node name="handle conference events" class="org.raven.tree.impl.GroupNode">
+              <attribute name="logLevel">
+                <value><![CDATA[WARN]]></value>
+              </attribute>
+              <node name="on joined" class="org.onesec.raven.ivr.conference.actions.ConferenceEventHandlerNode">
+                <attribute name="logLevel">
+                  <value><![CDATA[WARN]]></value>
+                </attribute>
+                <attribute name="eventType">
+                  <value><![CDATA[JOINED]]></value>
+                </attribute>
+                <node name="play You are connected" class="org.onesec.raven.ivr.actions.PlayAudioActionNode">
+                  <attribute name="logLevel">
+                    <value><![CDATA[WARN]]></value>
+                  </attribute>
+                  <attribute name="playAtRepetition">
+                    <value></value>
+                  </attribute>
+                  <attribute name="audioFile" valueHandler="ResourceReference">
+                    <value><![CDATA[/"Resources"/"IVR"/"sounds"/"conference"/"male"/"connected_to_conference"/]]></value>
+                  </attribute>
+                </node>
+                <node name="connect" class="org.onesec.raven.ivr.conference.actions.ConnectToConferenceActionNode">
+                  <attribute name="logLevel">
+                    <value><![CDATA[WARN]]></value>
+                  </attribute>
+                </node>
+              </node>
+              <node name="on muted" class="org.onesec.raven.ivr.conference.actions.ConferenceEventHandlerNode">
+                <attribute name="logLevel">
+                  <value><![CDATA[WARN]]></value>
+                </attribute>
+                <attribute name="eventType">
+                  <value><![CDATA[MUTED]]></value>
+                </attribute>
+                <node name="if dtmf==2" class="org.onesec.raven.ivr.actions.IfDtmfActionNode">
+                  <attribute name="logLevel">
+                    <value><![CDATA[WARN]]></value>
+                  </attribute>
+                  <attribute name="dtmf">
+                    <value><![CDATA[2]]></value>
+                  </attribute>
+                  <node name="unmute" class="org.onesec.raven.ivr.conference.actions.UnMuteConferenceParticipantActionNode">
+                    <attribute name="logLevel">
+                      <value><![CDATA[WARN]]></value>
+                    </attribute>
+                  </node>
+                </node>
+              </node>
+              <node name="on unmuted" class="org.onesec.raven.ivr.conference.actions.ConferenceEventHandlerNode">
+                <attribute name="logLevel">
+                  <value><![CDATA[WARN]]></value>
+                </attribute>
+                <attribute name="eventType">
+                  <value><![CDATA[UNMUTED]]></value>
+                </attribute>
+                <node name="if dtmf==1" class="org.onesec.raven.ivr.actions.IfDtmfActionNode">
+                  <attribute name="logLevel">
+                    <value><![CDATA[WARN]]></value>
+                  </attribute>
+                  <attribute name="dtmf">
+                    <value><![CDATA[1]]></value>
+                  </attribute>
+                  <node name="mute" class="org.onesec.raven.ivr.conference.actions.MuteConferenceParticipantActionNode">
+                    <attribute name="logLevel">
+                      <value><![CDATA[WARN]]></value>
+                    </attribute>
+                  </node>
+                </node>
+              </node>
+              <node name="on stopped" class="org.onesec.raven.ivr.conference.actions.ConferenceEventHandlerNode">
+                <attribute name="logLevel">
+                  <value><![CDATA[WARN]]></value>
+                </attribute>
+                <attribute name="eventType">
+                  <value><![CDATA[STOPPED]]></value>
+                </attribute>
+                <node name="stop" class="org.onesec.raven.ivr.actions.StopConversationActionNode">
+                  <attribute name="logLevel">
+                    <value><![CDATA[WARN]]></value>
+                  </attribute>
+                </node>
+              </node>
+              <node name="on invalid auth" class="org.onesec.raven.ivr.conference.actions.ConferenceEventHandlerNode">
+                <attribute name="logLevel">
+                  <value><![CDATA[WARN]]></value>
+                </attribute>
+                <attribute name="eventType">
+                  <value><![CDATA[REJECTED_DUE_INVALID_ID]]></value>
+                </attribute>
+                <node name="play Invalid ID or access code" class="org.onesec.raven.ivr.actions.PlayAudioActionNode">
+                  <attribute name="logLevel">
+                    <value><![CDATA[WARN]]></value>
+                  </attribute>
+                  <attribute name="playAtRepetition">
+                    <value></value>
+                  </attribute>
+                  <attribute name="audioFile" valueHandler="ResourceReference">
+                    <value><![CDATA[/"Resources"/"IVR"/"sounds"/"conference"/"male"/"invalid_auth"/]]></value>
+                  </attribute>
+                </node>
+                <node name="goto get id and access code" class="org.raven.conv.impl.GotoNode">
+                  <attribute name="logLevel">
+                    <value><![CDATA[WARN]]></value>
+                  </attribute>
+                  <attribute name="conversationPoint" valueHandler="NodeReference">
+                    <value><![CDATA[../../../../"get conference id and access code"/]]></value>
+                  </attribute>
+                </node>
+              </node>
+              <node name="on too many participants" class="org.onesec.raven.ivr.conference.actions.ConferenceEventHandlerNode">
+                <attribute name="logLevel">
+                  <value><![CDATA[WARN]]></value>
+                </attribute>
+                <attribute name="eventType">
+                  <value><![CDATA[REJECTED_DUE_TOO_MANY_PARTICIPANTS]]></value>
+                </attribute>
+                <node name="play Too many participants" class="org.onesec.raven.ivr.actions.PlayAudioActionNode">
+                  <attribute name="logLevel">
+                    <value><![CDATA[WARN]]></value>
+                  </attribute>
+                  <attribute name="playAtRepetition">
+                    <value></value>
+                  </attribute>
+                  <attribute name="audioFile" valueHandler="ResourceReference">
+                    <value><![CDATA[/"Resources"/"IVR"/"sounds"/"conference"/"male"/"too_many_participants"/]]></value>
+                  </attribute>
+                </node>
+                <node name="stop" class="org.onesec.raven.ivr.actions.StopConversationActionNode">
+                  <attribute name="logLevel">
+                    <value><![CDATA[WARN]]></value>
+                  </attribute>
+                </node>
+              </node>
+            </node>
+            <node name="pause 60 sec" class="org.onesec.raven.ivr.actions.PauseActionNode">
+              <attribute name="logLevel">
+                <value><![CDATA[WARN]]></value>
+              </attribute>
+              <attribute name="interval">
+                <value><![CDATA[60000]]></value>
+              </attribute>
+            </node>
+            <node name="repeat" class="org.raven.conv.impl.GotoNode">
+              <attribute name="logLevel">
+                <value><![CDATA[WARN]]></value>
+              </attribute>
+              <attribute name="conversationPoint" valueHandler="NodeReference">
+                <value><![CDATA[../]]></value>
+              </attribute>
+            </node>
+          </node>
+        </node>
+        <node name="Conference manager" class="org.onesec.raven.ivr.conference.impl.ConferenceManagerNode">
+          <attribute name="logLevel">
+            <value><![CDATA[WARN]]></value>
+          </attribute>
+          <attribute name="recordingStoragePath" valueHandler="TemplateVariable">
+            <value><![CDATA[/"Templates"/"Conference"/"Variables"/@recordingStoragePath]]></value>
+          </attribute>
+          <attribute name="accessCodeLength">
+            <value><![CDATA[5]]></value>
+          </attribute>
+          <attribute name="noiseLevel">
+            <value><![CDATA[0]]></value>
+          </attribute>
+          <attribute name="maxPlanDays">
+            <value><![CDATA[14]]></value>
+          </attribute>
+          <attribute name="executor" valueHandler="TemplateVariable">
+            <value><![CDATA[/"Templates"/"Conference"/"Variables"/@executor]]></value>
+          </attribute>
+          <attribute name="maxGainCoef">
+            <value><![CDATA[3]]></value>
+          </attribute>
+          <attribute name="timeQuant">
+            <value><![CDATA[900]]></value>
+          </attribute>
+          <attribute name="archiveScheduler" valueHandler="TemplateVariable">
+            <value><![CDATA[/"Templates"/"Conference"/"Variables"/@scheduler]]></value>
+          </attribute>
+          <attribute name="schedule" type="java.lang.String" required="true" parent="archiveScheduler">
+            <description><![CDATA["Расписание по которому будет выполняться задание узла. Примеры: <br/>0 0 12 * * ? - Запуск задания в 12:00 каждый день, <br/>0 15 10 * * ? 2005 - Запуск задания в 12:00 каждый день в 2005 году, <br/>0 0/5 14 * * ? - Запуск задания начиная 14:00 через каждые 5 минут и заканчивая 14:55, <br/>0 0-5 14 * * ? - Запуск задания каждую минуту начиная с 14:00 и заканчивая 14:05. <br/>Более подробную информацию можно узнать <a href='http://www.quartz-scheduler.org/docs/api/1.8.1/org/quartz/CronTrigger.html'>здесь</a>"]]></description>
+            <value><![CDATA[30 * * * * ?]]></value>
+          </attribute>
+          <attribute name="conferenceStoppedAudio" valueHandler="ResourceReference">
+            <value><![CDATA[IVR/sounds/conference/male/stopped]]></value>
+          </attribute>
+          <attribute name="oneMinuteLeftAudio" valueHandler="ResourceReference">
+            <value><![CDATA[IVR/sounds/conference/male/stop_after_1min]]></value>
+          </attribute>
+          <attribute name="conferenceLifeTime">
+            <value><![CDATA[2]]></value>
+          </attribute>
+          <attribute name="minChannelsPerConference">
+            <value><![CDATA[2]]></value>
+          </attribute>
+          <attribute name="channelsCount">
+            <value><![CDATA[60]]></value>
+          </attribute>
+          <attribute name="maxConferenceDuration">
+            <value><![CDATA[60]]></value>
+          </attribute>
+          <node name="Archive" class="org.onesec.raven.ivr.conference.impl.ConferencesArchiveNode">
+            <attribute name="logLevel">
+              <value><![CDATA[WARN]]></value>
+            </attribute>
+          </node>
+          <node name="Planned" class="org.onesec.raven.ivr.conference.impl.PlannedConferencesNode">
+            <attribute name="logLevel">
+              <value><![CDATA[WARN]]></value>
+            </attribute>
+          </node>
+        </node>
+      </node>
+    </node>
+  </node>
+</nodes>

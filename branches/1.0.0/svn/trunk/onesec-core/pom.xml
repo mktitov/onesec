@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>org.onesec</groupId>
+    <artifactId>onesec-core</artifactId>
+    <packaging>jar</packaging>
+    <version>1.0-SNAPSHOT</version>
+    <name>onesec-core</name>
+    <url>http://onesec.sourceforge.org</url>
+    
+    <parent>
+        <groupId>org.onesec</groupId>
+        <artifactId>onesec-project</artifactId>
+        <version>1.0-SNAPSHOT</version>
+        <relativePath>../onesec-project</relativePath>
+    </parent>
+
+  <pluginRepositories>
+      <!--
+    <pluginRepository>
+      <id>tapestry.formos</id>
+      <url>http://tapestry.formos.com/maven-snapshot-repository/</url>
+    </pluginRepository>
+    -->
+    <!--
+    <pluginRepository>
+        <id>apache.snapshots</id>
+        <url>http://people.apache.org/repo/m2-snapshot-repository/</url>
+    </pluginRepository>
+    -->
+  </pluginRepositories>
+    
+    <dependencies>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.tapestry</groupId>
+            <artifactId>tapestry-ioc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>javax.telephony</groupId>
+            <artifactId>jtapi</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.cisco</groupId>
+            <artifactId>cisco-jtapi</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.testng</groupId>
+            <artifactId>testng</artifactId>
+            <classifier>jdk15</classifier>
+        </dependency>
+        <dependency>
+            <groupId>org.easymock</groupId>
+            <artifactId>easymock</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.4</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <redirectTestOutputToFile>false</redirectTestOutputToFile>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                  <archive>
+                    <manifestEntries>
+                      <Tapestry-Module-Classes>org.onesec.core.services.OnesecCoreModule</Tapestry-Module-Classes>
+                    </manifestEntries>
+                  </archive>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-source-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
+
