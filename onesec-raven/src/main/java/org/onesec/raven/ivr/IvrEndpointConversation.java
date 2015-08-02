@@ -101,6 +101,10 @@ public interface IvrEndpointConversation extends ObjectDescription
      */
     public IvrEndpointConversationState getState();
     /**
+     * Returns true if rtp streams were started and all logical connections established
+     */
+    public boolean isConnectionEstablished();
+    /**
      * Transfers current call to the address passed in the parameter.
      * @param address The destination telephone address string to where the Call is being
      *      transferred

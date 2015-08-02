@@ -89,6 +89,11 @@ public class TestEndpointConversationNode extends BaseNode implements IvrEndpoin
         return null;
     }
 
+    @Override
+    public boolean isConnectionEstablished() {
+        return false;
+    }
+
     public ExecutorService getExecutorService()
     {
         return executorService;

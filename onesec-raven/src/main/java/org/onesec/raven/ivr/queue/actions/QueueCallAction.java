@@ -28,7 +28,6 @@ import org.raven.BindingNames;
 import org.raven.conv.BindingScope;
 import org.raven.conv.ConversationScenarioState;
 import org.raven.ds.DataContext;
-import org.raven.log.LogLevel;
 
 /**
  *
@@ -100,24 +99,22 @@ public class QueueCallAction extends AsyncAction
         } else if (callStatus.isReadyToCommutate() || callStatus.isCommutated()) {
             if (callStatus.isReadyToCommutate()) {
                 if (playOperatorGreeting){
-                    if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
-                        conversation.getOwner().getLogger().debug(logMess("Playing operator greeting"));
+                    if (logger.isDebugEnabled())
+                        logger.debug("Playing operator greeting");
                     AudioFile greeting = callStatus.getOperatorGreeting();
                     if (greeting!=null)
                         IvrUtils.playAudioInAction(this, conversation, greeting);
                 }
-                if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
-                    conversation.getOwner().getLogger().debug(logMess(
-                            "Operator and abonent are ready to commutate. Commutating..."));
+                if (logger.isDebugEnabled())
+                    logger.debug("Operator and abonent are ready to commutate. Commutating...");
                 callStatus.replayToReadyToCommutate();
                 do {
                     TimeUnit.MILLISECONDS.sleep(10);
                 } while (!callStatus.isCommutated() && !hasCancelRequest() && !callStatus.isDisconnected());
                 if (hasCancelRequest()) return;
             }
-            if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
-                conversation.getOwner().getLogger().debug(logMess(
-                        "Abonent and operator were commutated. Waiting for disconnected event..."));
+            if (logger.isDebugEnabled())
+                logger.debug("Abonent and operator were commutated. Waiting for disconnected event...");
             state.disableDtmfProcessing();
             try {
                 do {
@@ -127,9 +124,8 @@ public class QueueCallAction extends AsyncAction
                 state.enableDtmfProcessing();
             }
             
-            if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
-                conversation.getOwner().getLogger().debug(logMess(
-                        "Commutation disconnected"));
+            if (logger.isDebugEnabled())
+                logger.debug("Commutation disconnected");
         }
     }
 

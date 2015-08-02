@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Set;
 import org.onesec.raven.ivr.IvrAction;
 import org.onesec.raven.ivr.IvrActionException;
+import org.onesec.raven.ivr.IvrActionExecutor;
 import org.onesec.raven.ivr.IvrActionStatus;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.actions.DtmfProcessPointAction;
@@ -37,9 +38,9 @@ import org.raven.tree.Node;
  *
  * @author Mikhail Titov
  */
-public class IvrActionsExecutor implements Task
+public class IvrActionsExecutorImpl implements Task, IvrActionExecutor
 {
-    public static final int CANCEL_TIMEOUT = 5000;
+//    public static final int CANCEL_TIMEOUT = 5000;
     private final IvrEndpointConversation conversation;
     private final ExecutorService executorService;
     private Collection<IvrAction> actions;
@@ -50,7 +51,7 @@ public class IvrActionsExecutor implements Task
     private Set<Character> defferedDtmfs;
     private List<Character> collectedDtmfs;
 
-    public IvrActionsExecutor(IvrEndpointConversation conversation, ExecutorService executorService)
+    public IvrActionsExecutorImpl(IvrEndpointConversation conversation, ExecutorService executorService)
     {
         this.conversation = conversation;
         this.executorService = executorService;
@@ -106,7 +107,7 @@ public class IvrActionsExecutor implements Task
     {
         try {
             for (IvrAction action: actions) {
-                action.setLogPrefix(logPrefix);
+//                action.setLogPrefix(logPrefix);
                 boolean executeAction = true;
                 try {
                     statusMessage = String.format("Executing action (%s)", action.getName());
@@ -127,7 +128,7 @@ public class IvrActionsExecutor implements Task
                                         IvrEndpointConversation.DTMFS_BINDING, dtmfs);
                         }
                     if (executeAction)
-                        action.execute(conversation);
+                        action.execute(conversation, null, null);
                     else {
                         statusMessage = String.format("Skipping execution of action (%s)", action.getName());
                         if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))

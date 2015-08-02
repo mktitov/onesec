@@ -18,6 +18,7 @@
 package org.onesec.raven.ivr.actions;
 
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.onesec.raven.ivr.ActionStopListener;
 import org.onesec.raven.ivr.IvrActionException;
 import org.onesec.raven.ivr.IvrActionStatus;
 import org.onesec.raven.ivr.IvrEndpointConversation;
@@ -25,7 +26,6 @@ import org.raven.sched.ExecutorServiceException;
 import org.raven.sched.Task;
 import org.raven.tree.Node;
 import org.raven.tree.impl.LoggerHelper;
-import org.slf4j.Logger;
 
 /**
  *
@@ -36,6 +36,7 @@ public abstract class AsyncAction extends AbstractAction implements Task
     protected IvrEndpointConversation conversation;
     protected LoggerHelper logger;
     private final AtomicBoolean cancelRequest;
+    private volatile ActionStopListener stopListener;
 
     public AsyncAction(String actionName)
     {
@@ -53,17 +54,15 @@ public abstract class AsyncAction extends AbstractAction implements Task
         return cancelRequest.get();
     }
 
-    public void execute(IvrEndpointConversation endpoint) throws IvrActionException
+    public void execute(IvrEndpointConversation endpoint, ActionStopListener stopListener, LoggerHelper logger) throws IvrActionException
     {
         this.conversation = endpoint;
-        logger = new LoggerHelper(conversation.getOwner(), logMess(""));
-        try
-        {
+        this.stopListener = stopListener;
+        this.logger = new LoggerHelper(logger, getName()+". ");
+        try {
             setStatus(IvrActionStatus.EXECUTING);
             endpoint.getExecutorService().execute(this);
-        }
-        catch (ExecutorServiceException ex)
-        {
+        } catch (ExecutorServiceException ex) {
             setStatus(IvrActionStatus.EXECUTED);
             throw new IvrActionException("Error executing async action", ex);
         }
@@ -92,6 +91,8 @@ public abstract class AsyncAction extends AbstractAction implements Task
             }
         } finally {
             setStatus(IvrActionStatus.EXECUTED);
+            if (stopListener!=null)
+                stopListener.actionExecuted(this);
         }
     }
 

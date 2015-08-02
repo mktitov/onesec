@@ -864,6 +864,10 @@ public class ConferenceNode extends BaseNode implements Conference {
         public void conversationStopped(IvrEndpointConversationStoppedEvent event) { 
             stop();
         }
+
+        @Override
+        public void connectionEstablished(IvrEndpointConversationEvent event) { }
+
         public void conversationStarted(IvrEndpointConversationEvent event) { }
         public void conversationTransfered(IvrEndpointConversationTransferedEvent event) { }
         public void incomingRtpStarted(IvrIncomingRtpStartedEvent event) { }

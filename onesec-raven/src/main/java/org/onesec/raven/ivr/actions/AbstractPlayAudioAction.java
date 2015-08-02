@@ -48,17 +48,15 @@ public abstract class AbstractPlayAudioAction extends AsyncAction implements Inp
         audioFile = getAudioFile(conversation);
         bindings = conversation.getConversationScenarioState().getBindings();
         if (audioFile==null){
-            if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
-                conversation.getOwner().getLogger().debug(logMess("Nothing to play"));
+            if (logger.isDebugEnabled())
+                logger.debug("Nothing to play");
             return;
         }
-        if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
-            conversation.getOwner().getLogger().debug(
-                    logMess("Playing audio from source (%s)", audioFile.getPath()));
+        if (logger.isDebugEnabled())
+            logger.debug("Playing audio from source ({})", audioFile.getPath());
         IvrUtils.playAudioInAction(this, conversation, this, audioFile);
-        if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
-            conversation.getOwner().getLogger().debug(logMess(
-                    "Audio source (%s) successfuly played ", audioFile.getPath()));
+        if (logger.isDebugEnabled())
+            logger.debug("Audio source ({}) successfuly played ", audioFile.getPath());
     }
 
     public boolean isFlowControlAction() {
@@ -79,9 +77,8 @@ public abstract class AbstractPlayAudioAction extends AsyncAction implements Inp
             }
         }
         catch (Exception ex) {
-            if (conversation.getOwner().isLogLevelEnabled(LogLevel.ERROR))
-                conversation.getOwner().getLogger().error(
-                    logMess("Error geting audio stream from audio file node (%s) ", audioFile.getPath())
+            if (logger.isErrorEnabled())
+                logger.error(String.format("Error geting audio stream from audio file node (%s) ", audioFile.getPath())
                     , ex);
             return null;
         }

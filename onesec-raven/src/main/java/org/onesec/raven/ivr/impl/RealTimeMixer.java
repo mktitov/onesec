@@ -35,6 +35,13 @@ public class RealTimeMixer extends AbstractRealTimeMixer {
                 executor, noiseLevel, maxGainCoef);
     }
 
+    public RealTimeMixer(CodecManager codecManager, Node owner, LoggerHelper logger, ExecutorService executor, 
+            int noiseLevel, double maxGainCoef) 
+    {
+        super(codecManager, owner, new LoggerHelper(logger, "Mixer. "), 
+                executor, noiseLevel, maxGainCoef);
+    }
+
     @Override
     protected void applyBufferToHandlers(MixerHandler firstHandler, int[] data, int len, int streamsCount, 
         double maxGainCoef, int bufferSize) 

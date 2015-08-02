@@ -17,7 +17,8 @@
 
 package org.onesec.raven.ivr;
 
-import org.onesec.raven.ivr.impl.IvrActionsExecutor;
+import org.onesec.raven.ivr.impl.IvrActionsExecutorImpl;
+import org.raven.tree.impl.LoggerHelper;
 
 /**
  *
@@ -30,7 +31,7 @@ public interface IvrAction
      */
     public String getName();
     /**
-     * If returns true then {@link IvrActionsExecutor actions executor} stops executing actions following
+     * If returns true then {@link IvrActionsExecutorImpl actions executor} stops executing actions following
      * this action
      */
     public boolean isFlowControlAction();
@@ -38,7 +39,7 @@ public interface IvrAction
      * Executes action for passed in the parameter endpoint
      * @throws IvrActionException
      */
-    public void execute(IvrEndpointConversation conversation) throws IvrActionException;
+    public void execute(IvrEndpointConversation conversation, ActionStopListener listener, LoggerHelper logger) throws Exception;
     /**
      * Returns the action status
      */
@@ -52,5 +53,6 @@ public interface IvrAction
      */
     public String getStatusMessage();
 
-    public void setLogPrefix(String prefix);
+//    public void setLogPrefix(String prefix);
+//    public void setLogger(LoggerHelper logger);
 }

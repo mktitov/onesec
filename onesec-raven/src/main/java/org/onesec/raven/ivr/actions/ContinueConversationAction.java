@@ -18,7 +18,6 @@ package org.onesec.raven.ivr.actions;
 
 import org.onesec.raven.ivr.IvrActionStatus;
 import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.raven.log.LogLevel;
 
 /**
  *
@@ -34,6 +33,7 @@ public class ContinueConversationAction extends AsyncAction {
         super(actionName);
     }
 
+    @Override
     public boolean isFlowControlAction() {
         return true;
     }
@@ -41,10 +41,10 @@ public class ContinueConversationAction extends AsyncAction {
     @Override
     protected void doExecute(IvrEndpointConversation conversation) throws Exception {
         conversation.getConversationScenarioState().switchToNextConversationPoint();
-        if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
-            conversation.getOwner().getLogger().debug(logMess(
-                    "Executing transition to the conversation point (%s)"
-                    , conversation.getConversationScenarioState().getConversationPoint().getPath()));
+        if (logger.isDebugEnabled())
+            logger.debug(
+                    "Executing transition to the conversation point ({})"
+                    , conversation.getConversationScenarioState().getConversationPoint().getPath());
         setStatus(IvrActionStatus.EXECUTED);
         conversation.continueConversation(IvrEndpointConversation.EMPTY_DTMF);
     }

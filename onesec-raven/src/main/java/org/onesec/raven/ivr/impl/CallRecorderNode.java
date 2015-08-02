@@ -21,6 +21,9 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.media.protocol.DataSource;
 import javax.media.protocol.FileTypeDescriptor;
 import javax.media.protocol.PushBufferDataSource;
@@ -109,6 +112,9 @@ public class CallRecorderNode extends BaseNode
     
     @Parameter(defaultValue="3")
     private Double maxGainCoef;
+    
+    @NotNull @Parameter(defaultValue="false")
+    private Boolean startRecordOnConnectionEstablished;
     
     @Message private static String callInfoMessage;
     @Message private static String recordStartTimeMessage;
@@ -199,17 +205,26 @@ public class CallRecorderNode extends BaseNode
                     , noiseLevel, maxGainCoef, context);
             if (isLogLevelEnabled(LogLevel.DEBUG))
                 getLogger().debug(logMess(bridge, "Recorder created. Recorording to the file (%s)", file));
-            String mess = "Recording conversation from bridge: "+bridge;
-            executor.execute(new AbstractTask(this, mess) {
-                @Override public void doRun() throws Exception {
-                    recorder.startRecording();
-                }
-            });
+            if (startRecordOnConnectionEstablished)
+                new RecorderStarter(recorder);
+            else
+                startRecorder(recorder);
             recorders.put(bridge, recorder);
         } catch (Exception e) {
             if (isLogLevelEnabled(LogLevel.ERROR))
                 getLogger().error(logMess(bridge, "Error creating recorder"), e);
         }
+    }
+    
+    private void startRecorder(final Recorder recorder) throws Exception {
+        String mess = "Recording conversation from bridge: "+recorder.bridge;
+        executor.execute(new AbstractTask(this, mess) {
+            @Override public void doRun() throws Exception {
+                if (isLogLevelEnabled(LogLevel.DEBUG))
+                    getLogger().debug(logMess(recorder.bridge, "Recorder Started.", recorder.file));
+                recorder.startRecording();
+            }
+        });
     }
 
     public void bridgeReactivated(IvrConversationsBridge bridge) {
@@ -380,6 +395,14 @@ public class CallRecorderNode extends BaseNode
         return logMess(null, mess, args);
     }
 
+    public Boolean getStartRecordOnConnectionEstablished() {
+        return startRecordOnConnectionEstablished;
+    }
+
+    public void setStartRecordOnConnectionEstablished(Boolean startRecordOnConnectionEstablished) {
+        this.startRecordOnConnectionEstablished = startRecordOnConnectionEstablished;
+    }
+
     public Double getMaxGainCoef() {
         return maxGainCoef;
     }
@@ -460,6 +483,41 @@ public class CallRecorderNode extends BaseNode
         this.filterExpression = filterExpression;
     }
     
+    private class RecorderStarter extends IvrEndpointConversationListenerAdapter {
+        private final Recorder recorder;
+        private final AtomicBoolean recorderStarted = new AtomicBoolean();
+
+        public RecorderStarter(Recorder recorder) {
+            this.recorder = recorder;
+            recorder.bridge.getConversation1().addConversationListener(this);
+            recorder.bridge.getConversation2().addConversationListener(this);
+        }
+
+        @Override public void listenerAdded(IvrEndpointConversationEvent event) {
+            checkAndStartRecorder();
+        }
+
+        @Override public void connectionEstablished(IvrEndpointConversationEvent event) { 
+            checkAndStartRecorder();
+        }
+        
+        private void checkAndStartRecorder() {
+            if (   recorder.bridge.getConversation1().isConnectionEstablished() 
+                && recorder.bridge.getConversation2().isConnectionEstablished()
+                && recorderStarted.compareAndSet(false, true)) 
+            {
+                try {
+                    recorder.bridge.getConversation1().removeConversationListener(this);
+                    recorder.bridge.getConversation2().removeConversationListener(this);                    
+                    startRecorder(recorder);
+                } catch (Exception e) {
+                    if (isLogLevelEnabled(LogLevel.ERROR))
+                        getLogger().error(logMess(recorder.bridge, "Error creating recorder"), e);
+                }
+            }
+        }
+    }
+    
     private class Recorder implements IncomingRtpStreamDataSourceListener, Comparable<Recorder> {
         
         private final IvrConversationsBridge bridge;
@@ -472,6 +530,7 @@ public class CallRecorderNode extends BaseNode
         private final LoggerHelper logger;
         
         private volatile boolean stopped = false;
+        private volatile boolean started = false;
         private volatile IncomingRtpStream inRtp1;
         private volatile IncomingRtpStream inRtp2;
 
@@ -493,11 +552,12 @@ public class CallRecorderNode extends BaseNode
             if (stopped)
                 return;
             try {
+                started = true;
                 inRtp1 = bridge.getConversation1().getIncomingRtpStream();
                 inRtp2 = bridge.getConversation2().getIncomingRtpStream();
                 inRtp1.addDataSourceListener(this, null);
                 inRtp2.addDataSourceListener(this, null);
-                fileWriter.start();
+                fileWriter.start();                
             } catch (Exception ex) {
                 stopped = true;
                 if (logger.isErrorEnabled())
@@ -532,6 +592,8 @@ public class CallRecorderNode extends BaseNode
         }
         
         public synchronized void handleStreamSubstitution() {
+            if (!started)
+                return;
             try {
                 if (inRtp1 != bridge.getConversation1().getIncomingRtpStream()) {
                     inRtp1 = bridge.getConversation1().getIncomingRtpStream();

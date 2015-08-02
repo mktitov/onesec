@@ -18,17 +18,15 @@
 package org.onesec.raven.ivr.queue.actions;
 
 import org.onesec.raven.ivr.IvrActionException;
-import org.onesec.raven.ivr.IvrActionStatus;
 import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.onesec.raven.ivr.actions.AbstractAction;
+import org.onesec.raven.ivr.actions.AsyncAction;
 import org.onesec.raven.ivr.queue.QueuedCallStatus;
-import org.raven.log.LogLevel;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class CancelQueueCallRequestAction extends AbstractAction
+public class CancelQueueCallRequestAction extends AsyncAction
 {
     public static final String ACTION_NAME = "Cancel queue call request";
 
@@ -40,18 +38,13 @@ public class CancelQueueCallRequestAction extends AbstractAction
         return false;
     }
 
-    public void execute(IvrEndpointConversation conv) throws IvrActionException {
-        setStatus(IvrActionStatus.EXECUTING);
-        try {
-            QueuedCallStatus state = (QueuedCallStatus) conv.getConversationScenarioState().getBindings().get(
-                    QueueCallAction.QUEUED_CALL_STATUS_BINDING);
-            if (state!=null) {
-                state.cancel();
-                if (conv.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
-                    conv.getOwner().getLogger().debug(logMess("Queue call request was canceled"));
-            }
-        } finally {
-            setStatus(IvrActionStatus.EXECUTED);
+    public void doExecute(IvrEndpointConversation conv) throws Exception {
+        QueuedCallStatus state = (QueuedCallStatus) conv.getConversationScenarioState().getBindings().get(
+                QueueCallAction.QUEUED_CALL_STATUS_BINDING);
+        if (state!=null) {
+            state.cancel();
+            if (logger.isDebugEnabled())
+                logger.debug("Queue call request was canceled");
         }
     }
 

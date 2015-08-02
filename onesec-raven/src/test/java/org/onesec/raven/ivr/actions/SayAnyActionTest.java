@@ -20,12 +20,16 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 import org.junit.Before;
 import org.onesec.raven.Constants;
+import org.raven.log.LogLevel;
+import org.raven.tree.impl.LoggerHelper;
+import org.slf4j.LoggerFactory;
 
 /**
  *
  * @author Mikhail Titov
  */
 public class SayAnyActionTest extends PlayActionTestHelper {
+    private LoggerHelper logger = new LoggerHelper(LogLevel.TRACE, "logger", "", LoggerFactory.getLogger(PauseActionTest.class));
     private SayAnyActionNode actionNode;
     
     @Before
@@ -38,7 +42,7 @@ public class SayAnyActionTest extends PlayActionTestHelper {
         actionNode.getAttr(SayAnyActionNode.WORDS_NODE_ATTR).setValue(Constants.TIME_WORDS_RESOURCE);
     }
     
-//    @Test
+    @Test
     public void test() throws Exception {
         conv.setFileName("target/say_any_1.wav");
         assertTrue(conv.start());
@@ -47,7 +51,7 @@ public class SayAnyActionTest extends PlayActionTestHelper {
         assertTrue(actionNode.start());
         SayAnyAction action = (SayAnyAction) actionNode.createAction();
         assertNotNull(action);
-        action.execute(conv);
+        action.execute(conv, null, logger);
         waitForAction(action);
     }
     
@@ -60,7 +64,7 @@ public class SayAnyActionTest extends PlayActionTestHelper {
         assertTrue(actionNode.start());
         SayAnyAction action = (SayAnyAction) actionNode.createAction();
         assertNotNull(action);
-        action.execute(conv);
+        action.execute(conv, null, logger);
         waitForAction(action);
     }
     

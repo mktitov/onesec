@@ -45,7 +45,6 @@ import org.raven.tree.NodeAttribute;
 import org.raven.tree.Viewable;
 import org.raven.tree.ViewableObject;
 import org.raven.tree.impl.BaseNode;
-import org.raven.tree.impl.LoggerHelper;
 import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
 import org.raven.tree.impl.ViewableObjectImpl;
 import org.weda.annotations.constraints.NotNull;

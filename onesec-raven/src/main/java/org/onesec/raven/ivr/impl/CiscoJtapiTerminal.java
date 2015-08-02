@@ -1009,6 +1009,15 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
         });
     }
 
+    @Override
+    public void connectionEstablished(final IvrEndpointConversationEvent event) {
+        fireConversationEvent(new MethodCaller() {
+            @Override public void callMethod(IvrEndpointConversationListener listener) {
+                listener.connectionEstablished(event);
+            }
+        });
+    }
+
     public void conversationTransfered(final IvrEndpointConversationTransferedEvent event) {
         fireConversationEvent(new MethodCaller() {
             @Override public void callMethod(IvrEndpointConversationListener listener) {
@@ -1208,6 +1217,10 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
 
         public void conversationStarted(IvrEndpointConversationEvent event) {
             valid.compareAndSet(true, false);
+        }
+
+        @Override
+        public void connectionEstablished(IvrEndpointConversationEvent event) {
         }
 
         public void conversationStopped(IvrEndpointConversationStoppedEvent event) { }

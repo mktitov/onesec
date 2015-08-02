@@ -18,17 +18,28 @@
 package org.onesec.raven.ivr.actions;
 
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.onesec.raven.ivr.ActionStopListener;
+import org.onesec.raven.ivr.IvrActionException;
 import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.raven.log.LogLevel;
+import org.raven.sched.ExecutorServiceException;
+import org.raven.sched.Task;
+import org.raven.sched.impl.AbstractTask;
+import org.raven.tree.Node;
+import org.raven.tree.impl.LoggerHelper;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class PauseAction extends AsyncAction
+public class PauseAction extends AbstractAction
 {
     public static final String ACTION_NAME = "Pause action";
     private final long interval;
+    private volatile ActionStopListener stopListener;
+    private volatile LoggerHelper logger;
+    private volatile PauseTask pauseTask;
 
     public PauseAction(long interval)
     {
@@ -42,13 +53,45 @@ public class PauseAction extends AsyncAction
     }
 
     @Override
-    protected void doExecute(IvrEndpointConversation conversation) throws Exception
+    public void execute(IvrEndpointConversation conversation, ActionStopListener listener, LoggerHelper logger) 
+            throws Exception 
     {
-        if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
-            conversation.getOwner().getLogger().debug(logMess("Pausing on "+interval+" ms"));
-        long start = System.currentTimeMillis();
-        do {
-            TimeUnit.MILLISECONDS.sleep(10);
-        } while (System.currentTimeMillis()-start<interval && !hasCancelRequest());
+        this.stopListener = listener;
+        this.logger = new LoggerHelper(logger, getName()+". ");
+        if (this.logger.isDebugEnabled())
+            this.logger.debug("Pausing on "+interval+" ms");
+        pauseTask = new PauseTask(conversation.getOwner(), stopListener);
+        conversation.getExecutorService().execute(interval, pauseTask);
+    }
+
+    @Override
+    public void cancel() throws IvrActionException {
+        if (pauseTask!=null) 
+            pauseTask.cancel();
+        stopListener.actionExecuted(this);
+    }
+//    @Override
+//    protected void doExecute(IvrEndpointConversation conversation) throws Exception
+//    {
+//        if (logger.isDebugEnabled())
+//            logger.debug("Pausing on "+interval+" ms");
+//        long start = System.currentTimeMillis();
+//        do {
+//            TimeUnit.MILLISECONDS.sleep(10);
+//        } while (System.currentTimeMillis()-start<interval && !hasCancelRequest());
+//    }
+    
+    private class PauseTask extends AbstractTask {
+        private final ActionStopListener stopListener;
+
+        public PauseTask(Node taskNode, ActionStopListener stopListener) {
+            super(taskNode, "Pausing on "+interval+" ms");
+            this.stopListener = stopListener;
+        }
+
+        @Override
+        public void doRun() throws Exception {
+            this.stopListener.actionExecuted(PauseAction.this);
+        }
     }
 }

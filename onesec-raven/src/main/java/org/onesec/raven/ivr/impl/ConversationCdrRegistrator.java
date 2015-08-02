@@ -30,6 +30,10 @@ public class ConversationCdrRegistrator implements IvrEndpointConversationListen
         return cdr;
     }
 
+    @Override
+    public void connectionEstablished(IvrEndpointConversationEvent event) {
+    }
+
     public void listenerAdded(IvrEndpointConversationEvent event) {
         cdr.setCallStartTime(System.currentTimeMillis());
     }

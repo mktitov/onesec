@@ -163,6 +163,10 @@ public class IvrConversationScenarioNode extends ConversationScenarioNode
     public void listenerAdded(IvrEndpointConversationEvent event) {
     }
 
+    @Override
+    public void connectionEstablished(IvrEndpointConversationEvent event) {
+    }
+
     public void conversationStarted(IvrEndpointConversationEvent event) {
     }
 

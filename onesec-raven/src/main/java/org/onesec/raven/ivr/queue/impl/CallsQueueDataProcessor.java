@@ -70,7 +70,7 @@ public class CallsQueueDataProcessor extends AbstractDataProcessorLogic {
         } else if (GET_REQUESTS==message) {
             return queue.isEmpty()? Collections.EMPTY_LIST : new ArrayList<>(queue);
         } else 
-            return unhandled();
+            return UNHANDLED;
         return VOID;
     }
 

@@ -18,29 +18,41 @@
 package org.onesec.raven.ivr.actions;
 
 import java.io.File;
+import java.util.Collections;
 import java.util.Locale;
+import javax.script.SimpleBindings;
+import mockit.Expectations;
+import mockit.Mocked;
+import mockit.integration.junit4.JMockit;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.ivr.IvrActionException;
 import org.onesec.raven.ivr.impl.AudioFileNode;
+import org.raven.conv.ConversationScenarioState;
 import org.raven.log.LogLevel;
 import org.raven.sched.impl.ExecutorServiceNode;
 import org.raven.tree.Node;
 import org.raven.tree.ResourceManager;
 import org.raven.tree.Tree;
 import org.raven.tree.impl.ContainerNode;
+import org.raven.tree.impl.LoggerHelper;
 import org.raven.tree.impl.ResourcesNode;
+import org.slf4j.LoggerFactory;
 
 /**
  *
  * @author Mikhail Titov
  */
+@RunWith(JMockit.class)
 public class SayAmountActionTest extends OnesecRavenTestCase
 {
+    private LoggerHelper logger = new LoggerHelper(LogLevel.TRACE, "logger", "", LoggerFactory.getLogger(PauseActionTest.class));
+    
     private TestEndpointConversationNode conv;
     private ExecutorServiceNode executor;
 //    private Node numbers;
@@ -49,7 +61,7 @@ public class SayAmountActionTest extends OnesecRavenTestCase
     @Before
     public void prepare() throws Exception
     {
-        ResourcesNode resources = (ResourcesNode) tree.getRootNode().getChildren(ResourcesNode.NAME);
+        ResourcesNode resources = (ResourcesNode) tree.getRootNode().getNode(ResourcesNode.NAME);
         resources.setDefaultLocale(new Locale("ru"));
 
         resourceManager = registry.getService(ResourceManager.class);
@@ -77,8 +89,14 @@ public class SayAmountActionTest extends OnesecRavenTestCase
     }
 
     @Test(timeout=15000)
-    public void test() throws IvrActionException, InterruptedException
+    public void test(
+            final @Mocked ConversationScenarioState conversationState
+    ) throws IvrActionException, InterruptedException
     {
+        new Expectations() {{
+            conversationState.getBindings(); result = new SimpleBindings();
+        }};
+        conv.setConversationScenarioState(conversationState);
         SayAmountActionNode actionNode = new SayAmountActionNode();
         actionNode.setName("action node");
         tree.getRootNode().addAndSaveChildren(actionNode);
@@ -86,7 +104,7 @@ public class SayAmountActionTest extends OnesecRavenTestCase
         assertTrue(actionNode.start());
         SayAmountAction action = (SayAmountAction) actionNode.createAction();
 //        SayAmountAction action = new SayAmountAction(resourceManager.getResource(Constants, Locale.FRENCH), 11239.42, 0, resourceManager);
-        action.execute(conv);
+        action.execute(conv, null, logger);
         Thread.sleep(13000);
     }
 

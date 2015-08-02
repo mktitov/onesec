@@ -23,6 +23,9 @@ public class IvrEndpointConversationListenerAdapter implements IvrEndpointConver
 
     public void listenerAdded(IvrEndpointConversationEvent event) { }
 
+    @Override
+    public void connectionEstablished(IvrEndpointConversationEvent event) { }
+
     public void conversationStarted(IvrEndpointConversationEvent event) { }
 
     public void conversationStopped(IvrEndpointConversationStoppedEvent event) { }

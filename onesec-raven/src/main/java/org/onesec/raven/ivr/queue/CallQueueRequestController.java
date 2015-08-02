@@ -80,9 +80,13 @@ public interface CallQueueRequestController extends CallQueueRequest
      */
     public boolean fireReadyToCommutateQueueEvent(CommutationManagerCall operator);
     /**
-     * Fires when operator and abonent where commutated
+     * Fires when operator and abonent were commutated
      */
     public void fireCommutatedEvent();
+    /**
+     * Fires when conversation between abonent and operator were started
+     */
+    public void fireConversationStartedEvent();
     /**
      * Fires when commutation was disconnected
      */
