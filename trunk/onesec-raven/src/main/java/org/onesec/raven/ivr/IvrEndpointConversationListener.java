@@ -30,6 +30,10 @@ public interface IvrEndpointConversationListener
      */
     public void listenerAdded(IvrEndpointConversationEvent event);
     /**
+     * Fires when logical connection was established
+     */
+    public void connectionEstablished(IvrEndpointConversationEvent event);
+    /**
      * Fires when conversation was started.
      */
     public void conversationStarted(IvrEndpointConversationEvent event);

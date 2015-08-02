@@ -18,11 +18,10 @@ package org.onesec.raven.ivr.queue.impl;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.onesec.raven.ivr.queue.CallQueueRequestController;
 import org.onesec.raven.ivr.queue.CallsQueue;
 import org.onesec.raven.ivr.queue.CallsQueueOperator;
@@ -83,13 +82,6 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Viewable
     
     private AtomicReference<DataProcessorFacade> processor;
 
-//    private AtomicReference<String> statusMessage;
-//    private AtomicBoolean stopProcessing;
-//    AtomicBoolean processingThreadRunning;
-//    LinkedList<CallQueueRequestController> queue;
-    private ReadWriteLock lock;
-//    private Condition requestAddedCondition;
-//    private CallsQueueRequestComparator requestComparator;
     private AtomicLong sumCallDuration;
     private AtomicInteger callsCount;
 
@@ -97,12 +89,6 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Viewable
     protected void initFields() {
         super.initFields();
         processor = new AtomicReference<>();
-//        statusMessage = new AtomicReference<String>("Waiting for request...");
-//        stopProcessing = new AtomicBoolean(true);
-//        processingThreadRunning = new AtomicBoolean(false);
-        lock = new ReentrantReadWriteLock();
-//        requestAddedCondition = lock.writeLock().newCondition();
-//        requestComparator = new CallsQueueRequestComparator();
         callsCount = new AtomicInteger();
         sumCallDuration = new AtomicLong();
     }
@@ -110,15 +96,9 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Viewable
     @Override
     protected void doStart() throws Exception {
         super.doStart();
-//        if (processingThreadRunning.get())
-//            throw new Exception(
-//                    "Can't start calls queue because of processing thread is still running");
-//        queue = new LinkedList();
         resetStat();
         processor.set(new DataProcessorFacadeConfig(
                 "Queue", this, new CallsQueueDataProcessor(maxQueueSize), executor, new LoggerHelper(this, null)).build());
-//        stopProcessing.set(false);
-//        executor.execute(this);
     }
 
     @Override
@@ -126,16 +106,9 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Viewable
         super.doStop();
         DataProcessorFacade _processor = processor.getAndSet(null);
         if (_processor!=null)
-            _processor.askStop(STOP_PROCESSOR_TIMEOUT).get();
-//        stopProcessing.set(true);
-//        while(processingThreadRunning.get())
-//            TimeUnit.MILLISECONDS.sleep(100);
+            _processor.askStop(STOP_PROCESSOR_TIMEOUT, TimeUnit.MILLISECONDS).get();
     }    
 
-//    public TaskRestartPolicy getTaskRestartPolicy() {
-//        return TaskRestartPolicy.RESTART_NODE;
-//    }
-//    
     @Override
     public void queueCall(CallQueueRequestController request) {
         DataProcessorFacade _processor = processor.get();
@@ -147,44 +120,6 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Viewable
         }
     }
     
-//    public void queueCall2(CallQueueRequestController request) 
-//    {
-//        if (!Status.STARTED.equals(getStatus()) || stopProcessing.get()) {
-//            request.addToLog(String.format("Queue (%s) not ready", getName()));
-//            request.fireRejectedQueueEvent();
-//        }
-//        
-//        CallsQueue oldQueue = request.getCallsQueue();
-//        request.setCallsQueue(this);
-//        if (isLogLevelEnabled(LogLevel.DEBUG)) 
-//            getLogger().debug(logMess(request, "Request %s to the queue", this==oldQueue?"returned":"added"));
-//        
-////        if (request.getRequestId()==0)
-////            request.setRequestId(requestIdSeq.getAndIncrement());
-//        addRequestToQueue(request);
-//    }
-//    
-//    private void addRequestToQueue(CallQueueRequestController request)
-//    {
-//        lock.writeLock().lock();
-//        try {
-//            queue.offer(request);
-//            if (queue.size()>1)
-//                Collections.sort(queue, requestComparator);
-//            if (queue.size()>maxQueueSize) {
-//                CallQueueRequestController rejReq = queue.removeLast();
-//                executor.executeQuietly(new RejectTask(this, rejReq, "queue size was exceeded"));
-//            } else {
-//                request.fireCallQueuedEvent();
-//                fireQueueNumberChangedEvents();
-//            }
-//            requestAddedCondition.signal();
-//        } finally {
-//            lock.writeLock().unlock();
-//        }
-//    }
-//
-    
     public Collection<CallQueueRequestController> getRequests() {
         DataProcessorFacade _processor = processor.get();
         if (_processor!=null)
@@ -194,20 +129,6 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Viewable
         return Collections.EMPTY_LIST;
     }
     
-    
-//    public Collection<CallQueueRequestController> getRequests() {
-//        try {
-//            if (lock.readLock().tryLock(500, TimeUnit.MILLISECONDS)) {
-//                try {
-//                    return new ArrayList<CallQueueRequestController>(queue);
-//                } finally {
-//                    lock.readLock().unlock();
-//                }
-//            }
-//        } catch (InterruptedException e) { }
-//        return Collections.EMPTY_LIST;
-//    }
-
     @Parameter(readOnly=true)
     public int getAvgCallDuration() {
         int _callsCount = callsCount.get();
@@ -216,14 +137,6 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Viewable
 
     @Parameter(readOnly=true)
     public int getActiveOperatorsCount() {
-//        Set<Integer> opers = new HashSet<Integer>();
-//        for (Node priority: getNodes())
-//            for (CallsQueueOperatorRefNode ref: NodeUtils.getChildsOfType(priority, CallsQueueOperatorRefNode.class)) {
-//                CallsQueueOperator oper = ref.getOperator();
-//                if (oper.isStarted() && oper.isActive())
-//                    opers.add(oper.getId());
-//            }
-//        return opers.size();
         return getOpers(true).size();
     }
 
@@ -250,26 +163,19 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Viewable
         List<ViewableObject> vos = new ArrayList<ViewableObject>(1);
         //queue table
         vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, queueTitleMessage));
-//        if (lock.readLock().tryLock(500, TimeUnit.MILLISECONDS)) {
-//            try {
-                TableImpl tab = new TableImpl(new String[]{numberInQueueMessage, requestIdMessage,
-                        priorityMessage, queueTimeMessage, targetQueueMessage, 
-                        nextOnBusyBehaviourStepMessage, lastOperatorIndexMessage, requestMessage});
-                SimpleDateFormat fmt = new SimpleDateFormat("HH:mm:ss");
-                int numInQueue = 1;
-                for (CallQueueRequestController req: getRequests()) {
-                    tab.addRow(new Object[]{numInQueue++, req.getRequestId(), req.getPriority()
-                            , fmt.format(new Date(req.getLastQueuedTime()))
-                            , req.getTargetQueue().getName()
-                            , req.getOnBusyBehaviourStep(), req.getOperatorIndex(), req.toString()
-                    });
-                }
-                vos.add(new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, tab));
-//            } finally {
-//                lock.readLock().unlock();
-//            }
-//        } else 
-//            vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, queueBusyMessage));
+        TableImpl tab = new TableImpl(new String[]{numberInQueueMessage, requestIdMessage,
+                priorityMessage, queueTimeMessage, targetQueueMessage, 
+                nextOnBusyBehaviourStepMessage, lastOperatorIndexMessage, requestMessage});
+        SimpleDateFormat fmt = new SimpleDateFormat("HH:mm:ss");
+        int numInQueue = 1;
+        for (CallQueueRequestController req: getRequests()) {
+            tab.addRow(new Object[]{numInQueue++, req.getRequestId(), req.getPriority()
+                    , fmt.format(new Date(req.getLastQueuedTime()))
+                    , req.getTargetQueue().getName()
+                    , req.getOnBusyBehaviourStep(), req.getOperatorIndex(), req.toString()
+            });
+        }
+        vos.add(new ViewableObjectImpl(Viewable.RAVEN_TABLE_MIMETYPE, tab));
         //queue operators table
         vos.add(new ViewableObjectImpl(Viewable.RAVEN_TEXT_MIMETYPE, operatorsTitleMessage));
         TableImpl opersTab = new TableImpl(new String[]{operatorPhoneMessage, operatorDescMessage, 
@@ -327,14 +233,6 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Viewable
         return opers.isEmpty()? Collections.EMPTY_SET : opers;
     }
 
-//    public Node getTaskNode() {
-//        return this;
-//    }
-//
-//    public String getStatusMessage() {
-//        return statusMessage.get();
-//    }
-
     public Integer getMaxQueueSize() {
         return maxQueueSize;
     }
@@ -350,149 +248,4 @@ public class CallsQueueNode extends BaseNode implements CallsQueue, Viewable
     public void setExecutor(ExecutorService executor) {
         this.executor = executor;
     }
-
-//    public void run() {
-//        processingThreadRunning.set(true);
-//        try {
-//            if (isLogLevelEnabled(LogLevel.DEBUG))
-//                debug("Manager task started");
-//            try {
-//                while (!stopProcessing.get()) {
-//                    statusMessage.set("Waiting for request...");
-//                    processRequest();
-//                    TimeUnit.MILLISECONDS.sleep(100);
-//                }
-//            } catch (InterruptedException e) {
-//                if (isLogLevelEnabled(LogLevel.WARN))
-//                    warn("Manager task was interrupted");
-//                Thread.currentThread().interrupt();
-//            }
-//            if (isLogLevelEnabled(LogLevel.DEBUG))
-//                debug("Manager task stoped");
-//        } finally {
-//            clearQueue();
-//            processingThreadRunning.set(false);
-//        }
-//    }
-//    
-//    void processRequest() throws InterruptedException {
-//        if (lock.writeLock().tryLock(100, TimeUnit.MILLISECONDS)) 
-//            try {
-//                requestAddedCondition.await(1, TimeUnit.SECONDS);
-//                boolean leaveInQueue = false;
-//                try {
-//                    CallQueueRequestController request = queue.peek();
-//                    if (request!=null && request.isValid()){
-//                        statusMessage.set(request.logMess("Processing request..."));
-//                        if (isLogLevelEnabled(LogLevel.DEBUG))
-//                            getLogger().debug(logMess(request, "Processing request"));
-//                        CallsQueuePrioritySelector selector = searchForPrioritySelector(request);
-//                        if (selector==null) {
-//                            if (isLogLevelEnabled(LogLevel.WARN))
-//                                getLogger().warn(logMess(
-//                                        request
-//                                        , "Rejecting request. Not found priority selector"));
-//                            executor.executeQuietly(new RejectTask(this, request, "not found priority selector"));
-//                        } else {
-//                            if (isLogLevelEnabled(LogLevel.DEBUG))
-//                                getLogger().debug(logMess(
-//                                        request, "Request mapped to the (%s) priority selector"
-//                                        , selector.getName()));
-//                            //looking up for operator that will process the request
-//                            List<CallsQueueOperatorRef> operatorRefs = selector.getOperatorsRefs();
-//                            boolean processed = false;
-//                            int startIndex = selector.getStartIndex(request, operatorRefs.size());
-//                            if (startIndex<operatorRefs.size())
-//                                for (int i=startIndex; i<operatorRefs.size(); ++i){
-//                                    request.incOperatorHops();
-//                                    if (operatorRefs.get(i).processRequest(this, request)) {
-//                                        request.setOperatorIndex(i);
-//                                        processed = true;
-//                                        selector.rebuildIndex(operatorRefs, i);
-//                                        break;
-//                                    }
-//                                }
-//                            if (!processed) {
-//                                //if no operators found then processing onBusyBehaviour
-//                                if (isLogLevelEnabled(LogLevel.DEBUG))
-//                                    getLogger().debug(logMess(
-//                                            request, "Not found free operator to process request"));
-//                                CallsQueueOnBusyBehaviour onBusyBehaviour = request.getOnBusyBehaviour();
-//                                if (onBusyBehaviour==null){
-//                                    onBusyBehaviour = selector.getOnBusyBehaviour();
-//                                    request.setOnBusyBehaviour(onBusyBehaviour);
-//                                }
-//                                leaveInQueue = onBusyBehaviour.handleBehaviour(this, request);
-//                            }
-//                        }
-//                    }
-//                } finally {
-//                    if (!leaveInQueue && queue.peek()!=null) {
-//                        queue.pop();
-//                        fireQueueNumberChangedEvents();
-//                    } 
-//                }
-//            } finally {
-//                lock.writeLock().unlock();
-//            }
-//    }
-//    
-//    private CallsQueuePrioritySelector searchForPrioritySelector(CallQueueRequestController request)
-//    {
-//        List<CallsQueuePrioritySelector> selectors = NodeUtils.getChildsOfType(
-//                this, CallsQueuePrioritySelector.class);
-//        
-//        if (selectors.isEmpty())
-//            return null;
-//        
-//        Collections.sort(selectors, new CallsQueuePrioritySelectorComparator());
-//        for (CallsQueuePrioritySelector selector: selectors)
-//            if (selector.getPriority()<=request.getPriority())
-//                return selector;
-//        return null;
-//    }
-    
-//    private void clearQueue()
-//    {
-//        statusMessage.set("Stoping processing requests. Clearing queue...");
-//        for (CallQueueRequestController req: queue) {
-//            req.addToLog("queue stopped");
-//            req.fireRejectedQueueEvent();
-//        }
-//        queue=null;
-//    }
-//
-//    private void fireQueueNumberChangedEvents() 
-//    {
-//        int lastElement = Math.min(maxQueueSize, queue.size());
-//        int pos = 1;
-//        for (CallQueueRequestController req: queue) {
-//            if (pos>lastElement)
-//                break;
-//            req.setPositionInQueue(pos);
-//            pos++;
-//        }
-//    }
-//
-//    private String logMess(CallQueueRequestController req, String mess, Object... args)
-//    {
-//        return req.logMess("CallsQueue. "+mess, args);
-//    }
-//    
-//    private class RejectTask extends AbstractTask {
-//        private final String log;
-//        private final CallQueueRequestController req;
-//
-//        public RejectTask(Node taskNode, CallQueueRequestController req, String log) {
-//            super(taskNode, "Rejecting request");
-//            this.req = req;
-//            this.log = log;
-//        }
-//
-//        @Override
-//        public void doRun() throws Exception {
-//            req.addToLog(log);
-//            req.fireRejectedQueueEvent();
-//        }
-//    }
 }

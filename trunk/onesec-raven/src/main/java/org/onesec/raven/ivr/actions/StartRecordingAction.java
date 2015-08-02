@@ -36,11 +36,8 @@ import org.raven.conv.BindingScope;
 import org.raven.conv.ConversationScenarioState;
 import org.raven.ds.DataContext;
 import org.raven.ds.impl.DataContextImpl;
-import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.impl.AbstractTask;
-import org.raven.tree.Node;
-import org.raven.tree.impl.LoggerHelper;
 import org.weda.internal.annotations.Service;
 
 /**
@@ -88,8 +85,8 @@ public class StartRecordingAction extends AsyncAction {
     private void stopExistingRecorder(ConversationScenarioState state, IvrEndpointConversation conversation) {
         final Recorder oldRecorder = (Recorder) state.getBindings().get(RECORDER_BINDING);
         if (oldRecorder!=null) {
-            if (conversation.getOwner().isLogLevelEnabled(LogLevel.WARN))
-                conversation.getOwner().getLogger().warn(logMess("Found existing recorder! Stopping and replacing it"));
+            if (logger.isWarnEnabled())
+                logger.warn("Found existing recorder! Stopping and replacing it");
             conversation.getExecutorService().executeQuietly(new AbstractTask(actionNode, "Stopping recording") {
                 @Override public void doRun() throws Exception {
                     oldRecorder.stopRecording(true);
@@ -104,7 +101,7 @@ public class StartRecordingAction extends AsyncAction {
         private final IncomingRtpStream inRtp;
         private final RealTimeMixer merger;
         private final AudioFileWriterDataSource writer;
-        private final Node loggerNode;
+//        private final Node loggerNode;
         private final String key;
         private final Bindings conversationBindings;
         private final IvrEndpointConversation conversation;
@@ -117,22 +114,21 @@ public class StartRecordingAction extends AsyncAction {
             this.context.putAt(CONVERSATION_BINDING, conversation.getConversationScenarioState().getBindings());
             this.tempFileManager = actionNode.getTemporaryFileManager();
             this.inRtp = conversation.getIncomingRtpStream();
-            this.loggerNode = conversation.getOwner();
+//            this.loggerNode = conversation.getOwner();
             this.key = RavenUtils.generateUniqKey("recording");
             this.conversationBindings = conversation.getConversationScenarioState().getBindings();
             this.conversation = conversation;
-            String logPrefix = logMess("");
+//            String logPrefix = logMess("");
             File file = tempFileManager.createFile(actionNode, key, "audio/wav");
-            merger = new RealTimeMixer(codecManager, loggerNode, logPrefix
+            merger = new RealTimeMixer(codecManager, conversation.getOwner(), logger
                     , conversation.getExecutorService()
                     , actionNode.getNoiseLevel(), actionNode.getMaxGainCoef());
-            writer = new AudioFileWriterDataSource(file, merger, codecManager
-                    , FileTypeDescriptor.WAVE, new LoggerHelper(loggerNode, logPrefix));
+            writer = new AudioFileWriterDataSource(file, merger, codecManager, FileTypeDescriptor.WAVE, logger);
         }
         
         public void init() throws RtpStreamException {
-            if (loggerNode.isLogLevelEnabled(LogLevel.DEBUG))
-                loggerNode.getLogger().debug(logMess("Initializing recorder"));
+            if (logger.isDebugEnabled())
+                logger.debug("Initializing recorder");
             if (!inRtp.addDataSourceListener(this, null)) {
                 stopped.set(true);
                 conversationBindings.remove(RECORDER_BINDING);
@@ -143,14 +139,14 @@ public class StartRecordingAction extends AsyncAction {
         }
 
         public void dataSourceCreated(IncomingRtpStream stream, DataSource dataSource) {
-            if (loggerNode.isLogLevelEnabled(LogLevel.DEBUG))
-                loggerNode.getLogger().debug(logMess("Starting recorder"));
+            if (logger.isDebugEnabled())
+                logger.debug("Starting recorder");
             try {
                 writer.start();
                 merger.addDataSource((PushBufferDataSource)dataSource);
             } catch (Throwable e) {
-                if (loggerNode.isLogLevelEnabled(LogLevel.ERROR))
-                    loggerNode.getLogger().error(logMess("Error starting recording", e));
+                if (logger.isErrorEnabled())
+                    logger.error("Error starting recording", e);
                 stopRecording(true);
             }
         }
@@ -162,8 +158,8 @@ public class StartRecordingAction extends AsyncAction {
         public void stopRecording(boolean cancel) {
             if (!stopped.compareAndSet(false, true))
                 return;
-            if (loggerNode.isLogLevelEnabled(LogLevel.DEBUG))
-                loggerNode.getLogger().debug(logMess("Stopping recorder. Cancel flag == %s", cancel));
+            if (logger.isDebugEnabled())
+                logger.debug("Stopping recorder. Cancel flag == {}", cancel);
             try {
                 writer.stop();
             } finally {

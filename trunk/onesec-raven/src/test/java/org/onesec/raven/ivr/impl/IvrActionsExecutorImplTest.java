@@ -42,7 +42,7 @@ import static org.easymock.EasyMock.*;
  *
  * @author Mikhail Titov
  */
-public class IvrActionsExecutorTest extends RavenCoreTestCase
+public class IvrActionsExecutorImplTest extends RavenCoreTestCase
 {
     private ExecutorServiceNode executor;
     private IvrEndpointNode endpointNode;
@@ -83,7 +83,7 @@ public class IvrActionsExecutorTest extends RavenCoreTestCase
     {
         List<IvrAction> actions = Arrays.asList(
                 (IvrAction)new TestPauseAction(), new TestPauseAction());
-        IvrActionsExecutor actionsExecutor = new IvrActionsExecutor(conversation, executor);
+        IvrActionsExecutorImpl actionsExecutor = new IvrActionsExecutorImpl(conversation, executor);
         actionsExecutor.executeActions(actions);
         Thread.sleep(1100);
         assertEquals(IvrActionStatus.EXECUTED, actions.get(0).getStatus());
@@ -96,7 +96,7 @@ public class IvrActionsExecutorTest extends RavenCoreTestCase
         List<IvrAction> actions = Arrays.asList(
                 (IvrAction)new TestPauseAction(), new TestPauseAction());
         List<IvrAction> newActions = Arrays.asList((IvrAction)new TestPauseAction());
-        IvrActionsExecutor actionsExecutor = new IvrActionsExecutor(conversation, executor);
+        IvrActionsExecutorImpl actionsExecutor = new IvrActionsExecutorImpl(conversation, executor);
         actionsExecutor.executeActions(actions);
         actionsExecutor.executeActions(newActions);
         Thread.sleep(600);
@@ -110,7 +110,7 @@ public class IvrActionsExecutorTest extends RavenCoreTestCase
     }
 
     @Test
-    public void dtmfProcessPointTest() throws Exception
+    public void dtmfProcessPointTest() throws Exception 
     {
         executor.setMaximumPoolSize(10);
         executor.setCorePoolSize(10);
@@ -134,9 +134,9 @@ public class IvrActionsExecutorTest extends RavenCoreTestCase
 
         replay(endpoint, owner, state, bindings);
 
-        IvrActionsExecutor actionsExecutor = new IvrActionsExecutor(endpoint, executor);
+        IvrActionsExecutorImpl actionsExecutor = new IvrActionsExecutorImpl(endpoint, executor);
 
-        List<IvrAction> actions = new ArrayList<IvrAction>();
+        List<IvrAction> actions =  new ArrayList<IvrAction>();
         actions.add(new PauseAction(1000));
         actions.add(new DtmfProcessPointAction("12"));
         actions.add(new PauseAction(1000));

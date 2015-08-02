@@ -24,15 +24,19 @@ import org.junit.Before;
 import org.junit.Test;
 import org.onesec.raven.impl.Genus;
 import org.onesec.raven.ivr.impl.AudioFileNode;
+import org.raven.log.LogLevel;
 import org.raven.tree.Node;
 import org.raven.tree.Tree;
 import org.raven.tree.impl.ContainerNode;
+import org.raven.tree.impl.LoggerHelper;
+import org.slf4j.LoggerFactory;
 
 /**
  *
  * @author Mikhail Titov
  */
 public class SayNumberActionTest extends PlayActionTestHelper {
+    private LoggerHelper logger = new LoggerHelper(LogLevel.TRACE, "logger", "", LoggerFactory.getLogger(PauseActionTest.class));
     private SayNumberActionNode actionNode;
     
     @Before
@@ -59,7 +63,7 @@ public class SayNumberActionTest extends PlayActionTestHelper {
         assertTrue(actionNode.start());
         SayNumberAction action = (SayNumberAction) actionNode.createAction();
         assertNotNull(action);
-        action.execute(conv);
+        action.execute(conv, null, logger);
         waitForAction(action);
     }
     
@@ -73,7 +77,7 @@ public class SayNumberActionTest extends PlayActionTestHelper {
         assertTrue(actionNode.start());
         SayNumberAction action = (SayNumberAction) actionNode.createAction();
         assertNotNull(action);
-        action.execute(conv);
+        action.execute(conv, null, logger);
         waitForAction(action);
     }
     
@@ -91,7 +95,7 @@ public class SayNumberActionTest extends PlayActionTestHelper {
         assertTrue(pattern.start());
         SayNumberAction action = (SayNumberAction) actionNode.createAction();
         assertNotNull(action);
-        action.execute(conv);
+        action.execute(conv, null, logger);
         waitForAction(action);
     }
     

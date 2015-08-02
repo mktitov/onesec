@@ -34,14 +34,20 @@ import org.raven.conv.ConversationScenarioState;
 import org.raven.expr.BindingSupport;
 import static org.easymock.EasyMock.*;
 import org.onesec.raven.Constants;
+import org.onesec.raven.ivr.actions.PauseActionTest;
+import org.raven.log.LogLevel;
 import org.raven.tree.ResourceManager;
+import org.raven.tree.impl.LoggerHelper;
 import org.raven.tree.impl.ResourcesNode;
+import org.slf4j.LoggerFactory;
 /**
  *
  * @author Mikhail Titov
  */
 public class SayNumberInQueueActionTest extends OnesecRavenTestCase
 {
+    private LoggerHelper logger = new LoggerHelper(LogLevel.TRACE, "logger", "", LoggerFactory.getLogger(PauseActionTest.class));
+    
     private TestEndpointConversationNode conv;
     private ExecutorServiceNode executor;
     private Node numbers;
@@ -112,7 +118,7 @@ public class SayNumberInQueueActionTest extends OnesecRavenTestCase
         assertTrue(conv.start());
         SayNumberInQueueAction action =
                 new SayNumberInQueueAction(owner, bindingSupport, numbers, 50, preamble, resourceManager);
-        action.execute(conv);
+        action.execute(conv, null, logger);
         Thread.sleep(10000);
         
         verify(state, bindings, callStatus, bindingSupport);

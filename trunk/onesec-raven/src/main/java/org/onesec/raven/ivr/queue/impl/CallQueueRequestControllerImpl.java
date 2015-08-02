@@ -56,14 +56,13 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
 //    private final Listener listener;
     private final long requestId;
     private final AtomicBoolean cdrSent = new AtomicBoolean(false);
-    private final Set<RequestControllerListener> listeners = new HashSet<RequestControllerListener>();
+    private final Set<RequestControllerListener> listeners = new HashSet<>();
     private volatile Record cdr;
     private volatile Map<String, RecordSchemaField> cdrFields;
     private final boolean lazyRequest;
     private final Set<String> eventTypes;
     private final RecordSchema cdrSchema;
-    private final AtomicReference<CommutationManagerCall> commutationManager = 
-                  new AtomicReference<CommutationManagerCall>();
+    private final AtomicReference<CommutationManagerCall> commutationManager = new AtomicReference<>();
     private final long queuedTime = System.currentTimeMillis();
 
     private int priority;
@@ -74,8 +73,8 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
     private StringBuilder log;
     private int onBusyBehaviourStep;
     private CallsQueueOnBusyBehaviour onBusyBehaviour;
-    private AtomicBoolean valid;
-    private AtomicBoolean handlingByOperator = new AtomicBoolean();
+    private final AtomicBoolean valid;
+    private final AtomicBoolean handlingByOperator = new AtomicBoolean();
     private int operatorIndex;
     private int operatorHops;
     private long lastQueuedTime;
@@ -353,8 +352,6 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
                     cdr.setValue(READY_TO_COMMUTATE_TIME, getTimestamp());
                 } else if (event instanceof CommutatedQueueEvent) {
                     cdr.setValue(COMMUTATED_TIME, getTimestamp());
-                    cdr.setValue(CONVERSATION_START_TIME, getTimestamp());
-                    sendCdrToConsumers(CONVERSATION_STARTED_EVENT);
 //                } else if (event instanceof CallTransferedQueueEvent) {
 //                    cdr.setValue(TRANSFERED, 'T');
 //                    CallTransferedQueueEvent transferEvent = (CallTransferedQueueEvent) event;
@@ -365,6 +362,9 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
 //                    addToLog(String.format("transfered to op. (%s) number (%s)"
 //                            , transferEvent.getOperatorId(), transferEvent.getOperatorNumber()));
 //                    sendCdrToConsumers(ASSIGNED_TO_OPERATOR_EVENT);
+                } else if (event instanceof ConversationStartedQueueEvent) {
+                    cdr.setValue(CONVERSATION_START_TIME, getTimestamp());
+                    sendCdrToConsumers(CONVERSATION_STARTED_EVENT);
                 } else if (event instanceof OperatorQueueEvent) {
                     cdr.setValue(OPERATOR_ID, ((OperatorQueueEvent)event).getOperatorId());
                     cdr.setValue(OPERATOR_PERSON_ID, ((OperatorQueueEvent)event).getPersonId());
@@ -445,6 +445,11 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
 
     public void fireCommutatedEvent() {
         callQueueChangeEvent(new CommutatedQueueEventImpl(queue, requestId));
+    }
+
+    @Override
+    public void fireConversationStartedEvent() {
+        callQueueChangeEvent(new ConversationStartedQueueEventImpl(queue, requestId));
     }
 
     public void fireOperatorQueueEvent(String operatorId, String personId, String personDesc) {
@@ -546,6 +551,9 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
         public void incomingRtpStarted(IvrIncomingRtpStartedEvent event) { }
 
         public void outgoingRtpStarted(IvrOutgoingRtpStartedEvent event) { }
+
+        @Override
+        public void connectionEstablished(IvrEndpointConversationEvent event) { }
         
         public void conversationStarted(IvrEndpointConversationEvent event) { }
 

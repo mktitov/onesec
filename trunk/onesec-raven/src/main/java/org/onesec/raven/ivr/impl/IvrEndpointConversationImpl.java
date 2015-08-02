@@ -63,6 +63,7 @@ import org.weda.internal.annotations.Service;
  */
 public class IvrEndpointConversationImpl implements IvrEndpointConversation
 {
+
     private enum RtpStatus {INVALID, CREATED, CONNECTED, WAITING_FOR_START}
 
     @Service private static Tree tree;
@@ -93,7 +94,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     private RtpStatus inRtpStatus = RtpStatus.INVALID;
     private RtpStatus outRtpStatus = RtpStatus.INVALID;
     private ConversationScenarioState conversationState;
-    private IvrActionsExecutor actionsExecutor;
+    private IvrActionsExecutorImpl actionsExecutor;
     private ConcatDataSource audioStream;
     private CiscoCall call;
     private String remoteAddress;
@@ -105,6 +106,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     private volatile String calledNumber;
     private Collection<IvrEndpointConversationListener> listeners;
     private volatile boolean stopping = false;
+    private volatile boolean connectionEstablished = false;
 
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
@@ -196,12 +198,14 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                     stopOutgoingRtp();
                     state.setState(INVALID);
                 } else if (inRtpStatus == RtpStatus.CONNECTED && outRtpStatus == RtpStatus.CONNECTED) {
-                    if (isAllLogicalConnectionEstablished()) {
+                    if (isAllLogicalConnectionEstablished(false)) {
                         state.setState(TALKING);
                         fireEvent(true, null);
+                        if (!startRtpImmediatelly || isAllLogicalConnectionEstablished(true))
+                            setConnectionEstablished(true);
                         startConversation();
                     }
-                } else if (inRtpStatus==RtpStatus.WAITING_FOR_START || outRtpStatus==RtpStatus.WAITING_FOR_START && isAllLogicalConnectionEstablished()) {
+                } else if (inRtpStatus==RtpStatus.WAITING_FOR_START || outRtpStatus==RtpStatus.WAITING_FOR_START && isAllLogicalConnectionEstablished(false)) {
                     if (inRtpStatus==RtpStatus.WAITING_FOR_START && outRtpStatus.ordinal()>RtpStatus.CREATED.ordinal())
                         startIncomingRtp();
                     if (outRtpStatus==RtpStatus.WAITING_FOR_START)
@@ -215,9 +219,12 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             case TALKING:
                 if (call==null) {
                     state.setState(CONNECTING);
+                    setConnectionEstablished(false);
                     checkState();
-                } else if (inRtpStatus!=RtpStatus.CONNECTED || outRtpStatus!=RtpStatus.CONNECTED)
+                } else if (inRtpStatus!=RtpStatus.CONNECTED || outRtpStatus!=RtpStatus.CONNECTED) {
+                    setConnectionEstablished(false);
                     state.setState(CONNECTING);
+                }
                 break;
         }
         if (sharePort && inRtpStatus==RtpStatus.INVALID && outRtpStatus==RtpStatus.INVALID && streamManager!=null) {
@@ -227,6 +234,11 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 streamManager = null;
             }
         }
+    }
+
+    @Override
+    public boolean isConnectionEstablished() {
+        return connectionEstablished;
     }
 
     public void setCall(CallControlCall call) throws IvrEndpointConversationException {
@@ -333,6 +345,9 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             checkForOpponentPartyTransfered(opponentNumber);
             if (state.getId()==CONNECTING)
                 checkState();
+            else if (state.getId()==TALKING && isAllLogicalConnectionEstablished(true)) {
+                setConnectionEstablished(true);
+            }
         } finally {
             lock.writeLock().unlock();
         }
@@ -379,9 +394,9 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         return addr != null? addr : call.getCallingAddress();
     }
 
-    private boolean isAllLogicalConnectionEstablished() {
-        if (startRtpImmediatelly)
-            return true;
+    private boolean isAllLogicalConnectionEstablished(boolean forceCheck) {
+        if (!forceCheck && startRtpImmediatelly)
+            return true;        
         Connection[] cons = call.getConnections();
         if (cons!=null) {
             if (logger.isDebugEnabled())
@@ -393,9 +408,19 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             for (Connection con: cons)
                 if (((CallControlConnection)con).getCallControlState()!=CallControlConnection.ESTABLISHED)
                     return false;
+            
             return true;
         }
         return false;
+    }
+    
+    public void setConnectionEstablished(final boolean value) {
+        if (connectionEstablished!=value) {
+            connectionEstablished = value;
+            if (connectionEstablished && logger.isDebugEnabled())
+                logger.debug(callLog("Connection established"));
+            fireConnectionEstablished(connectionEstablished);
+        }
     }
 
     public void startIncomingRtp() throws IvrEndpointConversationException {
@@ -445,7 +470,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 throw new IvrEndpointConversationRtpStateException(
                         "Can't start incoming RTP stream", "CREATED, WAITING_FOR_START", outRtpStatus.name());
             try {
-                if (isAllLogicalConnectionEstablished()) {
+                if (isAllLogicalConnectionEstablished(false)) {
                     audioStream = new ConcatDataSource(
                             FileTypeDescriptor.WAVE, executor, codecManager, codec, packetSize, 0
                             , maxSendAheadPacketsCount, owner, bufferCache
@@ -548,7 +573,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 for (Map.Entry<String, Object> b: additionalBindings.entrySet())
                     conversationState.setBinding(b.getKey(), b.getValue(), BindingScope.CONVERSATION);
             additionalBindings = null;
-            actionsExecutor = new IvrActionsExecutor(this, executor);
+            actionsExecutor = new IvrActionsExecutorImpl(this, executor);
             actionsExecutor.setLogPrefix(callId+" : ");
             this.bindingSupport = new BindingSupportImpl();
             return true;
@@ -877,6 +902,21 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         }
     }
 
+    private void fireConnectionEstablished(boolean connectionEstablished) {
+        if (connectionEstablished) {
+            final List<IvrEndpointConversationListener> _listeners = cloneListeners();
+            final IvrEndpointConversationEventImpl event = new IvrEndpointConversationEventImpl(this);
+            if (!_listeners.isEmpty()) {
+                executor.executeQuietly(new AbstractTask(owner, "Sending connection established event") {
+                    @Override public void doRun() throws Exception {
+                        for (IvrEndpointConversationListener listener:  _listeners)
+                            listener.connectionEstablished(event);
+                    }
+                });
+            }
+        }
+    }
+    
     private void fireEvent(final boolean conversationStartEvent, CompletionCode completionCode)
     {
         final List<IvrEndpointConversationListener> _listeners = cloneListeners();

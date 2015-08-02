@@ -138,6 +138,10 @@ public class IvrEndpointNode extends AbstractEndpointNode
         return endpointState.getIdName();
     }
 
+    @Override
+    public void connectionEstablished(IvrEndpointConversationEvent event) {
+    }
+
     public void conversationStarted(IvrEndpointConversationEvent event) {
         changeStateTo(IvrEndpointState.TALKING, "TALKING");
     }

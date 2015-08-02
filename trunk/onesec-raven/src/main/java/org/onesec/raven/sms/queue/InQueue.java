@@ -108,7 +108,7 @@ public class InQueue extends AbstractDataProcessorLogic {
             else if (message==GET_RECEIVED_SAR_PACKETS)
                 return sarPackets;
             else 
-                return unhandled();
+                return UNHANDLED;
         } catch (Exception e) {
             processingErrors++;
             if (getLogger().isErrorEnabled())

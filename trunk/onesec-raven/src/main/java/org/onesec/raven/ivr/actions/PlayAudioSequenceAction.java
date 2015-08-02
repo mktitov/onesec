@@ -56,14 +56,14 @@ public class PlayAudioSequenceAction extends AbstractPlayAudioAction
             ++pos;
         else if (randomPlay) {
             pos = getRandomPosition();
-            if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
-                conversation.getOwner().getLogger().debug(logMess("Position (%s) selected randomly", pos));
+            if (logger.isDebugEnabled())
+                logger.debug("Position ({}) selected randomly", pos);
         }
         if (pos==null || pos<0 || pos>=audioFiles.size())
             pos = 0;
         bindings.put(posId, pos);
-        if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
-            conversation.getOwner().getLogger().debug(logMess("Selected audio file at position (%s)", pos));
+        if (logger.isDebugEnabled())
+            logger.debug("Selected audio file at position ({})", pos);
         return audioFiles.get(pos);
     }
 

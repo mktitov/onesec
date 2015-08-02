@@ -81,7 +81,7 @@ public class RealTimeMixerTest extends Assert {
         trainMocks();
         replay(executor, owner);
         
-        RealTimeMixer merger = new RealTimeMixer(codecManager, owner, null, executor, 0, 0);
+        RealTimeMixer merger = new RealTimeMixer(codecManager, owner, "", executor, 0, 0);
         merger.addDataSource(createDataSourceFromFile("src/test/wav/test2.wav"));
 //        merger.addDataSource(createDataSourceFromFile("src/test/wav/1sec_silence.wav"));
         merger.connect();
@@ -98,7 +98,7 @@ public class RealTimeMixerTest extends Assert {
         trainMocks();
         replay(executor, owner);
         
-        RealTimeMixer merger = new RealTimeMixer(codecManager, owner, null
+        RealTimeMixer merger = new RealTimeMixer(codecManager, owner, ""
                 , executor, 0, 3);
         merger.addDataSource(new BufferSplitterDataSource(
                 createDataSourceFromFile("src/test/wav/test2.wav"), 240, codecManager, loggerHelper));
@@ -116,7 +116,7 @@ public class RealTimeMixerTest extends Assert {
         trainMocks();
         replay(executor, owner);
         
-        RealTimeMixer merger = new RealTimeMixer(codecManager, owner, null
+        RealTimeMixer merger = new RealTimeMixer(codecManager, owner, ""
                 , executor, 0, 3);
         merger.addDataSource(createDataSourceFromFile("src/test/wav/test2.wav"));
         merger.addDataSource(createDataSourceFromFile("src/test/wav/test.wav"));
@@ -134,7 +134,7 @@ public class RealTimeMixerTest extends Assert {
         trainMocks();
         replay(executor, owner);
         
-        RealTimeMixer merger = new RealTimeMixer(codecManager, owner, null
+        RealTimeMixer merger = new RealTimeMixer(codecManager, owner, ""
                 , executor, 0, 3);
         PushBufferDataSource ds = createDataSourceFromFile("src/test/wav/test2.wav");
         merger.addDataSource(new BufferSplitterDataSource(ds, 160, codecManager, loggerHelper));
@@ -157,7 +157,7 @@ public class RealTimeMixerTest extends Assert {
         PushBufferDataSource ds = createDataSourceFromFile("src/test/wav/test2.wav");
         TranscoderDataSource tds1 = new TranscoderDataSource(codecManager, ds
                 , Codec.G729.getAudioFormat(), new LoggerHelper(owner, null));
-        RealTimeMixer merger = new RealTimeMixer(codecManager, owner, null
+        RealTimeMixer merger = new RealTimeMixer(codecManager, owner, ""
                 , executor, 0, 10);
         merger.addDataSource(tds1);
         merger.addDataSource(ds);
@@ -178,7 +178,7 @@ public class RealTimeMixerTest extends Assert {
         trainMocks();
         replay(executor, owner);
         
-        RealTimeMixer merger = new RealTimeMixer(codecManager, owner, null
+        RealTimeMixer merger = new RealTimeMixer(codecManager, owner, ""
                 , executor, 0, 3);
         merger.connect();
         JMFHelper.OperationController controller = JMFHelper.writeToFile(merger, "target/merger_1d_sources.wav");

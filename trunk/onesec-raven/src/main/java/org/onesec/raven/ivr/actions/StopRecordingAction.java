@@ -18,7 +18,6 @@ package org.onesec.raven.ivr.actions;
 import javax.script.Bindings;
 import org.onesec.raven.ivr.CallRecorder;
 import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.raven.log.LogLevel;
 
 /**
  *
@@ -38,8 +37,8 @@ public class StopRecordingAction extends AsyncAction {
         CallRecorder recorder = (CallRecorder) bindings.remove(
                 StartRecordingAction.RECORDER_BINDING);
         if (recorder==null) {
-            if (conversation.getOwner().isLogLevelEnabled(LogLevel.WARN))
-                conversation.getOwner().getLogger().warn(logMess("Can't stop recording because of recorder not found"));
+            if (logger.isWarnEnabled())
+                logger.warn("Can't stop recording because of recorder not found");
         } else 
             recorder.stopRecording(false);
     }

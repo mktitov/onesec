@@ -39,8 +39,8 @@ public class  CommutationManagerCallImpl
             , RequestControllerListener
 {
     public final static String SEARCHING_FOR_ENDPOINT_MSG = "Looking up for free endpoint in the pool (%s)";
-    public enum State {INIT, NO_FREE_ENDPOINTS, INVITING, OPERATOR_READY, ABONENT_READY, COMMUTATED
-        , HANDLED, INVALID}
+    public enum State {INIT, NO_FREE_ENDPOINTS, INVITING, OPERATOR_READY, ABONENT_READY, 
+        COMMUTATED, CONVERSATION_STARTED, HANDLED, INVALID}
     public final static Map<State, EnumSet<State>> TRANSITIONS = 
             new EnumMap<State, EnumSet<State>>(State.class);
 
@@ -67,7 +67,8 @@ public class  CommutationManagerCallImpl
         TRANSITIONS.put(State.INVITING, EnumSet.of(State.OPERATOR_READY, State.INVALID));
         TRANSITIONS.put(State.OPERATOR_READY, EnumSet.of(State.ABONENT_READY, State.INVALID));
         TRANSITIONS.put(State.ABONENT_READY, EnumSet.of(State.COMMUTATED, State.INVALID));
-        TRANSITIONS.put(State.COMMUTATED, EnumSet.of(State.HANDLED, State.INVALID));
+        TRANSITIONS.put(State.COMMUTATED, EnumSet.of(State.CONVERSATION_STARTED, State.INVALID));
+        TRANSITIONS.put(State.CONVERSATION_STARTED, EnumSet.of(State.HANDLED, State.INVALID));
         TRANSITIONS.put(State.HANDLED, EnumSet.of(State.INVALID));
         TRANSITIONS.put(State.INVALID, null);
     }
@@ -333,6 +334,31 @@ public class  CommutationManagerCallImpl
             listener.abonentReady();
     }
     
+    private class ConversationStartedListener extends IvrEndpointConversationListenerAdapter {
+        private final IvrConversationsBridge bridge;
+
+        public ConversationStartedListener(final IvrConversationsBridge bridge) {
+            this.bridge = bridge;
+            bridge.getConversation1().addConversationListener(this);
+            bridge.getConversation2().addConversationListener(this);
+        }
+
+        @Override
+        public void listenerAdded(IvrEndpointConversationEvent event) {
+            super.listenerAdded(event); //To change body of generated methods, choose Tools | Templates.
+        }
+
+        @Override
+        public void conversationStopped(IvrEndpointConversationStoppedEvent event) {
+            super.conversationStopped(event); //To change body of generated methods, choose Tools | Templates.
+        }
+
+        private void checkConversationStart() {
+            if (bridge.getConversation1().isConnectionEstablished() && bridge.getConversation2().isConnectionEstablished())
+                moveToState(State.CONVERSATION_STARTED, null, null);
+        }
+    }
+    
     private class OperatorConversationListener extends IvrEndpointConversationListenerAdapter {
         @Override
         public void listenerAdded(IvrEndpointConversationEvent event) {
@@ -341,13 +367,13 @@ public class  CommutationManagerCallImpl
 
         @Override
         public void conversationStopped(IvrEndpointConversationStoppedEvent event) {
-            moveToState(getState()==State.COMMUTATED? State.HANDLED:State.INVALID, null, event.getCompletionCode());
+            moveToState(getState()==State.CONVERSATION_STARTED? State.HANDLED:State.INVALID, null, event.getCompletionCode());
         }
 
         @Override
         public void conversationTransfered(IvrEndpointConversationTransferedEvent event) {
             synchronized(CommutationManagerCallImpl.this) {
-                if (state.get()==State.COMMUTATED) {
+                if (state.get()==State.COMMUTATED || state.get()==State.CONVERSATION_STARTED) {
                     number = event.getTransferAddress();
                     manager.callTransfered(number);
                 }

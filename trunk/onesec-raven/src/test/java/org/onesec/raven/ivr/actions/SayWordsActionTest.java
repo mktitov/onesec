@@ -23,15 +23,20 @@ import org.onesec.raven.Constants;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.ivr.IvrAction;
 import org.raven.conv.impl.ConversationScenarioStateImpl;
+import org.raven.log.LogLevel;
 import org.raven.sched.impl.ExecutorServiceNode;
 import org.raven.tree.Node;
+import org.raven.tree.impl.LoggerHelper;
 import org.raven.tree.impl.ResourcesNode;
+import org.slf4j.LoggerFactory;
 
 /**
  *
  * @author Mikhail Titov
  */
 public class SayWordsActionTest extends OnesecRavenTestCase {
+    private LoggerHelper logger = new LoggerHelper(LogLevel.TRACE, "logger", "", LoggerFactory.getLogger(PauseActionTest.class));
+    
     private TestEndpointConversationNode conv;
     private SayWordsActionNode actionNode;
     private Node wordsNode;
@@ -74,7 +79,7 @@ public class SayWordsActionTest extends OnesecRavenTestCase {
         assertTrue(actionNode.start());
         IvrAction action = actionNode.createAction();
         assertNotNull(action);
-        action.execute(conv);
+        action.execute(conv, null, logger);
         Thread.sleep(10000);
     }
 }

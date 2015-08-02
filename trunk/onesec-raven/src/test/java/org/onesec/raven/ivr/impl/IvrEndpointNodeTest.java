@@ -623,6 +623,9 @@ public class IvrEndpointNodeTest
 
         public void outgoingRtpStarted(IvrOutgoingRtpStartedEvent event) { }
 
+        @Override
+        public void connectionEstablished(IvrEndpointConversationEvent event) { }
+
         public void conversationStarted(final IvrEndpointConversationEvent event) {
             new Thread(new Runnable() {
                 public void run() {

@@ -17,10 +17,12 @@
 
 package org.onesec.raven.ivr.impl;
 
+import org.onesec.raven.ivr.ActionStopListener;
 import org.onesec.raven.ivr.IvrAction;
 import org.onesec.raven.ivr.IvrActionException;
 import org.onesec.raven.ivr.IvrActionStatus;
 import org.onesec.raven.ivr.IvrEndpointConversation;
+import org.raven.tree.impl.LoggerHelper;
 
 /**
  *
@@ -44,7 +46,7 @@ public class TestPauseAction implements IvrAction
         return false;
     }
 
-    public void execute(IvrEndpointConversation conversation) throws IvrActionException
+    public void execute(IvrEndpointConversation conversation, final ActionStopListener stopListener, LoggerHelper logger) throws IvrActionException
     {
         setStatus(IvrActionStatus.EXECUTING);
         new Thread(){
@@ -69,6 +71,8 @@ public class TestPauseAction implements IvrAction
                 finally
                 {
                     setStatus(IvrActionStatus.EXECUTED);
+                    if (stopListener!=null)
+                        stopListener.actionExecuted(TestPauseAction.this);
                 }
             }
         }.start();
