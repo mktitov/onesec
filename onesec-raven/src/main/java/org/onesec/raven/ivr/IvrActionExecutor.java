@@ -30,4 +30,5 @@ public interface IvrActionExecutor {
     public boolean hasDtmfProcessPoint(char dtmf);
     public List<Character> getCollectedDtmfs();
     public void cancelActionsExecution() throws InterruptedException;
+    public void stop();
 }

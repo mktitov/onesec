@@ -61,7 +61,6 @@ import org.slf4j.LoggerFactory;
 import static org.onesec.raven.ivr.queue.impl.CallQueueCdrRecordSchemaNode.*;
 import org.onesec.raven.net.impl.NettyNioEventLoopGroupNode;
 import org.onesec.raven.rtp.NettyRtpManagerConfigurator;
-import org.onesec.raven.rtp.RtpManagerConfigurator;
 
 /**
  *
@@ -333,7 +332,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         TimeUnit.SECONDS.sleep(60);
 
         Logger log = LoggerFactory.getLogger(Node.class);
-        log.debug("!! Finising test !!");
+        log.debug("!! Finishing test !!");
         assertEquals(1, collector.getDataListSize());
         assertTrue(collector.getDataList().get(0) instanceof Record);
         Record rec = (Record) collector.getDataList().get(0);
@@ -461,7 +460,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
             , IvrEndpointPoolNode pool, IvrConversationsBridgeManagerNode bridge, RecordSchemaNode schema) 
         throws Exception
     {
-        CallsQueuesNode queues = new CallsQueuesNode();
+        queues = new CallsQueuesNode();
         queues.setName("call queues");
         tree.getRootNode().addAndSaveChildren(queues);
         queues.setDataSource(queueCallAction);

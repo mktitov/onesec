@@ -17,14 +17,9 @@
 
 package org.onesec.raven.ivr.actions;
 
-import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.onesec.raven.ivr.ActionStopListener;
 import org.onesec.raven.ivr.IvrActionException;
 import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.raven.sched.ExecutorServiceException;
-import org.raven.sched.Task;
 import org.raven.sched.impl.AbstractTask;
 import org.raven.tree.Node;
 import org.raven.tree.impl.LoggerHelper;

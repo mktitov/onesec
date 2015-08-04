@@ -50,6 +50,11 @@ public class IvrActionExecutorFacade implements IvrActionExecutor {
     }
 
     @Override
+    public void stop() {
+        facade.stop();
+    }
+
+    @Override
     public void executeActions(Collection<IvrAction> actions) throws ExecutorServiceException, InterruptedException {
         cancelActionsExecution();
         facade.send(new ExecuteActions(actions));

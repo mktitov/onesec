@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Set;
 import org.onesec.raven.ivr.ActionStopListener;
 import org.onesec.raven.ivr.IvrAction;
-import org.onesec.raven.ivr.IvrActionException;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.actions.DtmfProcessPointAction;
 import org.raven.dp.impl.AbstractDataProcessorLogic;
