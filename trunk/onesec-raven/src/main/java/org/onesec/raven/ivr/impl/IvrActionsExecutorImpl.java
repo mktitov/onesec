@@ -60,6 +60,10 @@ public class IvrActionsExecutorImpl implements Task, IvrActionExecutor
         running = false;
     }
 
+    @Override
+    public void stop() {
+    }
+
     public synchronized void executeActions(Collection<IvrAction> actions)
             throws ExecutorServiceException, InterruptedException
     {

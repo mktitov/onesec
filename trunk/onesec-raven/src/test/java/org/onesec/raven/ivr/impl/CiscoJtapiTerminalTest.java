@@ -163,7 +163,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
 
     //В данном тесте необходимо самому позвонить на номер, указанный в тесте. Должны услышать:
     //  Пароли не совпадают
-//    @Test(timeout=50000)
+    @Test(timeout=50000)
     public void incomingCallTest() throws Exception {
         waitForProvider();
         createSimpleScenario();
@@ -196,9 +196,9 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
 
         endpoint = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, term, null);
         startEndpoint(endpoint);
-        endpoint.invite("01289111110000", 0, 0, listener, scenario, null, null);
+//        endpoint.invite("01289111110000", 0, 0, listener, scenario, null, null);
 //        endpoint.invite("01289651557837", 0, 0, listener, scenario, null, null);
-//        endpoint.invite("88024", 0, 0, listener, scenario, null, null);
+        endpoint.invite("88024", 0, 0, listener, scenario, null, null);
 //        endpoint.invite("88027", 0, 0, listener, scenario, null);
         waitForConversationStop();
         stopEndpoint(endpoint);
@@ -207,15 +207,15 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
     }
     
     //В данном тесте система позвонит, на указанный адрес. Необходимо взять трубку. 
-    //в течении секунды вызов должен переадресоваться на 88028
-//    @Test(timeout=70000)
+    //в течении секунды вызов должен переадресоваться на 88027
+    @Test(timeout=70000)
     public void transferTest() throws Exception {
         waitForProvider();
         createSimpleScenarioWithPause();
 
         IvrMediaTerminal term = trainTerminal(TEST_NUMBER, scenario, true, true);
-        IvrEndpointConversationListener listener = createTransferListener("088002500990*1");
-//        IvrEndpointConversationListener listener = createTransferListener("88028*19");
+//        IvrEndpointConversationListener listener = createTransferListener("088002500990*1");
+        IvrEndpointConversationListener listener = createTransferListener("88027*19");
         replay(term);
 
         endpoint = new CiscoJtapiTerminal(providerRegistry, stateListenersCoordinator, term, null);
@@ -309,7 +309,8 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         assertEquals(0, endpoint.getActiveCallsCount());
         
         convStopped.set(false);
-        endpoint2.invite("88028", 0, 0, listener2, scenario, null, null);
+        endpoint2.invite("88027", 0, 0, listener2, scenario, null, null);
+//        endpoint2.invite("88028", 0, 0, listener2, scenario, null, null);
         waitForConversationStop();
         Thread.sleep(1000);
         assertEquals(0, endpoint2.getActiveCallsCount());
@@ -677,6 +678,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
     private IvrEndpointConversationListener trainListener() {
         IvrEndpointConversationListener listener = createMock(IvrEndpointConversationListener.class);
         listener.conversationStarted(isA(IvrEndpointConversationEvent.class));
+        listener.connectionEstablished(isA(IvrEndpointConversationEvent.class));
         listener.conversationStopped(handleConversationStopped());
         listener.listenerAdded(isA(IvrEndpointConversationEvent.class));
         listener.incomingRtpStarted(isA(IvrIncomingRtpStartedEvent.class));
@@ -759,6 +761,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         expect(term.getLogLevel()).andReturn(LogLevel.TRACE).anyTimes();
         expect(term.getName()).andReturn("Terminal "+address).anyTimes();
         expect(term.getShareInboundOutboundPort()).andReturn(sharePorts).anyTimes();
+        expect(term.getStartRtpImmediatelly()).andReturn(false).anyTimes();
         return term;
     }
 

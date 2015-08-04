@@ -50,14 +50,11 @@ public class  CommutationManagerCallImpl
     
     private final AtomicReference<String> statusMessage;
     private final AtomicBoolean canceled = new AtomicBoolean(false);
-    private final List<CallsCommutationManagerListener> listeners =
-            new LinkedList<CallsCommutationManagerListener>();
-    private final AtomicReference<IvrEndpointConversation> operatorConversation = 
-            new AtomicReference<IvrEndpointConversation>();
-    private final AtomicReference<IvrConversationsBridge> bridge = 
-            new AtomicReference<IvrConversationsBridge>();
+    private final List<CallsCommutationManagerListener> listeners = new LinkedList<>();
+    private final AtomicReference<IvrEndpointConversation> operatorConversation = new AtomicReference<>();
+    private final AtomicReference<IvrConversationsBridge> bridge = new AtomicReference<>();
     private final ReentrantLock lock = new ReentrantLock();
-    private final AtomicReference<State> state = new AtomicReference<State>(State.INIT);
+    private final AtomicReference<State> state = new AtomicReference<>(State.INIT);
     private IvrEndpoint endpoint = null;
     private IvrEndpointConversation conversation = null;
     
@@ -78,24 +75,28 @@ public class  CommutationManagerCallImpl
         this.number = number;
         this.logger = new LoggerHelper(manager.getOperator(), "Operator ("+manager.getOperator().getName()+"). ");
 //        this.logger = manager.getOperator().getLogger();
-        this.statusMessage = new AtomicReference<String>(
+        this.statusMessage = new AtomicReference<>(
                 String.format(SEARCHING_FOR_ENDPOINT_MSG, manager.getRequest().toString()));
     }
     
     private synchronized void moveToState(State newState, Throwable e, CompletionCode completionCode) {
         //if current state is invalid then do nothing
-        if (state.get()==State.INVALID)
+        if (state.get()==State.INVALID || state.get()==newState)
             return;
         //first, check is transition possible
+        State nextState = null;
+        Throwable nextException = null;
+        if (newState==State.CONVERSATION_STARTED && state.get()==State.ABONENT_READY) {
+            newState = State.COMMUTATED;
+            nextState = State.CONVERSATION_STARTED;
+        }
         if (!TRANSITIONS.get(state.get()).contains(newState)) {
             if (logger.isErrorEnabled())
                 logger.error(String.format("Invalid transition. Can't move from state (%s) to state (%s)"
                         , state.get().name(), newState.name()));
             moveToState(State.INVALID, null, null);
         }
-        State nextState = null;
-        Throwable nextException = null;
-        try {
+        try {            
             switch (newState) {
                 case NO_FREE_ENDPOINTS: 
                     if (e!=null) {
@@ -131,6 +132,7 @@ public class  CommutationManagerCallImpl
                     commutateCalls();
                     break;
                 case COMMUTATED: getRequest().fireCommutatedEvent(); break;
+                case CONVERSATION_STARTED: getRequest().fireConversationStartedEvent(); break;
                 case HANDLED: 
                     if (logger.isDebugEnabled())
                         logger.debug("Operator's conv. completed");
@@ -161,6 +163,9 @@ public class  CommutationManagerCallImpl
                     }
                     break;
             }
+            if (logger.isDebugEnabled()) {
+                logger.debug("Successfully moved to state "+newState+" from state "+state.get());
+            }
             state.set(newState);
         } catch (Throwable ex) {
             nextState = State.INVALID;
@@ -173,7 +178,7 @@ public class  CommutationManagerCallImpl
     }
 
     public void requestInvalidated() {
-        callMoveToState(getState()==State.COMMUTATED? State.HANDLED:State.INVALID, null, null);
+        callMoveToState(getState()==State.CONVERSATION_STARTED? State.HANDLED:State.INVALID, null, null);
     }
 
     public void processingByOperator(CommutationManagerCall operatorCall) {
@@ -286,45 +291,56 @@ public class  CommutationManagerCallImpl
         IvrConversationsBridge _bridge = manager.getConversationsBridgeManager().createBridge(
                 getRequest().getConversation(), operatorConversation.get(), logger.getPrefix());
         bridge.set(_bridge);
+        final ConversationStartedListener convStartListener = new ConversationStartedListener(_bridge);
+        convStartListener.init();
         _bridge.addBridgeListener(this);
         _bridge.activateBridge();
         
     }
 
+    @Override
     public void operatorReadyToCommutate(IvrEndpointConversation operatorConversation) {
         this.operatorConversation.set(operatorConversation);
         callMoveToState(State.OPERATOR_READY, null, null);
     }
 
+    @Override
    public void abonentReadyToCommutate(IvrEndpointConversation abonentConversation) {
         callMoveToState(State.ABONENT_READY, null, null);
     }
 
+    @Override
     public void bridgeReactivated(IvrConversationsBridge bridge) { }
 
+    @Override
     public void bridgeActivated(IvrConversationsBridge bridge) {
         if (state.get()!=State.COMMUTATED)
             callMoveToState(State.COMMUTATED, null, null);
     }
 
+    @Override
     public void bridgeDeactivated(IvrConversationsBridge bridge) { }
 
 //    String logMess(String message, Object... args) {
 //        return manager.getRequest().logMess("Operator ("+manager.getOperator().getName()+"). "+message, args);
 //    }
 
+    @Override
     public long getWaitTimeout() {
         return manager.getWaitTimeout();
     }
 
+    @Override
     public Node getOwner() {
         return manager.getOperator();
     }
 
+    @Override
     public String getStatusMessage() {
         return statusMessage.get();
     }
 
+    @Override
     public int getPriority() {
         return manager.getRequest().getPriority();
     }
@@ -339,23 +355,27 @@ public class  CommutationManagerCallImpl
 
         public ConversationStartedListener(final IvrConversationsBridge bridge) {
             this.bridge = bridge;
-            bridge.getConversation1().addConversationListener(this);
-            bridge.getConversation2().addConversationListener(this);
         }
 
         @Override
         public void listenerAdded(IvrEndpointConversationEvent event) {
-            super.listenerAdded(event); //To change body of generated methods, choose Tools | Templates.
+            checkConversationStart();
+        }
+
+        public void init() {
+            bridge.getConversation1().addConversationListener(this);
+            bridge.getConversation2().addConversationListener(this);            
         }
 
         @Override
-        public void conversationStopped(IvrEndpointConversationStoppedEvent event) {
-            super.conversationStopped(event); //To change body of generated methods, choose Tools | Templates.
+        public void connectionEstablished(IvrEndpointConversationEvent event) {
+            System.out.println("\n\n\n CONNECTION ESTABLISHED: "+event.getConversation()+"\n\n\n");
+            checkConversationStart();
         }
 
         private void checkConversationStart() {
             if (bridge.getConversation1().isConnectionEstablished() && bridge.getConversation2().isConnectionEstablished())
-                moveToState(State.CONVERSATION_STARTED, null, null);
+                callMoveToState(State.CONVERSATION_STARTED, null, null);
         }
     }
     

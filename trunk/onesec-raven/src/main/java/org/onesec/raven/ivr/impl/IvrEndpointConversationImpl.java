@@ -94,7 +94,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     private RtpStatus inRtpStatus = RtpStatus.INVALID;
     private RtpStatus outRtpStatus = RtpStatus.INVALID;
     private ConversationScenarioState conversationState;
-    private IvrActionsExecutorImpl actionsExecutor;
+    private IvrActionExecutor actionsExecutor;
     private ConcatDataSource audioStream;
     private CiscoCall call;
     private String remoteAddress;
@@ -573,8 +573,9 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 for (Map.Entry<String, Object> b: additionalBindings.entrySet())
                     conversationState.setBinding(b.getKey(), b.getValue(), BindingScope.CONVERSATION);
             additionalBindings = null;
-            actionsExecutor = new IvrActionsExecutorImpl(this, executor);
-            actionsExecutor.setLogPrefix(callId+" : ");
+            actionsExecutor = new IvrActionExecutorFacade(this, new LoggerHelper(logger, callLog("")));
+//            actionsExecutor = new IvrActionsExecutorImpl(this, executor);
+//            actionsExecutor.setLogPrefix(callId+" : ");
             this.bindingSupport = new BindingSupportImpl();
             return true;
         }
@@ -663,6 +664,10 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             stopping = true;
             if (state.getId()==TALKING || state.getId()==CONNECTING || state.getId()==READY)
                 dropCallConnections();
+            if (actionsExecutor != null) {
+                actionsExecutor.stop();
+                actionsExecutor = null;
+            }
             call = null;
             try {
                 checkState();
@@ -689,6 +694,10 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             stopIncomingRtp();
             stopOutgoingRtp();
 //            audioStream.reset();
+            if (actionsExecutor != null) {
+                actionsExecutor.stop();
+                actionsExecutor = null;
+            }
             call = null;
             if (logger.isDebugEnabled())
                 logger.debug(callLog("Conversation \"softly\"stopped (%s)", completionCode));
