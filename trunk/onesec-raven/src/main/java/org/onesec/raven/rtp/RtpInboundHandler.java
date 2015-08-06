@@ -16,17 +16,18 @@
 package org.onesec.raven.rtp;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.ReferenceCountUtil;
 import java.io.IOException;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.PushSourceStream;
 import static javax.media.protocol.SourceStream.LENGTH_UNKNOWN;
 import javax.media.protocol.SourceTransferHandler;
-import org.onesec.raven.RingQueue;
-import org.onesec.raven.impl.RingQueueImpl;
 
 /**
  *
@@ -37,19 +38,21 @@ public class RtpInboundHandler extends ChannelInboundHandlerAdapter {
     private final static Object[] EMPTY_CONTROLS = new Object[0];
     private final static int MINIMUM_TRANSFER_SIZE = 2048;
     
-    private final RingQueue<ByteBuf> buffers = new RingQueueImpl<ByteBuf>(5);
+//    private final RingQueue<ByteBuf> buffers = new RingQueueImpl<ByteBuf>(5);
+    private final BlockingQueue<ByteBuf> buffers = new ArrayBlockingQueue<>(10);
     private final InStream inStream = new InStream();
     private final Channel channel;
     private volatile SourceTransferHandler handler;
 
-    public RtpInboundHandler(Channel channel) {
+    public RtpInboundHandler(Channel channel, final ByteBufAllocator bufAllocator) {
         channel.config().setAutoRead(false);
+        channel.config().setAllocator(bufAllocator);
         this.channel = channel;
     }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (!buffers.push((ByteBuf) msg)) 
+        if (!buffers.offer((ByteBuf) msg)) 
             ReferenceCountUtil.release(msg);
     }
     
@@ -74,7 +77,7 @@ public class RtpInboundHandler extends ChannelInboundHandlerAdapter {
                 final int cnt = Math.min(len, buf.readableBytes());
                 buf.readBytes(bytes, offset, cnt);
                 if (!buf.isReadable()) {
-                    buffers.pop();
+                    buffers.poll();
                     buf.release();
                 }
                 return cnt;

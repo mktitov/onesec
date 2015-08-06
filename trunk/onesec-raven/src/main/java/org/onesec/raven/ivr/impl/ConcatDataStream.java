@@ -46,7 +46,7 @@ public class ConcatDataStream implements PushBufferStream, Task
 
     private final LoggerHelper logger;
     private final Buffer silentBuffer;
-    private final Queue<Buffer> bufferQueue;
+    public final Queue<Buffer> bufferQueue;
     private final ConcatDataSource dataSource;
     private final ContentDescriptor contentDescriptor;
     private final Node owner;
@@ -60,9 +60,8 @@ public class ConcatDataStream implements PushBufferStream, Task
     private final AtomicInteger sendedPackets = new AtomicInteger(0);
     private final AtomicInteger silencePacketCount = new AtomicInteger(0);
 //    private String logPrefix;
-    private AtomicReference<ConcatDataSource.SourceProcessor> sourceInfo = 
-            new AtomicReference<ConcatDataSource.SourceProcessor>();
-    private AtomicInteger emptyQueueEvents = new AtomicInteger(0);
+    private final AtomicReference<ConcatDataSource.SourceProcessor> sourceInfo = new AtomicReference<>();
+    private final AtomicInteger emptyQueueEvents = new AtomicInteger(0);
 
     public ConcatDataStream(
             Queue<Buffer> bufferQueue, ConcatDataSource dataSource, Node owner
@@ -177,7 +176,7 @@ public class ConcatDataStream implements PushBufferStream, Task
             while ((!dataSource.isClosed() || !bufferQueue.isEmpty()))
 //                    && (silencePacketCount.get()<MAX_SILENCE_BUFFER_COUNT || (si!=null && si.isRealTime())))
             {
-                try {
+//                try {
                     long cycleStartTs = System.currentTimeMillis();
                     action = "getting new buffer from queue";
                     si = sourceInfo.get();
@@ -220,15 +219,15 @@ public class ConcatDataStream implements PushBufferStream, Task
                         logger.debug(mess);
                     }
                     prevSkew = skew;
-                    sleepTime = (packetNumber-expectedPacketNumber)*packetLength - correction - 5;                    
-                    if (sleepTime>0)
-                        TimeUnit.MILLISECONDS.sleep(sleepTime);
-                } catch (InterruptedException ex) {
-                    if (logger.isErrorEnabled())
-                        logger.error("Transfer buffers to rtp session task was interrupted", ex);
-                    Thread.currentThread().interrupt();
-                    break;
-                }
+//                    sleepTime = (packetNumber-expectedPacketNumber)*packetLength - correction - 5;                    
+//                    if (sleepTime>0)
+//                        TimeUnit.MILLISECONDS.sleep(sleepTime);
+//                } catch (InterruptedException ex) {
+//                    if (logger.isErrorEnabled())
+//                        logger.error("Transfer buffers to rtp session task was interrupted", ex);
+//                    Thread.currentThread().interrupt();
+//                    break;
+//                }
             }
             if (debugEnabled) {
                 logger.debug("Transfer buffers to rtp session task was finished");
@@ -258,11 +257,13 @@ public class ConcatDataStream implements PushBufferStream, Task
         final double avgSkew = expectedPacketNumber==0? 0 : skew/(double)expectedPacketNumber;
         final double avgTransferTime = packetNumber==0? 0 : transferTimeSum/(double)packetNumber;
         return String.format(
+                "\n\tformat: %s; "+
                 "\n\tstartTime: %s; dur: %s sec; skew: %s; maxSkew: %s; maxSkewTime: %s; avgSkew: %.2f; "+
                 "\n\texpectedPackets: %s; sentPackets: %s; missedPackets: %s; droppedPackets: %s; "+
                 "siliencePacktes: %s; "+
                 "\n\tavgTransferTime: %.2f; maxTransferTime: %s; "+
                 "emptyBufferEvents: %s; buffersSize: %s"
+                , getFormat().getEncoding()
                 , fmt.format(new Date(startTime))
                 , (currTime-startTime)/1000, skew, maxSkew
                 , fmt.format(new Date(maxSkewTime))+"/"+maxSkewDur/1000+"."+maxSkewDur%1000

@@ -15,16 +15,10 @@
  */
 package org.onesec.raven.rtp;
 
-import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInitializer;
 import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.nio.NioDatagramChannel;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import org.junit.Test;
-import org.onesec.raven.net.impl.BufHolderToBufDecoder;
 import org.raven.log.LogLevel;
 import org.raven.tree.impl.LoggerHelper;
 import org.slf4j.Logger;
@@ -51,14 +45,14 @@ public class NettyRtpConnectorTest {
         
     }
     
-    private ChannelFuture createChannel(int port) {
-        return new Bootstrap().group(group).channel(NioDatagramChannel.class).handler(new ChannelInitializer() {
-            @Override protected void initChannel(Channel ch) throws Exception {
-                ch.pipeline().addLast(new BufHolderToBufDecoder());
-                ch.pipeline().addLast(new RtpInboundHandler(ch));
-                ch.pipeline().addLast(new RtpOutboundHandler(ch));
-            }
-        }).bind(localhost, port);
-    }
-    
+//    private ChannelFuture createChannel(int port) {
+//        return new Bootstrap().group(group).channel(NioDatagramChannel.class).handler(new ChannelInitializer() {
+//            @Override protected void initChannel(Channel ch) throws Exception {
+//                ch.pipeline().addLast(new BufHolderToBufDecoder());
+//                ch.pipeline().addLast(new RtpInboundHandler(ch));
+//                ch.pipeline().addLast(new RtpOutboundHandler(ch));
+//            }
+//        }).bind(localhost, port);
+//    }
+//    
 }

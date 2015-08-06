@@ -17,6 +17,7 @@ package org.onesec.raven.rtp;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -91,7 +92,7 @@ public class RtpInboundHandlerTest extends Assert {
     private Bootstrap createServerBootstrap(NioEventLoopGroup group) {
         return createDatagramBootstrap(group).handler(new ChannelInitializer() {
             @Override protected void initChannel(Channel ch) throws Exception {
-                ch.pipeline().addLast(new BufHolderToBufDecoder()).addLast(new RtpInboundHandler(ch));
+                ch.pipeline().addLast(new BufHolderToBufDecoder()).addLast(new RtpInboundHandler(ch, PooledByteBufAllocator.DEFAULT));
             }
         });
     }

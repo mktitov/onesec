@@ -86,6 +86,8 @@ public class  CommutationManagerCallImpl
         //first, check is transition possible
         State nextState = null;
         Throwable nextException = null;
+        if (newState==State.COMMUTATED && (state.get()==State.COMMUTATED || state.get()==State.CONVERSATION_STARTED))
+            return;
         if (newState==State.CONVERSATION_STARTED && state.get()==State.ABONENT_READY) {
             newState = State.COMMUTATED;
             nextState = State.CONVERSATION_STARTED;
