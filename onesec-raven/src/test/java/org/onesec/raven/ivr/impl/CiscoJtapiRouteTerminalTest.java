@@ -38,7 +38,6 @@ import org.easymock.IMocksControl;
 import org.raven.RavenUtils;
 import org.raven.expr.impl.ScriptAttributeValueHandlerFactory;
 import org.raven.table.Table;
-import org.raven.tree.Node;
 import org.raven.tree.Viewable;
 import org.raven.tree.ViewableObject;
 

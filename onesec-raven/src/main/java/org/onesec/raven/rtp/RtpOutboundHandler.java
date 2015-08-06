@@ -16,6 +16,7 @@
 package org.onesec.raven.rtp;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import javax.media.rtp.OutputDataStream;
@@ -28,7 +29,8 @@ public class RtpOutboundHandler extends ChannelOutboundHandlerAdapter {
     public final static String NAME = "OutStream";
     private final OutStream outStream;
 
-    public RtpOutboundHandler(Channel channel) {
+    public RtpOutboundHandler(final Channel channel, final ByteBufAllocator bufAllocator) {
+        channel.config().setAllocator(bufAllocator);
         this.outStream = new OutStream(channel);
     }
 

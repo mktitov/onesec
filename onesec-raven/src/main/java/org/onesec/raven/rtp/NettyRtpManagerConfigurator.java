@@ -16,6 +16,9 @@
 package org.onesec.raven.rtp;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -42,11 +45,40 @@ import org.weda.internal.annotations.Service;
 @NodeClass
 public class NettyRtpManagerConfigurator extends BaseNode implements RtpManagerConfigurator {
     
+   
     @Service
     private static RTPManagerService rtpManagerService;
     
     @NotNull @Parameter(valueHandlerType = NodeReferenceValueHandlerFactory.TYPE)
     private NettyEventLoopGroupProvider eventLoopGroupProvider;
+    
+    @NotNull @Parameter(defaultValue = "true")
+    private Boolean useBuffersPool;
+    
+    @NotNull @Parameter(defaultValue = "true")
+    private Boolean preferDirectBuffer;
+    
+    private ByteBufAllocator bufferAllocator;
+
+    @Override
+    protected void doInit() throws Exception {
+        super.doInit();
+        bufferAllocator = null;
+    }
+
+    @Override
+    protected void doStart() throws Exception {
+        super.doStart();
+        bufferAllocator = useBuffersPool? 
+                new PooledByteBufAllocator(preferDirectBuffer) : 
+                new UnpooledByteBufAllocator(preferDirectBuffer);
+    }
+    
+    @Override
+    protected void doStop() throws Exception {
+        super.doStop();
+        bufferAllocator = null;
+    }
 
     public RTPManager configureOutboundManager(InetAddress localAddress, int localPort, 
             InetAddress remoteAddress, int remotePort, LoggerHelper logger) 
@@ -101,7 +133,7 @@ public class NettyRtpManagerConfigurator extends BaseNode implements RtpManagerC
                             }
                         });
                     ch.pipeline().addLast(BufHolderToBufDecoder.INSTANCE);
-                    ch.pipeline().addLast(new RtpInboundHandler(ch));
+                    ch.pipeline().addLast(new RtpInboundHandler(ch, bufferAllocator));
                 }
         }).bind(localAddress, localPort);
         ChannelFuture rtcpChannel = createBootstrap()
@@ -116,9 +148,9 @@ public class NettyRtpManagerConfigurator extends BaseNode implements RtpManagerC
                             }
                         });
                     ch.pipeline().addLast(BufHolderToBufDecoder.INSTANCE);
-                    ch.pipeline().addLast(new RtpInboundHandler(ch));
-                    ch.pipeline().addLast(new RtpInboundHandler(ch));
-                    ch.pipeline().addLast(new RtpOutboundHandler(ch));
+                    ch.pipeline().addLast(new RtpInboundHandler(ch, bufferAllocator));
+//                    ch.pipeline().addLast(new RtpInboundHandler(ch));
+                    ch.pipeline().addLast(new RtpOutboundHandler(ch, bufferAllocator));
                 }
         }).bind(localAddress, localPort+1);
         final RTPManager manager = rtpManagerService.createRtpManager();
@@ -133,6 +165,22 @@ public class NettyRtpManagerConfigurator extends BaseNode implements RtpManagerC
     public void setEventLoopGroupProvider(NettyEventLoopGroupProvider eventLoopGroupProvider) {
         this.eventLoopGroupProvider = eventLoopGroupProvider;
     }
+
+    public Boolean getPreferDirectBuffer() {
+        return preferDirectBuffer;
+    }
+
+    public void setPreferDirectBuffer(Boolean preferDirectBuffer) {
+        this.preferDirectBuffer = preferDirectBuffer;
+    }
+
+    public Boolean getUseBuffersPool() {
+        return useBuffersPool;
+    }
+
+    public void setUseBuffersPool(Boolean useBuffersPool) {
+        this.useBuffersPool = useBuffersPool;
+    }
     
     private final class StaticChannelInitializer extends ChannelInitializer<Channel> {
         private final int remotePort;
@@ -146,8 +194,8 @@ public class NettyRtpManagerConfigurator extends BaseNode implements RtpManagerC
         @Override
         protected void initChannel(Channel ch) throws Exception {
             ch.pipeline().addLast(BufHolderToBufDecoder.INSTANCE);
-            ch.pipeline().addLast(new RtpInboundHandler(ch));
-            ch.pipeline().addLast(new RtpOutboundHandler(ch));
+            ch.pipeline().addLast(new RtpInboundHandler(ch, bufferAllocator));
+            ch.pipeline().addLast(new RtpOutboundHandler(ch, bufferAllocator));
             ch.pipeline().addLast(new OutboundPacketBuilderHandler(remoteAddress, remotePort));
         }
     }

@@ -17,6 +17,7 @@ package org.onesec.raven.rtp;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -38,7 +39,7 @@ import org.onesec.raven.net.impl.BufHolderToBufDecoder;
 public class RtpOutboundHandlerTest extends Assert {
     private final static int BIND_PORT = 7777;
     private final static byte[] TEST_BUFFER = new byte[]{1,2,3,4,5};
-    private AtomicReference<byte[]> receivedBytes = new AtomicReference<byte[]>();
+    private final AtomicReference<byte[]> receivedBytes = new AtomicReference<>();
     
     @Test
     public void test() throws Exception {
@@ -68,7 +69,7 @@ public class RtpOutboundHandlerTest extends Assert {
     private Bootstrap createClientBootstrap(NioEventLoopGroup group) {
         return createDatagramBootstrap(group).handler(new ChannelInitializer() {
             @Override protected void initChannel(Channel ch) throws Exception {
-                ch.pipeline().addLast(new RtpOutboundHandler(ch));
+                ch.pipeline().addLast(new RtpOutboundHandler(ch, PooledByteBufAllocator.DEFAULT));
             }
         });
     }

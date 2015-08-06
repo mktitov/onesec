@@ -51,6 +51,7 @@ import org.raven.tree.impl.LoggerHelper;
 public class ConcatDataSource extends PushBufferDataSource implements AudioStream {
     public static final int SOURCE_WAIT_TIMEOUT = 100;
     public static final int WAIT_STATE_TIMEOUT = 2000;
+    public final static Object[] EMPTY_CONTROLS = new Object[0];
 
     private final LoggerHelper logger;
     private final String contentType;
@@ -58,8 +59,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
     private final CodecManager codecManager;
     private final ConcatDataStream[] streams;
     private final Queue<Buffer> buffers = new ConcurrentLinkedQueue<>();
-    private final AtomicReference<SourceProcessor> sourceProcessorRef = 
-            new AtomicReference<SourceProcessor>();
+    private final AtomicReference<SourceProcessor> sourceProcessorRef = new AtomicReference<>();
     private final AtomicBoolean stopped = new AtomicBoolean(false);
     private final AtomicBoolean started = new AtomicBoolean(false);
     private final Node owner;
@@ -68,7 +68,8 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
     private final int rtpPacketSize;
     private final long packetSizeInMillis;
     private final BufferCache bufferCache;
-    private final Codec codec;
+    private final Codec codec;    
+    private final Buffer silentBuffer;
 //    private String logPrefix;
     private int bufferCount;
 
@@ -95,29 +96,34 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
         this.logger = new LoggerHelper(logger, "AudioStream. ");
         
         bufferCount = 0;
-        Buffer silentBuffer = bufferCache.getSilentBuffer(executorService, owner, codec, rtpPacketSize);
+        silentBuffer = bufferCache.getSilentBuffer(executorService, owner, codec, rtpPacketSize);
         streams = new ConcatDataStream[]{new ConcatDataStream(
                 buffers, this, owner, rtpPacketSize, codec, rtpMaxSendAheadPacketsCount, silentBuffer, logger)};
     }
 
+    @Override
     public void addSource(DataSource source) {
         replaceSourceProcessor(new SourceProcessorImpl(source));
     }
 
+    @Override
     public void addSource(String key, long checksum, DataSource source) {
         replaceSourceProcessor(new SourceProcessorImpl(source, key, checksum));
     }
 
+    @Override
     public void addSource(InputStreamSource source) {
         if (source!=null)
             addSource(new ContainerParserDataSource(codecManager, source, contentType));
     }
 
+    @Override
     public void addSource(String key, long checksum, InputStreamSource source) {
         if (source!=null)
             addSource(key, checksum, new ContainerParserDataSource(codecManager, source, contentType));
     }
 
+    @Override
     public void playContinuously(List<AudioFile> files, long trimPeriod) {
         replaceSourceProcessor(new PlayContinuousSourceProcessor(files, trimPeriod));
     }
@@ -153,8 +159,10 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
 
     public DataSource getDataSource() {
         return this;
+//        return new PullDs();
+        
     }
-
+    
     public Format getFormat() {
         return format;
     }
@@ -641,5 +649,99 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
                 close();
             }
         }
+    }
+    
+    private class PullDs extends PullBufferDataSource {
+        private final PullBufferStream[] streams = new PullBufferStream[]{new PullStream()};
+
+        @Override
+        public PullBufferStream[] getStreams() {
+            return streams;
+        }
+
+        @Override
+        public String getContentType() {
+            return ConcatDataSource.this.getContentType();
+        }
+
+        @Override
+        public void connect() throws IOException {
+        }
+
+        @Override
+        public void disconnect() {
+        }
+
+        @Override
+        public void start() throws IOException {
+        }
+
+        @Override
+        public void stop() throws IOException {
+        }
+
+        @Override
+        public Object getControl(String paramString) {
+            return ConcatDataSource.this.getControl(paramString);
+        }
+
+        @Override
+        public Object[] getControls() {
+            return ConcatDataSource.this.getControls();
+        }
+
+        @Override
+        public Time getDuration() {
+            return ConcatDataSource.this.getDuration();
+        }
+        
+    }
+    
+    private class PullStream implements PullBufferStream {
+        private final ContentDescriptor contentDescriptor = new ContentDescriptor(ConcatDataSource.this.getContentType());
+
+        @Override
+        public boolean willReadBlock() {
+            return false;
+        }
+
+        @Override
+        public void read(Buffer buffer) throws IOException {
+            Buffer buf = streams[0].bufferQueue.poll();
+            if (buf==null)
+                buf = silentBuffer;
+            buffer.copy(buf);
+        }
+
+        @Override
+        public Format getFormat() {
+            return ConcatDataSource.this.getFormat();
+        }
+
+        @Override
+        public ContentDescriptor getContentDescriptor() {
+            return contentDescriptor;
+        }
+
+        @Override
+        public long getContentLength() {
+            return LENGTH_UNKNOWN;
+        }
+
+        @Override
+        public boolean endOfStream() {
+            return streams[0].bufferQueue.isEmpty() && isClosed();
+        }
+
+        @Override
+        public Object[] getControls() {
+            return EMPTY_CONTROLS;
+        }
+
+        @Override
+        public Object getControl(String paramString) {
+            return null;
+        }
+        
     }
 }
