@@ -223,7 +223,10 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
         return stopped.get();
     }
 
+    @Override
     public void reset() {
+        if (logger.isDebugEnabled())
+            logger.debug("Reseting audio stream");
         replaceSourceProcessor(null);
     }
 
@@ -651,97 +654,97 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
         }
     }
     
-    private class PullDs extends PullBufferDataSource {
-        private final PullBufferStream[] streams = new PullBufferStream[]{new PullStream()};
-
-        @Override
-        public PullBufferStream[] getStreams() {
-            return streams;
-        }
-
-        @Override
-        public String getContentType() {
-            return ConcatDataSource.this.getContentType();
-        }
-
-        @Override
-        public void connect() throws IOException {
-        }
-
-        @Override
-        public void disconnect() {
-        }
-
-        @Override
-        public void start() throws IOException {
-        }
-
-        @Override
-        public void stop() throws IOException {
-        }
-
-        @Override
-        public Object getControl(String paramString) {
-            return ConcatDataSource.this.getControl(paramString);
-        }
-
-        @Override
-        public Object[] getControls() {
-            return ConcatDataSource.this.getControls();
-        }
-
-        @Override
-        public Time getDuration() {
-            return ConcatDataSource.this.getDuration();
-        }
-        
-    }
-    
-    private class PullStream implements PullBufferStream {
-        private final ContentDescriptor contentDescriptor = new ContentDescriptor(ConcatDataSource.this.getContentType());
-
-        @Override
-        public boolean willReadBlock() {
-            return false;
-        }
-
-        @Override
-        public void read(Buffer buffer) throws IOException {
-            Buffer buf = streams[0].bufferQueue.poll();
-            if (buf==null)
-                buf = silentBuffer;
-            buffer.copy(buf);
-        }
-
-        @Override
-        public Format getFormat() {
-            return ConcatDataSource.this.getFormat();
-        }
-
-        @Override
-        public ContentDescriptor getContentDescriptor() {
-            return contentDescriptor;
-        }
-
-        @Override
-        public long getContentLength() {
-            return LENGTH_UNKNOWN;
-        }
-
-        @Override
-        public boolean endOfStream() {
-            return streams[0].bufferQueue.isEmpty() && isClosed();
-        }
-
-        @Override
-        public Object[] getControls() {
-            return EMPTY_CONTROLS;
-        }
-
-        @Override
-        public Object getControl(String paramString) {
-            return null;
-        }
-        
-    }
+//    private class PullDs extends PullBufferDataSource {
+//        private final PullBufferStream[] streams = new PullBufferStream[]{new PullStream()};
+//
+//        @Override
+//        public PullBufferStream[] getStreams() {
+//            return streams;
+//        }
+//
+//        @Override
+//        public String getContentType() {
+//            return ConcatDataSource.this.getContentType();
+//        }
+//
+//        @Override
+//        public void connect() throws IOException {
+//        }
+//
+//        @Override
+//        public void disconnect() {
+//        }
+//
+//        @Override
+//        public void start() throws IOException {
+//        }
+//
+//        @Override
+//        public void stop() throws IOException {
+//        }
+//
+//        @Override
+//        public Object getControl(String paramString) {
+//            return ConcatDataSource.this.getControl(paramString);
+//        }
+//
+//        @Override
+//        public Object[] getControls() {
+//            return ConcatDataSource.this.getControls();
+//        }
+//
+//        @Override
+//        public Time getDuration() {
+//            return ConcatDataSource.this.getDuration();
+//        }
+//        
+//    }
+//    
+//    private class PullStream implements PullBufferStream {
+//        private final ContentDescriptor contentDescriptor = new ContentDescriptor(ConcatDataSource.this.getContentType());
+//
+//        @Override
+//        public boolean willReadBlock() {
+//            return false;
+//        }
+//
+//        @Override
+//        public void read(Buffer buffer) throws IOException {
+//            Buffer buf = streams[0].bufferQueue.poll();
+//            if (buf==null)
+//                buf = silentBuffer;
+//            buffer.copy(buf);
+//        }
+//
+//        @Override
+//        public Format getFormat() {
+//            return ConcatDataSource.this.getFormat();
+//        }
+//
+//        @Override
+//        public ContentDescriptor getContentDescriptor() {
+//            return contentDescriptor;
+//        }
+//
+//        @Override
+//        public long getContentLength() {
+//            return LENGTH_UNKNOWN;
+//        }
+//
+//        @Override
+//        public boolean endOfStream() {
+//            return streams[0].bufferQueue.isEmpty() && isClosed();
+//        }
+//
+//        @Override
+//        public Object[] getControls() {
+//            return EMPTY_CONTROLS;
+//        }
+//
+//        @Override
+//        public Object getControl(String paramString) {
+//            return null;
+//        }
+//        
+//    }
 }
