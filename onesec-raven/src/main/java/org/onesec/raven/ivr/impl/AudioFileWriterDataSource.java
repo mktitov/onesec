@@ -42,6 +42,7 @@ public class AudioFileWriterDataSource {
     private RandomAccessFile out;
     private final AtomicBoolean fileClosed = new AtomicBoolean(false);
     private final AtomicBoolean muxClosed = new AtomicBoolean(false);
+    private volatile boolean muxInitialized = false;
 
     public AudioFileWriterDataSource(File file, PushBufferDataSource dataSource
             , CodecManager codecManager, String contentType, LoggerHelper logger) 
@@ -109,7 +110,8 @@ public class AudioFileWriterDataSource {
             if (mux!=null && mux.getDataOutput()!=null) {
                 if (logger.isDebugEnabled())
                     logger.debug("Closing mux");
-                mux.close();
+                if (muxInitialized) 
+                    mux.close();
                 mux.getDataOutput().stop();
                 mux.getDataOutput().disconnect();
             }
@@ -136,6 +138,7 @@ public class AudioFileWriterDataSource {
             if (fmt==null) 
                 throw new Exception("Not supported format: "+buffer.getFormat());
             mux.open();
+            muxInitialized = true;
             PushDataSource ds = (PushDataSource) mux.getDataOutput();
             ds.getStreams()[0].setTransferHandler(new MuxTransferHandler());
             ds.connect();

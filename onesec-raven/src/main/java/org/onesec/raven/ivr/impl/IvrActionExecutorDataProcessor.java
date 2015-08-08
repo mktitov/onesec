@@ -33,6 +33,7 @@ import org.raven.dp.DataProcessor;
 import org.raven.dp.DataProcessorFacade;
 import org.raven.dp.impl.Behaviour;
 import org.raven.ds.TimeoutMessageSelector;
+import org.raven.tree.impl.LoggerHelper;
 /**
  *
  * @author Mikhail Titov
@@ -46,6 +47,8 @@ public class IvrActionExecutorDataProcessor extends AbstractDataProcessorLogic {
     private Iterator<IvrAction> actionsForExecute;
     private IvrAction currentAction;
     private ActionStopListener actionStopListener = new StopListener();
+    private long actionId = 0;
+    private long executionCycleId = 0;
 
     public IvrActionExecutorDataProcessor(IvrEndpointConversation conversation) {
         this.conversation = conversation;
@@ -74,6 +77,7 @@ public class IvrActionExecutorDataProcessor extends AbstractDataProcessorLogic {
     private final Behaviour initialized = new Behaviour("Initialized") {
         @Override public Object processData(Object message) throws Exception {
             if (message instanceof ExecuteActions) {
+//                actionId=0;
                 Collection<IvrAction> actions = ((ExecuteActions)message).actions;
                 actionsForExecute = actions.iterator();
                 getFacade().send(EXECUTE_NEXT_ACTION);
@@ -81,10 +85,9 @@ public class IvrActionExecutorDataProcessor extends AbstractDataProcessorLogic {
                 collectedDtmfs.clear();
                 currentAction = null;
                 for (IvrAction action: actions)
-                    if (action instanceof DtmfProcessPointAction) {
+                    if (action instanceof DtmfProcessPointAction) 
                         for (char c: ((DtmfProcessPointAction)action).getDtmfs().toCharArray())
                             deferredDtmfs.add(c);
-                    }
                 become(executing);
                 return VOID;
             } else if (message==CANCEL_ACTIONS_EXECUTION)
@@ -124,6 +127,10 @@ public class IvrActionExecutorDataProcessor extends AbstractDataProcessorLogic {
                     } else 
                         getFacade().send(EXECUTE_NEXT_ACTION);            
                 }
+                else {
+                    if (getLogger().isDebugEnabled())
+                        getLogger().debug("Ignoring ACTION_EXECUTED message for action ({})", ((ActionExecuted)message).action.getName());
+                }
                 return VOID;
             } else 
                 return UNHANDLED;
@@ -156,10 +163,11 @@ public class IvrActionExecutorDataProcessor extends AbstractDataProcessorLogic {
         currentAction = action;
         try {
 //            action.setLogPrefix(logPrefix);
+            actionId++;
             if (checkDtmfProcessingPoint(action)) {
                 if (getLogger().isDebugEnabled())
-                    getLogger().debug(">>> ({})", action.getName());
-                action.execute(conversation, actionStopListener, getLogger());
+                    getLogger().debug(">>> [id:{}] {}", actionId, action.getName());
+                action.execute(conversation, actionStopListener, new LoggerHelper(getLogger(), "[id:"+(actionId)+"] "));
             } else if (getLogger().isDebugEnabled()) 
                 getLogger().debug("Skipping execution of the action ({})", action.getName());
             //executing actions async!!! on my opinion

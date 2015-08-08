@@ -46,6 +46,8 @@ public abstract class AsyncAction extends AbstractAction implements Task
 
     public void cancel() throws IvrActionException
     {
+        if (logger.isDebugEnabled())
+            logger.debug("Canceling execution");
         cancelRequest.set(true);
     }
 
@@ -84,7 +86,7 @@ public abstract class AsyncAction extends AbstractAction implements Task
                     logger.debug("Executing...");
                 doExecute(conversation);
                 if (logger.isDebugEnabled())
-                    logger.debug("Executed");
+                    logger.debug(hasCancelRequest()? "Canceled" : "Executed");
             } catch (Exception ex) {
                 if (logger.isErrorEnabled())
                     logger.error("Execution error", ex);

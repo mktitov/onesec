@@ -56,10 +56,10 @@ public class CallQueueRequestImpl implements QueuedCallStatus
     private CommutationManagerCall commutationManager;
     private AudioFile operatorGreeting;
     private final AtomicBoolean canceledFlag = new AtomicBoolean(false);
-    private final List<CallQueueRequestListener> listeners = new LinkedList<CallQueueRequestListener>();
+    private final List<CallQueueRequestListener> listeners = new LinkedList<>();
     private final DataContext context;
-    private AtomicReference<CallsQueue> lastQueue;
-    private AtomicLong lastQueuedTime; 
+    private final AtomicReference<CallsQueue> lastQueue;
+    private final AtomicLong lastQueuedTime; 
 
     public CallQueueRequestImpl(IvrEndpointConversation conversation, int priority, String queueId,
             String operatorPhoneNumbers,
@@ -76,10 +76,11 @@ public class CallQueueRequestImpl implements QueuedCallStatus
         this.prevSerialNumber = -1;
         this.context = context;
         this.operatorPhoneNumbers = operatorPhoneNumbers;
-        this.lastQueue = new AtomicReference<CallsQueue>();
+        this.lastQueue = new AtomicReference<>();
         this.lastQueuedTime = new AtomicLong();
     }
 
+    @Override
     public void addRequestListener(CallQueueRequestListener listener) {
         listeners.add(listener);
         listener.conversationAssigned(conversation);
@@ -87,6 +88,7 @@ public class CallQueueRequestImpl implements QueuedCallStatus
             listener.requestCanceled("CANCELED");
     }
 
+    @Override
     public synchronized Status getStatus() {
         return status;
     }
@@ -99,26 +101,32 @@ public class CallQueueRequestImpl implements QueuedCallStatus
         return continueConversationOnReject;
     }
 
+    @Override
     public IvrEndpointConversation getConversation() {
         return conversation;
     }
 
+    @Override
     public String getConversationInfo() {
         return conversation.getObjectName();
     }
 
+    @Override
     public long getLastQueuedTime() {
         return lastQueuedTime.get();
     }
 
+    @Override
     public CallsQueue getLastQueue() {
         return lastQueue.get();
     }
 
+    @Override
     public DataContext getContext() {
         return context;
     }
 
+    @Override
     public void callQueueChangeEvent(CallQueueEvent event)
     {
         boolean continueConversation = false;
@@ -152,6 +160,7 @@ public class CallQueueRequestImpl implements QueuedCallStatus
             conversation.continueConversation('-');
     }
 
+    @Override
     public synchronized void replayToReadyToCommutate() {
         if (status==Status.DISCONNECTED || status==Status.REJECTED)
             return;
@@ -159,6 +168,7 @@ public class CallQueueRequestImpl implements QueuedCallStatus
         commutationManager.abonentReadyToCommutate(conversation);
     }
 
+    @Override
     public void cancel() {
         if (canceledFlag.compareAndSet(false, true))
             fireRequestCanceled("CANCELED");
@@ -169,58 +179,72 @@ public class CallQueueRequestImpl implements QueuedCallStatus
             listener.requestCanceled(cause);
     }
 
+    @Override
     public boolean isCanceled() {
         return canceledFlag.get();
     }
 
+    @Override
     public synchronized int getPriority() {
         return priority;
     }
 
+    @Override
     public synchronized void setPriority(int priority) {
         this.priority = priority;
     }
 
+    @Override
     public synchronized String getQueueId() {
         return queueId;
     }
 
+    @Override
     public synchronized void setQueueId(String queueId) {
         this.queueId = queueId;
     }
 
+    @Override
     public String getOperatorPhoneNumbers() {
         return operatorPhoneNumbers;
     }
 
+    @Override
     public void setOperatorPhoneNumbers(String operatorPhoneNumbers) {
         this.operatorPhoneNumbers = operatorPhoneNumbers;
     }
 
+    @Override
     public synchronized boolean isQueueing() {
         return status == Status.QUEUEING;
     }
 
+    @Override
     public synchronized boolean isReadyToCommutate() {
         return status==Status.READY_TO_COMMUTATE;
     }
 
+    @Override
     public synchronized boolean isCommutated() {
         return status==Status.COMMUTATED;
     }
 
+    @Override
     public synchronized boolean isDisconnected() {
         return status==Status.DISCONNECTED;
     }
 
+    @Override
     public synchronized int getSerialNumber() {
         return serialNumber;
     }
 
+    @Override
     public synchronized int getPrevSerialNumber() {
         return prevSerialNumber;
     }
 
+    @Override
     public synchronized AudioFile getOperatorGreeting() {
         return operatorGreeting;
     }

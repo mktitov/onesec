@@ -104,6 +104,8 @@ public class AudioFileWriterDataSourceTest {
         
         executor.execute(executeTask(owner));
         expectLastCall().atLeastOnce();
+        expect(owner.getName()).andReturn("owner").anyTimes();
+        expect(owner.getLogLevel()).andReturn(LogLevel.TRACE).anyTimes();        
         expect(owner.getLogger()).andReturn(logger).anyTimes();
         expect(owner.isLogLevelEnabled(anyObject(LogLevel.class))).andReturn(Boolean.TRUE).anyTimes();
     }

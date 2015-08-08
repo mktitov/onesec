@@ -27,8 +27,6 @@ import javax.media.protocol.BufferTransferHandler;
 import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.PushBufferDataSource;
 import javax.media.protocol.PushBufferStream;
-import org.raven.log.LogLevel;
-import org.raven.tree.Node;
 import org.raven.tree.impl.LoggerHelper;
 
 /**

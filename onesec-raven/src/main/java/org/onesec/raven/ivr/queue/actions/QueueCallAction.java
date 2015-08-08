@@ -17,6 +17,7 @@
 package org.onesec.raven.ivr.queue.actions;
 
 import java.util.concurrent.TimeUnit;
+import javax.script.Bindings;
 import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.actions.AsyncAction;
@@ -83,7 +84,8 @@ public class QueueCallAction extends AsyncAction
     @Override
     protected void doExecute(IvrEndpointConversation conversation) throws Exception
     {
-        ConversationScenarioState state = conversation.getConversationScenarioState();
+        final ConversationScenarioState state = conversation.getConversationScenarioState();
+        final Bindings bindings = state.getBindings();
         QueuedCallStatus callStatus = (QueuedCallStatus) state.getBindings().get(
                 QUEUED_CALL_STATUS_BINDING);
         if (callStatus==null){
@@ -107,6 +109,8 @@ public class QueueCallAction extends AsyncAction
                 }
                 if (logger.isDebugEnabled())
                     logger.debug("Operator and abonent are ready to commutate. Commutating...");
+                //disable audio stream reset??? Then when t to enable???
+                bindings.put(IvrEndpointConversation.DISABLE_AUDIO_STREAM_RESET, true);
                 callStatus.replayToReadyToCommutate();
                 do {
                     TimeUnit.MILLISECONDS.sleep(10);
@@ -122,13 +126,14 @@ public class QueueCallAction extends AsyncAction
                 } while (!callStatus.isDisconnected() && !hasCancelRequest());
             } finally {
                 state.enableDtmfProcessing();
-            }
-            
+                bindings.put(IvrEndpointConversation.DISABLE_AUDIO_STREAM_RESET, false);
+            }            
             if (logger.isDebugEnabled())
                 logger.debug("Commutation disconnected");
         }
     }
 
+    @Override
     public boolean isFlowControlAction() {
         return false;
     }
