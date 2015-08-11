@@ -153,7 +153,7 @@ public class  CommutationManagerCallImpl
                                 logger.debug(String.format("Operator's number (%s) not answered", getOperatorNumber()));
                             addToLog("no answer from (%s)", getOperatorNumber());
                         }
-                    } else if (state.get()==State.OPERATOR_READY || state.get()==State.ABONENT_READY || canceled.get()) {
+                    } else if (ObjectUtils.in(state.get(), State.OPERATOR_READY, State.ABONENT_READY, State.COMMUTATED) || canceled.get()) {
                         final String cause = completionCode==null? "SYSTEM_ERROR" : completionCode.name();
                         manager.getRequest().fireDisconnectedQueueEvent(cause);
                     }
@@ -179,10 +179,12 @@ public class  CommutationManagerCallImpl
             moveToState(nextState, nextException, completionCode);
     }
 
+    @Override
     public void requestInvalidated() {
         callMoveToState(getState()==State.CONVERSATION_STARTED? State.HANDLED:State.INVALID, null, null);
     }
 
+    @Override
     public void processingByOperator(CommutationManagerCall operatorCall) {
         if (operatorCall!=this)
             callMoveToState(State.INVALID, null, null);
@@ -216,22 +218,27 @@ public class  CommutationManagerCallImpl
 //        return manager.getOperator().isLogLevelEnabled(logLevel);
 //    }
 
+    @Override
     public boolean isCommutationValid() {
         return getState()!=State.INVALID;
     }
 
+    @Override
     public String getOperatorNumber(){
         return number;
     }
 
+    @Override
     public IvrEndpointConversation getOperatorConversation() {
         return operatorConversation.get();
     }
 
+    @Override
     public CallsQueueOperator getOperator() {
         return manager.getOperator();
     }
 
+    @Override
     public void transferToOperator(String operatorNumber) {
         IvrEndpointConversation conv = operatorConversation.get();
         if (conv!=null)
@@ -248,14 +255,17 @@ public class  CommutationManagerCallImpl
         return manager.getRequest();
     }
 
+    @Override
     public void addListener(CallsCommutationManagerListener listener) {
         listeners.add(listener);
     }
 
+    @Override
     public void removeListener(CallsCommutationManagerListener listener) {
         listeners.remove(listener);
     }
 
+    @Override
     public void commutate() {
         try {
             if (manager.getRequest().isValid() && !manager.getRequest().isHandlingByOperator())
@@ -267,10 +277,12 @@ public class  CommutationManagerCallImpl
         }
     }
 
+    @Override
     public void cancel() {
         canceled.set(true);
     }
 
+    @Override
     public void processRequest(IvrEndpoint endpoint) {
         if (endpoint==null) {
             callMoveToState(State.NO_FREE_ENDPOINTS, null, null);

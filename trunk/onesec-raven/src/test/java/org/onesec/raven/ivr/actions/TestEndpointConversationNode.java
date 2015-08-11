@@ -53,6 +53,7 @@ public class TestEndpointConversationNode extends BaseNode implements IvrEndpoin
     private JMFHelper.OperationController operationController;
     private String fileName = "target/out.wav";
     private ConversationScenarioState conversationScenarioState;
+//    private Lo
 
     @Override
     protected void doStart() throws Exception
