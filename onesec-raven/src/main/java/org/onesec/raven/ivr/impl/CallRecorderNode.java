@@ -180,18 +180,22 @@ public class CallRecorderNode extends BaseNode
                     , name, type, field.getFieldType()));
     }
 
+    @Override
     public boolean getDataImmediate(DataConsumer dataConsumer, DataContext context) {
         throw new UnsupportedOperationException("DataSource not supports pull operations");
     }
 
+    @Override
     public Boolean getStopProcessingOnError() {
         return false;
     }
 
+    @Override
     public Collection<NodeAttribute> generateAttributes() {
         return null;
     }
     
+    @Override
     public void bridgeActivated(IvrConversationsBridge bridge) {
         DataContext context = new DataContextImpl();
         if (!applyFilter(bridge, context)) {
@@ -227,6 +231,7 @@ public class CallRecorderNode extends BaseNode
         });
     }
 
+    @Override
     public void bridgeReactivated(IvrConversationsBridge bridge) {
         final Recorder recorder = recorders.get(bridge);
         if (recorder==null)
@@ -243,6 +248,7 @@ public class CallRecorderNode extends BaseNode
         }
     }
 
+    @Override
     public void bridgeDeactivated(IvrConversationsBridge bridge) {
         final Recorder recorder = recorders.remove(bridge);
         try {
@@ -568,8 +574,10 @@ public class CallRecorderNode extends BaseNode
         
         public synchronized void stopRecording() {
             stopped = true;
-            fileWriter.stop();
-            createAndSendRecord();
+            if (started) {
+                fileWriter.stop();            
+                createAndSendRecord();
+            }
         }
         
         private void createAndSendRecord() {

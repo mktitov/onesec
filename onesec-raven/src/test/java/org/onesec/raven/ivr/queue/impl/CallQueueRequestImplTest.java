@@ -33,7 +33,7 @@ public class CallQueueRequestImplTest
         listener.conversationAssigned(null);
         listener.requestCanceled("CANCELED");
         replay(listener);
-        CallQueueRequestImpl req = new CallQueueRequestImpl(null, 1, "1", null, true, true, null);
+        CallQueueRequestImpl req = new CallQueueRequestImpl(null, 1, "1", null, true, true, null, null);
         req.addRequestListener(listener);
         req.cancel();
         verify(listener);

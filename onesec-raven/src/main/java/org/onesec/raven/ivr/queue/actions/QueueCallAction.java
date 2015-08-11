@@ -95,7 +95,7 @@ public class QueueCallAction extends AsyncAction
             callStatus = new CallQueueRequestImpl(
                     conversation, priority, queueId, operatorPhoneNumbers
                     , continueConversationOnReadyToCommutate
-                    , continueConversationOnReject, context);
+                    , continueConversationOnReject, context, logger);
             state.setBinding(QUEUED_CALL_STATUS_BINDING, callStatus, BindingScope.POINT);
             requestSender.sendCallQueueRequest(callStatus, context);
         } else if (callStatus.isReadyToCommutate() || callStatus.isCommutated()) {

@@ -37,6 +37,7 @@ import org.onesec.raven.ivr.queue.event.OperatorGreetingQueueEvent;
 import org.onesec.raven.ivr.queue.event.ReadyToCommutateQueueEvent;
 import org.onesec.raven.ivr.queue.event.RejectedQueueEvent;
 import org.raven.ds.DataContext;
+import org.raven.tree.impl.LoggerHelper;
 
 /**
  *
@@ -60,11 +61,12 @@ public class CallQueueRequestImpl implements QueuedCallStatus
     private final DataContext context;
     private final AtomicReference<CallsQueue> lastQueue;
     private final AtomicLong lastQueuedTime; 
+    private final LoggerHelper logger;
 
     public CallQueueRequestImpl(IvrEndpointConversation conversation, int priority, String queueId,
             String operatorPhoneNumbers,
             boolean continueConversationOnReadyToCommutate, boolean continueConversationOnReject,
-            DataContext context)
+            DataContext context, LoggerHelper logger)
     {
         this.conversation = conversation;
         this.priority = priority;
@@ -78,6 +80,7 @@ public class CallQueueRequestImpl implements QueuedCallStatus
         this.operatorPhoneNumbers = operatorPhoneNumbers;
         this.lastQueue = new AtomicReference<>();
         this.lastQueuedTime = new AtomicLong();
+        this.logger = new LoggerHelper(logger, "Call queue request. ");
     }
 
     @Override
@@ -130,7 +133,10 @@ public class CallQueueRequestImpl implements QueuedCallStatus
     public void callQueueChangeEvent(CallQueueEvent event)
     {
         boolean continueConversation = false;
+        if (logger.isDebugEnabled()) 
+            logger.debug("Received call queue change event: "+event);        
         synchronized(this){
+            final Status oldStatus = status;
             if (event instanceof CallQueuedEvent) {
                 CallsQueue eventQueue = ((CallQueuedEvent)event).getCallsQueue();
                 if (eventQueue!=lastQueue.get()) {
@@ -155,23 +161,33 @@ public class CallQueueRequestImpl implements QueuedCallStatus
                     continueConversation = true;
             } else if (event instanceof OperatorGreetingQueueEvent)
                 operatorGreeting = ((OperatorGreetingQueueEvent)event).getOperatorGreeting();
+            if (logger.isDebugEnabled())
+                logger.debug("Call queue change event were processed. Previous status ({}) new status ({})", oldStatus, status);
         }
-        if (continueConversation)
+        if (continueConversation) {
+            if (logger.isDebugEnabled())
+                logger.debug("Continueing conversation");
             conversation.continueConversation('-');
+        }
     }
 
     @Override
     public synchronized void replayToReadyToCommutate() {
         if (status==Status.DISCONNECTED || status==Status.REJECTED)
             return;
+        if (logger.isDebugEnabled()) 
+            logger.debug("Replaying to ready to commutate event");
         status = Status.COMMUTATING;
         commutationManager.abonentReadyToCommutate(conversation);
     }
 
     @Override
     public void cancel() {
-        if (canceledFlag.compareAndSet(false, true))
+        if (canceledFlag.compareAndSet(false, true)) {
+            if (logger.isDebugEnabled())
+                logger.debug("Canceled");
             fireRequestCanceled("CANCELED");
+        }
     }
     
     private void fireRequestCanceled(String cause) {

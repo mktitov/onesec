@@ -16,8 +16,8 @@
  */
 package org.onesec.raven.ivr.actions;
 
-import org.onesec.raven.ivr.IvrActionStatus;
 import org.onesec.raven.ivr.IvrEndpointConversation;
+import org.raven.sched.impl.AbstractTask;
 
 /**
  *
@@ -39,13 +39,17 @@ public class ContinueConversationAction extends AsyncAction {
     }
 
     @Override
-    protected void doExecute(IvrEndpointConversation conversation) throws Exception {
+    protected void doExecute(final IvrEndpointConversation conversation) throws Exception {
         conversation.getConversationScenarioState().switchToNextConversationPoint();
         if (logger.isDebugEnabled())
             logger.debug(
                     "Executing transition to the conversation point ({})"
                     , conversation.getConversationScenarioState().getConversationPoint().getPath());
-        setStatus(IvrActionStatus.EXECUTED);
-        conversation.continueConversation(IvrEndpointConversation.EMPTY_DTMF);
+//        setStatus(IvrActionStatus.EXECUTED);
+        conversation.getExecutorService().execute(new AbstractTask(conversation.getOwner(), "Continue conversation") {
+            @Override public void doRun() throws Exception {
+                conversation.continueConversation(IvrEndpointConversation.EMPTY_DTMF);                
+            }
+        });
     }
 }

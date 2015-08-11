@@ -313,8 +313,8 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
                     Timestamp ts = getTimestamp();
                     if (cdr.getValue(DISCONNECTED_TIME)==null) {
                         cdr.setValue(DISCONNECTED_TIME, ts);
-                        if (cdr.getValue(COMMUTATED_TIME)!=null){
-                            Timestamp startTs = (Timestamp)cdr.getValue(COMMUTATED_TIME);
+                        if (cdr.getValue(CONVERSATION_START_TIME)!=null){
+                            Timestamp startTs = (Timestamp)cdr.getValue(CONVERSATION_START_TIME);
                             long dur = (ts.getTime()-startTs.getTime())/1000;
                             cdr.setValue(CONVERSATION_DURATION, dur);
                         }

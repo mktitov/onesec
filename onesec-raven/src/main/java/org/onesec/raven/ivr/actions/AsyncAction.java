@@ -44,6 +44,7 @@ public abstract class AsyncAction extends AbstractAction implements Task
         cancelRequest = new AtomicBoolean(false);
     }
 
+    @Override
     public void cancel() throws IvrActionException
     {
         if (logger.isDebugEnabled())
@@ -75,10 +76,12 @@ public abstract class AsyncAction extends AbstractAction implements Task
         this.logger = logger;
     }
 
+    @Override
     public Node getTaskNode() {
         return conversation.getOwner();
     }
 
+    @Override
     public void run() {
         try {
             try {

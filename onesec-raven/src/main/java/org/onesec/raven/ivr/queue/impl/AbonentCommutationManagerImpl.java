@@ -64,8 +64,8 @@ public class AbonentCommutationManagerImpl implements LazyCallQueueRequest, Abon
     private volatile IvrEndpointConversation conversation;
     private volatile boolean canceled = false;
     private volatile CommutationManagerCall commutationManager;
-    private AtomicBoolean disconnected = new AtomicBoolean(false);
-    private final List<CallQueueRequestListener> listeners = new LinkedList<CallQueueRequestListener>();
+    private final AtomicBoolean disconnected = new AtomicBoolean(false);
+    private final List<CallQueueRequestListener> listeners = new LinkedList<>();
 
     public AbonentCommutationManagerImpl(String abonentNumber, String queueId, int priority
             , Node owner, DataContext context
@@ -86,12 +86,14 @@ public class AbonentCommutationManagerImpl implements LazyCallQueueRequest, Abon
 //        statusMessage = "Searching for free endpoint in the pool for: "+request.toString();
     }
 
+    @Override
     public void addRequestListener(CallQueueRequestListener listener) {
         synchronized(listeners) {
             listeners.add(listener);
         }
     }
 
+    @Override
     public void callQueueChangeEvent(CallQueueEvent event) {
         if (event instanceof ReadyToCommutateQueueEvent) {
             commutationManager = ((ReadyToCommutateQueueEvent)event).getCommutationManager();
@@ -112,57 +114,71 @@ public class AbonentCommutationManagerImpl implements LazyCallQueueRequest, Abon
         }
     }
 
+    @Override
     public long getLastQueuedTime() {
         return 0;
     }
 
+    @Override
     public CallsQueue getLastQueue() {
         return null;
     }
 
+    @Override
     public boolean isCommutationValid() {
         return !disconnected.get();
     }
 
+    @Override
     public String getAbonentNumber() {
         return abonentNumber;
     }
 
+    @Override
     public DataContext getContext() {
         return context;
     }
 
+    @Override
     public IvrEndpointConversation getConversation() {
         return conversation;
     }
 
+    @Override
     public String getConversationInfo() {
         return conversation!=null? conversation.getObjectName() : logMess("");
     }
 
+    @Override
     public String getOperatorPhoneNumbers() {
         return null;
     }
 
+    @Override
     public int getPriority() {
         return priority;
     }
 
+    @Override
     public String getQueueId() {
         return queueId;
     }
 
+    @Override
     public boolean isCanceled() {
         return canceled;
     }
 
+    @Override
     public void setOperatorPhoneNumbers(String phoneNumbers) {
     }
 
+    @Override
     public void setPriority(int priority) {
         this.priority = priority;
     }
 
+    @Override
     public void setQueueId(String queueId) {
         this.queueId = queueId;
     }
@@ -182,6 +198,7 @@ public class AbonentCommutationManagerImpl implements LazyCallQueueRequest, Abon
         }
     }
 
+    @Override
     public void abonentReadyToCommutate(IvrEndpointConversation abonentConversation) {
         if (logger.isDebugEnabled())
             logger.debug("Abonent is ready to commutate");
@@ -196,7 +213,7 @@ public class AbonentCommutationManagerImpl implements LazyCallQueueRequest, Abon
                 owner.getLogger().debug("Request is already in the DISCONNECTED state, so no need for call to the abonent");
             endpointPool.releaseEndpoint(endpoint);
         } else {
-            Map<String, Object> bindings = new HashMap<String, Object>();
+            Map<String, Object> bindings = new HashMap<>();
             bindings.put(ABONENT_COMMUTATION_MANAGER_BINDING, this);
             endpoint.invite(abonentNumber, inviteTimeout, 0
                     , new ConversationListener(endpoint, endpointPool)
