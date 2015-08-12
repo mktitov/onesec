@@ -137,20 +137,21 @@ public class SmsTransceiverWorker implements ShortMessageListener {
 //        }
     }
     
-    public boolean addMessage(SmsTransceiverNode.RecordHolder origMessage) {
-        try {
+    public boolean addMessage(SmsTransceiverNode.RecordHolder origMessage) throws Exception {
+//        try {
             ShortTextMessageImpl msg = new ShortTextMessageImpl(origMessage, messageEncoder, config, logger);
             msg.addListener(this);
-            if (!queue.addMessage(msg)) return false;
+            if (!queue.addMessage(msg)) 
+                return false;
             else {
                 startMessageProcessor();
                 return true;
             }
-        } catch (Exception e) {
-            if (logger.isErrorEnabled())
-                logger.error(String.format("Error add message (%s) to OUTBOUND queue", origMessage.getRecord()), e);
-            return false;
-        }
+//        } catch (Exception e) {
+//            if (logger.isErrorEnabled())
+//                logger.error(String.format("Error add message (%s) to OUTBOUND queue", origMessage.getRecord()), e);
+//            return false;
+//        }
     }        
     
     public void start() {
