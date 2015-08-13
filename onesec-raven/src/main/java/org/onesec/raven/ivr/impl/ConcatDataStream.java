@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Queue;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.media.Buffer;
@@ -30,6 +29,7 @@ import javax.media.protocol.BufferTransferHandler;
 import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.PushBufferStream;
 import org.onesec.raven.ivr.Codec;
+import org.onesec.raven.ivr.impl.ConcatDataSource.LastBuffer;
 import org.raven.sched.Task;
 import org.raven.tree.Node;
 import org.raven.tree.impl.LoggerHelper;
@@ -87,18 +87,12 @@ public class ConcatDataStream implements PushBufferStream, Task
         sourceInfo.compareAndSet(source, null);
     }
 
-//    public String getLogPrefix() {
-//        return logPrefix;
-//    }
-//
-//    public void setLogPrefix(String logPrefix) {
-//        this.logPrefix = logPrefix;
-//    }
-//
+    @Override
     public Format getFormat() {
         return dataSource.getFormat();
     }
 
+    @Override
     public void read(Buffer buffer) throws IOException
     {
         action = "reading buffer";
@@ -112,26 +106,32 @@ public class ConcatDataStream implements PushBufferStream, Task
         sendedPackets.incrementAndGet();
     }
 
+    @Override
     public void setTransferHandler(BufferTransferHandler transferHandler) {
         this.transferHandler = transferHandler;
     }
 
+    @Override
     public ContentDescriptor getContentDescriptor() {
         return contentDescriptor;
     }
 
+    @Override
     public long getContentLength() {
         return LENGTH_UNKNOWN;
     }
 
+    @Override
     public boolean endOfStream() {
         return bufferQueue.size()==0 && dataSource.isClosed();
     }
 
+    @Override
     public Object[] getControls() {
         return new Object[0];
     }
 
+    @Override
     public Object getControl(String controlType) {
         return null;
     }
@@ -141,16 +141,19 @@ public class ConcatDataStream implements PushBufferStream, Task
             transferHandler.transferData(this);
     }
 
+    @Override
     public Node getTaskNode() {
         return owner;
     }
 
+    @Override
     public String getStatusMessage() {
         return String.format(logger.logMess(
                 "Transfering buffers to rtp session. Action: %s. packetCount: %s; sleepTime: %s"
                 , action, packetNumber, sleepTime));
     }
 
+    @Override
     public void run() {
         dataSource.setStreamThreadRunning(true);
         try
@@ -181,9 +184,10 @@ public class ConcatDataStream implements PushBufferStream, Task
                     action = "getting new buffer from queue";
                     si = sourceInfo.get();
                     bufferToSend = bufferQueue.poll();
-//                    logger.debug(" B");
-                    if (bufferToSend!=null)
-                        System.out.println("BUFEER header: "+bufferToSend.getHeader());
+                    if (bufferToSend instanceof LastBuffer) {
+                        ((LastBuffer)bufferToSend).getSourceListener().sourceProcessed();
+                        continue;
+                    }
                     if (bufferToSend!=null && si!=null && si.isRealTime()) {
                         if (   bufferToSend.getTimeStamp()+MAX_TIME_SKEW<cycleStartTs
                             || bufferQueue.size()>MAX_QUEUE_SIZE) 

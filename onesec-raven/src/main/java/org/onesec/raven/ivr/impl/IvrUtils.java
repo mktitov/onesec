@@ -18,6 +18,7 @@
 package org.onesec.raven.ivr.impl;
 
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import javax.media.Buffer;
@@ -25,6 +26,7 @@ import javax.media.protocol.FileTypeDescriptor;
 import javax.media.protocol.PushBufferDataSource;
 import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.AudioStream;
+import org.onesec.raven.ivr.AudioStreamSourceListener;
 import org.onesec.raven.ivr.BufferCache;
 import org.onesec.raven.ivr.Cacheable;
 import org.onesec.raven.ivr.Codec;
@@ -49,7 +51,13 @@ public class IvrUtils
             , InputStreamSource audio)
         throws InterruptedException
     {
-        playAudioInAction(action, conversation, audio, null);
+        playAudioInAction(action, conversation, audio, (Cacheable)null);
+    }
+
+    public static void playAudioInAction(AsyncAction action, IvrEndpointConversation conversation
+            , InputStreamSource audio, AudioStreamSourceListener sourceListener)
+    {
+        playAudioInAction(action, conversation, audio, null, sourceListener);
     }
 
     public static void playAudioInAction(AsyncAction action, IvrEndpointConversation conversation
@@ -64,6 +72,20 @@ public class IvrUtils
                 stream.addSource(cacheInfo.getCacheKey(), cacheInfo.getCacheChecksum(), audio);
             waitWhilePlaying(action, conversation);
         }
+    }
+    
+    public static void playAudioInAction(AsyncAction action, IvrEndpointConversation conversation
+            , InputStreamSource audio, Cacheable cacheInfo, AudioStreamSourceListener sourceListener)
+    {
+        final AudioStream stream = conversation.getAudioStream();
+        if (stream!=null) {
+            if (cacheInfo==null || !cacheInfo.isCacheable())
+                stream.addSource(audio, sourceListener);
+            else
+                stream.addSource(cacheInfo.getCacheKey(), cacheInfo.getCacheChecksum(), audio, sourceListener);
+//            waitWhilePlaying(action, conversation);
+        } else
+            sourceListener.sourceProcessed();
     }
     
     public static void pauseInAction(AsyncAction action, long pause) throws InterruptedException {
@@ -90,6 +112,37 @@ public class IvrUtils
         
     }
     
+    public static void playAudiosInAction(List<AudioFile> audioFiles, final AsyncAction action, 
+            final IvrEndpointConversation conversation, long pauseBetweenFragments, 
+            final AudioStreamSourceListener sourceListener) 
+    {
+        if (audioFiles==null || audioFiles.isEmpty()) {
+            sourceListener.sourceProcessed();
+            return;
+        }
+        if (pauseBetweenFragments <= 0) {
+            final AudioStream audioStream = conversation.getAudioStream();
+            if (audioStream!=null) {
+                audioStream.playContinuously(audioFiles, Math.abs(pauseBetweenFragments), sourceListener);
+//                waitWhilePlaying(action, conversation);
+            } else
+                sourceListener.sourceProcessed();
+        } else {
+            final Iterator<AudioFile> it = audioFiles.iterator();
+            final AudioStreamSourceListener completionHandler = new AudioStreamSourceListener() {
+                    @Override public void sourceProcessed() {
+                        if (it.hasNext())
+                            sourceListener.sourceProcessed();
+                        else
+                            playAudioInAction(action, conversation, it.next(), this);
+                    }
+                };
+//            for (AudioFile file: audioFiles)
+             playAudioInAction(action, conversation, it.next(), completionHandler);
+        }
+        
+    }
+    
     public static void waitWhilePlaying(AsyncAction action, IvrEndpointConversation conv) 
             throws InterruptedException 
     {
@@ -104,6 +157,13 @@ public class IvrUtils
     {
         AudioFileInputStreamSource source = new AudioFileInputStreamSource(audio, conversation.getOwner());
         playAudioInAction(action, conversation, source, audio);
+    }
+    
+    public static void playAudioInAction(AsyncAction action, IvrEndpointConversation conversation
+            , AudioFile audio, AudioStreamSourceListener sourceListener)
+    {
+        AudioFileInputStreamSource source = new AudioFileInputStreamSource(audio, conversation.getOwner());
+        playAudioInAction(action, conversation, source, audio, sourceListener);
     }
     
     public static PushBufferDataSource createSourceFromAudioFile(AudioFile audioFile, 

@@ -76,7 +76,7 @@ public class ConcatDataSourceTest extends OnesecRavenTestCase
         bufferCache = new BufferCacheImpl(rtpManagerService, log, codecManager);
     }
 
-//    @Test
+    @Test
     public void addInputStreamSourceTest() throws Exception {
         trainOwnerAndExecutor();
         mocks.replay();
@@ -88,15 +88,19 @@ public class ConcatDataSourceTest extends OnesecRavenTestCase
         ConcatDataSource dataSource = new ConcatDataSource(
                 FileTypeDescriptor.WAVE, executorService, codecManager, Codec.G711_MU_LAW, 240, 5
                 , 5, owner, bufferCache, new LoggerHelper(owner, null));
-
+        
         dataSource.start();
         JMFHelper.OperationController control = JMFHelper.writeToFile(dataSource, "target/iss_test.wav");
         addSourceAndWait(dataSource, source1);
         addSourceAndWait(dataSource, source2);
-        TimeUnit.SECONDS.sleep(5);
+        while (dataSource.isPlaying())
+            Thread.sleep(100);
+//        TimeUnit.SECONDS.sleep(5);
         dataSource.reset();
         addSourceAndWait(dataSource, source3);
-        TimeUnit.SECONDS.sleep(5);
+        while (dataSource.isPlaying())
+            Thread.sleep(100);
+//        TimeUnit.SECONDS.sleep(5);
         dataSource.close();
         control.stop();
 
