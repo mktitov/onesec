@@ -49,13 +49,13 @@ public class BufferCacheImpl implements BufferCache
     public final static int WAIT_STATE_TIMEOUT = 2000;
     public final static long DEFAULT_MAX_CACHE_IDLE_TIME = 3600l;
 
-    private final Map<String, Buffer> silentBuffers = new ConcurrentHashMap<String, Buffer>();
-    private final Map<String, BuffersCacheEntity>  buffersCache = new ConcurrentHashMap<String, BuffersCacheEntity>();
+    private final Map<String, Buffer> silentBuffers = new ConcurrentHashMap<>();
+    private final Map<String, BuffersCacheEntity>  buffersCache = new ConcurrentHashMap<>();
     private final RTPManagerService rtpManagerService;
     private final CodecManager codecManager;
     private final Logger logger;
 
-    private AtomicLong maxCacheIdleTime = new AtomicLong(DEFAULT_MAX_CACHE_IDLE_TIME);
+    private final AtomicLong maxCacheIdleTime = new AtomicLong(DEFAULT_MAX_CACHE_IDLE_TIME);
 
     public BufferCacheImpl(RTPManagerService rtpManagerService, Logger logger, CodecManager codecManager) {
         this.rtpManagerService = rtpManagerService;

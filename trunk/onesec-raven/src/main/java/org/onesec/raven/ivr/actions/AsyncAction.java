@@ -37,6 +37,7 @@ public abstract class AsyncAction extends AbstractAction implements Task
     protected LoggerHelper logger;
     private final AtomicBoolean cancelRequest;
     private volatile ActionStopListener stopListener;
+    private volatile boolean waitForExecuted;
 
     public AsyncAction(String actionName)
     {
@@ -56,16 +57,29 @@ public abstract class AsyncAction extends AbstractAction implements Task
     {
         return cancelRequest.get();
     }
+    
+    protected void waitForExecutedEvent() {
+        waitForExecuted = true;
+    }
+    
+    protected void executed() {
+        setStatus(IvrActionStatus.EXECUTED);
+        if (stopListener!=null)
+            stopListener.actionExecuted(this);        
+    }
 
-    public void execute(IvrEndpointConversation endpoint, ActionStopListener stopListener, LoggerHelper logger) throws IvrActionException
+    @Override
+    public void execute(IvrEndpointConversation endpoint, ActionStopListener stopListener, LoggerHelper logger) 
+            throws IvrActionException
     {
-        this.conversation = endpoint;
         this.stopListener = stopListener;
+        this.waitForExecuted = false;
+        this.conversation = endpoint;
         this.logger = new LoggerHelper(logger, getName()+". ");
         try {
             setStatus(IvrActionStatus.EXECUTING);
             endpoint.getExecutorService().execute(this);
-        } catch (ExecutorServiceException ex) {
+        } catch (ExecutorServiceException ex) {            
             setStatus(IvrActionStatus.EXECUTED);
             throw new IvrActionException("Error executing async action", ex);
         }
@@ -88,16 +102,22 @@ public abstract class AsyncAction extends AbstractAction implements Task
                 if (logger.isDebugEnabled())
                     logger.debug("Executing...");
                 doExecute(conversation);
-                if (logger.isDebugEnabled())
-                    logger.debug(hasCancelRequest()? "Canceled" : "Executed");
+                if (logger.isDebugEnabled()) {
+                    if (waitForExecuted)
+                        logger.debug("Wating for executed event...");
+                    else
+                        logger.debug(hasCancelRequest()? "Canceled" : "Executed");
+                }
             } catch (Exception ex) {
                 if (logger.isErrorEnabled())
                     logger.error("Execution error", ex);
             }
         } finally {
-            setStatus(IvrActionStatus.EXECUTED);
-            if (stopListener!=null)
-                stopListener.actionExecuted(this);
+            if (!waitForExecuted) {
+                setStatus(IvrActionStatus.EXECUTED);
+                if (stopListener!=null)
+                    stopListener.actionExecuted(this);
+            }
         }
     }
 

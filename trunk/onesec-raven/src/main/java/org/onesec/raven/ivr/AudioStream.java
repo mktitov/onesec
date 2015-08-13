@@ -27,15 +27,20 @@ import javax.media.protocol.DataSource;
 public interface AudioStream
 {
     public void addSource(InputStreamSource source);
+    public void addSource(InputStreamSource source, AudioStreamSourceListener listener);
     public void addSource(DataSource source);
+    public void addSource(DataSource source, AudioStreamSourceListener listener);
     public void addSource(String key, long checksum, DataSource source);
+    public void addSource(String key, long checksum, DataSource source, AudioStreamSourceListener listener);
     public void addSource(String key, long checksum, InputStreamSource source);
+    public void addSource(String key, long checksum, InputStreamSource source, AudioStreamSourceListener listener);
     /**
      * Play passed audio files continuously. 
      * @param files - files which will be played continuously
      * @param trimPeriod - period in milliseconds which will be dropped from the end of all audio files exclude the last 
      */
     public void playContinuously(List<AudioFile> files, long trimPeriod);
+    public void playContinuously(List<AudioFile> files, long trimPeriod, AudioStreamSourceListener sourceListener);
     /**
      * Returns true if audio stream has buffers that not played yet.
      */
