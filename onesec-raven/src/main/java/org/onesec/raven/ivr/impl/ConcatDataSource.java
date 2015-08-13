@@ -103,12 +103,12 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
 
     @Override
     public void addSource(DataSource source) {
-        replaceSourceProcessor(new SourceProcessorImpl(source));
+        replaceSourceProcessor(new SourceProcessorImpl(source, null));
     }
 
     @Override
     public void addSource(String key, long checksum, DataSource source) {
-        replaceSourceProcessor(new SourceProcessorImpl(source, key, checksum));
+        replaceSourceProcessor(new SourceProcessorImpl(source, key, checksum, null));
     }
 
     @Override
@@ -276,19 +276,27 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
         return res;
     }
     
+    private void fireSourceProcessed(final AudioStreamSourceListener sourceListener) {
+        executorService.executeQuietly(new AbstractTask(owner, "Delivering source processed event") {            
+            @Override public void doRun() throws Exception {
+                sourceListener.sourceProcessed();
+            }
+        });
+    }
+    
     interface SourceProcessor {
         public void start();
         public void stop();
         public void close();
         public boolean isProcessing();
-        public boolean isRealTime();
+        public boolean isRealTime();        
     }
     
     class PlayContinuousSourceProcessor implements SourceProcessor {
         private final List<AudioFile> audioFiles;
         private final long trimPeriod;
         
-        private final Map<AudioFile, Buffer[]> filesBuffers = new ConcurrentHashMap<AudioFile, Buffer[]>();
+        private final Map<AudioFile, Buffer[]> filesBuffers = new ConcurrentHashMap<>();
         private final AtomicBoolean stopProcessing = new AtomicBoolean();
         private final LoggerHelper logger;
 
@@ -507,11 +515,13 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
     class SourceProcessorImpl implements SourceProcessor, BufferTransferHandler {
         private final DataSource source;
         private final AtomicBoolean stopProcessing = new AtomicBoolean(Boolean.FALSE);
+        private final AtomicBoolean closed = new AtomicBoolean(false);
         private final Lock lock = new ReentrantLock();
         private final String sourceKey;
         private final long sourceChecksum;
         private final ConcatDataStream concatStream;
         private final boolean realTime;
+        private final AudioStreamSourceListener sourceListener;
         private Collection<Buffer> cache;
 
 //        private PushBufferDataSource dataSource;
@@ -520,30 +530,38 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
         private long startTs;
         private long firstBufferTs;
 
-        public SourceProcessorImpl(DataSource source) {
-            this.source = source;
-            this.sourceChecksum = 0l;
-            this.sourceKey = null;
-            this.concatStream = streams[0];
-            this.realTime = source instanceof RealTimeDataSourceMarker;
+        public SourceProcessorImpl(DataSource source, AudioStreamSourceListener sourceListener) {
+            this(source, null, 0l, sourceListener);
+//            this.source = source;
+//            this.sourceChecksum = 0l;
+//            this.sourceKey = null;
+//            this.concatStream = streams[0];
+//            this.realTime = source instanceof RealTimeDataSourceMarker;
+//            this.sourceListener = sourceListener==null? null : new AudioStreamSourceListenerWrapper(sourceListener);
         }
 
-        public SourceProcessorImpl(DataSource source, String sourceKey, long sourceChecksum) {
+        public SourceProcessorImpl(DataSource source, String sourceKey, long sourceChecksum
+                , AudioStreamSourceListener sourceListener) 
+        {
             this.source = source;
             this.sourceKey = sourceKey;
             this.sourceChecksum = sourceChecksum;
             this.concatStream = streams[0];
             this.realTime = source instanceof RealTimeDataSourceMarker;
+            this.sourceListener = sourceListener==null? null : new AudioStreamSourceListenerWrapper(sourceListener);
         }
 
+        @Override
         public boolean isProcessing(){
             return !stopProcessing.get();
         }
 
+        @Override
         public boolean isRealTime() {
             return realTime;
         }
 
+        @Override
         public void start(){
             if (lock.tryLock()) try {
                 if (!stopProcessing.get()) try {
@@ -594,25 +612,30 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
             transcoder.start();
         }
         
+        @Override
         public void stop() {
             stopProcessing.set(true);
         }
 
+        @Override
         public void close(){
-            stopProcessing.set(true);
-            concatStream.sourceClosed(this);
-            try {
-                if (lock.tryLock(2000, TimeUnit.MILLISECONDS)) try {
-                    if (transcoder!=null) {
-                        transcoder.stop();
-                        transcoder.disconnect();
+            if (closed.compareAndSet(false, true)) {
+//                fireSourceProcessed(sourceListener);
+                stopProcessing.set(true);
+                concatStream.sourceClosed(this);
+                try {
+                    if (lock.tryLock(2000, TimeUnit.MILLISECONDS)) try {
+                        if (transcoder!=null) {
+                            transcoder.stop();
+                            transcoder.disconnect();
+                        }
+                    } finally {
+                        lock.unlock();
                     }
-                } finally {
-                    lock.unlock();
+                } catch (Exception e) {
+                    if (logger.isErrorEnabled())
+                        logger.error("Error stopping source processor", e);
                 }
-            } catch (Exception e) {
-                if (logger.isErrorEnabled())
-                    logger.error("Error stopping source processor", e);
             }
         }
 
@@ -630,6 +653,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
                     buffer.setEOM(false);
                     close();
                     theEnd = true;
+                    buffer.setHeader(sourceListener);
                 }
                 if (firstBufferTs==0) 
                     concatStream.sourceInitialized(this);
@@ -657,6 +681,26 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
                 close();
             }
         }
+    }
+    
+    private class AudioStreamSourceListenerWrapper implements AudioStreamSourceListener {
+        private final AudioStreamSourceListener sourceListener;
+        private final AtomicBoolean informed = new AtomicBoolean();
+
+        public AudioStreamSourceListenerWrapper(AudioStreamSourceListener sourceListener) {
+            this.sourceListener = sourceListener;
+        }
+
+        @Override
+        public void sourceProcessed() {
+            if (informed.compareAndSet(false, true))
+                executorService.executeQuietly(new AbstractTask(owner, "Delivering source processed event") {            
+                    @Override public void doRun() throws Exception {
+                        sourceListener.sourceProcessed();
+                    }
+                });           
+        }
+        
     }
     
 //    private class PullDs extends PullBufferDataSource {

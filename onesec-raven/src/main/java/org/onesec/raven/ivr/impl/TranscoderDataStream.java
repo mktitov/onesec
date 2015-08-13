@@ -127,13 +127,15 @@ public class TranscoderDataStream implements PushBufferStream, BufferTransferHan
             processBufferByCodec(buf, 0);
             processingTime += System.nanoTime()-cycleStartTs;
 //            String.format
-            if (buf.isEOM() && logger.isDebugEnabled())
+            if (buf.isEOM() && logger.isInfoEnabled())
                 logger.debug(String.format(
                         "Source processed. inputBuffersCount: %s; outputBuffersCount: %s; "
                         + "average cycle time: %.4f ms, %s ns"
                         , buffersCount, outputBuffersCount, (double)processingTime/1e9/buffersCount
                         , processingTime/buffersCount));
         } catch (IOException ex) {
+            if (logger.isErrorEnabled())
+                logger.error("Error reading buffer from source", ex);
         }
     }
     

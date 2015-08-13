@@ -181,6 +181,9 @@ public class ConcatDataStream implements PushBufferStream, Task
                     action = "getting new buffer from queue";
                     si = sourceInfo.get();
                     bufferToSend = bufferQueue.poll();
+//                    logger.debug(" B");
+                    if (bufferToSend!=null)
+                        System.out.println("BUFEER header: "+bufferToSend.getHeader());
                     if (bufferToSend!=null && si!=null && si.isRealTime()) {
                         if (   bufferToSend.getTimeStamp()+MAX_TIME_SKEW<cycleStartTs
                             || bufferQueue.size()>MAX_QUEUE_SIZE) 
@@ -202,7 +205,7 @@ public class ConcatDataStream implements PushBufferStream, Task
                     final long curTime = System.currentTimeMillis();
                     timeDiff = curTime - startTime;
                     expectedPacketNumber = timeDiff/packetLength;
-                    final long correction = timeDiff % packetLength;
+//                    final long correction = timeDiff % packetLength;
                     emptyBufferEventCount = expectedPacketNumber - packetNumber;
                     skew = timeDiff - sendedPackets.get()*packetLength;
                     if (packetNumber>1 && maxSkew<skew-prevSkew) {                        
