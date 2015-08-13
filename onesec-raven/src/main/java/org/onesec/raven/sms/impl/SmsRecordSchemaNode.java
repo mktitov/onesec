@@ -52,6 +52,8 @@ public class SmsRecordSchemaNode extends RecordSchemaNode {
     public final static String DATABASE_TABLE_NAME = "RAVEN_SMS_MESSAGES";
     public final static String DATABASE_COLUMN_EXTENSION_NAME = "dbColumn";
     
+    public final static String OPTIONAL_PARAMETERS_TAG = "optionalParameters";
+    
     @Message private static String datePattern;
     @Message private static String idDisplayName;
     @Message private static String messageIdDisplayName;
