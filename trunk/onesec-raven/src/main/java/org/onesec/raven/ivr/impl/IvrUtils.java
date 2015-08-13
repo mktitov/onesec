@@ -56,17 +56,13 @@ public class IvrUtils
             , InputStreamSource audio, Cacheable cacheInfo)
         throws InterruptedException
     {
-        AudioStream stream = conversation.getAudioStream();
+        final AudioStream stream = conversation.getAudioStream();
         if (stream!=null){
             if (cacheInfo==null || !cacheInfo.isCacheable())
                 stream.addSource(audio);
             else
                 stream.addSource(cacheInfo.getCacheKey(), cacheInfo.getCacheChecksum(), audio);
             waitWhilePlaying(action, conversation);
-//            Thread.sleep(200);
-//            while (!action.hasCancelRequest() && stream.isPlaying())
-//                TimeUnit.MILLISECONDS.sleep(5);
-//            TimeUnit.MILLISECONDS.sleep(20);
         }
     }
     
@@ -82,8 +78,11 @@ public class IvrUtils
             IvrEndpointConversation conversation, long pauseBetweenFragments) throws InterruptedException 
     {
         if (pauseBetweenFragments <= 0) {
-            conversation.getAudioStream().playContinuously(audioFiles, Math.abs(pauseBetweenFragments));
-            waitWhilePlaying(action, conversation);
+            final AudioStream audioStream = conversation.getAudioStream();
+            if (audioStream!=null) {
+                conversation.getAudioStream().playContinuously(audioFiles, Math.abs(pauseBetweenFragments));
+                waitWhilePlaying(action, conversation);
+            }
         } else {
             for (AudioFile file: audioFiles)
                 playAudioInAction(action, conversation, file);
@@ -94,8 +93,8 @@ public class IvrUtils
     public static void waitWhilePlaying(AsyncAction action, IvrEndpointConversation conv) 
             throws InterruptedException 
     {
-        final AudioStream stream = conv.getAudioStream();
-        while (!action.hasCancelRequest() && stream.isPlaying())
+        final AudioStream stream = conv.getAudioStream();        
+        while (stream!=null && !action.hasCancelRequest() && stream.isPlaying())
             TimeUnit.MILLISECONDS.sleep(10);
     }
 

@@ -112,7 +112,7 @@ public class ConcatDataSourceTest extends OnesecRavenTestCase
                 newAudio("900"), newAudio("50"), newAudio("4"), newAudio("рубля"), newAudio("30"), 
                 newAudio("3"), newAudio("копейки"));
         ConcatDataSource audioStream = new ConcatDataSource(
-                FileTypeDescriptor.WAVE, executorService, codecManager, Codec.G711_MU_LAW, 240, 5
+                FileTypeDescriptor.WAVE, executorService, codecManager, Codec.G729, 240, 5
                 , 5, owner, bufferCache, new LoggerHelper(owner, null));
 
         audioStream.start();
