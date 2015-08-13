@@ -668,6 +668,10 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 actionsExecutor.stop();
                 actionsExecutor = null;
             }
+            if (audioStream != null) {
+                audioStream.close();
+                audioStream = null;
+            }                
             call = null;
             try {
                 checkState();

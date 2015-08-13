@@ -2,9 +2,19 @@ package org.onesec.raven.sms.queue;
 
 import com.logica.smpp.pdu.Address;
 import com.logica.smpp.pdu.SubmitSM;
+import com.logica.smpp.pdu.tlv.TLV;
+import com.logica.smpp.pdu.tlv.TLVByte;
+import com.logica.smpp.pdu.tlv.TLVEmpty;
+import com.logica.smpp.pdu.tlv.TLVInt;
+import com.logica.smpp.pdu.tlv.TLVOctets;
+import com.logica.smpp.pdu.tlv.TLVShort;
+import com.logica.smpp.pdu.tlv.TLVString;
+import com.logica.smpp.util.ByteBuffer;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.onesec.raven.sms.MessageUnit;
@@ -71,6 +81,7 @@ public class ShortTextMessageImpl implements ShortTextMessage, MessageUnitListen
         SimpleDateFormat parser = new SimpleDateFormat("dd:HH:mm");
         parser.setLenient(false);
         SimpleDateFormat formatter = new SimpleDateFormat("0000ddHHmm00000");
+        final Collection<TLV> optParams = decodeOptionalParams(rec);
         for (int i=0; i<frags.length; ++i) {
             //setting up registered_delivery flag
             if (registeredDelivery!=null && registeredDelivery) 
@@ -84,10 +95,56 @@ public class ShortTextMessageImpl implements ShortTextMessage, MessageUnitListen
             frags[i].setValidityPeriod(String.format("0000%s00000R", expirePeriod.replaceAll(":","")));
 //            Date parsedDate = parser.parse(expirePeriod);
 //            frags[i].setValidityPeriod(formatter.format(parsedDate)+"R");
+            //adding optional parameters
+            if (optParams!=null)
+                for (TLV optParam: optParams)
+                    frags[i].setExtraOptional(optParam);
             _units[i] = new MessageUnitImpl(this, frags[i], config, new LoggerHelper(this.logger, "Unit ["+i+"]. "))
                         .addListener(this);
         }
         this.units = _units;
+    }
+    
+    private Collection<TLV> decodeOptionalParams(final Record rec) throws Exception {
+        Map<Object, Object> optionalParams = (Map) rec.getTag(SmsRecordSchemaNode.OPTIONAL_PARAMETERS_TAG);
+        if (optionalParams==null)
+            return null;
+        List<TLV> tlvs = new ArrayList<>(optionalParams.size());
+        try {
+            for (Map.Entry<Object, Object> pair: optionalParams.entrySet()) 
+                tlvs.add(decodeTLV(decodeTag(pair.getKey()), pair.getValue()));
+        } catch (Exception e) {
+            throw new Exception("Error decoding optional parameters for message: "+message, e);
+        }
+        return tlvs;
+    }
+    
+    private short decodeTag(Object tagObj) throws Exception {
+        try {
+            return Short.decode(tagObj.toString());
+        } catch (NumberFormatException e) {
+            throw new Exception(String.format("TLV tag (%s) decoding error", tagObj), e);
+        }
+    }
+    
+    private TLV decodeTLV(short tag, Object value) throws Exception {
+        try {
+            if (value==null)
+                return new TLVEmpty(tag, true);
+            else if (value instanceof Byte)
+                return new TLVByte(tag, (Byte)value);
+            else if (value instanceof Integer)
+                return new TLVInt(tag, (Integer)value);
+            else if (value instanceof Short)
+                return new TLVShort(tag, (Short)value);
+            else if (value instanceof byte[])
+                return new TLVOctets(tag, new ByteBuffer((byte[])value));
+            else if (value instanceof String)
+                return new TLVString(tag, (String)value);
+            throw new Exception("Can't detect type of TLV value");
+        } catch (Exception e) {
+            throw new Exception(String.format("Error decoding TLV value (%s) for tag (%s)", value, tag), e);
+        }        
     }
     
     public MessageUnit[] getUnits() {

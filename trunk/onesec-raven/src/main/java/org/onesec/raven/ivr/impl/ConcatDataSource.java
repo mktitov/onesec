@@ -128,8 +128,9 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
         replaceSourceProcessor(new PlayContinuousSourceProcessor(files, trimPeriod));
     }
 
-    private SourceProcessor replaceSourceProcessor(final SourceProcessor newSourceProcessor)
-    {
+    private void replaceSourceProcessor(final SourceProcessor newSourceProcessor) {
+        if (stopped.get())
+            return;
         final SourceProcessor oldSp = sourceProcessorRef.getAndSet(newSourceProcessor);
         if (oldSp!=null) {
             oldSp.stop();
@@ -146,7 +147,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
                     newSourceProcessor.start();
                 }
             });
-        return newSourceProcessor;
+//        return newSourceProcessor;
     }
 
     public String getLogPrefix() {
@@ -157,6 +158,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
 //        this.logPrefix = logPrefix;
 //    }
 
+    @Override
     public DataSource getDataSource() {
         return this;
 //        return new PullDs();
@@ -167,9 +169,10 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
         return format;
     }
 
+    @Override
     public boolean isPlaying() {
-        SourceProcessor sp = sourceProcessorRef.get();
-        return (sp!=null && sp.isProcessing()) || !buffers.isEmpty();
+        final SourceProcessor sp = sourceProcessorRef.get();
+        return ((sp!=null && sp.isProcessing()) || !buffers.isEmpty()) && !stopped.get();
     }
 
     @Override
@@ -204,6 +207,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
     public void stop() throws IOException {
     }
 
+    @Override
     public void close()  {
         if (!stopped.compareAndSet(false, true))
             return;
@@ -612,6 +616,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
             }
         }
 
+        @Override
         public void transferData(PushBufferStream stream) {
             try {
                 if (stopProcessing.get())
@@ -633,7 +638,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
                 buffers.add(buffer);
                 if (sourceKey!=null){
                     if (cache==null)
-                        cache = new LinkedList<Buffer>();
+                        cache = new LinkedList<>();
                     cache.add(buffer);
                     if (theEnd) {
                         if (logger.isDebugEnabled())

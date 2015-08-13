@@ -22,6 +22,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
@@ -136,8 +138,12 @@ public class SmsTransceiverNodeTest extends OnesecRavenTestCase {
     
     @Test
     public void submitTest() throws Exception {
+        Map optParams = new HashMap();
+        optParams.put(0x4910, (byte)0x01);
+        optParams.put(0x4911, (int)0x02);
+        optParams.put(0x4912, (short)0x02);
         assertTrue(sender.start());
-        Record smsRec = createSmsRecord(1);
+        Record smsRec = createSmsRecord(1, optParams);
         ds.pushData(smsRec);
         assertTrue(collector.waitForData(5000));
         assertSame(smsRec, collector.getDataList().get(0));
@@ -249,7 +255,11 @@ public class SmsTransceiverNodeTest extends OnesecRavenTestCase {
         assertEquals(SmsRecordSchemaNode.SUCCESSFUL_STATUS, rec2.getValue(SmsRecordSchemaNode.COMPLETION_CODE));
     }
     
-    private Record createSmsRecord(long id) throws RecordException {
+    private Record createSmsRecord(long id) throws RecordException {        
+        return createSmsRecord(id, null);
+    }
+    
+    private Record createSmsRecord(long id, Map optParams) throws RecordException {
         Record rec = schema.createRecord();
         rec.setValue(SmsRecordSchemaNode.ID, id);
         rec.setValue(SmsRecordSchemaNode.ADDRESS, privateProperties.getProperty("sms_dst_addr"));
@@ -257,6 +267,8 @@ public class SmsTransceiverNodeTest extends OnesecRavenTestCase {
                 new SimpleDateFormat("dd.MM.yyyy HH:mm:ss").format(new Date());
 //        rec.setValue(SmsRecordSchemaNode.MESSAGE, mess + mess + mess + mess);
         rec.setValue(SmsRecordSchemaNode.MESSAGE, mess);
+        if (optParams!=null)
+            rec.setTag(SmsRecordSchemaNode.OPTIONAL_PARAMETERS_TAG, optParams);
         return rec;
     }
     

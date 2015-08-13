@@ -42,7 +42,6 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.onesec.raven.ivr.BuffersCacheEntity;
 import org.onesec.raven.ivr.Codec;
-import static org.onesec.raven.ivr.impl.BufferSplitterDataSourceTest.executeTask;
 import org.raven.sched.Task;
 import org.raven.tree.DataFile;
 
