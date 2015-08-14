@@ -19,6 +19,7 @@ package org.onesec.raven.ivr.impl;
 
 import java.util.List;
 import java.util.LinkedList;
+import java.util.Set;
 import javax.media.format.AudioFormat;
 import javax.media.protocol.DataSource;
 import org.easymock.EasyMock;
@@ -37,8 +38,11 @@ import org.onesec.raven.ivr.IvrEndpointConversationListener;
 import org.onesec.raven.ivr.IvrEndpointConversationState;
 import org.onesec.raven.ivr.IvrIncomingRtpStartedEvent;
 import static org.easymock.EasyMock.*;
+import org.onesec.raven.OnesecRavenModule;
 import org.onesec.raven.ivr.RtpStreamException;
 import org.raven.log.LogLevel;
+import org.raven.sched.ExecutorService;
+import org.raven.test.InThreadExecutorService;
 import org.raven.tree.impl.BaseNode;
 /**
  *
@@ -48,12 +52,20 @@ public class IvrConversationsBridgeImplTest extends OnesecRavenTestCase
 {
     private static List<IvrEndpointConversationListener> conversationListeners;
     private static List<IncomingRtpStreamDataSourceListener> sourceListeners;
+    private ExecutorService executor;
 
+    @Override
+    protected void configureRegistry(Set<Class> builder) {
+        OnesecRavenModule.ENABLE_LOADING_SOUND_RESOURCE = false;
+        super.configureRegistry(builder);
+    }        
+    
     @Before
     public void prepare()
     {
-        conversationListeners = new LinkedList<IvrEndpointConversationListener>();
-        sourceListeners = new LinkedList<IncomingRtpStreamDataSourceListener>();
+        conversationListeners = new LinkedList<>();
+        sourceListeners = new LinkedList<>();
+        executor = new InThreadExecutorService();
     }
 
     @Test
@@ -119,6 +131,7 @@ public class IvrConversationsBridgeImplTest extends OnesecRavenTestCase
         mocks.rtpStream = createMock("incoming_rtp"+suffix, IncomingRtpStream.class);
         mocks.audioStream = createMock("audio_stream"+suffix, AudioStream.class);
 
+        expect(mocks.conv.getExecutorService()).andReturn(executor).anyTimes();
         expect(mocks.conv.getCallingNumber()).andReturn("num_"+suffix).anyTimes();
         expect(mocks.conv.getCalledNumber()).andReturn("!num_"+suffix).anyTimes();
         mocks.conv.addConversationListener(checkConversationListener(mocks.conv));

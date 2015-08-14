@@ -41,8 +41,7 @@ public class  CommutationManagerCallImpl
     public final static String SEARCHING_FOR_ENDPOINT_MSG = "Looking up for free endpoint in the pool (%s)";
     public enum State {INIT, NO_FREE_ENDPOINTS, INVITING, OPERATOR_READY, ABONENT_READY, 
         COMMUTATED, CONVERSATION_STARTED, HANDLED, INVALID}
-    public final static Map<State, EnumSet<State>> TRANSITIONS = 
-            new EnumMap<State, EnumSet<State>>(State.class);
+    public final static Map<State, EnumSet<State>> TRANSITIONS = new EnumMap<>(State.class);
 
     private final CallsCommutationManager manager;
     private String number;
@@ -360,8 +359,15 @@ public class  CommutationManagerCallImpl
     }
 
     private void fireAbonentReadyEvent() {
-        for (CallsCommutationManagerListener listener: listeners)
-            listener.abonentReady();
+        final List<CallsCommutationManagerListener> _listeners = new ArrayList<>(listeners);
+        if (_listeners.isEmpty())
+            return;
+        manager.getExecutor().executeQuietly(new AbstractTask(manager.getOperator(), "Delivering abonent ready event") {
+            @Override public void doRun() throws Exception {
+                for (CallsCommutationManagerListener listener: _listeners)
+                    listener.abonentReady();
+            }
+        });
     }
     
     private class ConversationStartedListener extends IvrEndpointConversationListenerAdapter {

@@ -156,9 +156,11 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
 
     private void replaceSourceProcessor(final SourceProcessor newSourceProcessor) {
         if (stopped.get()) {
-            final AudioStreamSourceListener sourceListener = newSourceProcessor.getSourceListener();
-            if (sourceListener != null)
-                sourceListener.sourceProcessed();
+            if (newSourceProcessor!=null) {
+                final AudioStreamSourceListener sourceListener = newSourceProcessor.getSourceListener(); 
+                if (sourceListener != null)
+                    sourceListener.sourceProcessed();
+            }
             return;
         }
         final SourceProcessor oldSp = sourceProcessorRef.getAndSet(newSourceProcessor);
