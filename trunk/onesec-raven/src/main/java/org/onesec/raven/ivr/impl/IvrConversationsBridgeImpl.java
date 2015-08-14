@@ -17,12 +17,16 @@
 
 package org.onesec.raven.ivr.impl;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.media.protocol.DataSource;
 import org.onesec.raven.ivr.*;
 import org.raven.log.LogLevel;
+import org.raven.sched.ExecutorService;
+import org.raven.sched.impl.AbstractTask;
 import org.raven.tree.Node;
 
 /**
@@ -46,11 +50,14 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
     private boolean activated = false;
     private final AtomicReference<IvrConversationsBridgeStatus> status;
     private final boolean passDtmf;
+    private final ExecutorService executor;
 //    private final ReentrantLock lock = new ReentrantLock();
 
     public IvrConversationsBridgeImpl(
-            IvrEndpointConversation conv1, IvrEndpointConversation conv2, Node owner, String logPrefix, boolean passDtmf)
+            IvrEndpointConversation conv1, IvrEndpointConversation conv2, Node owner, String logPrefix, 
+            boolean passDtmf)
     {
+        this.executor = conv1.getExecutorService();
         this.conv1 = conv1;
         this.conv2 = conv2;
         this.owner = owner;
@@ -59,8 +66,8 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
         this.passDtmf = passDtmf;
         activatingTimestamp = new AtomicLong();
         activatedTimestamp = new AtomicLong();
-        listeners = new LinkedList<IvrConversationsBridgeListener>();
-        status = new AtomicReference<IvrConversationsBridgeStatus>(IvrConversationsBridgeStatus.CREATED);
+        listeners = new LinkedList<>();
+        status = new AtomicReference<>(IvrConversationsBridgeStatus.CREATED);
     }
 
     public IvrConversationsBridgeStatus getStatus() {
@@ -134,7 +141,7 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
             fireBridgeDeactivatedEvent();
             if (status.get()==IvrConversationsBridgeStatus.ACTIVATED) {
                 activated = false;
-                fireBridgeActivatedEvent();
+                fireBridgeActivatedEvent(activated);
                 activated = true;
             }
         }
@@ -148,12 +155,20 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
         listeners.add(listener);
     }
 
-    private void fireBridgeActivatedEvent() {
-        for (IvrConversationsBridgeListener listener: listeners)
-            if (!activated)
-                listener.bridgeActivated(this);
-            else
-                listener.bridgeReactivated(this);
+    private void fireBridgeActivatedEvent(final boolean activated) {
+        final List<IvrConversationsBridgeListener> _listeners = new ArrayList<>(listeners);
+        if (!_listeners.isEmpty()) {
+            executor.executeQuietly(new AbstractTask(owner, "Delivering bridge activated event") {                
+                @Override
+                public void doRun() throws Exception {
+                    for (IvrConversationsBridgeListener listener: _listeners)
+                        if (!activated)
+                            listener.bridgeActivated(IvrConversationsBridgeImpl.this);
+                        else
+                            listener.bridgeReactivated(IvrConversationsBridgeImpl.this);                    
+                }
+            });
+        }
     }
 
     private void fireBridgeDeactivatedEvent() {
@@ -176,7 +191,7 @@ public class IvrConversationsBridgeImpl implements IvrConversationsBridge, Compa
         } else if (conn1.state==ConnectionState.ACTIVE && conn2.state==ConnectionState.ACTIVE) {
             status.set(IvrConversationsBridgeStatus.ACTIVATED);
             activatedTimestamp.set(System.currentTimeMillis());
-            fireBridgeActivatedEvent();
+            fireBridgeActivatedEvent(activated);
             activated = true;
             if (owner.isLogLevelEnabled(LogLevel.INFO))
                 owner.getLogger().info(logMess("Bridge successfully activated"));
