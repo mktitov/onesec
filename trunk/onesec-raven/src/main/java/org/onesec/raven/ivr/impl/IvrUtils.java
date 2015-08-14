@@ -102,7 +102,7 @@ public class IvrUtils
         if (pauseBetweenFragments <= 0) {
             final AudioStream audioStream = conversation.getAudioStream();
             if (audioStream!=null) {
-                conversation.getAudioStream().playContinuously(audioFiles, Math.abs(pauseBetweenFragments));
+                audioStream.playContinuously(audioFiles, Math.abs(pauseBetweenFragments));
                 waitWhilePlaying(action, conversation);
             }
         } else {
