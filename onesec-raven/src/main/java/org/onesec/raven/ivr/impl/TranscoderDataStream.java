@@ -48,8 +48,8 @@ public class TranscoderDataStream implements PushBufferStream, BufferTransferHan
     private volatile Buffer bufferToSend;
     private volatile boolean endOfStream = false;
     private long cycleStartTs;
-    private long buffersCount = 0;
-    private long outputBuffersCount = 0;
+    private volatile long buffersCount = 0;
+    private volatile long outputBuffersCount = 0;
     private long processingTime = 0;
 
     public TranscoderDataStream(PushBufferStream sourceStream, Logger logger) {
@@ -57,6 +57,14 @@ public class TranscoderDataStream implements PushBufferStream, BufferTransferHan
         this.logger = logger;
 //        this.owner = owner;
 //        this.node = node;
+    }
+    
+    public long getReceivedBuffersCount() {
+        return buffersCount;
+    }
+    
+    public long getSendBuffersCount() {
+        return outputBuffersCount;
     }
     
     void init(CodecConfig[] codecChain, Format outputFormat) {

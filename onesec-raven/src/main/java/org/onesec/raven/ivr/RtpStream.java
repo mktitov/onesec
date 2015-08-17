@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr;
 
+import java.util.Map;
 import org.raven.tree.impl.LoggerHelper;
 
 /**
@@ -34,14 +35,14 @@ public interface RtpStream extends RtpAddress
      * Releases rtp stream
      */
     public void release();
-//    /**
-//     * Returns amount of bytes handled by stream.
-//     */
-//    public long getHandledBytes();
-//    /**
-//     * Returns amount of packets handled by stream.
-//     */
-//    public long getHandledPackets();
+    /**
+     * Returns amount of bytes handled by stream.
+     */
+    public long getHandledBytes();
+    /**
+     * Returns amount of packets handled by stream.
+     */
+    public long getHandledPackets();
     /**
      * Returns the address of the remote side
      */
@@ -57,4 +58,6 @@ public interface RtpStream extends RtpAddress
     
 //    public void setLogPrefix(String prefix);
     public void setLogger(LoggerHelper logger);
+    
+    public Map<String, Object> getStat();
 }

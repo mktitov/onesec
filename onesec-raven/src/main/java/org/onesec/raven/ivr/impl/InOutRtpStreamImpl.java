@@ -16,6 +16,8 @@
 package org.onesec.raven.ivr.impl;
 
 import java.net.InetAddress;
+import java.util.Collections;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.media.rtp.RTPManager;
 import org.onesec.raven.ivr.InOutRtpStream;
@@ -34,8 +36,8 @@ import org.raven.tree.Node;
  */
 public class InOutRtpStreamImpl extends AbstractRtpStream implements InOutRtpStream {
     private volatile RTPManager rtpManager;
-    private final AtomicReference<InboundStream> inStream = new AtomicReference<InboundStream>();
-    private final AtomicReference<OutboundStream> outStream = new AtomicReference<OutboundStream>();
+    private final AtomicReference<InboundStream> inStream = new AtomicReference<>();
+    private final AtomicReference<OutboundStream> outStream = new AtomicReference<>();
 
     public InOutRtpStreamImpl(InetAddress address, int port, RtpManagerConfigurator configurator) {
         super(address, port, "(In/Out)bound RTP", configurator);
@@ -77,13 +79,18 @@ public class InOutRtpStreamImpl extends AbstractRtpStream implements InOutRtpStr
         }
     }
 
-//    public long getHandledBytes() {
-//        throw new UnsupportedOperationException("Not supported yet.");
-//    }
-//
-//    public long getHandledPackets() {
-//        throw new UnsupportedOperationException("Not supported yet.");
-//    }
+    @Override
+    public Map<String, Object> getStat() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public long getHandledBytes() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public long getHandledPackets() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
 
     public IncomingRtpStream getIncomingRtpStream(Node owner) {
         InboundStream stream = inStream.get();
@@ -194,6 +201,14 @@ public class InOutRtpStreamImpl extends AbstractRtpStream implements InOutRtpStr
                     rtpManager.addReceiveStreamListener(this);
                 }
             }
+        }
+
+        @Override
+        public Map<String, Object> getStat() {
+            if (rtpManager!=null)
+                return getStatFor(rtpManager.getGlobalReceptionStats());
+            else
+                return Collections.EMPTY_MAP;
         }
 
         @Override

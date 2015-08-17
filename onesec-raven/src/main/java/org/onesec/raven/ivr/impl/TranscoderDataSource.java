@@ -56,6 +56,14 @@ public class TranscoderDataSource extends PushBufferDataSource {
         this.streams = new TranscoderDataStream[]{new TranscoderDataStream(sourceStream, logger)};
     }
     
+    public long getReceivedBuffersCount() {
+        return streams[0].getReceivedBuffersCount();
+    }
+    
+    public long getSendBuffersCount() {
+        return streams[0].getSendBuffersCount();
+    }
+    
     @Override
     public PushBufferStream[] getStreams() {
         return streams;

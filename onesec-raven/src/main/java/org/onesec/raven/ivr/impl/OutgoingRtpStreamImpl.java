@@ -19,6 +19,10 @@ package org.onesec.raven.ivr.impl;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import javax.media.control.BufferControl;
 import javax.media.rtp.*;
 import org.onesec.raven.ivr.AudioStream;
@@ -115,6 +119,24 @@ public class OutgoingRtpStreamImpl extends AbstractRtpStream implements Outgoing
         } finally {
             releaseRtpManager();
         }        
+    }
+
+    @Override
+    public Map<String, Object> getStat() {
+        final RTPManager _rtpManager = rtpManager;
+        if (_rtpManager==null)
+            return Collections.EMPTY_MAP;
+        else {
+            GlobalTransmissionStats s = _rtpManager.getGlobalTransmissionStats();
+            Map<String, Object> stat = new LinkedHashMap<>();
+            stat.put("bytesSent", s.getBytesSent());
+            stat.put("RTPSent", s.getRTPSent());
+            stat.put("RTCPSent", s.getRTCPSent());
+            stat.put("localColls", s.getLocalColls());
+            stat.put("remoteColls", s.getRemoteColls());
+            stat.put("transmitFailed", s.getTransmitFailed());
+            return stat;
+        }
     }
 
     public void start() throws RtpStreamException {

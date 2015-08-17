@@ -20,6 +20,7 @@ package org.onesec.raven.ivr.impl;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -72,6 +74,8 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
     private final Buffer silentBuffer;
 //    private String logPrefix;
     private int bufferCount;
+    private final AtomicLong buffersReceivedByTranscoder = new AtomicLong();
+    private final AtomicLong buffersSentByTranscoder = new AtomicLong();
 
     public ConcatDataSource(String contentType
             , ExecutorService executorService
@@ -100,6 +104,17 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
         silentBuffer = bufferCache.getSilentBuffer(executorService, owner, codec, rtpPacketSize);
         streams = new ConcatDataStream[]{new ConcatDataStream(
                 buffers, this, owner, rtpPacketSize, codec, rtpMaxSendAheadPacketsCount, silentBuffer, logger)};
+    }
+
+    @Override
+    public Map<String, String> getStat() {
+        final Map<String, String> stat = new LinkedHashMap<>();
+        stat.put("buffersReceivedByTranscoder", buffersReceivedByTranscoder.toString());
+        stat.put("buffersSentByTranscoder", buffersSentByTranscoder.toString());
+        final Map<String, String> streamStat = streams[0].getStat();
+        if (streamStat!=null)
+            stat.putAll(streamStat);
+        return stat;
     }
 
     @Override
@@ -676,6 +691,10 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
 //                fireSourceProcessed(sourceListener);
                 stopProcessing.set(true);
                 concatStream.sourceClosed(this);
+                if (transcoder!=null) {
+                    buffersReceivedByTranscoder.addAndGet(transcoder.getReceivedBuffersCount());
+                    buffersSentByTranscoder.addAndGet(transcoder.getSendBuffersCount());
+                }
                 try {
                     if (lock.tryLock(2000, TimeUnit.MILLISECONDS)) try {
                         if (transcoder!=null) {
