@@ -19,8 +19,11 @@ package org.onesec.raven.ivr.impl;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -61,6 +64,7 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
     private DataSourceCloneBuilder sourceCloneBuilder; //SourceClonable
     private final List<Consumer> consumers;
     private final Lock lock;
+//    private volatile GlobalReceptionStats rtpStat;
     private Status status;
 
     public IncomingRtpStreamImpl(InetAddress address, int port, RtpManagerConfigurator configurator)
@@ -68,7 +72,7 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
         super(address, port, "Inbound RTP", configurator);
         
         status = Status.INITIALIZING;
-        consumers = new LinkedList<Consumer>();
+        consumers = new LinkedList<>();
         lock = new ReentrantLock();
     }
 
@@ -95,6 +99,55 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
             }
         } finally {
             releaseRtpManager();
+        }
+    }
+    
+    protected Map<String, Object> getStatFor(GlobalReceptionStats gStat) {
+        Map<String, Object> stat = new LinkedHashMap<>();
+        stat.put("badRTCPPkts", gStat.getBadRTCPPkts());
+        stat.put("badRTPkts", gStat.getBadRTPkts());
+        stat.put("bytesRecd", gStat.getBytesRecd());
+        stat.put("localColls", gStat.getLocalColls());
+        stat.put("malformedBye", gStat.getMalformedBye());
+        stat.put("malformedRR", gStat.getMalformedRR());
+        stat.put("malformedSDES", gStat.getMalformedSDES());
+        stat.put("malformedSR", gStat.getMalformedSR());
+        stat.put("packetsLooped", gStat.getPacketsLooped());
+        stat.put("packetsRecd", gStat.getPacketsRecd());
+        stat.put("RTCPRecd", gStat.getRTCPRecd());
+        stat.put("remoteColls", gStat.getRemoteColls());
+        stat.put("SRRecd", gStat.getSRRecd());
+        stat.put("transmitFailed", gStat.getTransmitFailed());
+        stat.put("unknownTypes", gStat.getUnknownTypes());
+        return stat;
+        
+    }
+
+    @Override
+    public Map<String, Object> getStat() {
+        final RTPManager _rtpManager = rtpManager;
+        if (_rtpManager==null)
+            return Collections.EMPTY_MAP;
+        else {
+            return getStatFor(_rtpManager.getGlobalReceptionStats());
+//            GlobalReceptionStats s = rtpStat;
+//            Map<String, Object> stat = new LinkedHashMap<>();
+//            stat.put("badRTCPPkts", s.getBadRTCPPkts());
+//            stat.put("badRTPkts", s.getBadRTPkts());
+//            stat.put("bytesRecd", s.getBytesRecd());
+//            stat.put("localColls", s.getLocalColls());
+//            stat.put("malformedBye", s.getMalformedBye());
+//            stat.put("malformedRR", s.getMalformedRR());
+//            stat.put("malformedSDES", s.getMalformedSDES());
+//            stat.put("malformedSR", s.getMalformedSR());
+//            stat.put("packetsLooped", s.getPacketsLooped());
+//            stat.put("packetsRecd", s.getPacketsRecd());
+//            stat.put("RTCPRecd", s.getRTCPRecd());
+//            stat.put("remoteColls", s.getRemoteColls());
+//            stat.put("SRRecd", s.getSRRecd());
+//            stat.put("transmitFailed", s.getTransmitFailed());
+//            stat.put("unknownTypes", s.getUnknownTypes());
+//            return stat;
         }
     }
     

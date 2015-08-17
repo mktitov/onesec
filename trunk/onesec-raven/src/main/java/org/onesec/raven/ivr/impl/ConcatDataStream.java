@@ -20,6 +20,8 @@ package org.onesec.raven.ivr.impl;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -57,11 +59,12 @@ public class ConcatDataStream implements PushBufferStream, Task
     private String action;
     private long packetNumber;
     private long sleepTime;
-    private final AtomicInteger sendedPackets = new AtomicInteger(0);
+    private final AtomicInteger sentPackets = new AtomicInteger(0);
     private final AtomicInteger silencePacketCount = new AtomicInteger(0);
 //    private String logPrefix;
     private final AtomicReference<ConcatDataSource.SourceProcessor> sourceInfo = new AtomicReference<>();
     private final AtomicInteger emptyQueueEvents = new AtomicInteger(0);
+    private volatile Map<String, String> stat;
 
     public ConcatDataStream(
             Queue<Buffer> bufferQueue, ConcatDataSource dataSource, Node owner
@@ -103,7 +106,7 @@ public class ConcatDataStream implements PushBufferStream, Task
             silencePacketCount.set(0);
             buffer.copy(bufferToSend);            
         }
-        sendedPackets.incrementAndGet();
+        sentPackets.incrementAndGet();
     }
 
     @Override
@@ -211,14 +214,14 @@ public class ConcatDataStream implements PushBufferStream, Task
                     expectedPacketNumber = timeDiff/packetLength;
 //                    final long correction = timeDiff % packetLength;
                     emptyBufferEventCount = expectedPacketNumber - packetNumber;
-                    skew = timeDiff - sendedPackets.get()*packetLength;
+                    skew = timeDiff - sentPackets.get()*packetLength;
                     if (packetNumber>1 && maxSkew<skew-prevSkew) {                        
                         maxSkew = skew-prevSkew;
                         maxSkewTime = curTime;
                     }
                     
+                    missedPackets = expectedPacketNumber - sentPackets.get();
                     if (si!=null && debugEnabled && curTime-prevTime>30000) {
-                        missedPackets = expectedPacketNumber - sendedPackets.get();
                         prevTime = curTime;
                         String mess = getStatString(emptyBufferEventCount, transferTimeSum, maxTransferTime, 
                                 droppedPacketCount, skew, maxSkew, maxSkewTime, expectedPacketNumber, missedPackets, 
@@ -239,19 +242,23 @@ public class ConcatDataStream implements PushBufferStream, Task
             if (debugEnabled) {
                 logger.debug("Transfer buffers to rtp session task was finished");
             }
-            skew = timeDiff - sendedPackets.get()*packetLength;
-            missedPackets = expectedPacketNumber - sendedPackets.get();
+            skew = timeDiff - sentPackets.get()*packetLength;
+            missedPackets = expectedPacketNumber - sentPackets.get();
             String mess = getStatString(emptyBufferEventCount, transferTimeSum, maxTransferTime, 
                     droppedPacketCount, skew, maxSkew, maxSkewTime, expectedPacketNumber, missedPackets, 
                     startTime);
             if (missedPackets*packetLength>500 && logger.isWarnEnabled())
                 logger.warn("Missed packets more than 500ms. {}", mess);
-            else if (logger.isInfoEnabled())
+            else if (logger.isDebugEnabled())
                 logger.info("Transfer of RTP packets finished. {}", mess);
         } finally {
             dataSource.setStreamThreadRunning(false);
         }
     }
+    
+    public Map<String, String> getStat() {
+        return stat;
+    } 
 
     private String getStatString(final long emptyBufferEventCount, final long transferTimeSum, 
             final long maxTransferTime, 
@@ -261,21 +268,41 @@ public class ConcatDataStream implements PushBufferStream, Task
         final long currTime = System.currentTimeMillis();
         final SimpleDateFormat fmt = new SimpleDateFormat("HH:mm:ss");
         final long maxSkewDur = maxSkewTime-startTime;
-        final double avgSkew = expectedPacketNumber==0? 0 : skew/(double)expectedPacketNumber;
-        final double avgTransferTime = packetNumber==0? 0 : transferTimeSum/(double)packetNumber;
+        final String avgSkew = String.format("%.2f", expectedPacketNumber==0? 0 : skew/(double)expectedPacketNumber);
+        final String avgTransferTime = String.format("%.2f", packetNumber==0? 0 : transferTimeSum/(double)packetNumber);
+        final String _startTime = fmt.format(new Date(startTime));
+        final long _dur = (currTime-startTime)/1000;
+        final String _maxSkewTime = fmt.format(new Date(maxSkewTime))+"/"+maxSkewDur/1000+"."+maxSkewDur%1000;
+        final Map<String, String> _stat = new LinkedHashMap<>();        
+        _stat.put("format", getFormat().getEncoding());
+        _stat.put("startTime", _startTime);
+        _stat.put("duration", ""+_dur);
+        _stat.put("skew", ""+skew);
+        _stat.put("maxSkew", ""+maxSkew);
+        _stat.put("maxSkewTime", _maxSkewTime);
+        _stat.put("avgSkew", avgSkew);
+        _stat.put("expectedPackets", ""+expectedPacketNumber);
+        _stat.put("sentPackets", ""+sentPackets.get());
+        _stat.put("missedPackets", ""+missedPackets);
+        _stat.put("droppedPackets", ""+droppedPacketCount);
+        _stat.put("siliencePackets", ""+silencePacketCount.get());
+        _stat.put("avgTransferTime", ""+avgTransferTime);
+        _stat.put("maxTransferTime", ""+maxTransferTime);
+        _stat.put("emptyBufferEventCount", ""+emptyBufferEventCount);
+        this.stat = _stat;
         return String.format(
                 "\n\tformat: %s; "+
-                "\n\tstartTime: %s; dur: %s sec; skew: %s; maxSkew: %s; maxSkewTime: %s; avgSkew: %.2f; "+
+                "\n\tstartTime: %s; dur: %s sec; skew: %s; maxSkew: %s; maxSkewTime: %s; avgSkew: %s; "+
                 "\n\texpectedPackets: %s; sentPackets: %s; missedPackets: %s; droppedPackets: %s; "+
-                "siliencePacktes: %s; "+
-                "\n\tavgTransferTime: %.2f; maxTransferTime: %s; "+
+                "siliencePackets: %s; "+
+                "\n\tavgTransferTime: %s; maxTransferTime: %s; "+
                 "emptyBufferEvents: %s; buffersSize: %s"
                 , getFormat().getEncoding()
-                , fmt.format(new Date(startTime))
+                , _startTime
                 , (currTime-startTime)/1000, skew, maxSkew
-                , fmt.format(new Date(maxSkewTime))+"/"+maxSkewDur/1000+"."+maxSkewDur%1000
+                , _maxSkewTime
                 , avgSkew
-                , expectedPacketNumber, sendedPackets.get(), missedPackets, droppedPacketCount
+                , expectedPacketNumber, sentPackets.get(), missedPackets, droppedPacketCount
                 , silencePacketCount.get()
                 , avgTransferTime, maxTransferTime, emptyBufferEventCount, bufferQueue.size());
     }

@@ -18,6 +18,7 @@ package org.onesec.raven.ivr.impl;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.media.Buffer;
@@ -36,11 +37,12 @@ import org.raven.tree.impl.LoggerHelper;
 public class DataSourceCloneBuilder implements BufferTransferHandler {
     
     private final PushBufferDataSource source;
-    private final Set<DataSourceClone> clones = new HashSet<DataSourceClone>();
+    private final Set<DataSourceClone> clones = new HashSet<>();
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
 //    private final Node owner;
 //    private final String logPrefix;
     private final LoggerHelper logger;
+    private final AtomicLong receivedBuffers = new AtomicLong();
     private Buffer bufferToSend;
 
     public DataSourceCloneBuilder(PushBufferDataSource source, LoggerHelper logger) {
@@ -100,6 +102,7 @@ public class DataSourceCloneBuilder implements BufferTransferHandler {
         Buffer buffer = new Buffer();
         try {
             stream.read(buffer);
+            receivedBuffers.incrementAndGet();
             lock.readLock().lock();
             try {
                 for (DataSourceClone clone: clones) {

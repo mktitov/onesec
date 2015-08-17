@@ -63,6 +63,16 @@ public abstract class AbstractRtpStream implements RtpStream
         released = new AtomicBoolean(false);
     }
 
+    @Override
+    public long getHandledBytes() {
+        return handledBytes.get();
+    }
+
+    @Override
+    public long getHandledPackets() {
+        return handledPackets.get();
+    }
+
     public long getCreationTime()
     {
         return creationTime;

@@ -23,6 +23,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -303,6 +305,29 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             lock.writeLock().unlock();
         }
     }
+    
+    private void addRtpInfoToBindings(final RtpStream stream) {
+        final Map rtpStat = new LinkedHashMap();
+        rtpStat.put("localHost", stream.getAddress().getHostAddress());
+        rtpStat.put("localPort", stream.getPort());
+        rtpStat.put("remoteHost", stream.getRemoteHost());
+        rtpStat.put("remotePort", stream.getRemotePort());
+        final List<String> statNames = new LinkedList<>();
+        if (stream instanceof IncomingRtpStream || stream instanceof InOutRtpStream)
+            statNames.add("inRtpInfo");
+        if (stream instanceof OutgoingRtpStream || stream instanceof InOutRtpStream)
+            statNames.add("outRtpInfo");
+        for (String statName: statNames)
+            conversationState.setBinding(statName, rtpStat, BindingScope.CONVERSATION);
+    }
+    
+    private void addRtpStat(RtpStream stream) {
+        String statName = stream instanceof IncomingRtpStream? "inRtpInfo" : "outRtpInfo";
+        Map stat = (Map) conversationState.getBindings().get(statName);
+        Map rtpStat = stream.getStat();
+        if (rtpStat!=null && stat!=null)
+            stat.putAll(rtpStat);
+    }
 
     public void initOutgoingRtp(String remoteAddress, int remotePort, int packetSize
             , int maxSendAheadPacketsCount, Codec codec)
@@ -437,8 +462,10 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             try {
 //                if (outRtpStatus.ordinal()>=RtpStatus.CREATED.ordinal() && isAllLogicalConnectionEstablished()) {
                 if (outRtpStatus.ordinal()>=RtpStatus.CREATED.ordinal()) {
-                    if (enableIncomingRtpStream)
+                    if (enableIncomingRtpStream) {
                         inRtp.open(remoteAddress);
+//                        addRtpInfoToBindings(inRtp);
+                    }
                     fireIncomingRtpStartedEvent();
                     inRtpStatus = RtpStatus.CONNECTED;
                     checkState();
@@ -480,6 +507,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                     outRtp.open(remoteAddress, remotePort, audioStream);
                     outRtp.start();
                     outRtpStatus = RtpStatus.CONNECTED;
+//                    addRtpInfoToBindings(outRtp);
                     fireOutgoingRtpStartedEvent();
                     checkState();
                 } else {
@@ -505,6 +533,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             try {
                 if (inRtp!=null) {
                     inRtp.release();
+                    addRtpStat(inRtp);
                     inRtp = null;
                     inRtpStatus = RtpStatus.INVALID;
                     checkState();
@@ -517,7 +546,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             lock.writeLock().unlock();
         }
     }
-
+    
     public void stopOutgoingRtp() {
         lock.writeLock().lock();
         try {
@@ -526,10 +555,12 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                     if (actionsExecutor!=null)
                         actionsExecutor.cancelActionsExecution();
                     outRtp.release();
+                    addRtpStat(outRtp);
                     outRtp = null;
                     outRtpStatus = RtpStatus.INVALID;
                     if (audioStream!=null) {
                         audioStream.close();
+                        addAudioStreamStat();
                         audioStream = null;
                     }
 //                    actionsExecutor = null;
@@ -542,6 +573,10 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         } finally {
             lock.writeLock().unlock();
         }
+    }
+    
+    private void addAudioStreamStat() {
+        conversationState.setBinding("audioStreamInfo", audioStream.getStat(), BindingScope.CONVERSATION);
     }
 
     private void startConversation() throws IvrEndpointConversationException {
@@ -577,6 +612,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
 //            actionsExecutor = new IvrActionsExecutorImpl(this, executor);
 //            actionsExecutor.setLogPrefix(callId+" : ");
             this.bindingSupport = new BindingSupportImpl();
+            addRtpInfoToBindings(outRtp);
+            addRtpInfoToBindings(inRtp);
             return true;
         }
         return false;
@@ -628,7 +665,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                     audioStream.reset();
                 conversationState.getBindings().put(DTMF_BINDING, ""+dtmfChar);
                 Collection<Node> actions = scenario.makeConversation(conversationState);
-                Collection<IvrAction> ivrActions = new ArrayList<IvrAction>(10);
+                Collection<IvrAction> ivrActions = new ArrayList<>(10);
                 String bindingId = null;
                 try {
                     bindingId = tree.addGlobalBindings(bindingSupport);
@@ -657,6 +694,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     }
 
     public void stopConversation(CompletionCode completionCode) {
+//        addRtpStat(inRtp);
+//        addRtpStat(outRtp);        
         lock.writeLock().lock();
         try {
             if (state.getId()==INVALID || stopping)
@@ -670,6 +709,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
             }
             if (audioStream != null) {
                 audioStream.close();
+                addAudioStreamStat();
                 audioStream = null;
             }                
             call = null;
@@ -684,7 +724,34 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         } finally {
             lock.writeLock().unlock();
         }
+//        try {
+//            Thread.sleep(100l);
+//        } catch (InterruptedException ex) {
+//        }
+        logConversationStat();
         fireEvent(false, completionCode);
+    }
+    
+    private void logConversationStat() {
+        StringBuilder buf = new StringBuilder();
+        addToConversationStat("inRtpInfo", buf);
+        addToConversationStat("outRtpInfo", buf);
+        addToConversationStat("audioStreamInfo", buf);
+        if (logger.isInfoEnabled())
+            logger.info(callLog("Conversation stat:%s", buf.toString()));
+    }
+    
+    private void addToConversationStat(String name, StringBuilder buf) {
+        Map<Object, Object> stat = (Map) conversationState.getBindings().get(name);
+        if (stat==null)
+            return;
+        buf.append("\n").append(name).append(":\n\t");
+        int cnt = 0;
+        for (Map.Entry<Object, Object> entry: stat.entrySet()) {
+            if (++cnt%3==0)
+                buf.append("\n\t");
+            buf.append(entry.getKey()).append(": ").append(entry.getValue()).append("; ");
+        }
     }
     
     private void softlyStopConversation(CompletionCode completionCode) {

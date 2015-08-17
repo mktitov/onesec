@@ -18,6 +18,7 @@
 package org.onesec.raven.ivr;
 
 import java.util.List;
+import java.util.Map;
 import javax.media.protocol.DataSource;
 
 /**
@@ -57,4 +58,5 @@ public interface AudioStream
      * Closes audio source.
      */
     public void close();
+    public Map<String, String> getStat();
 }
