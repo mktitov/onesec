@@ -17,6 +17,8 @@
 
 package org.onesec.raven.ivr.queue.impl;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -150,7 +152,8 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
         }
         try {
 //            timeoutEndTime.set(0);
-            this.request.set(request.toString());
+            SimpleDateFormat fmt = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
+            this.request.set(fmt.format(new Date())+": "+request.toString());
             String _nums = operatorPhoneNumbers==null||operatorPhoneNumbers.trim().length()==0?
                     phoneNumbers : operatorPhoneNumbers;
             commutationManager.set(commutate(queue, request, _nums, conversationScenario, greeting));

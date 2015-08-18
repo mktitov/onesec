@@ -250,7 +250,7 @@ public class ConcatDataStream implements PushBufferStream, Task
             if (missedPackets*packetLength>500 && logger.isWarnEnabled())
                 logger.warn("Missed packets more than 500ms. {}", mess);
             else if (logger.isDebugEnabled())
-                logger.info("Transfer of RTP packets finished. {}", mess);
+                logger.debug("Transfer of RTP packets finished. {}", mess);
         } finally {
             dataSource.setStreamThreadRunning(false);
         }
