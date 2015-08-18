@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.media.protocol.FileTypeDescriptor;
+import javax.script.Bindings;
 import javax.telephony.*;
 import javax.telephony.callcontrol.CallControlCall;
 import javax.telephony.callcontrol.CallControlConnection;
@@ -742,6 +743,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     }
     
     private void addToConversationStat(String name, StringBuilder buf) {
+        if (conversationState==null)
+            return;
         Map<Object, Object> stat = (Map) conversationState.getBindings().get(name);
         if (stat==null)
             return;
