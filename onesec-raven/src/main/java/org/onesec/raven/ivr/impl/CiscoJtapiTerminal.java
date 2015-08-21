@@ -120,7 +120,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
     private final IvrMediaTerminal term;
     private final Logger logger;
     private final CallsRouter callsRouter;
-    private final Map<String, Call> callsToUnpark = new ConcurrentHashMap<String, Call>();
+    private final Map<String, Call> callsToUnpark = new ConcurrentHashMap<>();
 
     private Address termAddress;
     private int maxChannels = Integer.MAX_VALUE;

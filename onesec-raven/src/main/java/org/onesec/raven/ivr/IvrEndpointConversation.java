@@ -21,7 +21,6 @@ import org.onesec.core.ObjectDescription;
 import org.raven.conv.ConversationScenarioState;
 import org.raven.sched.ExecutorService;
 import org.raven.tree.Node;
-import org.raven.tree.impl.LoggerHelper;
 import org.slf4j.Logger;
 
 /**
@@ -52,6 +51,10 @@ public interface IvrEndpointConversation extends ObjectDescription
      * @see #addConversationListener
      */
     public void removeConversationListener(IvrEndpointConversationListener listener);
+    public long getConversationId();
+    public long getCallStartTime();
+    public long getConversationStartTime();
+    public long getCallEndTime();
     /**
      * Returns the node owned by this conversation.
      */
@@ -72,6 +75,10 @@ public interface IvrEndpointConversation extends ObjectDescription
      * Returns the incoming rtp stream of the conversation
      */
     public IncomingRtpStream getIncomingRtpStream();
+    /**
+     * Returns the outgoing rtp stream of the conversation
+     */
+    public OutgoingRtpStream getOutgoingRtpStream();
     /**
      * Returns the number (address) of the calling side.
      */
