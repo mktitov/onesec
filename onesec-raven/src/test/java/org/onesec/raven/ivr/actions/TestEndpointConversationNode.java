@@ -201,4 +201,54 @@ public class TestEndpointConversationNode extends BaseNode implements IvrEndpoin
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
+    @Override
+    public String getConversationId() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public long getCallStartTime() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public long getConversationStartTime() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public long getCallEndTime() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public OutgoingRtpStream getOutgoingRtpStream() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public Map<String, Object> getAudioStreamStat() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public Map<String, Object> getIncomingRtpStat() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public Map<String, Object> getOutgoingRtpStat() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public CompletionCode getCompletionCode() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public long getConnectionEstablishedTime() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
 }

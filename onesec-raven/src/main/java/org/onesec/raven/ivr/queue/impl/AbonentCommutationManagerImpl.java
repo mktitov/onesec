@@ -206,18 +206,24 @@ public class AbonentCommutationManagerImpl implements LazyCallQueueRequest, Abon
     }
     
     private synchronized void callToAbonent(IvrEndpoint endpoint) {
-        if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-            owner.getLogger().debug(logMess("Calling to the abonent"));
-        if (disconnected.get()) {
-            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
-                owner.getLogger().debug("Request is already in the DISCONNECTED state, so no need for call to the abonent");
-            endpointPool.releaseEndpoint(endpoint);
+        if (endpoint==null) {
+            if (logger.isErrorEnabled())
+                logger.error(logMess("No free endpoints in the pool"));
+            fireRequestCanceledEvent("TERMINAL_POOL_ERROR");
         } else {
-            Map<String, Object> bindings = new HashMap<>();
-            bindings.put(ABONENT_COMMUTATION_MANAGER_BINDING, this);
-            endpoint.invite(abonentNumber, inviteTimeout, 0
-                    , new ConversationListener(endpoint, endpointPool)
-                    , conversationScenario, bindings, callingNumber);
+            if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                owner.getLogger().debug(logMess("Calling to the abonent"));
+            if (disconnected.get()) {
+                if (owner.isLogLevelEnabled(LogLevel.DEBUG))
+                    owner.getLogger().debug("Request is already in the DISCONNECTED state, so no need for call to the abonent");
+                endpointPool.releaseEndpoint(endpoint);
+            } else {
+                Map<String, Object> bindings = new HashMap<>();
+                bindings.put(ABONENT_COMMUTATION_MANAGER_BINDING, this);
+                endpoint.invite(abonentNumber, inviteTimeout, 0
+                        , new ConversationListener(endpoint, endpointPool)
+                        , conversationScenario, bindings, callingNumber);
+            }
         }
     }
     

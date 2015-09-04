@@ -58,5 +58,5 @@ public interface AudioStream
      * Closes audio source.
      */
     public void close();
-    public Map<String, String> getStat();
+    public Map<String, Object> getStat();
 }

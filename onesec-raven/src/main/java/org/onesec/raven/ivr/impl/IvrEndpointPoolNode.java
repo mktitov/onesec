@@ -32,18 +32,9 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.onesec.raven.ivr.*;
-import org.raven.RavenUtils;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.conv.ConversationScenario;
-import org.raven.dp.DataProcessor;
-import org.raven.ds.DataConsumer;
-import org.raven.ds.DataContext;
-import org.raven.ds.Record;
-import org.raven.ds.RecordException;
-import org.raven.ds.RecordSchema;
-import org.raven.ds.impl.DataContextImpl;
-import org.raven.ds.impl.DataSourceHelper;
 import org.raven.log.LogLevel;
 import org.raven.sched.*;
 import org.raven.sched.impl.AbstractTask;
@@ -134,6 +125,9 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     
     @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
     private CallsRouter callsRouter;
+    
+    @Parameter(valueHandlerType=NodeReferenceValueHandlerFactory.TYPE)
+    private CdrGeneratorNode cdrGenerator;
 
     private ReadWriteLock lock;
     private Condition endpointReleased;
@@ -216,7 +210,7 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         loadAverage = new LoadAverageStatistic(LOADAVERAGE_INTERVAL, getChildrenCount());
         sessionMaxRequestsPerSecond = maxRequestsPerSecond==null? Integer.MAX_VALUE : maxRequestsPerSecond;
         lastMaxRequestsPerSecondCheckTime = 0;
-        requestsCountInSecond = 0;
+        requestsCountInSecond = 0;        
         reservedEndpoints.clear();
     }
 
@@ -229,21 +223,6 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
             TimeUnit.MILLISECONDS.sleep(100);
     }
 
-    @Override
-    public boolean getDataImmediate(DataConsumer dataConsumer, DataContext context) {
-        throw new UnsupportedOperationException("Pool operations not supported by this data source");
-    }
-
-    @Override
-    public Boolean getStopProcessingOnError() {
-        return true;
-    }
-
-    @Override
-    public Collection<NodeAttribute> generateAttributes() {
-        return null;
-    }
-
     public TaskRestartPolicy getTaskRestartPolicy() {
         return TaskRestartPolicy.RESTART_NODE;
     }
@@ -254,8 +233,12 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
     }
 
     @Override
-    public void handleCallEvent(CallEventType callEvent, IvrEndpointConversation conversation) {
-        throw new UnsupportedOperationException("Not supported yet.");
+    public void handleCallEvent(CdrGeneratorDP.CallEventType callEvent, IvrEndpointConversation conversation, 
+            IvrTerminal term) 
+    {
+        final CdrGeneratorNode _cdrGenerator = cdrGenerator;
+        if (_cdrGenerator!=null) 
+            _cdrGenerator.registerCallEvent(new CdrGeneratorDP.CallEvent(callEvent, conversation, term));
     }
 
     public IvrEndpoint reserveEndpoint(ReserveEndpointRequest request) {
@@ -571,6 +554,14 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
 
     public void setCallsRouter(CallsRouter callsRouter) {
         this.callsRouter = callsRouter;
+    }
+
+    public CdrGeneratorNode getCdrGenerator() {
+        return cdrGenerator;
+    }
+
+    public void setCdrGenerator(CdrGeneratorNode cdrGenerator) {
+        this.cdrGenerator = cdrGenerator;
     }
 
     private void releaseEndpoint(IvrEndpoint endpoint, long duration)
@@ -997,62 +988,4 @@ public class IvrEndpointPoolNode extends BaseNode implements IvrEndpointPool, Vi
         }
     }
     
-    public static class CallEvent {
-        private final CallEventType eventType;
-        private final IvrEndpointConversation conversation;
-
-        public CallEvent(CallEventType eventType, IvrEndpointConversation conversation) {
-            this.eventType = eventType;
-            this.conversation = conversation;
-        }        
-    }
-    
-    import static org.onesec.raven.ivr.impl.CallCdrRecordSchemaNode.*;
-    
-    private static class SendCdrDP implements DataProcessor<CallEvent> {
-        private final IvrEndpointPool endpointPool;
-        private final RecordSchema cdrSchema;
-        private final EnumSet<CallEventType> enabledEvent;
-        
-        private final Map<IvrEndpointConversation, Record> cdrs = new HashMap<>();
-
-        public SendCdrDP(IvrEndpointPool endpointPool, RecordSchema cdrSchema, EnumSet<CallEventType> enabledEvent) {
-            this.endpointPool = endpointPool;
-            this.cdrSchema = cdrSchema;
-            this.enabledEvent = enabledEvent;
-        }
-
-        @Override
-        public Object processData(CallEvent event) throws Exception {
-            Record cdr;
-            switch (event.eventType) {
-                case CONVERSATION_STARTED:
-                    cdr = createCdrRecord(event.conversation);
-                    cdrs.put(event.conversation, cdr);                    
-                    trySendCdrToConcumers(cdr, CallEventType.CONVERSATION_STARTED);
-                    break;
-                case CONVERSATION_FINISHED:
-                    cdr = cdrs.remove(event.conversation);
-                    
-                    break;                    
-            }
-            if (event.eventType==CallEventType.CONVERSATION_FINISHED) {
-                
-            }
-            return VOID;
-        }
-        
-        private void trySendCdrToConcumers(final Record cdr, final CallEventType eventType) throws Exception {
-            if (enabledEvent.contains(eventType)) {
-                cdr.setTag("eventType", eventType.name());
-                DataSourceHelper.sendDataToConsumers(endpointPool, cdr, new DataContextImpl());                
-            }
-        }
-
-        private Record createCdrRecord(IvrEndpointConversation conversation) throws RecordException {
-            Record cdr = cdrSchema.createRecord();
-            
-        }
-
-    }
 }

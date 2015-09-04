@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr;
 
+import java.util.Map;
 import org.onesec.core.ObjectDescription;
 import org.raven.conv.ConversationScenarioState;
 import org.raven.sched.ExecutorService;
@@ -51,10 +52,43 @@ public interface IvrEndpointConversation extends ObjectDescription
      * @see #addConversationListener
      */
     public void removeConversationListener(IvrEndpointConversationListener listener);
-    public long getConversationId();
+    /**
+     * Returns unique conversation id
+     */
+    public String getConversationId();
+    /**
+     * Returns call start time
+     */
     public long getCallStartTime();
+    /**
+     * Returns conversation start time
+     */
     public long getConversationStartTime();
+    /**
+     * Returns time when all rtp streams started and all logical connections were established
+     */
+    public long getConnectionEstablishedTime();
+    /**
+     * Return call end time
+     */
     public long getCallEndTime();
+    /**
+     * Returns conversation completion code
+     */
+    public CompletionCode getCompletionCode();
+    /**
+     * Audio stream statistics. Available after conversation stop.
+     */
+    public Map<String, Object> getAudioStreamStat();
+    /**
+     * Incoming RTP stream statistics. Available after conversation stop.
+     */
+    public Map<String, Object> getIncomingRtpStat();
+    /**
+     * Outgoing RTP stream statistics. Available after conversation stop.
+     */
+    public Map<String, Object> getOutgoingRtpStat();
+    
     /**
      * Returns the node owned by this conversation.
      */

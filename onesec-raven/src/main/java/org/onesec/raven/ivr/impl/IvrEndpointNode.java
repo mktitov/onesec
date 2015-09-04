@@ -68,6 +68,7 @@ public class IvrEndpointNode extends AbstractEndpointNode
         super.doStart();
     }
 
+    @Override
     public Boolean getStopProcessingOnError() {
         return false;
     }
@@ -76,6 +77,7 @@ public class IvrEndpointNode extends AbstractEndpointNode
         return (IvrEndpointPool) getEffectiveParent();
     }
 
+    @Override
     public void invite(String opponentNum, int inviteTimeout, int maxCallDur
             , IvrEndpointConversationListener listener
             , IvrConversationScenario scenario, Map<String, Object> bindings, String callingNumber)
@@ -140,24 +142,36 @@ public class IvrEndpointNode extends AbstractEndpointNode
 
     @Override
     public void connectionEstablished(IvrEndpointConversationEvent event) {
+        getEndpointPool().handleCallEvent(CdrGeneratorDP.CallEventType.CONNECTION_ESTABLISHED, event.getConversation(), this);
     }
 
+    @Override
     public void conversationStarted(IvrEndpointConversationEvent event) {
         changeStateTo(IvrEndpointState.TALKING, "TALKING");
+        getEndpointPool().handleCallEvent(CdrGeneratorDP.CallEventType.CONVERSATION_STARTED, event.getConversation(), this);
     }
 
+    @Override
     public void conversationStopped(IvrEndpointConversationStoppedEvent event) {
+        getEndpointPool().handleCallEvent(CdrGeneratorDP.CallEventType.CONVERSATION_FINISHED, event.getConversation(), this);
         changeStateTo(IvrEndpointState.IN_SERVICE, "IN_SERVICE");
     }
 
+    @Override
     public void conversationTransfered(IvrEndpointConversationTransferedEvent event) { }
 
+    @Override
     public void incomingRtpStarted(IvrIncomingRtpStartedEvent event) { }
 
+    @Override
     public void outgoingRtpStarted(IvrOutgoingRtpStartedEvent event) { }
 
-    public void listenerAdded(IvrEndpointConversationEvent event) { }
+    @Override
+    public void listenerAdded(IvrEndpointConversationEvent event) { 
+        getEndpointPool().handleCallEvent(CdrGeneratorDP.CallEventType.CONVERSATION_INITIALIZED, event.getConversation(), this);
+    }
 
+    @Override
     public void dtmfReceived(IvrDtmfReceivedConversationEvent event) { }
 
     public IvrEndpointState getEndpointState() {

@@ -37,11 +37,13 @@ public class CallCdrRecordSchemaNode extends RecordSchemaNode {
     public final static String CALLED_NUMBER = "calledNumber";
     public final static String LAST_REDIRECTED_NUMBER = "lastRedirectedNumber";
     public final static String CALL_START_TIME = "callStartTime";
+    public final static String CONNECTION_ESTABLISHED_TIME = "connectionEstablishedTime";
     public final static String CONVERSATION_START_TIME = "conversationStartTime";
     public final static String CALL_END_TIME = "callEndTime";
     public final static String COMPLETION_CODE = "completionCode";
     public final static String CALL_DURATION = "callDuration";
     public final static String CONVERSATION_DURATION = "conversationDuration";
+    public final static String DUMP_FILE = "dumpFile";
     
     //audioStream stat
     public final static String AS_FORMAT = "asFormat";
@@ -66,6 +68,7 @@ public class CallCdrRecordSchemaNode extends RecordSchemaNode {
     public final static String IN_RTP_REMOTE_ADDR = "inRtpRemoteAddr";
     public final static String IN_RTP_REMOTE_PORT = "inRtpRemotePort";
     public final static String IN_RTP_BAD_RTCP_PACKETS = "inRtpBadRtcpPackets";
+    public final static String IN_RTP_BAD_RTP_PACKETS = "inRtpBadRtpPackets";
     public final static String IN_RTP_BYTES_RECEIVED = "inRtpBytesReceived";
     public final static String IN_RTP_PACKETS_RECEIVED = "inRtpPacketsReceived";
     public final static String IN_RTP_REMOTE_COLLISIONS = "inRtpRemoteCollisions";
@@ -117,11 +120,13 @@ public class CallCdrRecordSchemaNode extends RecordSchemaNode {
         createField(CALLED_NUMBER, RecordSchemaFieldType.STRING);
         createField(LAST_REDIRECTED_NUMBER, RecordSchemaFieldType.STRING);
         createField(CALL_START_TIME, RecordSchemaFieldType.TIMESTAMP);
+        createField(CONNECTION_ESTABLISHED_TIME, RecordSchemaFieldType.TIMESTAMP);
         createField(CONVERSATION_START_TIME, RecordSchemaFieldType.TIMESTAMP);
         createField(CALL_END_TIME, RecordSchemaFieldType.TIMESTAMP);
         createField(COMPLETION_CODE, RecordSchemaFieldType.STRING);
         createField(CALL_DURATION, RecordSchemaFieldType.INTEGER);
         createField(CONVERSATION_DURATION, RecordSchemaFieldType.INTEGER);
+        createField(DUMP_FILE, RecordSchemaFieldType.STRING);
         
         //audio stream stat fields
         createField(AS_FORMAT, RecordSchemaFieldType.STRING);
@@ -129,7 +134,7 @@ public class CallCdrRecordSchemaNode extends RecordSchemaNode {
         createField(AS_DURATION, RecordSchemaFieldType.INTEGER);
         createField(AS_SKEW, RecordSchemaFieldType.INTEGER);
         createField(AS_MAX_SKEW, RecordSchemaFieldType.INTEGER);
-        createField(AS_MAX_SKEW_TIME, RecordSchemaFieldType.TIMESTAMP);
+        createField(AS_MAX_SKEW_TIME, RecordSchemaFieldType.STRING);
         createField(AS_AVG_SKEW, RecordSchemaFieldType.DOUBLE);
         createField(AS_EXPECTED_PACKETS, RecordSchemaFieldType.INTEGER);
         createField(AS_SENT_PACKETS, RecordSchemaFieldType.INTEGER);
@@ -145,6 +150,7 @@ public class CallCdrRecordSchemaNode extends RecordSchemaNode {
         createField(IN_RTP_LOCAL_PORT, RecordSchemaFieldType.INTEGER);
         createField(IN_RTP_REMOTE_ADDR, RecordSchemaFieldType.STRING);
         createField(IN_RTP_REMOTE_PORT, RecordSchemaFieldType.INTEGER);
+        createField(IN_RTP_BAD_RTP_PACKETS, RecordSchemaFieldType.INTEGER);
         createField(IN_RTP_BAD_RTCP_PACKETS, RecordSchemaFieldType.INTEGER);
         createField(IN_RTP_BYTES_RECEIVED, RecordSchemaFieldType.INTEGER);
         createField(IN_RTP_PACKETS_RECEIVED, RecordSchemaFieldType.INTEGER);

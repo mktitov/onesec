@@ -39,7 +39,6 @@ import com.cisco.jtapi.extensions.CiscoTerminalObserver;
 import com.cisco.jtapi.extensions.CiscoTransferEndEv;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -52,14 +51,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.telephony.Address;
 import javax.telephony.AddressObserver;
 import javax.telephony.Call;
 import javax.telephony.Connection;
-import javax.telephony.InvalidStateException;
 import javax.telephony.Provider;
 import javax.telephony.Terminal;
 import javax.telephony.TerminalConnection;
@@ -130,14 +127,13 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
     Provider provider;
 
 //    private final Map<Call, ConvHolder> calls = new HashMap<Call, ConvHolder>();
-    private final Map<Call, ConvHolder> calls = new ConcurrentHashMap<Call, ConvHolder>();
+    private final Map<Call, ConvHolder> calls = new ConcurrentHashMap<>();
 //    private final AtomicInteger activeCalls = new AtomicInteger();
-    private final Map<Integer, ConvHolder> connIds = new HashMap<Integer, ConvHolder>();
-    private final Set<Call> transferCalls = new ConcurrentSkipListSet<Call>();
+    private final Map<Integer, ConvHolder> connIds = new HashMap<>();
+    private final Set<Call> transferCalls = new ConcurrentSkipListSet<>();
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
     private final IvrTerminalStateImpl state;
-    private final Set<IvrEndpointConversationListener> conversationListeners =
-            new HashSet<IvrEndpointConversationListener>();
+    private final Set<IvrEndpointConversationListener> conversationListeners = new HashSet<>();
     private final ReadWriteLock listenersLock = new ReentrantReadWriteLock();
     private final AtomicBoolean stopping = new AtomicBoolean();
     private final boolean sharePort;
@@ -219,9 +215,9 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
             , IvrConversationScenario scenario, Map<String, Object> bindings, String callingNumber)
     {
         Call call = null;
+        IvrEndpointConversationImpl conv = null;
         try {
             lock.writeLock().lock();
-            IvrEndpointConversationImpl conv = null;
             try {
                 if (state.getId()!=IvrTerminalState.IN_SERVICE)
                     throw new Exception("Can't invite oppenent to conversation. Terminal not ready");
@@ -230,7 +226,8 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
 //                activeCalls.incrementAndGet();
                 call = provider.createCall();
                 conv = new IvrEndpointConversationImpl(term, this, executor, scenario
-                        , rtpStreamManager, enableIncomingRtp, address, bindings, sharePort, startRtpImmediatelly);
+                        , rtpStreamManager, enableIncomingRtp, address, bindings, sharePort
+                        , startRtpImmediatelly, callingNumber);
                 conv.addConversationListener(listener);
                 conv.addConversationListener(this);
                 scenario.conversationCreated(conv);
@@ -259,15 +256,17 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
             if (logger.isWarnEnabled()) 
                 logger.warn(ccmExLog(String.format("Problem with inviting abonent with number (%s)", opponentNum), e), e);
             final IvrEndpointConversationStoppedEvent ev = new IvrEndpointConversationStoppedEventImpl(
-                    null, CompletionCode.TERMINAL_NOT_READY);
+                    conv, CompletionCode.TERMINAL_NOT_READY);
             if (call!=null)
                 stopConversation(call, CompletionCode.OPPONENT_UNKNOWN_ERROR);
-            executor.executeQuietly(new AbstractTask(term, "Propagating conversation stop event") {
-                @Override public void doRun() throws Exception {
-                    listener.conversationStopped(ev);
-                }
-            });
-            conversationStopped(ev);
+            else {
+                executor.executeQuietly(new AbstractTask(term, "Propagating conversation stop event") {
+                    @Override public void doRun() throws Exception {
+                        listener.conversationStopped(ev);
+                    }
+                });
+                conversationStopped(ev);
+            }
         }
     }
     
@@ -550,7 +549,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                     final ConversationScenario scenario = term.getConversationScenario();
                     IvrEndpointConversationImpl conv = new IvrEndpointConversationImpl(
                             term, this, executor, term.getConversationScenario(), rtpStreamManager
-                            , enableIncomingRtp, address, null, sharePort, startRtpImmediatelly);
+                            , enableIncomingRtp, address, null, sharePort, startRtpImmediatelly, null);
                     conv.setCall((CallControlCall) call);
                     conv.addConversationListener(this);
                     if (scenario instanceof IvrConversationScenario) 

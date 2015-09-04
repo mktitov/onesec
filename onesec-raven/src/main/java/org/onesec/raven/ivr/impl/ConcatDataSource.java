@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import javax.media.Buffer;
+import static javax.media.Duration.DURATION_UNKNOWN;
 import javax.media.Format;
 import javax.media.Time;
 import javax.media.control.PacketSizeControl;
@@ -107,11 +108,11 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
     }
 
     @Override
-    public Map<String, String> getStat() {
-        final Map<String, String> stat = new LinkedHashMap<>();
+    public Map<String, Object> getStat() {
+        final Map<String, Object> stat = new LinkedHashMap<>();
         stat.put("buffersReceivedByTranscoder", buffersReceivedByTranscoder.toString());
         stat.put("buffersSentByTranscoder", buffersSentByTranscoder.toString());
-        final Map<String, String> streamStat = streams[0].getStat();
+        final Map<String, Object> streamStat = streams[0].getStat();
         if (streamStat!=null)
             stat.putAll(streamStat);
         return stat;
@@ -683,6 +684,10 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
         @Override
         public void stop() {
             stopProcessing.set(true);
+            if (transcoder!=null) {
+                buffersReceivedByTranscoder.addAndGet(transcoder.getReceivedBuffersCount());
+                buffersSentByTranscoder.addAndGet(transcoder.getSendBuffersCount());
+            }
         }
 
         @Override
@@ -691,10 +696,6 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
 //                fireSourceProcessed(sourceListener);
                 stopProcessing.set(true);
                 concatStream.sourceClosed(this);
-                if (transcoder!=null) {
-                    buffersReceivedByTranscoder.addAndGet(transcoder.getReceivedBuffersCount());
-                    buffersSentByTranscoder.addAndGet(transcoder.getSendBuffersCount());
-                }
                 try {
                     if (lock.tryLock(2000, TimeUnit.MILLISECONDS)) try {
                         if (transcoder!=null) {

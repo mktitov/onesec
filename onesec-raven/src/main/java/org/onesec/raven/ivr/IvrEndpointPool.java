@@ -17,6 +17,7 @@
 
 package org.onesec.raven.ivr;
 
+import org.onesec.raven.ivr.impl.CdrGeneratorDP;
 import org.raven.conv.ConversationScenario;
 import org.raven.ds.DataSource;
 import org.raven.sched.ExecutorServiceException;
@@ -26,9 +27,8 @@ import org.raven.tree.Node;
  *
  * @author Mikhail Titov
  */
-public interface IvrEndpointPool extends Node, DataSource
+public interface IvrEndpointPool extends Node
 {
-    public enum CallEventType{CONVERSATION_STARTED, CONVERSATION_FINISHED};
     /**
      * Sends request for endpoint. When pool will found free endpoint or when
      * {@link EndpointRequest#getWaitTimeout() timeout} will reached pool executes
@@ -53,5 +53,5 @@ public interface IvrEndpointPool extends Node, DataSource
      */
     public ConversationScenario getConversationScenario(IvrEndpoint endpoint);
     
-    public void handleCallEvent(CallEventType callEvent, IvrEndpointConversation conversation);
+    public void handleCallEvent(CdrGeneratorDP.CallEventType callEvent, IvrEndpointConversation conversation, IvrTerminal term);
 }

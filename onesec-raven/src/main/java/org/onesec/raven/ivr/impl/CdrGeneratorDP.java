@@ -22,7 +22,10 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import org.onesec.raven.ivr.IncomingRtpStream;
 import org.onesec.raven.ivr.IvrEndpointConversation;
+import org.onesec.raven.ivr.IvrTerminal;
+import org.onesec.raven.ivr.OutgoingRtpStream;
 import org.raven.RavenRuntimeException;
 import org.raven.dp.impl.AbstractDataProcessorLogic;
 import org.raven.ds.DataSource;
@@ -32,31 +35,38 @@ import org.raven.ds.impl.DataContextImpl;
 import org.raven.ds.impl.DataSourceHelper;
 import org.raven.sched.ExecutorServiceException;
 import static org.onesec.raven.ivr.impl.CallCdrRecordSchemaNode.*;
+import org.raven.ds.RecordException;
 /**
  *
  * @author Mikhail Titov
  */
-public class SendCallCdrDP extends AbstractDataProcessorLogic {
+public class CdrGeneratorDP extends AbstractDataProcessorLogic {
 
-    public enum CallEventType{CONVERSATION_INITIALIZED, CONVERSATION_STARTED, CONVERSATION_FINISHED};
+    public enum CallEventType { 
+        CONVERSATION_INITIALIZED, CONVERSATION_STARTED, CONNECTION_ESTABLISHED, CONVERSATION_FINISHED
+    };
     
     public final static String GET_CDRS = "GET_FORMING_CDRS";
+    public final static String GET_ACTIVE_CDR_COUNT = "GET_ACTIVE_CDR_COUNT";
+    public final static String GET_COMPLETED_CDR_COUNT = "GET_COMPLETED_CDR_COUNT";
     public final static String CHECK_CDR_COMPLETE_TIMEOUT = "CHECK_CDR_COMPLETE_TIMEOUT";
     public final static long CHECK_CDR_COMPLETE_TIMEOUT_INTERVAL = 60_0000;
+    public static final String CDR_COMPLETION_TOO_LONG = "CDR_COMPLETION_TOO_LONG";
     
-    private final DataSource sender;
+    private final DataSource cdrSource;
     private final RecordSchema cdrSchema;
-    private final EnumSet<CallEventType> enabledEvent;
+    private final EnumSet<CallEventType> sendCdrOnEvents;
     private final long cdrCompleteTimeout;
 
     private final Map<IvrEndpointConversation, Record> cdrs = new HashMap<>();
+    private long completedCdrCount = 0l;
 
-    public SendCallCdrDP(DataSource sender, RecordSchema cdrSchema, EnumSet<CallEventType> enabledEvent, 
+    public CdrGeneratorDP(DataSource cdrSource, RecordSchema cdrSchema, EnumSet<CallEventType> sendCdrOnEvents, 
             long cdrCompleteTimeout) 
     {
-        this.sender = sender;
+        this.cdrSource = cdrSource;
         this.cdrSchema = cdrSchema;
-        this.enabledEvent = enabledEvent;
+        this.sendCdrOnEvents = sendCdrOnEvents;
         this.cdrCompleteTimeout = cdrCompleteTimeout;
     }
 
@@ -71,11 +81,12 @@ public class SendCallCdrDP extends AbstractDataProcessorLogic {
         }
     }
 
-
     @Override
     public Object processData(Object data) throws Exception {
         if      (data == GET_CDRS) return getCdrsList();
         else if (data == CHECK_CDR_COMPLETE_TIMEOUT) return checkCdrCompleteTimeout();
+        else if (data == GET_ACTIVE_CDR_COUNT) return cdrs.size();
+        else if (data == GET_COMPLETED_CDR_COUNT) return completedCdrCount;
         else if (data instanceof CallEvent) return processCallEvent((CallEvent)data);
         else return UNHANDLED;            
     }
@@ -89,12 +100,12 @@ public class SendCallCdrDP extends AbstractDataProcessorLogic {
             Iterator<Map.Entry<IvrEndpointConversation, Record>> it = cdrs.entrySet().iterator();
             while (it.hasNext()) {
                 Map.Entry<IvrEndpointConversation, Record> entry = it.next();
-                if (System.currentTimeMillis() - entry.getKey().getConversationStartTime() > cdrCompleteTimeout) {
+                if (System.currentTimeMillis() - entry.getKey().getCallStartTime() > cdrCompleteTimeout) {
                     if (getLogger().isWarnEnabled())
                         getLogger().warn("Found CDR that forms more than {} minutes. CDR: {}", cdrCompleteTimeout/1000/60, entry.getValue());
                     it.remove();
                     completeCdr(entry.getKey(), entry.getValue());
-                    trySendCdrToConcumers(entry.getValue(), CallEventType.CONVERSATION_STARTED);
+                    trySendCdrToConcumers(entry.getValue(), CallEventType.CONVERSATION_FINISHED);
                 }
             }
         }
@@ -102,14 +113,17 @@ public class SendCallCdrDP extends AbstractDataProcessorLogic {
     }
         
     private void trySendCdrToConcumers(final Record cdr, final CallEventType eventType) throws Exception {
-        if (enabledEvent.contains(eventType)) {
-            cdr.setTag("eventType", eventType.name());
-            DataSourceHelper.sendDataToConsumers(sender, cdr, new DataContextImpl());                
+        if (sendCdrOnEvents.contains(eventType)) {
+            final Record _cdr = cdrSchema.createRecord();
+            _cdr.copyFrom(cdr);
+            _cdr.setTag("eventType", eventType.name());
+            DataSourceHelper.sendDataToConsumers(cdrSource, _cdr, new DataContextImpl());                
         }
     }
 
-    private void completeCdr(IvrEndpointConversation key, Record value) {
-        throw new UnsupportedOperationException("Not supported yet.");
+    private void completeCdr(IvrEndpointConversation conv, Record cdr) throws RecordException {
+        processConversationFinishedEvent(conv, cdr);
+        cdr.setValue(COMPLETION_CODE, CDR_COMPLETION_TOO_LONG);
     }
 
     private Object processCallEvent(CallEvent callEvent) throws Exception {
@@ -121,16 +135,22 @@ public class SendCallCdrDP extends AbstractDataProcessorLogic {
                 break;
             case CONVERSATION_STARTED:
             case CONVERSATION_FINISHED:
+            case CONNECTION_ESTABLISHED:    
                 cdr = cdrs.get(callEvent.conversation);
                 if (cdr==null) {
                     if (getLogger().isErrorEnabled())
-                        getLogger().error("Can't process {} call event because CDR not initialized.", callEvent);
+                        getLogger().error("Can't process ({}) call event because CDR not initialized.", callEvent);
                     return VOID;
                 }
-                if (callEvent.eventType==CallEventType.CONVERSATION_STARTED)
-                    processConversationStartedEvent(callEvent, cdr);
-                else
-                    processConversationFinishedEvent(callEvent, cdr);
+                switch (callEvent.eventType) {
+                    case CONVERSATION_STARTED: processConversationStartedEvent(callEvent.conversation, cdr); break;
+                    case CONNECTION_ESTABLISHED: processConnectionEstablishedEvent(callEvent.conversation, cdr); break;
+                    case CONVERSATION_FINISHED: 
+                        cdrs.remove(callEvent.conversation);
+                        processConversationFinishedEvent(callEvent.conversation, cdr);
+                        break;
+                    default: return UNHANDLED;
+                }
                 break;
             default:                
                 return UNHANDLED;
@@ -144,31 +164,66 @@ public class SendCallCdrDP extends AbstractDataProcessorLogic {
         final IvrEndpointConversation conv = callEvent.conversation;
         cdr.setValue(ID, conv.getConversationId());
         cdr.setValue(ENDPOINT_ADDRESS, callEvent.endpoint.getAddress());
-        cdr.setValue(CALLING_NUMBER, conv.getCallingNumber());
-        cdr.setValue(CALLED_NUMBER, conv.getCalledNumber());
-        cdr.setValue(LAST_REDIRECTED_NUMBER, conv.getLastRedirectedNumber());
         cdr.setValue(CALL_START_TIME, conv.getCallStartTime());
-        cdr.setValue(GET_CDRS, VOID);
         return cdr;        
     }
     
-    private void processConversationStartedEvent(CallEvent callEvent, Record cdr) {
-        throw new UnsupportedOperationException("Not supported yet.");
+    private void processConversationStartedEvent(IvrEndpointConversation conv, Record cdr) throws RecordException {
+//        final IvrEndpointConversation conv = callEvent.conversation;
+        
+        cdr.setValue(CALLING_NUMBER, conv.getCallingNumber());
+        cdr.setValue(CALLED_NUMBER, conv.getCalledNumber());
+        cdr.setValue(LAST_REDIRECTED_NUMBER, conv.getLastRedirectedNumber());
+        cdr.setValue(CONVERSATION_START_TIME, conv.getConversationStartTime());
+        
+        final IncomingRtpStream inRtp = conv.getIncomingRtpStream();
+        if (inRtp!=null) {
+            cdr.setValue(IN_RTP_LOCAL_ADDR, inRtp.getAddress().getHostAddress());
+            cdr.setValue(IN_RTP_LOCAL_PORT, inRtp.getPort());
+            cdr.setValue(IN_RTP_REMOTE_ADDR, inRtp.getRemoteHost());
+            cdr.setValue(IN_RTP_REMOTE_PORT, inRtp.getRemotePort());            
+        }
+        
+        final OutgoingRtpStream outRtp = conv.getOutgoingRtpStream();
+        if (outRtp!=null) {
+            cdr.setValue(OUT_RTP_LOCAL_ADDR, outRtp.getAddress().getHostAddress());
+            cdr.setValue(OUT_RTP_LOCAL_PORT, outRtp.getPort());
+            cdr.setValue(OUT_RTP_REMOTE_ADDR, outRtp.getRemoteHost());
+            cdr.setValue(OUT_RTP_REMOTE_PORT, outRtp.getRemotePort());
+        }
+    }
+    
+    private void processConnectionEstablishedEvent(IvrEndpointConversation conv, Record cdr) throws RecordException {
+        cdr.setValue(CONNECTION_ESTABLISHED_TIME, conv.getConnectionEstablishedTime());
     }
 
-    private void processConversationFinishedEvent(CallEvent callEvent, Record cdr) {
-        throw new UnsupportedOperationException("Not supported yet.");
+    private void processConversationFinishedEvent(IvrEndpointConversation conv, Record cdr) throws RecordException {
+//        final IvrEndpointConversation conv = callEvent.conversation;     
+        completedCdrCount++;
+        cdr.setValue(CALLING_NUMBER, conv.getCallingNumber());
+        cdr.setValue(CALLED_NUMBER, conv.getCalledNumber());
+        cdr.setValue(LAST_REDIRECTED_NUMBER, conv.getLastRedirectedNumber());
+        
+        cdr.setValue(COMPLETION_CODE, conv.getCompletionCode());
+        cdr.setValue(CALL_END_TIME, conv.getCallEndTime());
+        cdr.setValue(CALL_DURATION, (conv.getCallEndTime()-conv.getCallStartTime())/1000);
+        if (conv.getConnectionEstablishedTime()>0)
+            cdr.setValue(CONVERSATION_DURATION, (conv.getCallEndTime() - conv.getConnectionEstablishedTime())/1000);
+        cdr.setValues(conv.getIncomingRtpStat());
+        cdr.setValues(conv.getOutgoingRtpStat());
+        cdr.setValues(conv.getAudioStreamStat());
     }
    
     public static class CallEvent {        
         private final CallEventType eventType;
         private final IvrEndpointConversation conversation;        
-        private final AbstractEndpointNode endpoint;
+        private final IvrTerminal endpoint;
 
-        public CallEvent(CallEventType eventType, IvrEndpointConversation conversation) {
+        public CallEvent(CallEventType eventType, IvrEndpointConversation conversation, IvrTerminal endpoint) {
             this.eventType = eventType;
             this.conversation = conversation;
-        }        
+            this.endpoint = endpoint;
+        }
 
         @Override
         public String toString() {

@@ -21,6 +21,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import mockit.Expectations;
+import mockit.Mocked;
+import mockit.integration.junit4.JMockit;
 import static org.easymock.EasyMock.*;
 import org.easymock.IAnswer;
 import org.easymock.IArgumentMatcher;
@@ -28,13 +31,18 @@ import org.easymock.IMocksControl;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.onesec.raven.OnesecRavenModule;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.ivr.EndpointRequest;
 import org.onesec.raven.ivr.IvrEndpoint;
+import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.IvrEndpointPool;
+import org.onesec.raven.ivr.IvrTerminal;
+import org.raven.ds.Record;
 import org.raven.log.LogLevel;
 import org.raven.sched.impl.ExecutorServiceNode;
+import org.raven.test.DataCollector;
 import org.raven.tree.Node;
 import org.raven.tree.NodeError;
 import org.raven.tree.impl.ContainerNode;
@@ -43,6 +51,7 @@ import org.raven.tree.impl.ContainerNode;
  *
  * @author Mikhail Titov
  */
+@RunWith(JMockit.class)
 public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
 {
     private IvrEndpointPoolNode pool;
@@ -334,7 +343,7 @@ public class IvrEndpointPoolNodeTest extends OnesecRavenTestCase
         switchToProbabilisticQueue();
         auxiliaryPoolTest();
     }
-    
+        
     @Test
     public void addressRangesTest() throws Exception {
         pool.stop();

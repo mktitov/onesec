@@ -129,12 +129,16 @@ public class OutgoingRtpStreamImpl extends AbstractRtpStream implements Outgoing
         else {
             GlobalTransmissionStats s = _rtpManager.getGlobalTransmissionStats();
             Map<String, Object> stat = new LinkedHashMap<>();
-            stat.put("bytesSent", s.getBytesSent());
-            stat.put("RTPSent", s.getRTPSent());
+            stat.put(CallCdrRecordSchemaNode.OUT_RTP_LOCAL_ADDR, getAddress().getHostAddress());
+            stat.put(CallCdrRecordSchemaNode.OUT_RTP_LOCAL_PORT, getPort());
+            stat.put(CallCdrRecordSchemaNode.OUT_RTP_REMOTE_ADDR, getRemoteHost());
+            stat.put(CallCdrRecordSchemaNode.OUT_RTP_REMOTE_PORT, getRemotePort());
+            stat.put(CallCdrRecordSchemaNode.OUT_RTP_BYTES_SENT, s.getBytesSent());
+            stat.put(CallCdrRecordSchemaNode.OUT_RTP_PACKETS_SENT, s.getRTPSent());
             stat.put("RTCPSent", s.getRTCPSent());
-            stat.put("localColls", s.getLocalColls());
-            stat.put("remoteColls", s.getRemoteColls());
-            stat.put("transmitFailed", s.getTransmitFailed());
+            stat.put(CallCdrRecordSchemaNode.OUT_RTP_LOCAL_COLLISIONS, s.getLocalColls());
+            stat.put(CallCdrRecordSchemaNode.OUT_RTP_REMOTE_COLLISIONS, s.getRemoteColls());
+            stat.put(CallCdrRecordSchemaNode.OUT_RTP_TRANSMIT_FAILED, s.getTransmitFailed());
             return stat;
         }
     }

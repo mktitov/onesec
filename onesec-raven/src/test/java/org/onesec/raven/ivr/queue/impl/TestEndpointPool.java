@@ -17,12 +17,19 @@
 
 package org.onesec.raven.ivr.queue.impl;
 
+import java.util.Collection;
 import org.onesec.raven.ivr.EndpointRequest;
 import org.onesec.raven.ivr.IvrEndpoint;
+import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.IvrEndpointPool;
+import org.onesec.raven.ivr.IvrTerminal;
 import org.onesec.raven.ivr.ReserveEndpointRequest;
+import org.onesec.raven.ivr.impl.CdrGeneratorDP;
 import org.raven.conv.ConversationScenario;
+import org.raven.ds.DataConsumer;
+import org.raven.ds.DataContext;
 import org.raven.sched.ExecutorServiceException;
+import org.raven.tree.NodeAttribute;
 import org.raven.tree.impl.BaseNode;
 
 /**
@@ -59,5 +66,11 @@ public class TestEndpointPool extends BaseNode implements IvrEndpointPool
 
     public ConversationScenario getConversationScenario(IvrEndpoint endpoint) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+
+    @Override
+    public void handleCallEvent(CdrGeneratorDP.CallEventType callEvent, IvrEndpointConversation conversation, IvrTerminal term) {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 }

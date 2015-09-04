@@ -104,20 +104,24 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
     
     protected Map<String, Object> getStatFor(GlobalReceptionStats gStat) {
         Map<String, Object> stat = new LinkedHashMap<>();
-        stat.put("badRTCPPkts", gStat.getBadRTCPPkts());
-        stat.put("badRTPkts", gStat.getBadRTPkts());
-        stat.put("bytesRecd", gStat.getBytesRecd());
-        stat.put("localColls", gStat.getLocalColls());
+        stat.put(CallCdrRecordSchemaNode.IN_RTP_LOCAL_ADDR, getAddress().getHostAddress());
+        stat.put(CallCdrRecordSchemaNode.IN_RTP_LOCAL_PORT, getPort());
+        stat.put(CallCdrRecordSchemaNode.IN_RTP_REMOTE_ADDR, getRemoteHost());
+        stat.put(CallCdrRecordSchemaNode.IN_RTP_REMOTE_PORT, getRemotePort());
+        stat.put(CallCdrRecordSchemaNode.IN_RTP_BAD_RTCP_PACKETS, gStat.getBadRTCPPkts());
+        stat.put(CallCdrRecordSchemaNode.IN_RTP_BAD_RTCP_PACKETS, gStat.getBadRTPkts());
+        stat.put(CallCdrRecordSchemaNode.IN_RTP_BYTES_RECEIVED, gStat.getBytesRecd());
+        stat.put(CallCdrRecordSchemaNode.IN_RTP_LOCAL_COLLISIONS, gStat.getLocalColls());
         stat.put("malformedBye", gStat.getMalformedBye());
         stat.put("malformedRR", gStat.getMalformedRR());
         stat.put("malformedSDES", gStat.getMalformedSDES());
         stat.put("malformedSR", gStat.getMalformedSR());
         stat.put("packetsLooped", gStat.getPacketsLooped());
-        stat.put("packetsRecd", gStat.getPacketsRecd());
+        stat.put(CallCdrRecordSchemaNode.IN_RTP_PACKETS_RECEIVED, gStat.getPacketsRecd());
         stat.put("RTCPRecd", gStat.getRTCPRecd());
-        stat.put("remoteColls", gStat.getRemoteColls());
+        stat.put(CallCdrRecordSchemaNode.IN_RTP_REMOTE_COLLISIONS, gStat.getRemoteColls());
         stat.put("SRRecd", gStat.getSRRecd());
-        stat.put("transmitFailed", gStat.getTransmitFailed());
+        stat.put(CallCdrRecordSchemaNode.IN_RTP_TRANSMIT_FAILED, gStat.getTransmitFailed());
         stat.put("unknownTypes", gStat.getUnknownTypes());
         return stat;
         
@@ -128,27 +132,8 @@ public class IncomingRtpStreamImpl extends AbstractRtpStream
         final RTPManager _rtpManager = rtpManager;
         if (_rtpManager==null)
             return Collections.EMPTY_MAP;
-        else {
+        else 
             return getStatFor(_rtpManager.getGlobalReceptionStats());
-//            GlobalReceptionStats s = rtpStat;
-//            Map<String, Object> stat = new LinkedHashMap<>();
-//            stat.put("badRTCPPkts", s.getBadRTCPPkts());
-//            stat.put("badRTPkts", s.getBadRTPkts());
-//            stat.put("bytesRecd", s.getBytesRecd());
-//            stat.put("localColls", s.getLocalColls());
-//            stat.put("malformedBye", s.getMalformedBye());
-//            stat.put("malformedRR", s.getMalformedRR());
-//            stat.put("malformedSDES", s.getMalformedSDES());
-//            stat.put("malformedSR", s.getMalformedSR());
-//            stat.put("packetsLooped", s.getPacketsLooped());
-//            stat.put("packetsRecd", s.getPacketsRecd());
-//            stat.put("RTCPRecd", s.getRTCPRecd());
-//            stat.put("remoteColls", s.getRemoteColls());
-//            stat.put("SRRecd", s.getSRRecd());
-//            stat.put("transmitFailed", s.getTransmitFailed());
-//            stat.put("unknownTypes", s.getUnknownTypes());
-//            return stat;
-        }
     }
     
     protected void releaseRtpManager() {

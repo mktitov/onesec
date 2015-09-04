@@ -30,6 +30,7 @@ import javax.media.Format;
 import javax.media.protocol.BufferTransferHandler;
 import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.PushBufferStream;
+import static javax.media.protocol.SourceStream.LENGTH_UNKNOWN;
 import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.impl.ConcatDataSource.LastBuffer;
 import org.raven.sched.Task;
@@ -64,7 +65,7 @@ public class ConcatDataStream implements PushBufferStream, Task
 //    private String logPrefix;
     private final AtomicReference<ConcatDataSource.SourceProcessor> sourceInfo = new AtomicReference<>();
     private final AtomicInteger emptyQueueEvents = new AtomicInteger(0);
-    private volatile Map<String, String> stat;
+    private volatile Map<String, Object> stat;
 
     public ConcatDataStream(
             Queue<Buffer> bufferQueue, ConcatDataSource dataSource, Node owner
@@ -256,7 +257,7 @@ public class ConcatDataStream implements PushBufferStream, Task
         }
     }
     
-    public Map<String, String> getStat() {
+    public Map<String, Object> getStat() {
         return stat;
     } 
 
@@ -268,37 +269,38 @@ public class ConcatDataStream implements PushBufferStream, Task
         final long currTime = System.currentTimeMillis();
         final SimpleDateFormat fmt = new SimpleDateFormat("HH:mm:ss");
         final long maxSkewDur = maxSkewTime-startTime;
-        final String avgSkew = String.format("%.2f", expectedPacketNumber==0? 0 : skew/(double)expectedPacketNumber);
-        final String avgTransferTime = String.format("%.2f", packetNumber==0? 0 : transferTimeSum/(double)packetNumber);
-        final String _startTime = fmt.format(new Date(startTime));
+        final double avgSkew = expectedPacketNumber==0? 0 : skew/(double)expectedPacketNumber;
+        final double avgTransferTime = packetNumber==0? 0 : transferTimeSum/(double)packetNumber;
+        final Date _startTime = new Date(startTime);
+//        final String _startTime = fmt.format(new Date(startTime));
         final long _dur = (currTime-startTime)/1000;
         final String _maxSkewTime = fmt.format(new Date(maxSkewTime))+"/"+maxSkewDur/1000+"."+maxSkewDur%1000;
-        final Map<String, String> _stat = new LinkedHashMap<>();        
-        _stat.put("format", getFormat().getEncoding());
-        _stat.put("startTime", _startTime);
-        _stat.put("duration", ""+_dur);
-        _stat.put("skew", ""+skew);
-        _stat.put("maxSkew", ""+maxSkew);
-        _stat.put("maxSkewTime", _maxSkewTime);
-        _stat.put("avgSkew", avgSkew);
-        _stat.put("expectedPackets", ""+expectedPacketNumber);
-        _stat.put("sentPackets", ""+sentPackets.get());
-        _stat.put("missedPackets", ""+missedPackets);
-        _stat.put("droppedPackets", ""+droppedPacketCount);
-        _stat.put("siliencePackets", ""+silencePacketCount.get());
-        _stat.put("avgTransferTime", ""+avgTransferTime);
-        _stat.put("maxTransferTime", ""+maxTransferTime);
-        _stat.put("emptyBufferEventCount", ""+emptyBufferEventCount);
+        final Map<String, Object> _stat = new LinkedHashMap<>();        
+        _stat.put(CallCdrRecordSchemaNode.AS_FORMAT, getFormat().getEncoding());
+        _stat.put(CallCdrRecordSchemaNode.AS_START_TIME, _startTime);
+        _stat.put(CallCdrRecordSchemaNode.AS_DURATION, _dur);
+        _stat.put(CallCdrRecordSchemaNode.AS_SKEW, skew);
+        _stat.put(CallCdrRecordSchemaNode.AS_MAX_SKEW, maxSkew);
+        _stat.put(CallCdrRecordSchemaNode.AS_MAX_SKEW_TIME, _maxSkewTime);
+        _stat.put(CallCdrRecordSchemaNode.AS_AVG_SKEW, avgSkew);
+        _stat.put(CallCdrRecordSchemaNode.AS_EXPECTED_PACKETS, expectedPacketNumber);
+        _stat.put(CallCdrRecordSchemaNode.AS_SENT_PACKETS, sentPackets.get());
+        _stat.put(CallCdrRecordSchemaNode.AS_MISSED_PACKETS, missedPackets);
+        _stat.put(CallCdrRecordSchemaNode.AS_DROPPED_PACKETS, droppedPacketCount);
+        _stat.put(CallCdrRecordSchemaNode.AS_SILIENCE_PACKETS, silencePacketCount.get());
+        _stat.put(CallCdrRecordSchemaNode.AS_AVG_TRANSFER_TIME, avgTransferTime);
+        _stat.put(CallCdrRecordSchemaNode.AS_MAX_TRANSFER_TIME, maxTransferTime);
+        _stat.put(CallCdrRecordSchemaNode.AS_EMPTY_BUFFER_EVENT_COUNT, emptyBufferEventCount);
         this.stat = _stat;
         return String.format(
                 "\n\tformat: %s; "+
-                "\n\tstartTime: %s; dur: %s sec; skew: %s; maxSkew: %s; maxSkewTime: %s; avgSkew: %s; "+
+                "\n\tstartTime: %s; dur: %s sec; skew: %s; maxSkew: %s; maxSkewTime: %s; avgSkew: %.2f; "+
                 "\n\texpectedPackets: %s; sentPackets: %s; missedPackets: %s; droppedPackets: %s; "+
                 "siliencePackets: %s; "+
-                "\n\tavgTransferTime: %s; maxTransferTime: %s; "+
+                "\n\tavgTransferTime: %.2f; maxTransferTime: %s; "+
                 "emptyBufferEvents: %s; buffersSize: %s"
                 , getFormat().getEncoding()
-                , _startTime
+                , fmt.format(_startTime)
                 , (currTime-startTime)/1000, skew, maxSkew
                 , _maxSkewTime
                 , avgSkew
