@@ -748,7 +748,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         expect(term.getObjectName()).andReturn(termNode.getName()).anyTimes();
         expect(term.getObjectDescription()).andReturn("Terminal").anyTimes();
         expect(term.getAddress()).andReturn(address);
-        expect(term.getCodec()).andReturn(Codec.G729);
+        expect(term.getCodec()).andReturn(Codec.G711_A_LAW);
 //        expect(term.getCodec()).andReturn(Codec.AUTO);
         expect(term.getConversationScenario()).andReturn(scenario).anyTimes();
         expect(term.getEnableIncomingCalls()).andReturn(enableInCalls);

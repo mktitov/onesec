@@ -265,6 +265,8 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
         try {
             if (state.getId()!=INVALID)
                 throw new IvrEndpointConversationStateException("Can't setCall", "INVALID", state.getIdName());
+            if (stopping)
+                throw new IvrEndpointConversationStateException("Can't setCall because of conversation is stopped or stopping now");
             this.call = (CiscoCall) call;
 //            callId = "[call id: " + this.call.getCallID().intValue()+", calling number: "
 //                    + call.getCallingAddress().getName() + "]";

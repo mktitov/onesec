@@ -23,6 +23,10 @@ package org.onesec.raven.ivr;
  */
 public class IvrEndpointConversationStateException extends IvrEndpointConversationException {
 
+    public IvrEndpointConversationStateException(String message) {
+        super(message);
+    }
+
     public IvrEndpointConversationStateException(String mess, String expectedStates, String currentState)
     {
         super(String.format("%s. Invalid conversation STATE. Expected one of (%s) but was (%s)"
