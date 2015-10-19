@@ -63,6 +63,8 @@ public class TranscoderDataSourceTest extends Assert {
         executor.execute(executeTask(owner));
         expectLastCall().atLeastOnce();
         expect(owner.getLogger()).andReturn(logger).anyTimes();
+        expect(owner.getLogLevel()).andReturn(LogLevel.TRACE).anyTimes();
+        expect(owner.getName()).andReturn("owner").anyTimes();
         expect(owner.isLogLevelEnabled(anyObject(LogLevel.class))).andReturn(Boolean.TRUE).anyTimes();
         replay(executor, owner);
         
@@ -76,16 +78,16 @@ public class TranscoderDataSourceTest extends Assert {
                 codecManager, conv, Codec.G711_A_LAW.getAudioFormat(), new LoggerHelper(owner, "T1. "));
 //        TranscoderDataSource t1 = new TranscoderDataSource(codecManager, conv, JMFHelper.DEFAULT_FORMAT);
 //        TranscoderDataSource t1 = new TranscoderDataSource(codecManager, conv, audioFormat);
-//        TranscoderDataSource t2 = new TranscoderDataSource(
-//                codecManager, conv, Codec.G711_MU_LAW.getAudioFormat(), owner, "T2. ");
         TranscoderDataSource t2 = new TranscoderDataSource(
-                codecManager, t1, Codec.LINEAR.getAudioFormat(), new LoggerHelper(owner, "T2. "));
-//        TranscoderDataSource t3 = new TranscoderDataSource(
-//                codecManager, t2, JMFHelper.DEFAULT_FORMAT, owner, "T3. ");
+                codecManager, t1, Codec.G729.getAudioFormat(), new LoggerHelper(owner, "T2. "));
+//        TranscoderDataSource t2 = new TranscoderDataSource(
+//                codecManager, t1, Codec.LINEAR.getAudioFormat(), new LoggerHelper(owner, "T2. "));
+        TranscoderDataSource t3 = new TranscoderDataSource(
+                codecManager, t2, Codec.LINEAR.getAudioFormat(), new LoggerHelper(owner, "T3. "));
         long ts = System.currentTimeMillis();
-        t2.connect();
+        t3.connect();
         System.out.println(" !! Connect time: "+(System.currentTimeMillis()-ts));
-        JMFHelper.OperationController controller = JMFHelper.writeToFile(t2, "target/transcode_test.wav");
+        JMFHelper.OperationController controller = JMFHelper.writeToFile(t3, "target/transcode_test.wav");
         TimeUnit.SECONDS.sleep(4);
         controller.stop();
         

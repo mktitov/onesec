@@ -120,12 +120,12 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
 
     @Override
     public void addSource(DataSource source) {
-        replaceSourceProcessor(new SourceProcessorImpl(source, null));
+        replaceSourceProcessor(new SourceProcessorImpl(source, null), false);
     }
 
     @Override
     public void addSource(DataSource source, AudioStreamSourceListener listener) {
-        replaceSourceProcessor(new SourceProcessorImpl(source, listener));
+        replaceSourceProcessor(new SourceProcessorImpl(source, listener), false);
     }
 
     @Override
@@ -135,7 +135,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
 
     @Override
     public void addSource(String key, long checksum, DataSource source, AudioStreamSourceListener listener) {
-        replaceSourceProcessor(new SourceProcessorImpl(source, key, checksum, listener));
+        replaceSourceProcessor(new SourceProcessorImpl(source, key, checksum, listener), false);
     }
 
     @Override
@@ -167,11 +167,11 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
 
     @Override
     public void playContinuously(List<AudioFile> files, long trimPeriod, AudioStreamSourceListener sourceListener) {
-        replaceSourceProcessor(new PlayContinuousSourceProcessor(files, trimPeriod, sourceListener));
+        replaceSourceProcessor(new PlayContinuousSourceProcessor(files, trimPeriod, sourceListener), false);
     }
 
-    private void replaceSourceProcessor(final SourceProcessor newSourceProcessor) {
-        if (stopped.get()) {
+    private void replaceSourceProcessor(final SourceProcessor newSourceProcessor, final boolean stopping) {
+        if (!stopping && stopped.get() ) {
             if (newSourceProcessor!=null) {
                 final AudioStreamSourceListener sourceListener = newSourceProcessor.getSourceListener(); 
                 if (sourceListener != null)
@@ -262,7 +262,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
     public void close()  {
         if (!stopped.compareAndSet(false, true))
             return;
-        replaceSourceProcessor(null);
+        replaceSourceProcessor(null, true);
         buffers.clear();
         try {
             while (streamThreadRunning.get())
@@ -282,7 +282,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
     public void reset() {
         if (logger.isDebugEnabled())
             logger.debug("Reseting audio stream");
-        replaceSourceProcessor(null);
+        replaceSourceProcessor(null, false);
     }
 
     void setStreamThreadRunning(boolean streamThreadRunning) {

@@ -39,6 +39,7 @@ public class RTPManagerServiceImpl implements RTPManagerService
         this.g729RtpFormat = codecManager.getG729RtpFormat();
     }
 
+    @Override
     public RTPManager createRtpManager()
     {
         if (logger.isDebugEnabled())

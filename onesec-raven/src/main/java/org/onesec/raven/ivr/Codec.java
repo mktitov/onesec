@@ -52,8 +52,8 @@ public enum Codec
                 audioFormat = new AudioFormat(AudioFormat.LINEAR, 8000d, 8, 1, -1, 0, 8, 16000.0, byte[].class);
                 break;
             case -1 :
-                ciscoMediaCapabilities = new CiscoMediaCapability[]{new CiscoMediaCapability(2, 60),
-                    new CiscoMediaCapability(4, 60), new CiscoMediaCapability(11, 60)};
+                ciscoMediaCapabilities = new CiscoMediaCapability[]{
+                    new CiscoMediaCapability(4, 60), new CiscoMediaCapability(11, 60), new CiscoMediaCapability(2, 60)};
                 audioFormat = null;
                 break;
             default : 
