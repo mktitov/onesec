@@ -141,7 +141,7 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
     @Override
     protected boolean doProcessRequest(CallsQueue queue, CallQueueRequestController request
             , IvrConversationScenario conversationScenario, AudioFile greeting
-            , String operatorPhoneNumbers)
+            , String operatorPhoneNumbers, Integer inviteTimeout)
     {
         if (getCallsQueues().getUseOnlyRegisteredOperators()==true && getOperatorId()==null)
             return false;
@@ -152,11 +152,11 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
         }
         try {
 //            timeoutEndTime.set(0);
-            SimpleDateFormat fmt = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
+            final SimpleDateFormat fmt = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
             this.request.set(fmt.format(new Date())+": "+request.toString());
-            String _nums = operatorPhoneNumbers==null||operatorPhoneNumbers.trim().length()==0?
+            final String _nums = operatorPhoneNumbers==null||operatorPhoneNumbers.trim().length()==0?
                     phoneNumbers : operatorPhoneNumbers;
-            commutationManager.set(commutate(queue, request, _nums, conversationScenario, greeting));
+            commutationManager.set(commutate(queue, request, _nums, inviteTimeout, conversationScenario, greeting));
             return true;
         } catch (Throwable e) {
             if (isLogLevelEnabled(LogLevel.ERROR))

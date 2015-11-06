@@ -48,6 +48,9 @@ public class CallsQueueOperatorRefNode extends BaseNode implements CallsQueueOpe
     @Parameter
     private String phoneNumbers;
     
+    @Parameter 
+    private Integer inviteTimeout;
+    
     private int sortIndex;
 
     @Override
@@ -96,10 +99,18 @@ public class CallsQueueOperatorRefNode extends BaseNode implements CallsQueueOpe
         this.phoneNumbers = phoneNumbers;
     }
 
+    public Integer getInviteTimeout() {
+        return inviteTimeout;
+    }
+
+    public void setInviteTimeout(Integer inviteTimeout) {
+        this.inviteTimeout = inviteTimeout;
+    }
+
     public boolean processRequest(CallsQueue queue, CallQueueRequestController request) {
         try {
             return operator.processRequest(
-                    queue, request, conversationScenario, greeting, phoneNumbers);
+                    queue, request, conversationScenario, greeting, phoneNumbers, inviteTimeout);
         } catch (Throwable e) {
             if (isLogLevelEnabled(LogLevel.ERROR))
                 getLogger().error(

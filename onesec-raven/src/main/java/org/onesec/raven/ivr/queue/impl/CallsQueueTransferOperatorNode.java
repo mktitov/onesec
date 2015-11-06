@@ -103,7 +103,10 @@ public class CallsQueueTransferOperatorNode extends BaseNode implements CallsQue
         return null;
     }
 
-    public boolean processRequest(CallsQueue queue, CallQueueRequestController request, IvrConversationScenario conversationScenario, AudioFile greeting, String operatorPhoneNumbers) {
+    public boolean processRequest(CallsQueue queue, CallQueueRequestController request, 
+            IvrConversationScenario conversationScenario, AudioFile greeting, String operatorPhoneNumbers, 
+            Integer inviteTimeout) 
+    {
         if (isLogLevelEnabled(LogLevel.WARN))
             getLogger().warn("Transfer operator must not be used as normal operators");
         return false;

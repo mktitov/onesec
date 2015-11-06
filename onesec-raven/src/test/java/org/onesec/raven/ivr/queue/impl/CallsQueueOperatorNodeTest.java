@@ -93,7 +93,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
         CallsQueue queue = createMock(CallsQueue.class);
         replay(request, queue);
 
-        assertFalse(operator.processRequest(queue, request, scenario, null, null));
+        assertFalse(operator.processRequest(queue, request, scenario, null, null, null));
 
         verify(request, queue);
     }
@@ -107,7 +107,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
 
         operator.setActive(Boolean.FALSE);
         assertTrue(operator.start());
-        assertFalse(operator.processRequest(queue, request, scenario, null, null));
+        assertFalse(operator.processRequest(queue, request, scenario, null, null, null));
 
         verify(request, queue);
     }
@@ -143,12 +143,12 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
         assertTrue(operator.start());
         endpointPool.setEndpointPool(pool);
         operator.setBusyTimer(1);
-        operator.processRequest(queue, request, scenario, audioFile, null);
+        operator.processRequest(queue, request, scenario, audioFile, null, null);
         operator.doRequestProcessed(operator.getCommutationManager(), true);
         assertFalse(operator.getBusy());
-        assertFalse(operator.processRequest(queue, request, scenario, audioFile, null));
+        assertFalse(operator.processRequest(queue, request, scenario, audioFile, null, null));
         Thread.sleep(1100);
-        assertTrue(operator.processRequest(queue, request, scenario, audioFile, null));
+        assertTrue(operator.processRequest(queue, request, scenario, audioFile, null, null));
         Thread.sleep(200);
         
         verify(request, queue, pool, audioFile);
@@ -179,7 +179,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
 
         assertTrue(operator.start());
         endpointPool.setEndpointPool(pool);
-        operator.processRequest(queue, request, scenario, audioFile, null);
+        operator.processRequest(queue, request, scenario, audioFile, null, null);
         Thread.sleep(200);
         verify(request, queue, pool, audioFile);
     }
@@ -220,7 +220,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
         endpointPool.setEndpointPool(pool);
         long startTime = System.currentTimeMillis();
         flag.set(false);
-        operator.processRequest(queue, request, scenario, audioFile, null);
+        operator.processRequest(queue, request, scenario, audioFile, null, null);
         while (!flag.get())
             Thread.sleep(100);
         long diff = System.currentTimeMillis() - startTime;
@@ -304,10 +304,10 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
         assertTrue(operator.start());
         endpointPool.setEndpointPool(pool);
         bridgeManager.setManager(bManager);
-        operator.processRequest(queue, request, scenario, audioFile, null);
+        operator.processRequest(queue, request, scenario, audioFile, null, null);
         Thread.sleep(10);
         //check for busy
-        assertFalse(operator.processRequest(queue, request, scenario, audioFile, null));
+        assertFalse(operator.processRequest(queue, request, scenario, audioFile, null, null));
         while(!stopFlag.get()) 
             TimeUnit.MILLISECONDS.sleep(100);
         TimeUnit.MILLISECONDS.sleep(1000);
