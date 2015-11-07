@@ -15,8 +15,8 @@
     <relativePath>../onesec-project</relativePath>
   </parent>
   <scm>
-    <connection>scm:svn:https://onesec.googlecode.com/svn/trunk/onesec-raven</connection>
-    <url>https://onesec.googlecode.com/svn/trunk/onesec-raven</url>
+    <connection>scm:git:https://mktitov@github.com/mktitov/onesec.git</connection>
+    <url>https://mktitov@github.com/mktitov/onesec.git</url>
   </scm>
 
   <pluginRepositories>
@@ -114,6 +114,7 @@
         <configuration>
           <doCheck>false</doCheck>
           <doUpdate>false</doUpdate>
+          <shortRevisionLength>5</shortRevisionLength>          
         </configuration>
       </plugin>
       <plugin>

@@ -11,4 +11,11 @@
                 <maven.test.skip>true</maven.test.skip>
             </properties>
         </action>
+        <action>
+            <actionName>CUSTOM-validate</actionName>
+            <displayName>validate</displayName>
+            <goals>
+                <goal>validate</goal>
+            </goals>
+        </action>
     </actions>
