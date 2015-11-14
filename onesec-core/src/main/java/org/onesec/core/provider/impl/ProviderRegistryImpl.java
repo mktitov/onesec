@@ -21,7 +21,6 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -44,22 +43,22 @@ import org.slf4j.Logger;
  */
 public class ProviderRegistryImpl implements ProviderRegistry, RegistryShutdownListener 
 {
-    private NavigableMap<Integer, ProviderController> controllers = new ConcurrentSkipListMap();
+    private final NavigableMap<Integer, ProviderController> controllers = new ConcurrentSkipListMap();
     
     private final StateListenersCoordinator stateListenersCoordinator;
     private final Logger log;
     
     private boolean stoped;
-    private ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
-    private ExecutorService connectExecutor = Executors.newSingleThreadExecutor();
-    private JtapiPeer jtapiPeer;
+    private final ScheduledExecutorService reconnectExecutor = Executors.newScheduledThreadPool(1);
+    private final ExecutorService connectExecutor = Executors.newSingleThreadExecutor();
+    private final JtapiPeer jtapiPeer;
 
     public ProviderRegistryImpl(StateListenersCoordinator stateListenersCoordinator, Logger log)
             throws JtapiPeerUnavailableException
     {
         this.stateListenersCoordinator = stateListenersCoordinator;
         this.log = log;
-        executor.scheduleWithFixedDelay(new ReconnectProviderTask(), 5, 1, TimeUnit.MINUTES);
+        reconnectExecutor.schedule(new ReconnectProviderTask(), 5, TimeUnit.MINUTES);
         jtapiPeer = JtapiPeerFactory.getJtapiPeer(null);
     }
     
@@ -139,14 +138,18 @@ public class ProviderRegistryImpl implements ProviderRegistry, RegistryShutdownL
         this.stoped = stoped;
     }
     
-    private class ReconnectProviderTask implements Runnable {
+    private class ReconnectProviderTask implements Runnable {        
         public void run() {
-            for (ProviderController controller: controllers.values()) {
-                int id = controller.getState().getId();
-                if (id==ProviderControllerState.OUT_OF_SERVICE || id==ProviderControllerState.STOPED) {
-                    log.info("Reinitializing provider controller. "+controller.getName());
-                    controller.connect();
+            try {
+                for (ProviderController controller: controllers.values()) {
+                    int id = controller.getState().getId();
+                    if (id==ProviderControllerState.OUT_OF_SERVICE || id==ProviderControllerState.STOPED) {
+                        log.info("Reinitializing provider controller. "+controller.getName());
+                        controller.connect();
+                    }
                 }
+            } finally {
+                reconnectExecutor.schedule(this, 1, TimeUnit.MINUTES);
             }
         }
     }
