@@ -48,7 +48,7 @@ public class ProviderRegistryImpl implements ProviderRegistry, RegistryShutdownL
     private final StateListenersCoordinator stateListenersCoordinator;
     private final Logger log;
     
-    private boolean stoped;
+    private volatile boolean stoped;
     private final ScheduledExecutorService reconnectExecutor = Executors.newScheduledThreadPool(1);
     private final ExecutorService connectExecutor = Executors.newSingleThreadExecutor();
     private final JtapiPeer jtapiPeer;
