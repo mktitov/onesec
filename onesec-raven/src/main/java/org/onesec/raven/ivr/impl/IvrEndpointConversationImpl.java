@@ -632,7 +632,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 for (Map.Entry<String, Object> b: additionalBindings.entrySet())
                     conversationState.setBinding(b.getKey(), b.getValue(), BindingScope.CONVERSATION);
             additionalBindings = null;
-            actionsExecutor = new IvrActionExecutorFacade(this, new LoggerHelper(logger, callLog("")));
+            actionsExecutor = new ActionExecutorFacade(this, new LoggerHelper(logger, callLog("")));
 //            actionsExecutor = new IvrActionsExecutorImpl(this, executor);
 //            actionsExecutor.setLogPrefix(callId+" : ");
             this.bindingSupport = new BindingSupportImpl();
@@ -695,14 +695,14 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                     bindingId = tree.addGlobalBindings(bindingSupport);
                     bindingSupport.putAll(conversationState.getBindings());
                     bindingSupport.put(DTMF_BINDING, ""+dtmfChar);
-                    for (Node node: actions)
-                        if (node instanceof IvrActionNode) {
-                            IvrAction action = ((IvrActionNode)node).createAction();
-                            if (action!=null)
-                                ivrActions.add(action);
-                        } else if (node instanceof GotoNode || node instanceof ConversationScenarioPoint)
-                            ivrActions.add(new ContinueConversationAction());
-                    actionsExecutor.executeActions(ivrActions);
+//                    for (Node node: actions)
+//                        if (node instanceof IvrActionNode) {
+//                            IvrAction action = ((IvrActionNode)node).createAction();
+//                            if (action!=null)
+//                                ivrActions.add(action);
+//                        } else if (node instanceof GotoNode || node instanceof ConversationScenarioPoint)
+//                            ivrActions.add(new ContinueConversationAction());
+//                    actionsExecutor.executeActions(ivrActions);
                 } finally {
                     if (bindingId!=null)
                         tree.removeGlobalBindings(bindingId);
