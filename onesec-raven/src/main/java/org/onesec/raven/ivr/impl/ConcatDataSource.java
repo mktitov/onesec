@@ -41,6 +41,9 @@ import javax.media.control.PacketSizeControl;
 import javax.media.format.AudioFormat;
 import javax.media.protocol.*;
 import org.onesec.raven.ivr.*;
+import org.raven.dp.RavenFuture;
+import org.raven.dp.impl.CompletedFuture;
+import org.raven.dp.impl.RavenPromise;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.ExecutorServiceException;
 import org.raven.sched.impl.AbstractTask;
@@ -77,6 +80,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
     private int bufferCount;
     private final AtomicLong buffersReceivedByTranscoder = new AtomicLong();
     private final AtomicLong buffersSentByTranscoder = new AtomicLong();
+    private final RavenFuture processedSourceFuture;
 
     public ConcatDataSource(String contentType
             , ExecutorService executorService
@@ -103,6 +107,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
         
         bufferCount = 0;
         silentBuffer = bufferCache.getSilentBuffer(executorService, owner, codec, rtpPacketSize);
+        processedSourceFuture = new CompletedFuture(null, executorService);                
         streams = new ConcatDataStream[]{new ConcatDataStream(
                 buffers, this, owner, rtpPacketSize, codec, rtpMaxSendAheadPacketsCount, silentBuffer, logger)};
     }
@@ -119,63 +124,59 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
     }
 
     @Override
-    public void addSource(DataSource source) {
-        replaceSourceProcessor(new SourceProcessorImpl(source, null));
+    public RavenFuture addSource(DataSource source) {
+        final RavenPromise completionPromise = new RavenPromise(executorService);
+        replaceSourceProcessor(new SourceProcessorImpl(source, completionPromise));
+        return completionPromise.getFuture();
     }
 
     @Override
-    public void addSource(DataSource source, AudioStreamSourceListener listener) {
-        replaceSourceProcessor(new SourceProcessorImpl(source, listener));
+    public RavenFuture addSource(String key, long checksum, DataSource source) {
+        final RavenPromise completionPromise = new RavenPromise(executorService);
+        replaceSourceProcessor(new SourceProcessorImpl(source, key, checksum, completionPromise));
+        return completionPromise.getFuture();
     }
 
     @Override
-    public void addSource(String key, long checksum, DataSource source) {
-        addSource(key, checksum, source, null);
-    }
-
-    @Override
-    public void addSource(String key, long checksum, DataSource source, AudioStreamSourceListener listener) {
-        replaceSourceProcessor(new SourceProcessorImpl(source, key, checksum, listener));
-    }
-
-    @Override
-    public void addSource(InputStreamSource source) {
-        addSource(source, null);
-    }
-
-    @Override
-    public void addSource(InputStreamSource source, AudioStreamSourceListener listener) {
+    public RavenFuture addSource(InputStreamSource source) {
         if (source!=null)
-            addSource(new ContainerParserDataSource(codecManager, source, contentType), listener);
+            return addSource(new ContainerParserDataSource(codecManager, source, contentType));
+        else
+            return processedSourceFuture;
+//        addSource(source, null);
     }
 
-    @Override
-    public void addSource(String key, long checksum, InputStreamSource source) {
-        addSource(key, checksum, source, null);
-    }
+//    @Override
+//    public void addSource(InputStreamSource source, AudioStreamSourceListener listener) {
+//        if (source!=null)
+//            addSource(new ContainerParserDataSource(codecManager, source, contentType), listener);
+//    }
 
     @Override
-    public void addSource(String key, long checksum, InputStreamSource source, AudioStreamSourceListener listener) {
+    public RavenFuture addSource(String key, long checksum, InputStreamSource source) {
         if (source!=null)
-            addSource(key, checksum, new ContainerParserDataSource(codecManager, source, contentType), listener);
-    }
+            return addSource(key, checksum, new ContainerParserDataSource(codecManager, source, contentType));
+        else 
+            return processedSourceFuture;
+    } 
+
+//    @Override
+//    public void addSource(String key, long checksum, InputStreamSource source, AudioStreamSourceListener listener) {
+//        if (source!=null)
+//            addSource(key, checksum, new ContainerParserDataSource(codecManager, source, contentType), listener);
+//    }
 
     @Override
-    public void playContinuously(List<AudioFile> files, long trimPeriod) {
-        playContinuously(files, trimPeriod, null);
-    }
-
-    @Override
-    public void playContinuously(List<AudioFile> files, long trimPeriod, AudioStreamSourceListener sourceListener) {
-        replaceSourceProcessor(new PlayContinuousSourceProcessor(files, trimPeriod, sourceListener));
+    public RavenFuture playContinuously(List<AudioFile> files, long trimPeriod) {
+        final RavenPromise completionPromise = new RavenPromise(executorService);
+        replaceSourceProcessor(new PlayContinuousSourceProcessor(files, trimPeriod, completionPromise));
+        return completionPromise.getFuture();
     }
 
     private void replaceSourceProcessor(final SourceProcessor newSourceProcessor) {
         if (stopped.get()) {
             if (newSourceProcessor!=null) {
-                final AudioStreamSourceListener sourceListener = newSourceProcessor.getSourceListener(); 
-                if (sourceListener != null)
-                    sourceListener.sourceProcessed();
+                newSourceProcessor.getCompletionPromise().completeWithValue(null);
             }
             return;
         }
@@ -185,9 +186,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
             executorService.executeQuietly(new AbstractTask(owner, "Stopping source processing") {
                 @Override public void doRun() throws Exception {
                     oldSp.close();
-                    final AudioStreamSourceListener sourceListener = oldSp.getSourceListener();
-                    if (sourceListener != null)
-                        sourceListener.sourceProcessed();
+                    oldSp.getCompletionPromise().completeWithValue(null);
                 }
             });
         }
@@ -200,7 +199,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
             });
 //        return newSourceProcessor;
     }
-
+    
     public String getLogPrefix() {
         return logger.getPrefix();
     }
@@ -327,13 +326,13 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
         return res;
     }
     
-    private void fireSourceProcessed(final AudioStreamSourceListener sourceListener) {
-        executorService.executeQuietly(new AbstractTask(owner, "Delivering source processed event") {            
-            @Override public void doRun() throws Exception {
-                sourceListener.sourceProcessed();
-            }
-        });
-    }
+//    private void fireSourceProcessed(final AudioStreamSourceListener sourceListener) {
+//        executorService.executeQuietly(new AbstractTask(owner, "Delivering source processed event") {            
+//            @Override public void doRun() throws Exception {
+//                sourceListener.sourceProcessed();
+//            }
+//        });
+//    }
     
     interface SourceProcessor {
         public void start();
@@ -341,7 +340,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
         public void close();
         public boolean isProcessing();
         public boolean isRealTime();
-        public AudioStreamSourceListener getSourceListener();
+        public RavenPromise getCompletionPromise();
     }
     
     class PlayContinuousSourceProcessor implements SourceProcessor {
@@ -351,21 +350,23 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
         private final Map<AudioFile, Buffer[]> filesBuffers = new ConcurrentHashMap<>();
         private final AtomicBoolean stopProcessing = new AtomicBoolean();
         private final LoggerHelper logger;
-        private final AudioStreamSourceListener sourceListener;
+//        private final AudioStreamSourceListener sourceListener;
+        private final RavenPromise completionPromise;
 
         public PlayContinuousSourceProcessor(final List<AudioFile> audioFiles, final long trimPeriod, 
-                final AudioStreamSourceListener sourceListener) 
+                final RavenPromise completionPromise) 
         {
             this.audioFiles = audioFiles;
             this.trimPeriod = trimPeriod;
             this.logger = new LoggerHelper(ConcatDataSource.this.logger, "Cont. play processor. ");
-            this.sourceListener = sourceListener==null? null : new AudioStreamSourceListenerWrapper(sourceListener);
+            this.completionPromise = completionPromise;
         }
 
-        @Override public AudioStreamSourceListener getSourceListener() {
-            return sourceListener;
+        @Override
+        public RavenPromise getCompletionPromise() {
+            return completionPromise;
         }
-
+        
         @Override public boolean isRealTime() {
             return false;
         }
@@ -414,8 +415,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
                     logger.debug("Initialization time (cache time): {}ms", System.currentTimeMillis()-ts);
                 for (AudioFile file: audioFiles)
                     buffers.addAll(Arrays.asList(filesBuffers.get(file)));
-                if (sourceListener!=null)
-                    buffers.add(new LastBuffer(sourceListener));
+                buffers.add(new LastBuffer(completionPromise));
                 if (logger.isDebugEnabled())
                     logger.debug("All audio file buffers added to stream for playing", System.currentTimeMillis()-ts);
                 stopProcessing.set(true);
@@ -584,7 +584,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
         private final long sourceChecksum;
         private final ConcatDataStream concatStream;
         private final boolean realTime;
-        private final AudioStreamSourceListener sourceListener;
+        private final RavenPromise completionPromise;
         private Collection<Buffer> cache;
 
 //        private PushBufferDataSource dataSource;
@@ -593,8 +593,8 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
         private long startTs;
         private long firstBufferTs;
 
-        public SourceProcessorImpl(DataSource source, AudioStreamSourceListener sourceListener) {
-            this(source, null, 0l, sourceListener);
+        public SourceProcessorImpl(DataSource source, RavenPromise completionPromise) {
+            this(source, null, 0l, completionPromise);
 //            this.source = source;
 //            this.sourceChecksum = 0l;
 //            this.sourceKey = null;
@@ -604,18 +604,20 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
         }
 
         public SourceProcessorImpl(DataSource source, String sourceKey, long sourceChecksum
-                , AudioStreamSourceListener sourceListener) 
+                , RavenPromise completionPromise) 
         {
             this.source = source;
             this.sourceKey = sourceKey;
             this.sourceChecksum = sourceChecksum;
             this.concatStream = streams[0];
             this.realTime = source instanceof RealTimeDataSourceMarker;
-            this.sourceListener = sourceListener==null? null : new AudioStreamSourceListenerWrapper(sourceListener);
+            this.completionPromise = completionPromise;
+//            this.sourceListener = sourceListener==null? null : new AudioStreamSourceListenerWrapper(sourceListener);
         }
 
-        @Override public AudioStreamSourceListener getSourceListener() {
-            return sourceListener;
+        @Override
+        public RavenPromise getCompletionPromise() {
+            return completionPromise;
         }
 
         @Override
@@ -657,8 +659,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
             if (cachedBuffers==null)
                 return false;
             buffers.addAll(Arrays.asList(cachedBuffers));
-            if (sourceListener!=null)
-                buffers.add(new LastBuffer(sourceListener));
+            buffers.add(new LastBuffer(completionPromise));
             stopProcessing.set(true);
             if (logger.isDebugEnabled())
                 logger.debug("Buffers applied from the cache (number of buffers - {})", cachedBuffers.length);
@@ -732,8 +733,8 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
                 if (isRealTime())
                     buffer.setTimeStamp(System.currentTimeMillis());
                 buffers.add(buffer);
-                if (theEnd && sourceListener!=null)
-                    buffers.add(new LastBuffer(sourceListener));
+                if (theEnd)
+                    buffers.add(new LastBuffer(completionPromise));
                 if (sourceKey!=null){
                     if (cache==null)
                         cache = new LinkedList<>();
@@ -778,108 +779,14 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
     }
     
     protected class LastBuffer extends Buffer {
-        private final AudioStreamSourceListener sourceListener;
+        private final RavenPromise completionPromise;
 
-        public LastBuffer(AudioStreamSourceListener sourceListener) {
-            this.sourceListener = sourceListener;
+        public LastBuffer(RavenPromise completionPromise) {
+            this.completionPromise = completionPromise;
         }
-
-        public AudioStreamSourceListener getSourceListener() {
-            return sourceListener;
+        
+        public RavenPromise getCompletionPromise() {
+            return completionPromise;
         }
     }
-    
-//    private class PullDs extends PullBufferDataSource {
-//        private final PullBufferStream[] streams = new PullBufferStream[]{new PullStream()};
-//
-//        @Override
-//        public PullBufferStream[] getStreams() {
-//            return streams;
-//        }
-//
-//        @Override
-//        public String getContentType() {
-//            return ConcatDataSource.this.getContentType();
-//        }
-//
-//        @Override
-//        public void connect() throws IOException {
-//        }
-//
-//        @Override
-//        public void disconnect() {
-//        }
-//
-//        @Override
-//        public void start() throws IOException {
-//        }
-//
-//        @Override
-//        public void stop() throws IOException {
-//        }
-//
-//        @Override
-//        public Object getControl(String paramString) {
-//            return ConcatDataSource.this.getControl(paramString);
-//        }
-//
-//        @Override
-//        public Object[] getControls() {
-//            return ConcatDataSource.this.getControls();
-//        }
-//
-//        @Override
-//        public Time getDuration() {
-//            return ConcatDataSource.this.getDuration();
-//        }
-//        
-//    }
-//    
-//    private class PullStream implements PullBufferStream {
-//        private final ContentDescriptor contentDescriptor = new ContentDescriptor(ConcatDataSource.this.getContentType());
-//
-//        @Override
-//        public boolean willReadBlock() {
-//            return false;
-//        }
-//
-//        @Override
-//        public void read(Buffer buffer) throws IOException {
-//            Buffer buf = streams[0].bufferQueue.poll();
-//            if (buf==null)
-//                buf = silentBuffer;
-//            buffer.copy(buf);
-//        }
-//
-//        @Override
-//        public Format getFormat() {
-//            return ConcatDataSource.this.getFormat();
-//        }
-//
-//        @Override
-//        public ContentDescriptor getContentDescriptor() {
-//            return contentDescriptor;
-//        }
-//
-//        @Override
-//        public long getContentLength() {
-//            return LENGTH_UNKNOWN;
-//        }
-//
-//        @Override
-//        public boolean endOfStream() {
-//            return streams[0].bufferQueue.isEmpty() && isClosed();
-//        }
-//
-//        @Override
-//        public Object[] getControls() {
-//            return EMPTY_CONTROLS;
-//        }
-//
-//        @Override
-//        public Object getControl(String paramString) {
-//            return null;
-//        }
-//        
-//    }
 }
