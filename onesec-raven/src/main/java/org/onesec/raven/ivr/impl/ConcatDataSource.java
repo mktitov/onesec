@@ -126,14 +126,14 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
     @Override
     public RavenFuture addSource(DataSource source) {
         final RavenPromise completionPromise = new RavenPromise(executorService);
-        replaceSourceProcessor(new SourceProcessorImpl(source, completionPromise));
+        replaceSourceProcessor(new SourceProcessorImpl(source, completionPromise), false);
         return completionPromise.getFuture();
     }
 
     @Override
     public RavenFuture addSource(String key, long checksum, DataSource source) {
         final RavenPromise completionPromise = new RavenPromise(executorService);
-        replaceSourceProcessor(new SourceProcessorImpl(source, key, checksum, completionPromise));
+        replaceSourceProcessor(new SourceProcessorImpl(source, key, checksum, completionPromise), false);
         return completionPromise.getFuture();
     }
 
@@ -169,7 +169,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
     @Override
     public RavenFuture playContinuously(List<AudioFile> files, long trimPeriod) {
         final RavenPromise completionPromise = new RavenPromise(executorService);
-        replaceSourceProcessor(new PlayContinuousSourceProcessor(files, trimPeriod, completionPromise));
+        replaceSourceProcessor(new PlayContinuousSourceProcessor(files, trimPeriod, completionPromise), false);
         return completionPromise.getFuture();
     }
 
