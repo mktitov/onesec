@@ -16,7 +16,7 @@
 package org.onesec.raven.ivr.actions;
 
 import javax.script.Bindings;
-import org.onesec.raven.ivr.IvrAction;
+import org.onesec.raven.ivr.Action;
 import org.onesec.raven.ivr.IvrActionNode;
 import org.raven.expr.impl.BindingSupportImpl;
 import org.raven.tree.impl.BaseNode;
@@ -40,7 +40,7 @@ public abstract class AbstractActionNode extends BaseNode implements IvrActionNo
         bindingSupport.addTo(bindings);
     }
 
-    public IvrAction createAction() {
+    public Action createAction() {
         bindingSupport.enableScriptExecution();
         try {
             return doCreateAction();
@@ -53,5 +53,5 @@ public abstract class AbstractActionNode extends BaseNode implements IvrActionNo
         return bindingSupport;
     }
     
-    protected abstract IvrAction doCreateAction();
+    protected abstract Action doCreateAction();
 }

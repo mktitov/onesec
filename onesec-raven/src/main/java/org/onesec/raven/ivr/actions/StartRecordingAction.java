@@ -38,13 +38,14 @@ import org.raven.ds.DataContext;
 import org.raven.ds.impl.DataContextImpl;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.impl.AbstractTask;
+import org.raven.tree.impl.LoggerHelper;
 import org.weda.internal.annotations.Service;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class StartRecordingAction extends AsyncAction {
+public class StartRecordingAction extends AbstractAction {
     public final static String NAME = "Start recording action";
     public final static String RECORDER_BINDING = "CallRecorder";
     public final static String CONVERSATION_BINDING = "convBindings";
@@ -62,18 +63,21 @@ public class StartRecordingAction extends AsyncAction {
     }
 
     @Override
-    protected void doExecute(IvrEndpointConversation conversation) throws Exception {
+    protected ActionExecuted processExecuteMessage(Execute message) throws Exception {
+        final IvrEndpointConversation conversation = message.getConversation();
         ConversationScenarioState state = conversation.getConversationScenarioState();
         DataContext context = (DataContext) state.getBindings().get(BindingNames.DATA_CONTEXT_BINDING);
         stopExistingRecorder(state, conversation);
-        Recorder recorder = new Recorder(context, codecManager, conversation);
+        Recorder recorder = new Recorder(context, codecManager, conversation, getLogger());
         initRecorder(recorder, conversation.getExecutorService());
-    }
-
-    public boolean isFlowControlAction() {
-        return false;
+        return ACTION_EXECUTED_then_EXECUTE_NEXT;
     }
     
+    @Override
+    protected void processCancelMessage() throws Exception {
+        sendExecuted(ACTION_EXECUTED_then_EXECUTE_NEXT);
+    }
+
     private void initRecorder(final Recorder recorder, ExecutorService executor) {
         executor.executeQuietly(new AbstractTask(actionNode, "Initializing recorder") {
             @Override public void doRun() throws Exception {
@@ -85,8 +89,8 @@ public class StartRecordingAction extends AsyncAction {
     private void stopExistingRecorder(ConversationScenarioState state, IvrEndpointConversation conversation) {
         final Recorder oldRecorder = (Recorder) state.getBindings().get(RECORDER_BINDING);
         if (oldRecorder!=null) {
-            if (logger.isWarnEnabled())
-                logger.warn("Found existing recorder! Stopping and replacing it");
+            if (getLogger().isWarnEnabled())
+                getLogger().warn("Found existing recorder! Stopping and replacing it");
             conversation.getExecutorService().executeQuietly(new AbstractTask(actionNode, "Stopping recording") {
                 @Override public void doRun() throws Exception {
                     oldRecorder.stopRecording(true);
@@ -94,6 +98,15 @@ public class StartRecordingAction extends AsyncAction {
             });
         }
     }
+//    @Override
+//    protected void doExecute(IvrEndpointConversation conversation) throws Exception {
+//        ConversationScenarioState state = conversation.getConversationScenarioState();
+//        DataContext context = (DataContext) state.getBindings().get(BindingNames.DATA_CONTEXT_BINDING);
+//        stopExistingRecorder(state, conversation);
+//        Recorder recorder = new Recorder(context, codecManager, conversation);
+//        initRecorder(recorder, conversation.getExecutorService());
+//    }
+
     
     class Recorder implements IncomingRtpStreamDataSourceListener, CallRecorder {
         private final DataContext context;
@@ -106,10 +119,12 @@ public class StartRecordingAction extends AsyncAction {
         private final Bindings conversationBindings;
         private final IvrEndpointConversation conversation;
         private final AtomicBoolean stopped = new AtomicBoolean(false);
+        private final LoggerHelper logger;
 
-        public Recorder(DataContext context, CodecManager codecManager, IvrEndpointConversation conversation) 
+        public Recorder(DataContext context, CodecManager codecManager, IvrEndpointConversation conversation, LoggerHelper logger) 
                 throws Exception
         {
+            this.logger = new LoggerHelper(logger, "Recorder. ");
             this.context = context!=null? context : new DataContextImpl();
             this.context.putAt(CONVERSATION_BINDING, conversation.getConversationScenarioState().getBindings());
             this.tempFileManager = actionNode.getTemporaryFileManager();
@@ -151,10 +166,12 @@ public class StartRecordingAction extends AsyncAction {
             }
         }
 
+        @Override
         public void streamClosing(IncomingRtpStream stream) {
             stopRecording(true);
         }
         
+        @Override
         public void stopRecording(boolean cancel) {
             if (!stopped.compareAndSet(false, true))
                 return;
@@ -169,4 +186,5 @@ public class StartRecordingAction extends AsyncAction {
                 actionNode.sendDataToConsumers(tempFileManager.getDataSource(key), context);
         }
     }
+
 }

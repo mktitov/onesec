@@ -19,7 +19,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import org.onesec.raven.ivr.IvrAction;
+import org.onesec.raven.ivr.Action;
 import org.onesec.raven.ivr.IvrActionExecutor;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.raven.dp.DataProcessorFacade;
@@ -32,7 +32,7 @@ import org.raven.tree.impl.LoggerHelper;
  *
  * @author Mikhail Titov
  */
-public class IvrActionExecutorFacade implements IvrActionExecutor {
+public class ActionExecutorFacade implements IvrActionExecutor {
     final static String GET_COLLECTED_DTMFS = "GetCollectedDtmfs";
     final static String CANCEL_ACTIONS_EXECUTION = "CancelActionsExecution";
     
@@ -40,12 +40,11 @@ public class IvrActionExecutorFacade implements IvrActionExecutor {
     private final IvrEndpointConversation conversation;
     private final ExecutorService executor;
     
-
-    public IvrActionExecutorFacade(IvrEndpointConversation conversation, LoggerHelper logger) {
+    public ActionExecutorFacade(IvrEndpointConversation conversation, LoggerHelper logger) {
         this.conversation = conversation;
         this.executor = conversation.getExecutorService();
         facade = new DataProcessorFacadeConfig(
-                "Actions executor", conversation.getOwner(), new IvrActionExecutorDataProcessor(conversation)
+                "Actions executor", conversation.getOwner(), new ActionExecutorDP(conversation)
                 , executor, logger).build();
     }
 
@@ -55,7 +54,7 @@ public class IvrActionExecutorFacade implements IvrActionExecutor {
     }
 
     @Override
-    public void executeActions(Collection<IvrAction> actions) throws ExecutorServiceException, InterruptedException {
+    public void executeActions(Collection<Action> actions) throws ExecutorServiceException, InterruptedException {
         cancelActionsExecution();
         facade.send(new ExecuteActions(actions));
     }
@@ -76,9 +75,9 @@ public class IvrActionExecutorFacade implements IvrActionExecutor {
     }
     
     final class ExecuteActions {
-        public final Collection<IvrAction> actions;
+        public final Collection<Action> actions;
 
-        public ExecuteActions(Collection<IvrAction> actions) {
+        public ExecuteActions(Collection<Action> actions) {
             this.actions = actions;
         }
 
@@ -100,4 +99,5 @@ public class IvrActionExecutorFacade implements IvrActionExecutor {
             return "HasDtmfProcessingPoint";
         }
     }
+    
 }

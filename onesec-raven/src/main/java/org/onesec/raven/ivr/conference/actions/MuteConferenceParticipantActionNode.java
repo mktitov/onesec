@@ -15,7 +15,7 @@
  */
 package org.onesec.raven.ivr.conference.actions;
 
-import org.onesec.raven.ivr.IvrAction;
+import org.onesec.raven.ivr.Action;
 import org.onesec.raven.ivr.actions.AbstractActionNode;
 import org.raven.annotations.NodeClass;
 
@@ -25,8 +25,9 @@ import org.raven.annotations.NodeClass;
  */
 @NodeClass(parentNode=ConferenceEventHandlerNode.class)
 public class MuteConferenceParticipantActionNode extends AbstractActionNode {
+
     @Override
-    protected IvrAction doCreateAction() {
+    protected Action doCreateAction() {
         return new MuteConferenceParticipantAction();
     }
 }

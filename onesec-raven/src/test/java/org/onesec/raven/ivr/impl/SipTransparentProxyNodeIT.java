@@ -25,7 +25,7 @@ import org.raven.sched.impl.ExecutorServiceNode;
  *
  * @author Mikhail Titov
  */
-public class SipTransparentProxyNodeTest extends OnesecRavenTestCase {
+public class SipTransparentProxyNodeIT extends OnesecRavenTestCase {
     private SipTransparentProxyNode proxy;
     
     @Before
@@ -36,8 +36,7 @@ public class SipTransparentProxyNodeTest extends OnesecRavenTestCase {
         executor.setCorePoolSize(20);
         executor.setMaximumQueueSize(5);
         executor.setMaximumPoolSize(30);
-        assertTrue(executor.start());
-                
+        assertTrue(executor.start());                
         
         proxy = new SipTransparentProxyNode();
         proxy.setName("sip proxy");

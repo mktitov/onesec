@@ -21,15 +21,11 @@ package org.onesec.raven.ivr;
  *
  * @author Mikhail Titov
  */
-public class IvrActionException extends Exception
-{
-    public IvrActionException(String message, Throwable cause)
-    {
-        super(message, cause);
-    }
-
-    public IvrActionException(String message)
-    {
-        super(message);
+public class IvrActionException extends Exception {
+    private final IvrAction action;
+    
+    public IvrActionException(IvrAction action, Throwable cause) {
+        super(cause);
+        this.action = action;
     }
 }

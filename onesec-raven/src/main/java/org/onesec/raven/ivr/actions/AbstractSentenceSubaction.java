@@ -50,7 +50,7 @@ public abstract class AbstractSentenceSubaction implements SayAnySubaction<Subac
         this.resourceManager = resourceManager;
         this.params = params;
         this.actionNode = actionNode;
-        this.wordsNodes = new LinkedList<Node>();
+        this.wordsNodes = new LinkedList<>();
         if (params.containsKey(NODES_PARAM))
             parseNodesParam(params.get(NODES_PARAM));
         addDefaultWordsNodes(defaultWordsNodes);

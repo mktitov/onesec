@@ -17,109 +17,156 @@
 
 package org.onesec.raven.ivr.actions;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import org.onesec.raven.ivr.ActionStopListener;
+import org.onesec.raven.ivr.IvrAction;
 import org.onesec.raven.ivr.IvrActionException;
-import org.onesec.raven.ivr.IvrActionStatus;
 import org.onesec.raven.ivr.IvrEndpointConversation;
+import org.raven.dp.RavenFuture;
+import org.raven.dp.impl.RavenPromise;
 import org.raven.sched.ExecutorServiceException;
-import org.raven.sched.Task;
-import org.raven.tree.Node;
+import org.raven.sched.impl.AbstractTask;
 import org.raven.tree.impl.LoggerHelper;
 
 /**
  *
  * @author Mikhail Titov
  */
-public abstract class AsyncAction extends AbstractAction implements Task
+@Deprecated
+public abstract class AsyncAction extends IvrAbstractAction 
 {
-    protected IvrEndpointConversation conversation;
-    protected LoggerHelper logger;
-    private final AtomicBoolean cancelRequest;
-    private volatile ActionStopListener stopListener;
-    private volatile boolean waitForExecuted;
+//    protected IvrEndpointConversation conversation;
+//    protected LoggerHelper logger;
+//    private final AtomicBoolean cancelRequest;
+//    private volatile ActionStopListener stopListener;
+//    private volatile boolean waitForExecuted;
 
     public AsyncAction(String actionName)
     {
         super(actionName);
-        cancelRequest = new AtomicBoolean(false);
+//        cancelRequest = new AtomicBoolean(false);
     }
+
+////    @Override
+////    public void cancel() throws IvrActionException
+////    {
+////        if (logger.isDebugEnabled())
+////            logger.debug("Canceling execution");
+////        cancelRequest.set(true);
+////    }
+////
+////    public boolean hasCancelRequest()
+////    {
+////        return cancelRequest.get();
+//    }
+    
+//    protected void waitForExecutedEvent() {
+//        waitForExecuted = true;
+//    }
+    
+//    protected void executed() {
+//        setStatus(IvrActionStatus.EXECUTED);
+//        if (stopListener!=null)
+//            stopListener.actionExecuted(this);        
+//    }
 
     @Override
-    public void cancel() throws IvrActionException
+    public RavenFuture<IvrAction, IvrActionException> execute(final IvrEndpointConversation conversation, final LoggerHelper logger) 
     {
-        if (logger.isDebugEnabled())
-            logger.debug("Canceling execution");
-        cancelRequest.set(true);
-    }
-
-    public boolean hasCancelRequest()
-    {
-        return cancelRequest.get();
-    }
-    
-    protected void waitForExecutedEvent() {
-        waitForExecuted = true;
-    }
-    
-    protected void executed() {
-        setStatus(IvrActionStatus.EXECUTED);
-        if (stopListener!=null)
-            stopListener.actionExecuted(this);        
-    }
-
-    @Override
-    public void execute(IvrEndpointConversation endpoint, ActionStopListener stopListener, LoggerHelper logger) 
-            throws IvrActionException
-    {
-        this.stopListener = stopListener;
-        this.waitForExecuted = false;
-        this.conversation = endpoint;
-        this.logger = new LoggerHelper(logger, getName()+". ");
+//        this.stopListener = stopListener;
+//        this.waitForExecuted = false;
+//        this.conversation = endpoint;
+        final LoggerHelper actionLogger = new LoggerHelper(logger, getName()+". ");
+        final RavenPromise<IvrAction, IvrActionException> completionPromise = new RavenPromise<>(conversation.getExecutorService());
         try {
-            setStatus(IvrActionStatus.EXECUTING);
-            endpoint.getExecutorService().execute(this);
+//            setStatus(IvrActionStatus.EXECUTING);
+            conversation.getExecutorService().execute(new ActionExecutor(conversation, completionPromise, actionLogger));
         } catch (ExecutorServiceException ex) {            
-            setStatus(IvrActionStatus.EXECUTED);
-            throw new IvrActionException("Error executing async action", ex);
+            completionPromise.completeWithError(new IvrActionException(this, ex));
+//            setStatus(IvrActionStatus.EXECUTED);
+//            throw new IvrActionException("Error executing async action", ex);
         }
+        return completionPromise.getFuture();
     }
     
     //for tests purposes
-    public void setLogger(LoggerHelper logger) {
-        this.logger = logger;
-    }
+//    public void setLogger(LoggerHelper logger) {
+//        this.logger = logger;
+//    }
+//
+//    @Override
+//    public Node getTaskNode() {
+//        return conversation.getOwner();
+//    }
 
-    @Override
-    public Node getTaskNode() {
-        return conversation.getOwner();
-    }
+//    @Override
+//    public void run() {
+//        try {
+//            try {
+//                if (logger.isDebugEnabled())
+//                    logger.debug("Executing...");
+//                doExecute(conversation);
+//                if (logger.isDebugEnabled()) {
+//                    if (waitForExecuted)
+//                        logger.debug("Wating for executed event...");
+//                    else
+//                        logger.debug(hasCancelRequest()? "Canceled" : "Executed");
+//                }
+//            } catch (Exception ex) {
+//                if (logger.isErrorEnabled())
+//                    logger.error("Execution error", ex);
+//            }
+//        } finally {
+//            if (!waitForExecuted) {
+//                setStatus(IvrActionStatus.EXECUTED);
+//                if (stopListener!=null)
+//                    stopListener.actionExecuted(this);
+//            }
+//        }
+//    }
 
-    @Override
-    public void run() {
-        try {
+    /**
+     * Returns true if action were executed. In this case when methods returns <b>true</b> AsyncAction automaticly 
+     * completes a completionPromise. If methods returns false then method doExecute MUST themselves complete the completionPromise
+     * @param conversation the conversation
+     * @param completionPromise completion promise
+     * @param logger action logger
+     * @throws Exception 
+     */
+    protected abstract boolean doExecute(IvrEndpointConversation conversation, 
+            RavenPromise<IvrAction, IvrActionException> completionPromise, 
+            LoggerHelper logger) throws Exception;
+    
+    private class ActionExecutor extends AbstractTask {
+        private final IvrEndpointConversation conversation;
+        private final RavenPromise<IvrAction, IvrActionException> completionPromise;
+        private final LoggerHelper logger;
+
+        public ActionExecutor(final IvrEndpointConversation conversation, 
+                final RavenPromise<IvrAction, IvrActionException> completionPromise, 
+                final LoggerHelper logger) 
+        {
+            super(conversation.getOwner(), String.format("Executing action (%s)", getName()));
+            this.conversation = conversation;
+            this.completionPromise = completionPromise;
+            this.logger = logger;
+        }
+
+        @Override
+        public void doRun() throws Exception {
             try {
                 if (logger.isDebugEnabled())
                     logger.debug("Executing...");
-                doExecute(conversation);
-                if (logger.isDebugEnabled()) {
-                    if (waitForExecuted)
-                        logger.debug("Wating for executed event...");
-                    else
-                        logger.debug(hasCancelRequest()? "Canceled" : "Executed");
+                boolean completeExecution = doExecute(conversation, completionPromise, logger);
+                if (completeExecution) {
+                    if (!completionPromise.isCanceled())
+                        completionPromise.completeWithValue(AsyncAction.this);
+                    if (logger.isDebugEnabled())
+                        logger.debug(completionPromise.isCanceled()? "Canceled" : "Executed");                    
                 }
-            } catch (Exception ex) {
+            } catch (Throwable e) {
                 if (logger.isErrorEnabled())
-                    logger.error("Execution error", ex);
+                    logger.error("Execution error", e);
+                completionPromise.completeWithError(new IvrActionException(AsyncAction.this, e));
             }
-        } finally {
-            if (!waitForExecuted) {
-                setStatus(IvrActionStatus.EXECUTED);
-                if (stopListener!=null)
-                    stopListener.actionExecuted(this);
-            }
-        }
+        }        
     }
-
-    protected abstract void doExecute(IvrEndpointConversation conversation) throws Exception;
 }

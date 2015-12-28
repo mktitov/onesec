@@ -24,7 +24,17 @@ package org.onesec.raven.ivr.queue;
 public interface CallsCommutationManagerListener
 {
     /**
-     * Fires when manager receive the "abonent ready" event
+     * Fires when the state of {@link CommutationManagerCall} was changed.
+     * Also method will be called when listener will added to the {@link CommutationManagerCall}
+     * @param state current state of the commutation manager
      */
-    public void abonentReady();
+    public void stateChanged(CommutationManagerCall.State state);
+//    /**
+//     * Fires when manager receive the "abonent ready" event
+//     */
+//    public void abonentReady();
+//    /**
+//     * Fires when commutation was invalidated
+//     */
+//    public void commutationInvalidated();
 }

@@ -17,14 +17,11 @@
 
 package org.onesec.raven.ivr.actions;
 
-import javax.script.Bindings;
-import org.onesec.raven.ivr.IvrAction;
-import org.onesec.raven.ivr.IvrActionNode;
+import java.util.concurrent.TimeUnit;
+import org.onesec.raven.ivr.Action;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
-import org.raven.expr.impl.BindingSupportImpl;
-import org.raven.tree.impl.BaseNode;
 import org.weda.annotations.constraints.NotNull;
 
 /**
@@ -32,25 +29,14 @@ import org.weda.annotations.constraints.NotNull;
  * @author Mikhail Titov
  */
 @NodeClass(parentNode=IvrConversationScenarioNode.class)
-public class PauseActionNode extends BaseNode implements IvrActionNode
+public class PauseActionNode extends AbstractActionNode
 {
     @NotNull @Parameter()
     private Long interval;
     
-    private BindingSupportImpl bindingSupport;
-
-    @Override
-    protected void initFields() {
-        super.initFields();
-        bindingSupport = new BindingSupportImpl();
-    }
-
-    @Override
-    public void formExpressionBindings(Bindings bindings) {
-        super.formExpressionBindings(bindings);
-        bindingSupport.addTo(bindings);
-    }
-
+    @NotNull @Parameter(defaultValue = "MILLISECONDS")
+    private TimeUnit intervalTimeUnit;
+    
     public Long getInterval() {
         return interval;
     }
@@ -59,12 +45,16 @@ public class PauseActionNode extends BaseNode implements IvrActionNode
         this.interval = interval;
     }
 
-    public IvrAction createAction() {
-        try {
-            bindingSupport.enableScriptExecution();
-            return new PauseAction(interval);
-        } finally {
-            bindingSupport.reset();
-        }
+    public TimeUnit getIntervalTimeUnit() {
+        return intervalTimeUnit;
+    }
+
+    public void setIntervalTimeUnit(TimeUnit intervalTimeUnit) {
+        this.intervalTimeUnit = intervalTimeUnit;
+    }
+
+    @Override
+    protected Action doCreateAction() {
+        return new PauseAction(interval, intervalTimeUnit);
     }
 }

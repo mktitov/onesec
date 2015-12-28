@@ -72,7 +72,7 @@ public class CodecManagerImplTest extends Assert {
 //        assertEquals(2, codecs.length);
     }
     
-//    @Test
+    @Test
     public void buildCodecChainTest2() throws Exception {
         AudioFormat f1 = new AudioFormat(
                 AudioFormat.LINEAR, 16000, 16, 1, AudioFormat.LITTLE_ENDIAN, AudioFormat.SIGNED);
@@ -92,7 +92,7 @@ public class CodecManagerImplTest extends Assert {
 //        assertEquals(2, codecs.length);
     }
     
-//    @Test
+    @Test
     public void buildMultiplexerTest() throws Exception {
         Multiplexer mux = manager.buildMultiplexer(FileTypeDescriptor.WAVE);
         assertNotNull(mux);
@@ -114,7 +114,7 @@ public class CodecManagerImplTest extends Assert {
 //    }
     
     
-//    @Test
+    @Test
     public void buildDemultiplexerTest() {
         Demultiplexer parser = manager.buildDemultiplexer(FileTypeDescriptor.WAVE);
         assertNotNull(parser);

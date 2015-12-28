@@ -153,7 +153,7 @@ public class RegisterOperatorActionNodeTest extends OnesecRavenTestCase {
         map.put(OperatorRegistratorNode.OPERATOR_DESC_FIELD, "Pupkin");
         ds.addDataPortion(map);
         ds.setListener(listener);
-        assertNull(action.getEffectiveChildrens());
+        assertTrue(action.getEffectiveChildrens().isEmpty());
         //test formExpressionBindings
         action.formExpressionBindings(bindings2);
         

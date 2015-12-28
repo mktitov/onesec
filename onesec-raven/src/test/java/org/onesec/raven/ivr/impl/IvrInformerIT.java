@@ -53,7 +53,7 @@ import org.raven.tree.NodeError;
  *
  * @author Mikhail Titov
  */
-public class IvrInformerTest extends OnesecRavenTestCase
+public class IvrInformerIT extends OnesecRavenTestCase
 {
     private IvrEndpointNode endpoint;
     private ExecutorServiceNode executor;

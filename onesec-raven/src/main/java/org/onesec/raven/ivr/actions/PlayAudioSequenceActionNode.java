@@ -18,15 +18,13 @@
 package org.onesec.raven.ivr.actions;
 
 import java.util.List;
+import org.onesec.raven.ivr.Action;
 import org.onesec.raven.ivr.AudioFile;
-import org.onesec.raven.ivr.IvrAction;
-import org.onesec.raven.ivr.IvrActionNode;
 import org.onesec.raven.ivr.impl.AudioFileNode;
 import org.onesec.raven.ivr.impl.AudioFileRefNode;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
-import org.raven.tree.impl.BaseNode;
 import org.raven.util.NodeUtils;
 import org.weda.annotations.constraints.NotNull;
 
@@ -37,7 +35,7 @@ import org.weda.annotations.constraints.NotNull;
 @NodeClass(
     parentNode=IvrConversationScenarioNode.class,
     childNodes={AudioFileRefNode.class, AudioFileNode.class})
-public class PlayAudioSequenceActionNode extends BaseNode implements IvrActionNode
+public class PlayAudioSequenceActionNode extends AbstractActionNode
 {
     @NotNull @Parameter(defaultValue="false")
     private Boolean randomPlay;
@@ -50,11 +48,11 @@ public class PlayAudioSequenceActionNode extends BaseNode implements IvrActionNo
         this.randomPlay = randomPlay;
     }
 
-    public IvrAction createAction()
-    {
+    @Override
+    protected Action doCreateAction() {
         List<AudioFile> files = NodeUtils.getChildsOfType(this, AudioFile.class);
         if (files.isEmpty())
             return null;
-        return new PlayAudioSequenceAction(this, files, randomPlay);
+        return new PlayAudioSequenceAction(this, files, randomPlay, converter);
     }
 }

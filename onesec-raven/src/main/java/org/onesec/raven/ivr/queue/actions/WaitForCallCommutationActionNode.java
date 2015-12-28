@@ -17,20 +17,20 @@
 
 package org.onesec.raven.ivr.queue.actions;
 
-import org.onesec.raven.ivr.IvrAction;
-import org.onesec.raven.ivr.IvrActionNode;
+import org.onesec.raven.ivr.Action;
+import org.onesec.raven.ivr.actions.AbstractActionNode;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.raven.annotations.NodeClass;
-import org.raven.tree.impl.BaseNode;
 
 /**
  *
  * @author Mikhail Titov
  */
 @NodeClass(parentNode=IvrConversationScenarioNode.class)
-public class WaitForCallCommutationActionNode extends BaseNode implements IvrActionNode
+public class WaitForCallCommutationActionNode extends AbstractActionNode
 {
-    public IvrAction createAction() {
-        return new WaitForCallCommutationAction(this);
+    @Override
+    protected Action doCreateAction() {
+        return new WaitForCallCommutationAction();
     }
 }

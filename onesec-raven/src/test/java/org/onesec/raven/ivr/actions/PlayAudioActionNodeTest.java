@@ -18,7 +18,6 @@ package org.onesec.raven.ivr.actions;
 import org.junit.*;
 import static org.junit.Assert.*;
 import org.onesec.raven.BindingSourceNode;
-import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.ivr.impl.AudioFileNode;
 import org.raven.conv.ConversationScenario;
 
@@ -26,10 +25,11 @@ import org.raven.conv.ConversationScenario;
  *
  * @author Mikhail Titov
  */
-public class PlayAudioActionNodeTest extends OnesecRavenTestCase {
+public class PlayAudioActionNodeTest extends ActionTestCase {
 
     private BindingSourceNode parent;
-    private PlayAudioActionNode action;
+    private PlayAudioActionNode actionNode;
+    private AudioFileNode audio;
     
     @Before
     public void prepare() {
@@ -38,30 +38,31 @@ public class PlayAudioActionNodeTest extends OnesecRavenTestCase {
         tree.getRootNode().addAndSaveChildren(parent);
         assertTrue(parent.start());
         
-        AudioFileNode audio = new AudioFileNode();
+        audio = new AudioFileNode();
         audio.setName("audio");
         tree.getRootNode().addAndSaveChildren(audio);
         
         
-        action = new PlayAudioActionNode();
-        action.setName("action");
-        parent.addAndSaveChildren(action);
-        action.setAudioFile(audio);
-        assertTrue(action.start());
+        actionNode = new PlayAudioActionNode();
+        actionNode.setName("action");
+        parent.addAndSaveChildren(actionNode);
+        actionNode.setAudioFile(audio);
+        assertTrue(actionNode.start());
     }
     
     @Test
-    public void nullPlayAtRepetitionTest() {
-        assertNotNull(action.createAction());
+    public void nullPlayAtRepetitionTest() throws Exception {
+        PlayAudioAction action = (PlayAudioAction) actionNode.createAction();
+        assertNotNull(action);
+        assertSame(audio, action.getAudio(null));
     }
     
     @Test
     public void playAtRepetitionTest1() {
         parent.addBinding(ConversationScenario.REPEITION_COUNT_PARAM, 1);
-        action.setPlayAtRepetition(0);
-        assertNotNull(action.createAction());
-        action.setPlayAtRepetition(1);
-        assertNull(action.createAction());
+        actionNode.setPlayAtRepetition(0);
+        assertNotNull(actionNode.createAction());
+        actionNode.setPlayAtRepetition(1);
+        assertNull(actionNode.createAction());
     }
-    
 }

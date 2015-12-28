@@ -16,28 +16,34 @@
  */
 package org.onesec.raven.ivr.queue.actions;
 
-import java.util.concurrent.TimeUnit;
-import javax.script.Bindings;
 import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.onesec.raven.ivr.actions.AsyncAction;
-import org.onesec.raven.ivr.impl.IvrUtils;
+import org.onesec.raven.ivr.PlayAudioDP;
+import org.onesec.raven.ivr.actions.AbstractAction;
+import org.onesec.raven.ivr.queue.CallQueueRequestListener;
 import org.onesec.raven.ivr.queue.CallQueueRequestSender;
 import org.onesec.raven.ivr.queue.QueuedCallStatus;
 import org.onesec.raven.ivr.queue.impl.CallQueueRequestImpl;
 import org.raven.BindingNames;
 import org.raven.conv.BindingScope;
 import org.raven.conv.ConversationScenarioState;
+import org.raven.dp.DataProcessorFacade;
+import org.raven.dp.NonUniqueNameException;
+import org.raven.dp.impl.Behaviour;
 import org.raven.ds.DataContext;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class QueueCallAction extends AsyncAction
+public class QueueCallAction extends AbstractAction
 {
-    private final static String ACTION_NAME = "Queue call action";
+    private final static String ACTION_NAME = "Queue call";
     public final static String QUEUED_CALL_STATUS_BINDING = "queuedCallStatus";
+    
+    public final static String COMMUTATED = "COMMUTATED";
+    public final static String COMMUTATE = "COMMUTATE";
+    public final static String DISCONNECTED = "DISCONNECTED";
     
     private final boolean continueConversationOnReadyToCommutate;
     private final boolean continueConversationOnReject;
@@ -46,6 +52,8 @@ public class QueueCallAction extends AsyncAction
     private final String queueId;
     private final boolean playOperatorGreeting;
     private final String operatorPhoneNumbers;
+    
+    private IvrEndpointConversation conversation;
 
     public QueueCallAction(CallQueueRequestSender requestSender
             , boolean continueConversationOnReadyToCommutate, boolean continueConversationOnReject
@@ -80,61 +88,171 @@ public class QueueCallAction extends AsyncAction
     public CallQueueRequestSender getRequestSender() {
         return requestSender;
     }
+    
+    //play greeting behaviour. Processing cancel event, disconnect event, 
+    //wait for commutated behaviour. Processing cancel event, disconnect event, commutated event
+    //wait for disconnect behaviour. Processing cancel event, disconnect event
+    private final Behaviour disonnected = new Behaviour("Disconnected") {
+        @Override public Object processData(Object message) throws Exception {
+            if (message==DISCONNECTED) {
+                final ConversationScenarioState state = conversation.getConversationScenarioState();
+                state.enableDtmfProcessing();
+                state.getBindings().put(IvrEndpointConversation.DISABLE_AUDIO_STREAM_RESET, false);
+                if (getLogger().isDebugEnabled())
+                    getLogger().debug("Commutation disconnected");
+                sendExecuted(ACTION_EXECUTED_then_EXECUTE_NEXT);
+                return VOID;
+            }
+            return UNHANDLED;
+        }
+    };
+    
+    public final Behaviour cancel = new CancelBehaviour(ACTION_EXECUTED_then_EXECUTE_NEXT);
+    
+    private class PlayGreeting extends Behaviour {
+        private final QueuedCallStatus callStatus;
+        
+        public PlayGreeting(AudioFile greeting, QueuedCallStatus callStatus) throws NonUniqueNameException {
+            super("Play greeting");
+            this.callStatus = callStatus;
+            DataProcessorFacade greetingPlayer = getContext().addChild(
+                    getContext().createChild("Greeting player", new PlayAudioDP(conversation.getAudioStream())));
+            getFacade().sendTo(greetingPlayer, new PlayAudioDP.PlayAudioFile(greeting));
+        }
+
+        @Override public Object processData(Object message) throws Exception {
+            if (message == PlayAudioDP.PLAYED) {
+                become(commutating);
+                getFacade().send(callStatus);
+                return VOID;
+            }
+            return UNHANDLED;
+        }
+    };
+    
+    private final Behaviour commutating = new Behaviour("Commutating") {
+        @Override public Object processData(Object message) throws Exception {
+            if (message instanceof QueuedCallStatus) {
+                conversation.getConversationScenarioState().getBindings().put(IvrEndpointConversation.DISABLE_AUDIO_STREAM_RESET, true);
+                ((QueuedCallStatus)message).replayToReadyToCommutate();
+                if (getLogger().isDebugEnabled())
+                    getLogger().debug("Operator and abonent are ready to commutate. Commutating...");
+                return VOID;
+            } else if (message==COMMUTATED) {
+                become(commutated);
+                conversation.getConversationScenarioState().disableDtmfProcessing();
+                if (getLogger().isDebugEnabled())
+                    getLogger().debug("Abonent and operator were commutated. Waiting for disconnected event...");
+                return VOID;
+            }
+            return UNHANDLED;
+        }
+    }.andThen(disonnected).andThen(cancel);;
+
+    private final Behaviour commutated = new Behaviour("Commutated") {
+        @Override public Object processData(Object dataPackage) throws Exception {
+            return UNHANDLED;
+        }
+    }.andThen(disonnected).andThen(cancel);
+    
 
     @Override
-    protected void doExecute(IvrEndpointConversation conversation) throws Exception
-    {
+    protected ActionExecuted processExecuteMessage(Execute message) throws Exception {
+        conversation = message.getConversation();
         final ConversationScenarioState state = conversation.getConversationScenarioState();
-        final Bindings bindings = state.getBindings();
-        QueuedCallStatus callStatus = (QueuedCallStatus) state.getBindings().get(
-                QUEUED_CALL_STATUS_BINDING);
-        if (callStatus==null){
+        QueuedCallStatus callStatus = (QueuedCallStatus) state.getBindings().get(QUEUED_CALL_STATUS_BINDING);        
+        if (callStatus==null) {
             DataContext context = (DataContext) state.getBindings().get(BindingNames.DATA_CONTEXT_BINDING);
             if (context==null)
                 context = requestSender.createDataContext();
             callStatus = new CallQueueRequestImpl(
                     conversation, priority, queueId, operatorPhoneNumbers
                     , continueConversationOnReadyToCommutate
-                    , continueConversationOnReject, context, logger);
+                    , continueConversationOnReject, context, getLogger());
             state.setBinding(QUEUED_CALL_STATUS_BINDING, callStatus, BindingScope.POINT);
             requestSender.sendCallQueueRequest(callStatus, context);
-        } else if (callStatus.isReadyToCommutate() || callStatus.isCommutated()) {
-            if (callStatus.isReadyToCommutate()) {
-                if (playOperatorGreeting){
-                    if (logger.isDebugEnabled())
-                        logger.debug("Playing operator greeting");
-                    AudioFile greeting = callStatus.getOperatorGreeting();
-                    if (greeting!=null)
-                        IvrUtils.playAudioInAction(this, conversation, greeting);
-                }
-                if (logger.isDebugEnabled())
-                    logger.debug("Operator and abonent are ready to commutate. Commutating...");
-                //disable audio stream reset??? Then when t to enable???
-                bindings.put(IvrEndpointConversation.DISABLE_AUDIO_STREAM_RESET, true);
-                callStatus.replayToReadyToCommutate();
-                do {
-                    TimeUnit.MILLISECONDS.sleep(10);
-                } while (!callStatus.isCommutated() && !hasCancelRequest() && !callStatus.isDisconnected());
-                if (hasCancelRequest()) return;
+            return ACTION_EXECUTED_then_EXECUTE_NEXT;
+        } else if (callStatus.isReadyToCommutate()) {
+            callStatus.addRequestListener(new RequestListener());
+            if (playOperatorGreeting)
+                become(new PlayGreeting(callStatus.getOperatorGreeting(), callStatus).andThen(cancel));
+            else {
+                become(commutating);
+                getFacade().send(callStatus);
             }
-            if (logger.isDebugEnabled())
-                logger.debug("Abonent and operator were commutated. Waiting for disconnected event...");
-            state.disableDtmfProcessing();
-            try {
-                do {
-                    TimeUnit.MILLISECONDS.sleep(10);
-                } while (!callStatus.isDisconnected() && !hasCancelRequest());
-            } finally {
-                state.enableDtmfProcessing();
-                bindings.put(IvrEndpointConversation.DISABLE_AUDIO_STREAM_RESET, false);
-            }            
-            if (logger.isDebugEnabled())
-                logger.debug("Commutation disconnected");
-        }
+            return null;
+        } else
+            return ACTION_EXECUTED_then_EXECUTE_NEXT;
     }
 
     @Override
-    public boolean isFlowControlAction() {
-        return false;
+    protected void processCancelMessage() throws Exception {
+        sendExecuted(ACTION_EXECUTED_then_EXECUTE_NEXT);
     }
+    
+    private class RequestListener implements CallQueueRequestListener {
+
+        @Override public void requestCanceled(String cause) { }
+        @Override public void conversationAssigned(IvrEndpointConversation conversation) { }
+
+        @Override  public void commutated() {
+            getFacade().send(COMMUTATED);
+        }
+        @Override public void disconnected() {
+            getFacade().send(DISCONNECTED);
+        }
+    }
+
+//    @Override
+//    protected void doExecute(IvrEndpointConversation conversation) throws Exception
+//    {
+//        final ConversationScenarioState state = conversation.getConversationScenarioState();
+//        final Bindings bindings = state.getBindings();
+//        QueuedCallStatus callStatus = (QueuedCallStatus) state.getBindings().get(
+//                QUEUED_CALL_STATUS_BINDING);
+//        if (callStatus==null){
+//            DataContext context = (DataContext) state.getBindings().get(BindingNames.DATA_CONTEXT_BINDING);
+//            if (context==null)
+//                context = requestSender.createDataContext();
+//            callStatus = new CallQueueRequestImpl(
+//                    conversation, priority, queueId, operatorPhoneNumbers
+//                    , continueConversationOnReadyToCommutate
+//                    , continueConversationOnReject, context, logger);
+//            state.setBinding(QUEUED_CALL_STATUS_BINDING, callStatus, BindingScope.POINT);
+//            requestSender.sendCallQueueRequest(callStatus, context);
+//        } else if (callStatus.isReadyToCommutate() || callStatus.isCommutated()) {
+//            if (callStatus.isReadyToCommutate()) {
+//                if (playOperatorGreeting){
+//                    if (logger.isDebugEnabled())
+//                        logger.debug("Playing operator greeting");
+//                    AudioFile greeting = callStatus.getOperatorGreeting();
+//                    if (greeting!=null)
+//                        IvrUtils.playAudioInAction(this, conversation, greeting);
+//                }
+//                if (logger.isDebugEnabled())
+//                    logger.debug("Operator and abonent are ready to commutate. Commutating...");
+//                //disable audio stream reset??? Then when t to enable???
+//                bindings.put(IvrEndpointConversation.DISABLE_AUDIO_STREAM_RESET, true);
+//                callStatus.replayToReadyToCommutate();
+//                do {
+//                    TimeUnit.MILLISECONDS.sleep(10);
+//                } while (!callStatus.isCommutated() && !hasCancelRequest() && !callStatus.isDisconnected());
+//                if (hasCancelRequest()) return;
+//            }
+//            if (logger.isDebugEnabled())
+//                logger.debug("Abonent and operator were commutated. Waiting for disconnected event...");
+//            state.disableDtmfProcessing();
+//            try {
+//                do {
+//                    TimeUnit.MILLISECONDS.sleep(10);
+//                } while (!callStatus.isDisconnected() && !hasCancelRequest());
+//            } finally {
+//                state.enableDtmfProcessing();
+//                bindings.put(IvrEndpointConversation.DISABLE_AUDIO_STREAM_RESET, false);
+//            }            
+//            if (logger.isDebugEnabled())
+//                logger.debug("Commutation disconnected");
+//        }
+//    }
+
 }

@@ -17,8 +17,7 @@
 package org.onesec.raven.ivr.queue.actions;
 
 import java.util.Collection;
-import org.onesec.raven.ivr.IvrAction;
-import org.onesec.raven.ivr.IvrActionNode;
+import org.onesec.raven.ivr.Action;
 import org.onesec.raven.ivr.actions.AbstractActionNode;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.onesec.raven.ivr.queue.CallQueueRequest;
@@ -38,7 +37,7 @@ import org.weda.annotations.constraints.NotNull;
  * @author Mikhail Titov
  */
 @NodeClass(parentNode=IvrConversationScenarioNode.class)
-public class QueueCallActionNode extends AbstractActionNode implements IvrActionNode, DataSource, CallQueueRequestSender
+public class QueueCallActionNode extends AbstractActionNode implements DataSource, CallQueueRequestSender
 {
     @NotNull @Parameter(defaultValue="true")
     private Boolean continueConversationOnReadyToCommutate;
@@ -57,29 +56,35 @@ public class QueueCallActionNode extends AbstractActionNode implements IvrAction
 
     @Parameter()
     private String queueId;
-    
-    public IvrAction doCreateAction() {
+
+    @Override
+    protected Action doCreateAction() {
         return new QueueCallAction(this, continueConversationOnReadyToCommutate, continueConversationOnReject
                 , priority, queueId, playOperatorGreeting, operatorPhoneNumbers);
     }
 
+    @Override
     public boolean getDataImmediate(DataConsumer dataConsumer, DataContext context) {
         throw new UnsupportedOperationException("Pull operation not supported by this datasource");
     }
 
+    @Override
     public Collection<NodeAttribute> generateAttributes() {
         return null;
     }
 
+    @Override
     public Boolean getStopProcessingOnError() {
         return false;
     }
     
+    @Override
     public void sendCallQueueRequest(CallQueueRequest request, DataContext context)
     {
         DataSourceHelper.sendDataToConsumers(this, request, context);
     }
 
+    @Override
     public DataContext createDataContext() {
         return new DataContextImpl();
     }

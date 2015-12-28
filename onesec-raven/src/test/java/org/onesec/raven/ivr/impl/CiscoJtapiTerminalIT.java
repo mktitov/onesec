@@ -57,7 +57,7 @@ import org.onesec.raven.ivr.SendMessageDirection;
 /**
  * @author Mikhail Titov
  */
-public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
+public class CiscoJtapiTerminalIT extends OnesecRavenTestCase {
 //    private final static String TEST_NUMBER = "631798";
     private final static String TEST_NUMBER = "68000"; //звонить на 88137
     private final static String RP_TEST_NUMBER = "631690";

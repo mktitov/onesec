@@ -25,5 +25,5 @@ import org.raven.tree.Node;
  */
 public interface IvrActionNode extends Node
 {
-    public IvrAction createAction();
+    public Action createAction();
 }

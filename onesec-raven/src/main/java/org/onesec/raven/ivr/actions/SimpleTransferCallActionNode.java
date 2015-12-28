@@ -15,7 +15,7 @@
  */
 package org.onesec.raven.ivr.actions;
 
-import org.onesec.raven.ivr.IvrAction;
+import org.onesec.raven.ivr.Action;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
@@ -31,7 +31,7 @@ public class SimpleTransferCallActionNode extends AbstractActionNode {
     private String address;
 
     @Override
-    protected IvrAction doCreateAction() {
+    protected Action doCreateAction() {
         return new SimpleTransferCallAction(address);
     }
 

@@ -20,7 +20,7 @@ import java.util.Arrays;
 import java.util.List;
 import org.junit.Test;
 import org.onesec.raven.ivr.AudioFile;
-import org.onesec.raven.ivr.Sentence;
+import org.onesec.raven.ivr.SentenceResult;
 import org.onesec.raven.ivr.SubactionSentencesResult;
 import org.raven.tree.Node;
 
@@ -40,10 +40,10 @@ public class SayAnyWordSubactionTest extends SentenceSubactionTestHelper {
         SubactionSentencesResult res = action.getResult();
         assertNotNull(res);
         assertEquals(1l, res.getPauseBetweenSentences());
-        List<Sentence> sentences = res.getSentences();
+        List<SentenceResult> sentences = res.getSentences();
         assertNotNull(sentences);
         assertEquals(1, sentences.size());
-        Sentence sentence = sentences.get(0);
+        SentenceResult sentence = sentences.get(0);
         assertNotNull(sentence);
         assertEquals(2l, sentence.getPauseBetweenWords());
         assertArrayEquals(new AudioFile[]{w1}, sentence.getWords().toArray());
@@ -57,7 +57,7 @@ public class SayAnyWordSubactionTest extends SentenceSubactionTestHelper {
                 Arrays.asList((Node)testsNode), resourceManager);
         SubactionSentencesResult res = action.getResult();
         assertNotNull(res);
-        List<Sentence> sentences = res.getSentences();
+        List<SentenceResult> sentences = res.getSentences();
         assertEquals(1, sentences.size());
         assertArrayEquals(new AudioFile[]{w1, w2}, sentences.get(0).getWords().toArray());
     }

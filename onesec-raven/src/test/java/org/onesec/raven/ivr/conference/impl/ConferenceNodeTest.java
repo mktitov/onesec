@@ -72,7 +72,7 @@ public class ConferenceNodeTest extends OnesecRavenTestCase {
     public void finish() {
     }
     
-//    @Test
+    @Test
     public void joinOnNotStartedTest() throws InterruptedException {
         mocks = createControl();
         ConferenceSessionListener listener = mocks.createMock(ConferenceSessionListener.class);
@@ -85,14 +85,14 @@ public class ConferenceNodeTest extends OnesecRavenTestCase {
         mocks.verify();
     }
     
-//    @Test
+    @Test
     public void joinOnInvalidTimeTest() throws Exception {
         conference.setStartTime(new Date(System.currentTimeMillis()+1000));
         assertTrue(conference.start());
         joinOnNotStartedTest();
     }
     
-//    @Test
+    @Test
     public void joinWithInvalidAccessCodeTest() throws Exception {
         assertTrue(conference.start());
         mocks = createControl();

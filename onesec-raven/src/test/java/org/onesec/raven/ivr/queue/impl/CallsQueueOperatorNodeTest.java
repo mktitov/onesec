@@ -272,7 +272,7 @@ public class CallsQueueOperatorNodeTest extends OnesecRavenTestCase {
         
         //ABONENT READY TO COMMUTATE
         request.addToLog("abonent ready to commutate");
-        commListener.abonentReady();
+        commListener.stateChanged(CommutationManagerCall.State.ABONENT_READY);
         
         //COMMUTATED
         expect(request.getConversation()).andReturn(abonentConversation);

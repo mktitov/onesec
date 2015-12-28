@@ -42,7 +42,7 @@ public class SayWordsAction extends AbstractSayWordsAction {
     }
 
     @Override
-    protected List<List> formWords(IvrEndpointConversation conversation) {
+    protected List formWords(IvrEndpointConversation conversation) {
         try {
             actionNodeBindingSupport.putAll(conversation.getConversationScenarioState().getBindings());
             return Arrays.asList((List)arrayToList(split(actionNode.getWords(), " ")));

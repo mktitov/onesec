@@ -17,162 +17,52 @@
 
 package org.onesec.raven.ivr.actions;
 
-import mockit.Delegate;
-import mockit.Expectations;
+import java.util.concurrent.TimeUnit;
 import mockit.Mocked;
 import mockit.integration.junit4.JMockit;
-import org.junit.Assert;
 import org.junit.Test;
-import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.raven.sched.ExecutorService;
-import org.raven.sched.Task;
 import org.junit.runner.RunWith;
-import org.onesec.raven.ivr.ActionStopListener;
-import org.raven.log.LogLevel;
-import org.raven.sched.CancelationProcessor;
-import org.raven.sched.impl.AbstractTask;
-import org.raven.tree.impl.LoggerHelper;
-import org.slf4j.LoggerFactory;
+import org.onesec.raven.ivr.Action;
+import org.raven.dp.DataProcessor;
+import org.raven.dp.DataProcessorFacade;
+import org.raven.test.TestDataProcessorFacade;
 /**
  *
  * @author Mikhail Titov
  */
 @RunWith(JMockit.class)
-public class PauseActionTest extends Assert {
-    private LoggerHelper logger = new LoggerHelper(LogLevel.TRACE, "logger", "", LoggerFactory.getLogger(PauseActionTest.class));
+public class PauseActionTest extends ActionTestCase {
+    
     
     @Test
     public void pauseTest(
-            @Mocked final IvrEndpointConversation conversation,
-            @Mocked final ActionStopListener stopListener,
-            @Mocked final ExecutorService executor
-    ) throws Exception 
+            @Mocked final DataProcessor actionExecutorDP,
+            @Mocked final Action.Execute executeMessage) 
+        throws InterruptedException 
     {
-        final PauseAction pauseAction = new PauseAction(1000);
-                
-        new Expectations() {{
-            conversation.getExecutorService(); result = executor;
-            executor.execute(1000, (Task)any); result = new Delegate() {
-                void execute(long delay, Task task) {
-                    task.run();
-                }
-            };
-            stopListener.actionExecuted(pauseAction);
-        }};
-        
-        pauseAction.execute(conversation, stopListener, logger);
+        TestDataProcessorFacade actionExecutor = createActionExecutor(actionExecutorDP);
+        DataProcessorFacade pauseAction = createAction(actionExecutor, new PauseAction(100, TimeUnit.MILLISECONDS));
+        actionExecutor.setWaitForMessage(AbstractAction.ACTION_EXECUTED_then_EXECUTE_NEXT, pauseAction);
+        final long ts = System.currentTimeMillis();
+        pauseAction.send(executeMessage);        
+        actionExecutor.waitForMessage(110l);
+        assertTrue((System.currentTimeMillis()-ts)>=100);
     }
     
     @Test
     public void pauseCancelTest(
-            @Mocked final IvrEndpointConversation conversation,
-            @Mocked final ActionStopListener stopListener,
-            @Mocked final ExecutorService executor,
-            @Mocked final CancelationProcessor cancelationProcessor
-    ) throws Exception 
+            @Mocked final DataProcessor actionExecutorDP,
+            @Mocked final Action.Execute executeMessage) 
+        throws InterruptedException 
     {
-        final PauseAction pauseAction = new PauseAction(1000);
-                
-        new Expectations() {{
-            conversation.getExecutorService(); result = executor;
-            executor.execute(1000, (AbstractTask)any); result = new Delegate() {
-                void execute(long delay, Task task) {
-                    ((AbstractTask)task).setCancelationProcessor(cancelationProcessor);
-                }
-            };
-            cancelationProcessor.cancel();
-            stopListener.actionExecuted(pauseAction);
-        }};
+        TestDataProcessorFacade actionExecutor = createActionExecutor(actionExecutorDP);
+        DataProcessorFacade pauseAction = createAction(actionExecutor, new PauseAction(100, TimeUnit.MILLISECONDS));
+        actionExecutor.setWaitForMessage(AbstractAction.ACTION_EXECUTED_then_EXECUTE_NEXT, pauseAction);
+        final long ts = System.currentTimeMillis();
+        pauseAction.send(executeMessage);        
+        pauseAction.send(Action.CANCEL);
+        actionExecutor.waitForMessage(30l);
+        assertTrue((System.currentTimeMillis()-ts)<=30);
         
-        pauseAction.execute(conversation, stopListener, logger);
-        pauseAction.cancel();
     }
-    
-    
-    
-//    @Test()
-//    public void executeTest() throws Exception
-//    {
-//        IvrEndpointConversation conversation = createMock(IvrEndpointConversation.class);
-//        ExecutorService executor = createMock(ExecutorService.class);
-//        expect(conversation.getExecutorService()).andReturn(executor);
-//        executor.execute(executeTask());
-//        replay(conversation, executor);
-//
-//        PauseAction action = new PauseAction(100);
-//        long start = System.currentTimeMillis();
-//        action.execute(conversation, null, logger);
-//        long interval = System.currentTimeMillis()-start;
-//        assertTrue(interval>=100);
-//        assertTrue(interval<=100+10);
-//
-//        verify(conversation, executor);
-//    }
-//
-//    @Test
-//    public void cancelTest() throws Exception
-//    {
-//        IvrEndpointConversation conversation = createMock(IvrEndpointConversation.class);
-//        ExecutorService executor = createMock(ExecutorService.class);
-//        expect(conversation.getExecutorService()).andReturn(executor);
-//        executor.execute(executeTaskInThread());
-//        replay(conversation, executor);
-//
-//        PauseAction action = new PauseAction(100);
-//        long start = System.currentTimeMillis();
-//        assertEquals(IvrActionStatus.WAITING, action.getStatus());
-//        action.execute(conversation, null, logger);
-//        assertEquals(IvrActionStatus.EXECUTING, action.getStatus());
-//        Thread.sleep(20);
-//        assertEquals(IvrActionStatus.EXECUTING, action.getStatus());
-//        action.cancel();
-//        Thread.sleep(15);
-//        long interval = System.currentTimeMillis()-start;
-//        assertTrue(interval<100);
-//        assertEquals(IvrActionStatus.EXECUTED, action.getStatus());
-//
-//        verify(conversation, executor);
-//        
-//    }
-//
-//    public static Task executeTask()
-//    {
-//        reportMatcher(new IArgumentMatcher()
-//        {
-//            public boolean matches(Object argument)
-//            {
-//                ((Task)argument).run();
-//                return true;
-//            }
-//
-//            public void appendTo(StringBuffer buffer)
-//            {
-//            }
-//        });
-//        return null;
-//    }
-//
-//    public static Task executeTaskInThread()
-//    {
-//        reportMatcher(new IArgumentMatcher()
-//        {
-//            public boolean matches(final Object argument)
-//            {
-//                new Thread()
-//                {
-//                    @Override
-//                    public void run() {
-//                        ((Task)argument).run();
-//                    }
-//
-//                }.start();
-//                return true;
-//            }
-//
-//            public void appendTo(StringBuffer buffer)
-//            {
-//            }
-//        });
-//        return null;
-//    }
 }

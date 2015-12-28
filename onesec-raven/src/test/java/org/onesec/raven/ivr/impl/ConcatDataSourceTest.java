@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import javax.media.Manager;
 import javax.media.protocol.DataSource;
@@ -40,6 +41,7 @@ import org.onesec.raven.ivr.BufferCache;
 import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.CodecManager;
 import org.onesec.raven.ivr.InputStreamSource;
+import org.raven.dp.RavenFuture;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.sched.Task;
@@ -76,7 +78,7 @@ public class ConcatDataSourceTest extends OnesecRavenTestCase
         bufferCache = new BufferCacheImpl(rtpManagerService, log, codecManager);
     }
 
-    @Test
+    @Test(timeout = 30000)
     public void addInputStreamSourceTest() throws Exception {
         trainOwnerAndExecutor();
         mocks.replay();
@@ -88,18 +90,20 @@ public class ConcatDataSourceTest extends OnesecRavenTestCase
         ConcatDataSource dataSource = new ConcatDataSource(
                 FileTypeDescriptor.WAVE, executorService, codecManager, Codec.G711_MU_LAW, 240, 5
                 , 5, owner, bufferCache, new LoggerHelper(owner, null));
+        TickingDataSource tickingSource = new TickingDataSource(dataSource, 30, new LoggerHelper(owner, null));
         
-        dataSource.start();
-        JMFHelper.OperationController control = JMFHelper.writeToFile(dataSource, "target/iss_test.wav");
+//        dataSource.start();
+        tickingSource.start();
+        JMFHelper.OperationController control = JMFHelper.writeToFile(tickingSource, "target/iss_test.wav");
         addSourceAndWait(dataSource, source1);
         addSourceAndWait(dataSource, source2);
-        while (dataSource.isPlaying())
-            Thread.sleep(100);
-//        TimeUnit.SECONDS.sleep(5);
+//        while (dataSource.isPlaying())
+//            Thread.sleep(100);
+        TimeUnit.SECONDS.sleep(5);
         dataSource.reset();
         addSourceAndWait(dataSource, source3);
-        while (dataSource.isPlaying())
-            Thread.sleep(100);
+//        while (dataSource.isPlaying())
+//            Thread.sleep(100);
 //        TimeUnit.SECONDS.sleep(5);
         dataSource.close();
         control.stop();
@@ -118,18 +122,21 @@ public class ConcatDataSourceTest extends OnesecRavenTestCase
         ConcatDataSource audioStream = new ConcatDataSource(
                 FileTypeDescriptor.WAVE, executorService, codecManager, Codec.G729, 240, 5
                 , 5, owner, bufferCache, new LoggerHelper(owner, null));
-
-        audioStream.start();
-        JMFHelper.OperationController control = JMFHelper.writeToFile(audioStream, "target/cont_play_test.wav");
-        audioStream.playContinuously(files, 90);
-        while (audioStream.isPlaying())
-            Thread.sleep(100);
+        TickingDataSource tickingSource = new TickingDataSource(audioStream, 30, new LoggerHelper(owner, null));
+//        audioStream.start();
+        tickingSource.start();
+        JMFHelper.OperationController control = JMFHelper.writeToFile(tickingSource, "target/cont_play_test.wav");
+        RavenFuture res = audioStream.playContinuously(files, 90);
+        res.get();
+//        while (audioStream.isPlaying())
+//            Thread.sleep(100);
         control.stop();
         
-        control = JMFHelper.writeToFile(audioStream, "target/cont_play_test2.wav");
-        audioStream.playContinuously(files, 90);
-        while (audioStream.isPlaying())
-            Thread.sleep(100);
+        control = JMFHelper.writeToFile(tickingSource, "target/cont_play_test2.wav");
+        res = audioStream.playContinuously(files, 90);
+        res.get();
+//        while (audioStream.isPlaying())
+//            Thread.sleep(100);
         
         control.stop();
         audioStream.close();
@@ -138,39 +145,28 @@ public class ConcatDataSourceTest extends OnesecRavenTestCase
     }
         
 
-//    @Test
+    @Test
     public void addDataSourceTest() throws Exception
     {
-        Node owner = createMock("node", Node.class);
-        ExecutorService executorService = createMock("executor", ExecutorService.class);
-//        Logger logger = createMock("logger", Logger.class);
-
-//        executorService.execute(executeTask());
-//        expectLastCall().atLeastOnce();
-        executorService.execute(executeTask());
-        expectLastCall().atLeastOnce();
-        expect(executorService.executeQuietly(executeTask())).andReturn(Boolean.TRUE).times(2);
-        expect(owner.isLogLevelEnabled(LogLevel.ERROR)).andReturn(Boolean.TRUE).anyTimes();
-        expect(owner.isLogLevelEnabled(LogLevel.DEBUG)).andReturn(Boolean.TRUE).anyTimes();
-        expect(owner.getLogger()).andReturn(logger).anyTimes();
-
-        replay(owner, executorService);
+        trainOwnerAndExecutor();
+        mocks.replay();
 
         DataSource ids = Manager.createDataSource(new File("src/test/wav/test.wav").toURI().toURL());
 
         ConcatDataSource dataSource = new ConcatDataSource(
                 FileTypeDescriptor.WAVE, executorService, codecManager, Codec.G711_MU_LAW, 240, 5
                 , 5, owner, bufferCache, new LoggerHelper(owner, null));
+        TickingDataSource tickingSource = new TickingDataSource(dataSource, 30, new LoggerHelper(owner, null));
 
-        dataSource.start();
-        JMFHelper.OperationController control  = JMFHelper.writeToFile(
-                dataSource, "target/ds_test.wav");
-        dataSource.addSource(ids);
-        TimeUnit.SECONDS.sleep(5);
+        tickingSource.start();
+        JMFHelper.OperationController control  = JMFHelper.writeToFile(tickingSource, "target/ds_test.wav");
+        RavenFuture res = dataSource.addSource(ids);
+        res.get();
+//        TimeUnit.SECONDS.sleep(5);
         dataSource.close();
         control.stop();
         
-        verify(owner, executorService);
+        mocks.verify();
     }
     
     private AudioFile newAudio(String name) throws Exception {
@@ -198,13 +194,14 @@ public class ConcatDataSourceTest extends OnesecRavenTestCase
     }
 
     private void addSourceAndWait(ConcatDataSource audioStream, InputStreamSource source)
-            throws InterruptedException
+            throws InterruptedException, ExecutionException
     {
-        audioStream.addSource("audio1", 10, source);
-        while (audioStream.isPlaying()){
-            TimeUnit.MILLISECONDS.sleep(10);
-//            logger.debug("Waiting...");
-        }
+        RavenFuture res = audioStream.addSource("audio1", 10, source);
+        res.get();
+//        while (audioStream.isPlaying()){
+//            TimeUnit.MILLISECONDS.sleep(10);
+////            logger.debug("Waiting...");
+//        }
     }
 
     private static Task executeTask()

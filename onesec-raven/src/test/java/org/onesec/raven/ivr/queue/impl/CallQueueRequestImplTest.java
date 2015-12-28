@@ -17,25 +17,124 @@
 
 package org.onesec.raven.ivr.queue.impl;
 
+import mockit.Delegate;
+import mockit.Expectations;
+import mockit.Mocked;
+import mockit.Verifications;
+import mockit.integration.junit4.JMockit;
 import org.junit.Test;
 import org.onesec.raven.ivr.queue.CallQueueRequestListener;
-import static org.easymock.EasyMock.*;
+//import static org.easymock.EasyMock.*;
+import org.junit.runner.RunWith;
+import org.onesec.raven.ivr.IvrEndpointConversation;
+import org.onesec.raven.ivr.queue.event.CommutatedQueueEvent;
+import org.onesec.raven.ivr.queue.event.DisconnectedQueueEvent;
+import org.raven.sched.ExecutorService;
+import org.raven.sched.Task;
+import org.raven.tree.impl.LoggerHelper;
 /**
  *
  * @author Mikhail Titov
  */
+@RunWith(JMockit.class)
 public class CallQueueRequestImplTest
 {
     @Test
-    public void cancelTest()
+    public void cancelTest(
+            @Mocked final IvrEndpointConversation conv,
+            @Mocked final CallQueueRequestListener listener,
+            @Mocked final CommutatedQueueEvent commutatedEvent,
+            @Mocked final LoggerHelper logger
+    ) throws Exception
     {
-        CallQueueRequestListener listener = createMock(CallQueueRequestListener.class);
-        listener.conversationAssigned(null);
-        listener.requestCanceled("CANCELED");
-        replay(listener);
-        CallQueueRequestImpl req = new CallQueueRequestImpl(null, 1, "1", null, true, true, null, null);
+        CallQueueRequestImpl req = new CallQueueRequestImpl(conv, 1, "1", null, true, true, null, logger);
         req.addRequestListener(listener);
         req.cancel();
-        verify(listener);
+        new Verifications() {{
+            listener.requestCanceled("CANCELED"); times = 1;
+        }};
+    }    
+    
+    @Test
+    public void commutatedTest(
+            @Mocked final IvrEndpointConversation conv,
+            @Mocked final ExecutorService executor,
+            @Mocked final CallQueueRequestListener listener,
+            @Mocked final CommutatedQueueEvent commutatedEvent,
+            @Mocked final LoggerHelper logger
+    ) throws Exception
+    {
+        trainExecutor(executor);
+        CallQueueRequestImpl req = new CallQueueRequestImpl(conv, 1, "1", null, true, true, null, logger);
+        req.addRequestListener(listener);
+        req.callQueueChangeEvent(commutatedEvent);
+        new Verifications() {{
+            listener.commutated(); times = 1;
+        }};
+    }
+    
+    @Test
+    public void alreadyCommutatedTest(
+            @Mocked final IvrEndpointConversation conv,
+            @Mocked final ExecutorService executor,
+            @Mocked final CallQueueRequestListener listener,
+            @Mocked final CommutatedQueueEvent commutatedEvent,
+            @Mocked final LoggerHelper logger
+    ) throws Exception
+    {
+        trainExecutor(executor);
+        CallQueueRequestImpl req = new CallQueueRequestImpl(conv, 1, "1", null, true, true, null, logger);
+        req.callQueueChangeEvent(commutatedEvent);
+        req.addRequestListener(listener);
+        new Verifications() {{
+            listener.commutated(); times = 1;
+        }};
+    }
+    
+    @Test
+    public void disconnectedTest(
+            @Mocked final IvrEndpointConversation conv,
+            @Mocked final ExecutorService executor,
+            @Mocked final CallQueueRequestListener listener,
+            @Mocked final DisconnectedQueueEvent disconnectedEvent,
+            @Mocked final LoggerHelper logger
+    ) throws Exception
+    {
+        trainExecutor(executor);
+        CallQueueRequestImpl req = new CallQueueRequestImpl(conv, 1, "1", null, true, true, null, logger);
+        req.callQueueChangeEvent(disconnectedEvent);
+        req.addRequestListener(listener);
+        new Verifications() {{
+            listener.disconnected(); times = 1;
+        }};
+    }
+    
+    @Test
+    public void alreadyDisconnectedTest(
+            @Mocked final IvrEndpointConversation conv,
+            @Mocked final ExecutorService executor,
+            @Mocked final CallQueueRequestListener listener,
+            @Mocked final DisconnectedQueueEvent disconnectedEvent,
+            @Mocked final LoggerHelper logger
+    ) throws Exception
+    {
+        trainExecutor(executor);
+        CallQueueRequestImpl req = new CallQueueRequestImpl(conv, 1, "1", null, true, true, null, logger);
+        req.addRequestListener(listener);
+        req.callQueueChangeEvent(disconnectedEvent);
+        new Verifications() {{
+            listener.disconnected(); times = 1;
+        }};
+    }
+    
+    private void trainExecutor(final ExecutorService executor) {
+        new Expectations() {{
+            executor.executeQuietly((Task) any); result = new Delegate() {
+                public boolean executeQuietly(Task task) {
+                    task.run();
+                    return true;
+                }
+            };
+        }};
     }
 }

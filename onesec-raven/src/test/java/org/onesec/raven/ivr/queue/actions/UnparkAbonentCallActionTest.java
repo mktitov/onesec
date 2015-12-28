@@ -16,19 +16,27 @@
 package org.onesec.raven.ivr.queue.actions;
 
 import javax.script.Bindings;
+import mockit.Expectations;
+import mockit.Mocked;
+import mockit.integration.junit4.JMockit;
 import org.junit.Test;
-import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.raven.conv.ConversationScenarioState;
-import org.raven.log.LogLevel;
-import static org.easymock.EasyMock.*;
 import org.junit.Before;
+import org.junit.runner.RunWith;
+import org.onesec.raven.ivr.Action;
+import org.onesec.raven.ivr.actions.AbstractAction;
+import org.onesec.raven.ivr.actions.ActionTestCase;
+import org.raven.dp.DataProcessor;
+import org.raven.dp.DataProcessorFacade;
+import org.raven.test.TestDataProcessorFacade;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class UnparkAbonentCallActionTest extends OnesecRavenTestCase {
+@RunWith(JMockit.class)
+public class UnparkAbonentCallActionTest extends ActionTestCase {
     UnparkAbonentCallActionNode actionNode;
     
     @Before
@@ -36,40 +44,42 @@ public class UnparkAbonentCallActionTest extends OnesecRavenTestCase {
         actionNode = new UnparkAbonentCallActionNode();
         actionNode.setName("action");
         testsNode.addAndSaveChildren(actionNode);
-        actionNode.setLogLevel(LogLevel.TRACE);
         assertTrue(actionNode.start());
     }
     
-    @Test(expected=Exception.class)
-    public void notFoundParkDNTest() throws Exception {
-        IvrEndpointConversation conv = createMock(IvrEndpointConversation.class);
-        ConversationScenarioState state = createMock(ConversationScenarioState.class);
-        Bindings bindings = createMock(Bindings.class);
-        
-        expect(conv.getConversationScenarioState()).andReturn(state);
-        expect(state.getBindings()).andReturn(bindings);
-        expect(bindings.get(ParkOperatorCallAction.PARK_NUMBER_BINDING)).andReturn(null);
-        replay(conv, state, bindings);
-        
-        UnparkAbonentCallAction action = (UnparkAbonentCallAction) actionNode.createAction();
-        action.doExecute(conv);
-        verify(conv, state, bindings);
+    @Test
+    public void notFoundParkDNTest(
+            @Mocked final Action.Execute executeMessage,
+            @Mocked final DataProcessor actionExecutorDP,
+            @Mocked final IvrEndpointConversation conv,
+            @Mocked final ConversationScenarioState state,
+            @Mocked final Bindings bindings
+    ) throws Exception 
+    {
+        TestDataProcessorFacade actionExecutor = createActionExecutor(actionExecutorDP);
+        DataProcessorFacade action = createAction(actionExecutor, actionNode);
+        actionExecutor.setWaitForMessage(AbstractAction.ACTION_EXECUTED_then_STOP);
+        action.send(executeMessage);
+        assertTrue(actionExecutor.waitForMessage(100));
     }
     
     @Test
-    public void normalTest() throws Exception {
-        IvrEndpointConversation conv = createMock(IvrEndpointConversation.class);
-        ConversationScenarioState state = createMock(ConversationScenarioState.class);
-        Bindings bindings = createMock(Bindings.class);
-        
-        expect(conv.getConversationScenarioState()).andReturn(state);
-        expect(state.getBindings()).andReturn(bindings);
-        expect(bindings.get(ParkOperatorCallAction.PARK_NUMBER_BINDING)).andReturn("1234");
-        conv.unpark("1234");
-        replay(conv, state, bindings);
-        
-        UnparkAbonentCallAction action = (UnparkAbonentCallAction) actionNode.createAction();
-        action.doExecute(conv);
-        verify(conv, state, bindings);
+    public void normalTest(
+            @Mocked final Action.Execute executeMessage,
+            @Mocked final DataProcessor actionExecutorDP,
+            @Mocked final IvrEndpointConversation conv,
+            @Mocked final ConversationScenarioState state,
+            @Mocked final Bindings bindings
+    ) throws Exception 
+    {
+        new Expectations() {{
+            bindings.get(ParkOperatorCallAction.PARK_NUMBER_BINDING); result = "123";
+            conv.unpark("123");
+        }};
+        TestDataProcessorFacade actionExecutor = createActionExecutor(actionExecutorDP);
+        DataProcessorFacade action = createAction(actionExecutor, actionNode);
+        actionExecutor.setWaitForMessage(AbstractAction.ACTION_EXECUTED_then_STOP);
+        action.send(executeMessage);
+        assertTrue(actionExecutor.waitForMessage(100));
     }
 }

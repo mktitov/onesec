@@ -15,10 +15,12 @@
  */
 package org.onesec.raven.ivr.queue.actions;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import javax.script.Bindings;
 import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.onesec.raven.ivr.actions.AsyncAction;
-import org.onesec.raven.ivr.impl.IvrUtils;
+import org.onesec.raven.ivr.actions.AbstractSayWordsAction;
 import org.onesec.raven.ivr.queue.impl.CallsQueueOperatorNode;
 import org.raven.conv.BindingScope;
 import org.raven.expr.BindingSupport;
@@ -27,21 +29,21 @@ import org.raven.expr.BindingSupport;
  *
  * @author Mikhail Titov
  */
-public class QueueOperatorStatusHandlerAction extends AsyncAction {
+public class QueueOperatorStatusHandlerAction extends AbstractSayWordsAction {
     
     public final static String HELLO_PLAYED_BINDING = "helloPlayedFlag";
     
-    private final static String ACTION_NAME = "Queue operator status handler action";
+    private final static String ACTION_NAME = "Queue operator status";
     private final QueueOperatorStatusHandlerActionNode actionNode;
     
 
     public QueueOperatorStatusHandlerAction(QueueOperatorStatusHandlerActionNode actionNode) {
-        super(ACTION_NAME);
+        super(ACTION_NAME, null, 0, 0, null);
         this.actionNode = actionNode;
     }
 
     @Override
-    protected void doExecute(IvrEndpointConversation conv) throws Exception {
+    protected List<Object> formWords(IvrEndpointConversation conv) throws Exception {
         BindingSupport bindings = actionNode.getBindingSupport();
         try {
             Bindings convBindings = conv.getConversationScenarioState().getBindings();
@@ -49,31 +51,28 @@ public class QueueOperatorStatusHandlerAction extends AsyncAction {
             String operNumber = (String) convBindings.get(IvrEndpointConversation.NUMBER_BINDING);
             CallsQueueOperatorNode oper = actionNode.getCallsQueues().getOperatorByPhoneNumber(operNumber);
             if (oper==null)
-                return;
+                return null;
             boolean active = oper.getActive()!=null && oper.getActive();
-            conv.getOwner().getLogger().debug("DTMF: "+convBindings.get(IvrEndpointConversation.DTMF_BINDING));
-            conv.getOwner().getLogger().debug("active: "+active);
+//            getLogger().debug("DTMF: "+convBindings.get(IvrEndpointConversation.DTMF_BINDING));
+//            getLogger().debug("active: "+active);
             if ("1".equals(convBindings.get(IvrEndpointConversation.DTMF_BINDING))) 
                 oper.setActive(!active);
+            //сформируем последовательность аудио файлов
+            List audioFiles = new ArrayList<>(3);
             if (!convBindings.containsKey(HELLO_PLAYED_BINDING)) {
-                IvrUtils.playAudioInAction(this, conversation, actionNode.getHelloAudio());
+                audioFiles.add(actionNode.getHelloAudio());
                 conv.getConversationScenarioState().setBinding(HELLO_PLAYED_BINDING, true, BindingScope.POINT);
-                if (hasCancelRequest()) return;
             }
-            IvrUtils.playAudioInAction(this, conversation, actionNode.getCurrentStatusAudio());
-            if (hasCancelRequest()) return;
+            audioFiles.add(actionNode.getCurrentStatusAudio());
             if (oper.getActive()==null || !oper.getActive())
-                IvrUtils.playAudioInAction(this, conversation, actionNode.getUnavailableStatusAudio());
+                audioFiles.add(actionNode.getUnavailableStatusAudio());
             else
-                IvrUtils.playAudioInAction(this, conversation, actionNode.getAvailableStatusAudio());
-            if (hasCancelRequest()) return;
-            IvrUtils.playAudioInAction(this, conversation, actionNode.getPressOneToChangeStatusAudio());
+                audioFiles.add(actionNode.getAvailableStatusAudio());
+            audioFiles.add(actionNode.getPressOneToChangeStatusAudio());
+            
+            return Arrays.asList((Object)audioFiles);
         } finally {
             bindings.reset();
         }
-    }
-
-    public boolean isFlowControlAction() {
-        return false;
     }
 }

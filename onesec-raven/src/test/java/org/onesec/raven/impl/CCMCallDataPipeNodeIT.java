@@ -31,7 +31,7 @@ import org.raven.test.PushDataSource;
  *
  * @author Mikhail Titov
  */
-public class CCMCallDataPipeNodeTest extends OnesecRavenTestCase
+public class CCMCallDataPipeNodeIT extends OnesecRavenTestCase
 {
     @Test
     public void test() throws Exception

@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.Map;
 import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.SayAnyActionException;
-import org.onesec.raven.ivr.Sentence;
+import org.onesec.raven.ivr.SentenceResult;
 import org.onesec.raven.ivr.SubactionSentencesResult;
 import org.onesec.raven.ivr.impl.SentenceImpl;
 import org.onesec.raven.ivr.impl.SubactionSentencesResultImpl;
@@ -41,7 +41,7 @@ public class SayAnyWordSubaction extends AbstractSentenceSubaction {
         throws SayAnyActionException 
     {
         super(params, actionNode, defaultWordsNodes, resourceManager);
-        Sentence sentence = new SentenceImpl(pauseBetweenWords, parseWords(value));
+        SentenceResult sentence = new SentenceImpl(pauseBetweenWords, parseWords(value));
         result = new SubactionSentencesResultImpl(pauseBetweenSentences, Arrays.asList(sentence));
     }
 

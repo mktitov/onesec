@@ -16,7 +16,7 @@
 package org.onesec.raven.ivr.actions;
 
 import java.util.Collection;
-import org.onesec.raven.ivr.IvrAction;
+import org.onesec.raven.ivr.Action;
 import org.onesec.raven.ivr.IvrActionNode;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.raven.annotations.NodeClass;
@@ -28,7 +28,6 @@ import org.raven.ds.DataContext;
 import org.raven.ds.DataSource;
 import org.raven.ds.impl.DataSourceHelper;
 import org.raven.tree.NodeAttribute;
-import org.raven.tree.impl.BaseNode;
 import org.weda.annotations.constraints.NotNull;
 
 /**
@@ -36,7 +35,7 @@ import org.weda.annotations.constraints.NotNull;
  * @author Mikhail Titov
  */
 @NodeClass(parentNode=IvrConversationScenarioNode.class)
-public class StartRecordingActionNode extends BaseNode implements IvrActionNode, DataSource {
+public class StartRecordingActionNode extends AbstractActionNode implements IvrActionNode, DataSource {
     
     @NotNull @Parameter(valueHandlerType=TemporaryFileManagerValueHandlerFactory.TYPE)
     private TemporaryFileManager temporaryFileManager;
@@ -57,6 +56,7 @@ public class StartRecordingActionNode extends BaseNode implements IvrActionNode,
         this.noiseLevel = noiseLevel;
     }
 
+    @Override
     public Boolean getStopProcessingOnError() {
         return false;
     }
@@ -77,14 +77,17 @@ public class StartRecordingActionNode extends BaseNode implements IvrActionNode,
         this.temporaryFileManager = temporaryFileManager;
     }
 
-    public IvrAction createAction() {
+    @Override
+    protected Action doCreateAction() {
         return new StartRecordingAction(this, saveOnCancel());
     }
 
+    @Override
     public boolean getDataImmediate(DataConsumer dataConsumer, DataContext context) {
         throw new UnsupportedOperationException("DataSource work in PUSH mode only");
     }
 
+    @Override
     public Collection<NodeAttribute> generateAttributes() {
         return null;
     }

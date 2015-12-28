@@ -47,7 +47,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author Mikhail Titov
  */
-public class SmsAgentTest extends ServiceTestCase {
+public class SmsAgentIT extends ServiceTestCase {
     private final static Logger logger = LoggerFactory.getLogger(ContainerParserDataSource.class);
     private static LoggerHelper loggerHelper = new LoggerHelper(LogLevel.TRACE, "SMS. ", null, logger);
     private IMocksControl mainMocks;

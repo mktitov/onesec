@@ -16,23 +16,32 @@
 package org.onesec.raven.ivr.queue.actions;
 
 import javax.script.Bindings;
+import mockit.Expectations;
+import mockit.Mocked;
+import mockit.integration.junit4.JMockit;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.*;
-import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.ivr.IvrEndpointConversation;
-import static org.easymock.EasyMock.*;
+import org.junit.runner.RunWith;
+import org.onesec.raven.ivr.Action;
+import org.onesec.raven.ivr.actions.AbstractAction;
+import org.onesec.raven.ivr.actions.ActionTestCase;
 import org.onesec.raven.ivr.queue.CallQueueRequestController;
 import org.onesec.raven.ivr.queue.CommutationManagerCall;
+import static org.onesec.raven.ivr.queue.actions.ParkOperatorCallAction.PARK_NUMBER_BINDING;
 import org.raven.conv.BindingScope;
 import org.raven.conv.ConversationScenarioState;
+import org.raven.dp.DataProcessor;
+import org.raven.dp.DataProcessorFacade;
 import org.raven.log.LogLevel;
-import org.raven.tree.impl.LoggerHelper;
+import org.raven.test.TestDataProcessorFacade;
 /**
  *
  * @author Mikhail Titov
  */
-public class ParkOperatorCallActionTest extends OnesecRavenTestCase {
+@RunWith(JMockit.class)
+public class ParkOperatorCallActionTest extends ActionTestCase {
     private ParkOperatorCallActionNode actionNode;
     
     @Before
@@ -42,45 +51,53 @@ public class ParkOperatorCallActionTest extends OnesecRavenTestCase {
         testsNode.addAndSaveChildren(actionNode);
         actionNode.setLogLevel(LogLevel.TRACE);
         assertTrue(actionNode.start());
-        
-    }
-    
-    @Test(expected=Exception.class)
-    public void notQueueOperatorConversationTest() throws Exception {
-        IvrEndpointConversation conv = createMock("OperatorConversation", IvrEndpointConversation.class);
-        ConversationScenarioState state = createMock(ConversationScenarioState.class);
-        Bindings bindings = createMock(Bindings.class);
-        expect(conv.getConversationScenarioState()).andReturn(state);
-        expect(state.getBindings()).andReturn(bindings);
-        expect(bindings.get(CommutationManagerCall.CALL_QUEUE_REQUEST_BINDING)).andReturn(null);
-        replay(conv, state, bindings);
-        
-        ParkOperatorCallAction action = (ParkOperatorCallAction) actionNode.createAction();
-        action.doExecute(conv);
-        verify(conv, state, bindings);
     }
     
     @Test
-    public void normalTest() throws Exception {
-        IvrEndpointConversation conv = createMock("OperatorConversation", IvrEndpointConversation.class);
-        ConversationScenarioState state = createMock("OperatorConversationState", ConversationScenarioState.class);
-        Bindings bindings = createMock(Bindings.class);
-        CallQueueRequestController controller = createMock(CallQueueRequestController.class);
-        IvrEndpointConversation abonConv = createMock("AbonentConversation", IvrEndpointConversation.class);
-        ConversationScenarioState abonState = createMock("AbonentConversationState", ConversationScenarioState.class);
-        
-        expect(conv.getConversationScenarioState()).andReturn(state);
-        expect(state.getBindings()).andReturn(bindings);
-        expect(bindings.get(CommutationManagerCall.CALL_QUEUE_REQUEST_BINDING)).andReturn(controller);
-        expect(conv.park()).andReturn("1234");
-        expect(controller.getConversation()).andReturn(abonConv);
-        expect(abonConv.getConversationScenarioState()).andReturn(abonState);
-        abonState.setBinding(ParkOperatorCallAction.PARK_NUMBER_BINDING, "1234", BindingScope.POINT);
-        replay(conv, state, bindings, controller, abonConv, abonState);
-        
-        ParkOperatorCallAction action = (ParkOperatorCallAction) actionNode.createAction();
-        action.setLogger(new LoggerHelper(actionNode, null));
-        action.doExecute(conv);
-        verify(conv, state, bindings, controller, abonConv, abonState);
+    public void notQueueOperatorConversationTest(
+            @Mocked final DataProcessor executeActionDP,
+            @Mocked final Action.Execute execMess,
+            @Mocked final IvrEndpointConversation conv,
+            @Mocked final ConversationScenarioState state,
+            @Mocked final Bindings bindings,
+            @Mocked final CallQueueRequestController requestController) 
+        throws Exception 
+    {
+        new Expectations() {{
+            execMess.getConversation(); result = conv;
+            conv.getConversationScenarioState(); result = state;
+            state.getBindings(); result = bindings;
+            bindings.get(CommutationManagerCall.CALL_QUEUE_REQUEST_BINDING); result = null;            
+        }};
+        TestDataProcessorFacade actionExecutor = createActionExecutor(executeActionDP);
+        DataProcessorFacade action = createAction(actionExecutor, actionNode);
+        actionExecutor.setWaitForMessage(AbstractAction.ACTION_EXECUTED_then_STOP);
+        action.send(execMess);
+        assertTrue(actionExecutor.waitForMessage(100));
+    }
+    
+    @Test
+    public void normalTest(
+            @Mocked final DataProcessor executeActionDP,
+            @Mocked final Action.Execute execMess,
+            @Mocked final IvrEndpointConversation conv,
+            @Mocked final ConversationScenarioState state,
+            @Mocked final Bindings bindings,
+            @Mocked final CallQueueRequestController requestController) 
+        throws Exception 
+    {
+        new Expectations() {{
+            execMess.getConversation(); result = conv;
+            conv.getConversationScenarioState(); result = state;
+            state.getBindings(); result = bindings;
+            bindings.get(CommutationManagerCall.CALL_QUEUE_REQUEST_BINDING); result = requestController;            
+            conv.park(); result = "123";
+            state.setBinding(PARK_NUMBER_BINDING, "123", BindingScope.POINT);
+        }};
+        TestDataProcessorFacade actionExecutor = createActionExecutor(executeActionDP);
+        DataProcessorFacade action = createAction(actionExecutor, actionNode);
+        actionExecutor.setWaitForMessage(AbstractAction.ACTION_EXECUTED_then_STOP);
+        action.send(execMess);
+        assertTrue(actionExecutor.waitForMessage(100));
     }
 }

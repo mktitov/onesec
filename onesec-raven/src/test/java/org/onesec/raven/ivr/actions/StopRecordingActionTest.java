@@ -16,21 +16,27 @@
 package org.onesec.raven.ivr.actions;
 
 import javax.script.Bindings;
+import mockit.Expectations;
+import mockit.Mocked;
+import mockit.integration.junit4.JMockit;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.*;
-import org.onesec.raven.OnesecRavenTestCase;
-import static org.easymock.EasyMock.*;
-import org.easymock.IMocksControl;
+import org.junit.runner.RunWith;
+import org.onesec.raven.ivr.Action;
 import org.onesec.raven.ivr.CallRecorder;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.raven.conv.ConversationScenarioState;
+import org.raven.dp.DataProcessor;
+import org.raven.dp.DataProcessorFacade;
+import org.raven.test.TestDataProcessorFacade;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class StopRecordingActionTest extends OnesecRavenTestCase {
+@RunWith(JMockit.class)
+public class StopRecordingActionTest extends ActionTestCase {
     
     private StopRecordingActionNode actionNode;
     
@@ -43,25 +49,48 @@ public class StopRecordingActionTest extends OnesecRavenTestCase {
     }
     
     @Test
-    public void test() throws Exception {
-        IMocksControl control = createControl();
-        IvrEndpointConversation conv = control.createMock(IvrEndpointConversation.class);
-        ConversationScenarioState state = control.createMock(ConversationScenarioState.class);
-        Bindings bindings = control.createMock(Bindings.class);
-        CallRecorder recorder = control.createMock(CallRecorder.class);
-        
-        expect(conv.getConversationScenarioState()).andReturn(state);
-        expect(conv.getOwner()).andReturn(actionNode).anyTimes();
-        expect(state.getBindings()).andReturn(bindings);
-        expect(bindings.remove(StartRecordingAction.RECORDER_BINDING)).andReturn(recorder);
-        recorder.stopRecording(false);
-        
-        control.replay();
-        
-        StopRecordingAction action = (StopRecordingAction) actionNode.createAction();
-        assertNotNull(action);
-        action.doExecute(conv);
-        
-        control.verify();
-    }
+    public void testWithRecorder(
+            @Mocked final DataProcessor executeActionDP,
+            @Mocked final Action.Execute execMess,
+            @Mocked final IvrEndpointConversation conv,
+            @Mocked final ConversationScenarioState state,
+            @Mocked final Bindings bindings,
+            @Mocked final CallRecorder recorder) 
+        throws Exception 
+    {
+        new Expectations() {{
+            execMess.getConversation(); result = conv;
+            conv.getConversationScenarioState(); result = state;
+            state.getBindings(); result = bindings;
+            bindings.remove(StartRecordingAction.RECORDER_BINDING); result = recorder;
+            recorder.stopRecording(false);
+        }};
+        TestDataProcessorFacade actionExecutor = createActionExecutor(executeActionDP);
+        DataProcessorFacade action = createAction(actionExecutor, actionNode);
+        actionExecutor.setWaitForMessage(AbstractAction.ACTION_EXECUTED_then_EXECUTE_NEXT);
+        action.send(execMess);
+        actionExecutor.waitForMessage(100);
+    }    
+    
+    @Test
+    public void testWithoutRecorder(
+            @Mocked final DataProcessor executeActionDP,
+            @Mocked final Action.Execute execMess,
+            @Mocked final IvrEndpointConversation conv,
+            @Mocked final ConversationScenarioState state,
+            @Mocked final Bindings bindings) 
+        throws Exception 
+    {
+        new Expectations() {{
+            execMess.getConversation(); result = conv;
+            conv.getConversationScenarioState(); result = state;
+            state.getBindings(); result = bindings;
+            bindings.remove(StartRecordingAction.RECORDER_BINDING); result = null;
+        }};
+        TestDataProcessorFacade actionExecutor = createActionExecutor(executeActionDP);
+        DataProcessorFacade action = createAction(actionExecutor, actionNode);
+        actionExecutor.setWaitForMessage(AbstractAction.ACTION_EXECUTED_then_EXECUTE_NEXT);
+        action.send(execMess);
+        actionExecutor.waitForMessage(100);
+    }    
 }

@@ -17,7 +17,7 @@
 package org.onesec.raven.ivr.impl;
 
 import java.util.List;
-import org.onesec.raven.ivr.Sentence;
+import org.onesec.raven.ivr.SentenceResult;
 import org.onesec.raven.ivr.SubactionSentencesResult;
 
 /**
@@ -26,9 +26,9 @@ import org.onesec.raven.ivr.SubactionSentencesResult;
  */
 public class SubactionSentencesResultImpl implements SubactionSentencesResult {
     private final long pauseBetweenSentences;
-    private final List<Sentence> sentences;
+    private final List<SentenceResult> sentences;
 
-    public SubactionSentencesResultImpl(long pauseBetweenSentences, List<Sentence> sentences) {
+    public SubactionSentencesResultImpl(long pauseBetweenSentences, List<SentenceResult> sentences) {
         this.pauseBetweenSentences = pauseBetweenSentences;
         this.sentences = sentences;
     }
@@ -37,7 +37,7 @@ public class SubactionSentencesResultImpl implements SubactionSentencesResult {
         return pauseBetweenSentences;
     }
 
-    public List<Sentence> getSentences() {
+    public List<SentenceResult> getSentences() {
         return sentences;
     }
 }

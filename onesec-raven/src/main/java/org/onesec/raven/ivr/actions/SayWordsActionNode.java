@@ -15,16 +15,12 @@
  */
 package org.onesec.raven.ivr.actions;
 
-import javax.script.Bindings;
-import org.onesec.raven.ivr.IvrAction;
-import org.onesec.raven.ivr.IvrActionNode;
+import org.onesec.raven.ivr.Action;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
-import org.raven.expr.impl.BindingSupportImpl;
 import org.raven.tree.Node;
 import org.raven.tree.ResourceManager;
-import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.ResourceReferenceValueHandlerFactory;
 import org.raven.util.NodeUtils;
 import org.weda.annotations.constraints.NotNull;
@@ -35,7 +31,7 @@ import org.weda.internal.annotations.Service;
  * @author Mikhail Titov
  */
 @NodeClass(parentNode=IvrConversationScenarioNode.class)
-public class SayWordsActionNode extends BaseNode implements IvrActionNode {
+public class SayWordsActionNode extends AbstractActionNode {
     
     public final static String WORDS_NODE_ATTR = "wordsNode";
     
@@ -52,30 +48,13 @@ public class SayWordsActionNode extends BaseNode implements IvrActionNode {
     @NotNull @Parameter(defaultValue="10") 
     private Integer pauseBetweenWords;
     
-    private BindingSupportImpl bindingSupport;
-
-    public IvrAction createAction() {
+    @Override
+    protected Action doCreateAction() {
         return new SayWordsAction(this, bindingSupport, 
                 NodeUtils.getAttrValuesByPrefixAndType(this, "wordsNode", Node.class), 
                 pauseBetweenWords, resourceManager);
     }
     
-    @Override
-    protected void initFields() {
-        super.initFields();
-        bindingSupport = new BindingSupportImpl();
-    }
-
-    @Override
-    public void formExpressionBindings(Bindings bindings) {
-        super.formExpressionBindings(bindings);
-        bindingSupport.addTo(bindings);
-    }
-
-//    BindingSupportImpl getBindingSupport() {
-//        return bindingSupport;
-//    }
-//
     public String getWords() {
         return words;
     }

@@ -189,7 +189,7 @@ public class ConcatDataStream implements PushBufferStream, Task
                     si = sourceInfo.get();
                     bufferToSend = bufferQueue.poll();
                     if (bufferToSend instanceof LastBuffer) {
-                        ((LastBuffer)bufferToSend).getSourceListener().sourceProcessed();
+                        ((LastBuffer)bufferToSend).getCompletionPromise().completeWithValue(null);
                         continue;
                     }
                     if (bufferToSend!=null && si!=null && si.isRealTime()) {

@@ -21,7 +21,7 @@ import java.util.List;
  *
  * @author Mikhail Titov
  */
-public interface Sentence {
+public interface SentenceResult {
     public long getPauseBetweenWords();
     public List<AudioFile> getWords();
 }

@@ -26,7 +26,7 @@ import org.raven.sched.ExecutorServiceException;
 public interface IvrActionExecutor {
     public static final int CANCEL_TIMEOUT = 5000;
     
-    public void executeActions(Collection<IvrAction> actions) throws ExecutorServiceException, InterruptedException;
+    public void executeActions(Collection<Action> actions) throws ExecutorServiceException, InterruptedException;
     public boolean hasDtmfProcessPoint(char dtmf);
     public List<Character> getCollectedDtmfs();
     public void cancelActionsExecution() throws InterruptedException;

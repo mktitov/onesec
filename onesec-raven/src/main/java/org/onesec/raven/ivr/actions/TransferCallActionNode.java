@@ -17,14 +17,10 @@
 
 package org.onesec.raven.ivr.actions;
 
-import javax.script.Bindings;
-import org.onesec.raven.ivr.IvrAction;
-import org.onesec.raven.ivr.IvrActionNode;
+import org.onesec.raven.ivr.Action;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
-import org.raven.expr.impl.BindingSupportImpl;
-import org.raven.tree.impl.BaseNode;
 import org.weda.annotations.constraints.NotNull;
 
 /**
@@ -32,7 +28,7 @@ import org.weda.annotations.constraints.NotNull;
  * @author Mikhail Titov
  */
 @NodeClass(parentNode=IvrConversationScenarioNode.class)
-public class TransferCallActionNode extends BaseNode implements IvrActionNode
+public class TransferCallActionNode extends AbstractActionNode //implements IvrActionNode
 {
     @Parameter
     private String address;
@@ -45,24 +41,6 @@ public class TransferCallActionNode extends BaseNode implements IvrActionNode
 
     @NotNull @Parameter(defaultValue="600")
     private Long callEndTimeout;
-    
-    private BindingSupportImpl bindingSupport;
-
-    @Override
-    protected void initFields() {
-        super.initFields();
-        bindingSupport = new BindingSupportImpl();
-    }
-
-    BindingSupportImpl getBindingSupport() {
-        return bindingSupport;
-    }
-
-    @Override
-    public void formExpressionBindings(Bindings bindings) {
-        super.formExpressionBindings(bindings);
-        bindingSupport.addTo(bindings);
-    }
 
     public String getAddress()
     {
@@ -104,8 +82,8 @@ public class TransferCallActionNode extends BaseNode implements IvrActionNode
         this.monitorTransfer = monitorTransfer;
     }
 
-    public IvrAction createAction()
-    {
+    @Override
+    protected Action doCreateAction() {
         return new TransferCallAction(this);
     }
 }

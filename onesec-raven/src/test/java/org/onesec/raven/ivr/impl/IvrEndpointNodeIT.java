@@ -53,7 +53,7 @@ import org.raven.tree.NodeAttribute;
  *
  * @author Mikhail Titov
  */
-public class IvrEndpointNodeTest 
+public class IvrEndpointNodeIT 
         extends OnesecRavenTestCase implements ConversationCompletionCallback
 {
     private IvrEndpointNode endpoint;
@@ -632,7 +632,7 @@ public class IvrEndpointNodeTest
                     try {
                         Thread.sleep(1000);
                     } catch (InterruptedException ex) {
-                        Logger.getLogger(IvrEndpointNodeTest.class.getName()).log(Level.SEVERE, null, ex);
+                        Logger.getLogger(IvrEndpointNodeIT.class.getName()).log(Level.SEVERE, null, ex);
                     }
                     event.getConversation().sendMessage(message, "windows-1251", direction);
                 }

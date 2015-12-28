@@ -26,25 +26,11 @@ public class DtmfProcessPointAction extends ContinueConversationAction
     private final String dtmfs;
 
     public DtmfProcessPointAction(String dtmfs) {
-        super("Process collected dtmfs action");
+        super("DTMF Processing point");
         this.dtmfs = dtmfs;
     }
 
     public String getDtmfs() {
         return dtmfs;
     }
-
-//    @Override
-//    protected void doExecute(IvrEndpointConversation conversation) throws Exception
-//    {
-//         List<Character> passedDtmfs =
-//                 (List<Character>) conversation.getConversationScenarioState().getBindings()
-//                 .get(IvrEndpointConversation.DTMFS_BINDING);
-//         if (passedDtmfs!=null)
-//            for (Character c: passedDtmfs)
-//                if (dtmfs.indexOf(c)>=0) {
-//                    super.doExecute(conversation);
-//                    break;
-//                }
-//    }
 }

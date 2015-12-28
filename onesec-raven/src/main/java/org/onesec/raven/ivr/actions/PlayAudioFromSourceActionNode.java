@@ -15,7 +15,7 @@
  */
 package org.onesec.raven.ivr.actions;
 
-import org.onesec.raven.ivr.IvrAction;
+import org.onesec.raven.ivr.Action;
 import org.onesec.raven.ivr.IvrActionNode;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.raven.annotations.NodeClass;
@@ -27,13 +27,15 @@ import org.raven.expr.BindingSupport;
  * @author Mikhail Titov
  */
 @NodeClass(parentNode=IvrConversationScenarioNode.class)
-public class PlayAudioFromSourceActionNode extends DataSourceFieldValueGenerator implements IvrActionNode {
+public class PlayAudioFromSourceActionNode extends DataSourceFieldValueGenerator implements IvrActionNode 
+{
     
     BindingSupport getBindingSupport() {
         return bindingSupport;
     }
 
-    public IvrAction createAction() {
+    @Override
+    public Action createAction() {
         return new PlayAudioFromSourceAction(this, converter);
     }
 }

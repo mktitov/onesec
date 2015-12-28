@@ -20,6 +20,10 @@ package org.onesec.raven.ivr.actions;
 import java.nio.charset.Charset;
 import javax.script.Bindings;
 import javax.script.SimpleBindings;
+import mockit.Expectations;
+import mockit.Mocked;
+import mockit.Verifications;
+import mockit.integration.junit4.JMockit;
 import org.junit.Test;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.ivr.IvrEndpointConversation;
@@ -27,21 +31,33 @@ import org.onesec.raven.ivr.SendMessageDirection;
 import org.raven.conv.ConversationScenarioState;
 import org.raven.expr.impl.ScriptAttributeValueHandlerFactory;
 import org.raven.tree.NodeAttribute;
-import static org.easymock.EasyMock.*;
+import org.junit.runner.RunWith;
+import org.onesec.raven.ivr.Action;
 
 /**
  *
  * @author Mikhail Titov
  */
+@RunWith(JMockit.class)
 public class SendMessageActionNodeTest extends OnesecRavenTestCase
 {
     @Test
-    public void test() throws Exception
+    public void test(
+            @Mocked final Action.Execute execMessage,
+            @Mocked final IvrEndpointConversation conv,
+            @Mocked final ConversationScenarioState state) 
+        throws Exception
     {
+        final Bindings bindings = new SimpleBindings();
+        bindings.put("greeting", "World!");
+        new Expectations() {{
+            state.getBindings(); result = bindings;
+        }};
+        
         SendMessageActionNode actionNode = new SendMessageActionNode();
         actionNode.setName("actionNode");
-        tree.getRootNode().addAndSaveChildren(actionNode);
-        NodeAttribute attr = actionNode.getNodeAttribute("message");
+        testsNode.addAndSaveChildren(actionNode);
+        NodeAttribute attr = actionNode.getAttr("message");
         attr.setValueHandlerType(ScriptAttributeValueHandlerFactory.TYPE);
         attr.setValue("'Hello '+greeting");
         actionNode.setSendDirection(SendMessageDirection.CALLING_PARTY);
@@ -49,19 +65,12 @@ public class SendMessageActionNodeTest extends OnesecRavenTestCase
 
         SendMessageAction action = (SendMessageAction) actionNode.createAction();
 
-        Bindings bindings = new SimpleBindings();
-        IvrEndpointConversation conv = createMock(IvrEndpointConversation.class);
-        ConversationScenarioState state = createMock(ConversationScenarioState.class);
+        assertSame(action.processExecuteMessage(execMessage), AbstractAction.ACTION_EXECUTED_then_EXECUTE_NEXT);
+        
+        new Verifications() {{
+            conv.sendMessage("Hello World!", Charset.forName("windows-1251").name(), SendMessageDirection.CALLING_PARTY);
+        }};
 
-        expect(conv.getConversationScenarioState()).andReturn(state);
-        expect(state.getBindings()).andReturn(bindings);
-        conv.sendMessage("Hello World!",
-                Charset.forName("windows-1251").name(), SendMessageDirection.CALLING_PARTY);
-        replay(conv, state);
-
-        bindings.put("greeting", "World!");
-        action.doExecute(conv);
-
-        verify(conv, state);
+//        verify(conv, state);
     }
 }

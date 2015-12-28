@@ -30,7 +30,6 @@ import javax.media.protocol.FileTypeDescriptor;
 import javax.media.protocol.PushBufferDataSource;
 import org.junit.Test;
 import org.onesec.raven.ivr.InputStreamSource;
-import static org.junit.Assert.*;
 
 /**
  *

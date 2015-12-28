@@ -33,4 +33,12 @@ public interface CallQueueRequestListener
      * Fires when conversation assigned to the request
      */
     public void conversationAssigned(IvrEndpointConversation conversation);
+    /**
+     * Fires when call commutated with operator
+     */
+    public void commutated();
+    /**
+     * Fires when queue call were disconnected
+     */
+    public void disconnected();
 }

@@ -27,5 +27,6 @@ public interface AbonentCommutationManager {
     
     public void abonentReadyToCommutate(IvrEndpointConversation abonentConversation);
     public boolean isCommutationValid();
+    public void addRequestListener(CallQueueRequestListener listener);
     
 }

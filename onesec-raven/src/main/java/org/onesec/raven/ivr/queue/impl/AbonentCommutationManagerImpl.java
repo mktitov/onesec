@@ -15,6 +15,8 @@
  */
 package org.onesec.raven.ivr.queue.impl;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -35,6 +37,7 @@ import org.onesec.raven.ivr.queue.event.RejectedQueueEvent;
 import org.raven.ds.DataContext;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorServiceException;
+import org.raven.sched.impl.AbstractTask;
 import org.raven.tree.Node;
 import org.raven.tree.impl.LoggerHelper;
 
@@ -90,7 +93,19 @@ public class AbonentCommutationManagerImpl implements LazyCallQueueRequest, Abon
     public void addRequestListener(CallQueueRequestListener listener) {
         synchronized(listeners) {
             listeners.add(listener);
+            if (disconnected.get())
+                fireDisconnectedEvent(Arrays.asList(listener));
         }
+    }
+    
+    private void fireDisconnectedEvent(final Collection<CallQueueRequestListener> listeners) {
+        if (!listeners.isEmpty()) 
+            conversation.getExecutorService().executeQuietly(new AbstractTask(conversation.getOwner(), "Delivering DISONNECTED event") {
+                @Override public void doRun() throws Exception {
+                    for (CallQueueRequestListener listener: listeners)
+                        listener.disconnected();
+                }
+            });
     }
 
     @Override
@@ -106,11 +121,13 @@ public class AbonentCommutationManagerImpl implements LazyCallQueueRequest, Abon
     }
     
     private synchronized void processDisconnect() {
-        if (   disconnected.compareAndSet(false, true) 
-            && conversation!=null 
-            && IvrEndpointConversationState.TALKING!=conversation.getState().getId())
-        {
-            conversation.stopConversation(CompletionCode.COMPLETED_BY_ENDPOINT);
+        if (disconnected.compareAndSet(false, true)) {
+            fireDisconnectedEvent(listeners);
+            if (   conversation!=null 
+                && IvrEndpointConversationState.TALKING!=conversation.getState().getId())
+            {
+                conversation.stopConversation(CompletionCode.COMPLETED_BY_ENDPOINT);
+            }
         }
     }
 

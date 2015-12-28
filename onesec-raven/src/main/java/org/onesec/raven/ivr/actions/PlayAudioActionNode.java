@@ -19,20 +19,16 @@ package org.onesec.raven.ivr.actions;
 
 import java.util.List;
 import java.util.Map;
-import javax.script.Bindings;
 import javax.script.SimpleBindings;
-import org.onesec.raven.ivr.IvrAction;
-import org.onesec.raven.ivr.IvrActionNode;
+import org.onesec.raven.ivr.Action;
 import org.onesec.raven.ivr.impl.AudioFileNode;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.conv.ConversationScenario;
-import org.raven.expr.impl.BindingSupportImpl;
 import org.raven.tree.NodeAttribute;
 import org.raven.tree.Viewable;
 import org.raven.tree.ViewableObject;
-import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
 import org.weda.annotations.constraints.NotNull;
 
@@ -41,7 +37,7 @@ import org.weda.annotations.constraints.NotNull;
  * @author Mikhail Titov
  */
 @NodeClass(parentNode=IvrConversationScenarioNode.class)
-public class PlayAudioActionNode extends BaseNode implements IvrActionNode, Viewable
+public class PlayAudioActionNode extends AbstractActionNode implements Viewable
 {
     public final static String AUDIO_FILE_ATTR = "audioFile";
     
@@ -51,19 +47,6 @@ public class PlayAudioActionNode extends BaseNode implements IvrActionNode, View
     @Parameter
     private Integer playAtRepetition;
     
-    private BindingSupportImpl bindingSupport;
-
-    @Override
-    protected void initFields() {
-        super.initFields();
-        bindingSupport = new BindingSupportImpl();
-    }
-
-    @Override
-    public void formExpressionBindings(Bindings bindings) {
-        super.formExpressionBindings(bindings);
-        bindingSupport.addTo(bindings);
-    }
 
     public AudioFileNode getAudioFile() {
         return audioFile;
@@ -73,28 +56,25 @@ public class PlayAudioActionNode extends BaseNode implements IvrActionNode, View
         this.audioFile = audioFile;
     }
 
-    public IvrAction createAction() {
-        bindingSupport.enableScriptExecution();
-        try {
-            Integer _playAtRepetition = playAtRepetition;
-            if (_playAtRepetition==null)
-                return new PlayAudioAction(audioFile);
-            else {
-                SimpleBindings bindings = new SimpleBindings();
-                formExpressionBindings(bindings);
-                int repetitionCount = ((Number) bindings.get(ConversationScenario.REPEITION_COUNT_PARAM)).intValue();
-                return repetitionCount-1==_playAtRepetition? new PlayAudioAction(audioFile) : null;
-            }
-        } finally {
-            bindingSupport.reset();
+    @Override
+    protected Action doCreateAction() {
+        Integer _playAtRepetition = playAtRepetition;
+        if (_playAtRepetition==null)
+            return new PlayAudioAction(audioFile);
+        else {
+            SimpleBindings bindings = new SimpleBindings();
+            formExpressionBindings(bindings);
+            int repetitionCount = ((Number) bindings.get(ConversationScenario.REPEITION_COUNT_PARAM)).intValue();
+            return repetitionCount-1==_playAtRepetition? new PlayAudioAction(audioFile) : null;
         }
     }
-
-    public Map<String, NodeAttribute> getRefreshAttributes() throws Exception
-    {
+    
+    @Override
+    public Map<String, NodeAttribute> getRefreshAttributes() throws Exception {
         return null;
     }
 
+    @Override
     public List<ViewableObject> getViewableObjects(Map<String, NodeAttribute> refreshAttributes)
         throws Exception
     {
@@ -105,6 +85,7 @@ public class PlayAudioActionNode extends BaseNode implements IvrActionNode, View
             return null;
     }
 
+    @Override
     public Boolean getAutoRefresh()
     {
         return true;
@@ -117,5 +98,4 @@ public class PlayAudioActionNode extends BaseNode implements IvrActionNode, View
     public void setPlayAtRepetition(Integer playAtRepetition) {
         this.playAtRepetition = playAtRepetition;
     }
-    
 }

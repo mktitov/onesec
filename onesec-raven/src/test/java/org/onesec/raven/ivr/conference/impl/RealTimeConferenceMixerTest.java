@@ -78,7 +78,7 @@ public class RealTimeConferenceMixerTest {
         verify(executor, owner);
     }
 
-//    @Test
+    @Test
     public void test() throws Exception {
         conf.connect();
         conf.start();
@@ -87,7 +87,7 @@ public class RealTimeConferenceMixerTest {
         Thread.sleep(6000);
     }
     
-//    @Test
+    @Test
     public void threeParticipantsTest() throws Exception {
         conf.connect();
         conf.start();

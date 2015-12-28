@@ -29,7 +29,7 @@ import org.junit.Before;
 import org.onesec.raven.OnesecRavenModule;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.ivr.AudioFile;
-import org.onesec.raven.ivr.Sentence;
+import org.onesec.raven.ivr.SentenceResult;
 import org.onesec.raven.ivr.impl.AudioFileNode;
 import org.raven.tree.DataFileException;
 import org.raven.tree.Node;
@@ -83,7 +83,7 @@ public class SentenceSubactionTestHelper extends OnesecRavenTestCase {
         owner.addAttr(attr);
     }
     
-    protected void checkSentences(String[][] words, List<Sentence> sentences) {
+    protected void checkSentences(String[][] words, List<SentenceResult> sentences) {
         assertEquals(words.length, sentences.size());
         for (int i=0; i<words.length; ++i) {
             List<String> names = new LinkedList<String>();

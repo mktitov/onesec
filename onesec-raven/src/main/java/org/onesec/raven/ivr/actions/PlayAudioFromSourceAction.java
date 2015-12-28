@@ -15,56 +15,64 @@
  */
 package org.onesec.raven.ivr.actions;
 
-import javax.script.Bindings;
-import org.onesec.raven.ivr.InputStreamSource;
 import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.onesec.raven.ivr.impl.IvrUtils;
 import org.raven.BindingNames;
-import org.raven.conv.ConversationScenarioState;
 import org.raven.ds.DataContext;
 import org.raven.ds.impl.DataContextImpl;
 import org.raven.expr.BindingSupport;
-import org.raven.log.LogLevel;
 import org.weda.services.TypeConverter;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class PlayAudioFromSourceAction extends AsyncAction {
+public class PlayAudioFromSourceAction extends AbstractPlayAudioAction
+{
     
-    private final static String NAME = "Play audio from source";
     private final PlayAudioFromSourceActionNode owner;
-    private final TypeConverter converter;
 
     public PlayAudioFromSourceAction(PlayAudioFromSourceActionNode owner, TypeConverter converter) {
-        super(NAME);
+        super("Play from source: "+owner.getDataSource().getName(), converter);
         this.owner = owner;
-        this.converter = converter;
+    }
+
+////    public PlayAudioFromSourceAction(PlayAudioFromSourceActionNode owner, TypeConverter converter) {
+////        super(NAME);
+////        this.owner = owner;
+////        this.converter = converter;
+////    }
+////
+////    @Override?
+//    protected void doExecute(IvrEndpointConversation conversation) throws Exception {
+//        BindingSupport bindingSupport = owner.getBindingSupport();
+//        try {
+//            ConversationScenarioState state = conversation.getConversationScenarioState();
+//            Bindings bindings = state.getBindings();
+//            bindingSupport.putAll(bindings);
+//            DataContext context = (DataContext) bindings.get(BindingNames.DATA_CONTEXT_BINDING);
+//            if (context==null)
+//                context = new DataContextImpl();
+//            InputStreamSource data = converter.convert(InputStreamSource.class, owner.getFieldValue(context), null);
+//            if (data==null) {
+//                if (owner.isLogLevelEnabled(LogLevel.ERROR))
+//                    owner.getLogger().error("Received null data");
+//            } else IvrUtils.playAudioInAction(this, conversation, data);
+//        } finally {
+//            bindingSupport.reset();
+//        }
+//    }
+
+    @Override
+    protected Object getAudio(IvrEndpointConversation conversation) throws Exception {
+        DataContext context = (DataContext) conversation.getConversationScenarioState().getBindings().get(
+                BindingNames.DATA_CONTEXT_BINDING);
+        if (context==null)
+            context = new DataContextImpl();
+        return owner.getFieldValue(context);
     }
 
     @Override
-    protected void doExecute(IvrEndpointConversation conversation) throws Exception {
-        BindingSupport bindingSupport = owner.getBindingSupport();
-        try {
-            ConversationScenarioState state = conversation.getConversationScenarioState();
-            Bindings bindings = state.getBindings();
-            bindingSupport.putAll(bindings);
-            DataContext context = (DataContext) bindings.get(BindingNames.DATA_CONTEXT_BINDING);
-            if (context==null)
-                context = new DataContextImpl();
-            InputStreamSource data = converter.convert(InputStreamSource.class, owner.getFieldValue(context), null);
-            if (data==null) {
-                if (owner.isLogLevelEnabled(LogLevel.ERROR))
-                    owner.getLogger().error("Received null data");
-            } else IvrUtils.playAudioInAction(this, conversation, data);
-        } finally {
-            bindingSupport.reset();
-        }
+    protected BindingSupport getBindingSupport() {
+        return owner.getBindingSupport();
     }
-
-    public boolean isFlowControlAction() {
-        return false;
-    }
-    
 }
