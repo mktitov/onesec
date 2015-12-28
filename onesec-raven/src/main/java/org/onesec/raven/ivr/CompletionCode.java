@@ -31,5 +31,6 @@ public enum CompletionCode
     CALL_DURATION_TOO_LONG,
     TERMINAL_NOT_READY,
     TRANSFER_ERROR,
-    UNPARK_ERROR
+    UNPARK_ERROR,
+//    COMPLETED_BY_OPERATOR, //used in queues
 }

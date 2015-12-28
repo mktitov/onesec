@@ -45,15 +45,15 @@ public enum Codec
                 break;
             case 8 :
                 ciscoMediaCapabilities = new CiscoMediaCapability[]{new CiscoMediaCapability(2, 60)};
-                audioFormat = new AudioFormat(AlawAudioFormat.ALAW_RTP, 8000d, 8, 1);
+                audioFormat = new AlawAudioFormat(AlawAudioFormat.ALAW_RTP, new AudioFormat(AlawAudioFormat.ALAW_RTP, 8000d, 8, 1));
                 break;
             case 100:
                 ciscoMediaCapabilities = null;
                 audioFormat = new AudioFormat(AudioFormat.LINEAR, 8000d, 8, 1, -1, 0, 8, 16000.0, byte[].class);
                 break;
             case -1 :
-                ciscoMediaCapabilities = new CiscoMediaCapability[]{new CiscoMediaCapability(2, 60),
-                    new CiscoMediaCapability(4, 60), new CiscoMediaCapability(11, 60)};
+                ciscoMediaCapabilities = new CiscoMediaCapability[]{
+                    new CiscoMediaCapability(4, 60), new CiscoMediaCapability(11, 60), new CiscoMediaCapability(2, 60)};
                 audioFormat = null;
                 break;
             default : 

@@ -58,7 +58,7 @@ public interface CallsQueueOperator extends Node, StatisticCollector {
      */
     public boolean processRequest(CallsQueue queue, CallQueueRequestController request
             , IvrConversationScenario conversationScenario, AudioFile greeting
-            , String operatorPhoneNumbers);
+            , String operatorPhoneNumbers, Integer inviteTimeout);
     public boolean resetBusyTimer();
     public CallsQueueOperator callTransferedFromOperator(String phoneNumber, CallsCommutationManager commutationManager);
     public boolean callTransferedToOperator(CallsCommutationManager commutationManager);

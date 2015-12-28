@@ -224,7 +224,7 @@ public class CiscoJtapiTerminal implements CiscoTerminalObserver, AddressObserve
                 if (calls.size()>=maxChannels)
                     throw new Exception("Can't invite oppenent to conversation. Too many opened channels");
 //                activeCalls.incrementAndGet();
-                call = provider.createCall();
+                call = provider.createCall();                
                 conv = new IvrEndpointConversationImpl(term, this, executor, scenario
                         , rtpStreamManager, enableIncomingRtp, address, bindings, sharePort
                         , startRtpImmediatelly, callingNumber);

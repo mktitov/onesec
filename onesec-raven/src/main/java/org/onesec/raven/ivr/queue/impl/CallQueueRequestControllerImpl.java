@@ -304,6 +304,7 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
                     CallTransferedQueueEvent transferEvent = transfered? (CallTransferedQueueEvent)event : null;
                     if (transfered) {
                         cdr.setValue(TRANSFERED, 'T');
+                        cdr.setValue(COMPLETION_CODE, CompletionCode.COMPLETED_BY_OPPONENT.name());
                         addToLog(String.format("transfered to op. (%s) number (%s)"
                                 , transferEvent.getOperatorId(), transferEvent.getOperatorNumber()));
                     } else {
@@ -383,7 +384,7 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
 
     public void addToLog(String message)
     {
-        String time = new SimpleDateFormat("hh:mm:ss").format(new Date());
+        String time = new SimpleDateFormat("HH:mm:ss").format(new Date());
 //        if (log==null)
 //            log = new StringBuilder(time);
 //        else

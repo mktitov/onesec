@@ -36,6 +36,7 @@ import org.onesec.core.services.ProviderRegistry;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.impl.CCMCallOperatorNode;
 import org.onesec.raven.impl.ProviderNode;
+import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.actions.PauseActionNode;
 import org.onesec.raven.ivr.actions.StopConversationActionNode;
@@ -558,6 +559,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         endpoint.setLogLevel(LogLevel.TRACE);
         endpoint.setEnableIncomingRtp(Boolean.TRUE);
         endpoint.setShareInboundOutboundPort(Boolean.TRUE);
+        endpoint.setCodec(Codec.G711_A_LAW);
         assertTrue(endpoint.start());
         endpoints.add(endpoint);
     }

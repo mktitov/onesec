@@ -28,7 +28,14 @@ public class AlawDepacketizer extends DePacketizer {
     private final static String PLUGIN_NAME = "A-Law DePacketizer";
 
     public AlawDepacketizer() {
-        this.inputFormats = new Format[] { new AudioFormat("ALAW/rtp") };
+        this.inputFormats = new Format[] {new AlawAudioFormat(AlawAudioFormat.ALAW_RTP, new AudioFormat(
+                AlawAudioFormat.ALAW_RTP,
+                8000,
+                8,
+                1,
+                Format.NOT_SPECIFIED,
+                Format.NOT_SPECIFIED
+            ))};
     }
 
     @Override
@@ -39,11 +46,19 @@ public class AlawDepacketizer extends DePacketizer {
     @Override
     public Format[] getSupportedOutputFormats(Format in) {
         if (in == null) 
-            return new Format[]{new AudioFormat("ULAW")};
+//            return new Format[]{new AudioFormat("ALAW")};
+            return new Format[]{new AlawAudioFormat(AudioFormat.ALAW, new AudioFormat(
+                AudioFormat.ALAW,
+                8000,
+                8,
+                1,
+                Format.NOT_SPECIFIED,
+                Format.NOT_SPECIFIED
+            ))};
         if (BasicPlugIn.matches(in, this.inputFormats) == null) 
             return new Format[1];
         if (!(in instanceof AudioFormat)) 
-            return new Format[]{new AudioFormat("ULAW")};
+            return new Format[]{new AudioFormat("ALAW")};
         AudioFormat af = (AudioFormat) in;
         return new Format[]{new AudioFormat("ALAW", af.getSampleRate(), af.getSampleSizeInBits(), 
                 af.getChannels())};

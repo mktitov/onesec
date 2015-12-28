@@ -32,7 +32,6 @@ import org.onesec.raven.codec.AlawPacketizer;
 import org.onesec.raven.codec.UlawPacketizer;
 import org.onesec.raven.codec.g729.G729Decoder;
 import org.onesec.raven.codec.g729.G729Depacketizer;
-import org.onesec.raven.codec.g729.G729FullDecoder;
 import org.onesec.raven.codec.g729.G729Encoder;
 import org.onesec.raven.codec.g729.G729Packetizer;
 import org.onesec.raven.ivr.CodecConfig;
@@ -49,10 +48,9 @@ public class CodecManagerImpl implements CodecManager {
     private final Logger logger;
     private final Format alawRtpFormat;
     private final Format g729RtpFormat;
-    private final Map<Format/*inFormat*/, Map<Format/*outFormat*/, CodecConfigMeta[]>> cache =
-            new HashMap<Format, Map<Format, CodecConfigMeta[]>>();
-    private final Map<String, Class> parsers = new HashMap<String, Class>();
-    private final Map<String, Class> coders = new HashMap<String, Class>();
+    private final Map<Format/*inFormat*/, Map<Format/*outFormat*/, CodecConfigMeta[]>> cache = new HashMap<>();
+    private final Map<String, Class> parsers = new HashMap<>();
+    private final Map<String, Class> coders = new HashMap<>();
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
     private FormatInfo[] formats;
 
@@ -127,7 +125,8 @@ public class CodecManagerImpl implements CodecManager {
                 , PlugInManager.CODEC);
         logger.debug("G729 depacketizer ({}) successfully added", G729Depacketizer.class.getName());
 
-        alawRtpFormat = p.getSupportedOutputFormats(null)[0];
+        alawRtpFormat = adep.getSupportedInputFormats()[0];
+//        System.out.println("\n\nALAW FORMAT: "+alawRtpFormat.toString()+"\n\n");
         g729RtpFormat = gp.getSupportedOutputFormats(null)[0];
 
         PlugInManager.commit();
@@ -192,14 +191,17 @@ public class CodecManagerImpl implements CodecManager {
         }
     }
     
+    @Override
     public Format getAlawRtpFormat() {
         return alawRtpFormat;
     }
 
+    @Override
     public Format getG729RtpFormat() {
         return g729RtpFormat;
     }
 
+    @Override
     public Demultiplexer buildDemultiplexer(String contentType) {
         Class parserClass = parsers.get(contentType);
         try {
@@ -211,6 +213,7 @@ public class CodecManagerImpl implements CodecManager {
         }
     }
     
+    @Override
     public Multiplexer buildMultiplexer(String contentType) {
         Class parserClass = coders.get(contentType);
         try {
@@ -222,6 +225,7 @@ public class CodecManagerImpl implements CodecManager {
         }
     }
     
+    @Override
     public CodecConfig[] buildCodecChain(AudioFormat inFormat, AudioFormat outFormat) throws CodecManagerException {
         try {
             if (inFormat.getSampleRate()==AudioFormat.NOT_SPECIFIED)

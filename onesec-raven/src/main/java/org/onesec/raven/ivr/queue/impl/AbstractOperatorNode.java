@@ -121,9 +121,10 @@ public abstract class AbstractOperatorNode extends BaseNode implements CallsQueu
     }
     
     //CallQueueOpertor's method
+    @Override
     public boolean processRequest(CallsQueue queue, CallQueueRequestController request
             , IvrConversationScenario conversationScenario, AudioFile greeting
-            , String operatorPhoneNumbers)
+            , String operatorPhoneNumbers, Integer inviteTimeout)
     {
         totalRequests.incrementAndGet();
         if (!Status.STARTED.equals(getStatus()) || !active) {
@@ -131,7 +132,7 @@ public abstract class AbstractOperatorNode extends BaseNode implements CallsQueu
             return false;
         }
         boolean res =  doProcessRequest(queue, request, conversationScenario, greeting
-                , operatorPhoneNumbers);
+                , operatorPhoneNumbers, inviteTimeout);
         if (res)
             processingRequestCount.incrementAndGet();
         return res;
@@ -147,20 +148,21 @@ public abstract class AbstractOperatorNode extends BaseNode implements CallsQueu
 
     protected abstract boolean doProcessRequest(CallsQueue queue, CallQueueRequestController request
             , IvrConversationScenario conversationScenario, AudioFile greeting
-            , String operatorPhoneNumbers);
+            , String operatorPhoneNumbers, Integer inviteTimeout);
 
     /**
      * Create and returns the commutation manager.
      * @param queue
      * @param request
      * @param phoneNumbers
+     * @param invTimeout
      * @param conversationScenario
      * @param greeting
      * @return 
      */
     protected CallsCommutationManagerImpl commutate(CallsQueue queue
             , CallQueueRequestController request
-            , String phoneNumbers, IvrConversationScenario conversationScenario, AudioFile greeting)
+            , String phoneNumbers, Integer invTimeout, IvrConversationScenario conversationScenario, AudioFile greeting)
         throws Exception
     {
         request.fireOperatorQueueEvent(getName(), getPersonId(), getPersonDesc());
@@ -168,7 +170,8 @@ public abstract class AbstractOperatorNode extends BaseNode implements CallsQueu
         String[] numbers = RavenUtils.split(phoneNumbers, ",");
         if (numbers==null || numbers.length==0) 
             throw new Exception("Operator phone numbers not defined");
-        CallsCommutationManagerImpl manager = new CallsCommutationManagerImpl(executor, request, inviteTimeout
+        CallsCommutationManagerImpl manager = new CallsCommutationManagerImpl(executor, request
+                , invTimeout!=null? invTimeout : inviteTimeout
                 , parallelCallAfter, queue, endpointWaitTimeout, numbers, conversationScenario
                 , conversationsBridgeManager, endpointPool, this);
         request.addToLog(String.format("handling by operator (%s)", getName()));

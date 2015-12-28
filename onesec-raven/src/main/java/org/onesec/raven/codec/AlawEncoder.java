@@ -37,14 +37,14 @@ public class AlawEncoder extends com.ibm.media.codec.audio.AudioCodec
 
         defaultOutputFormats = new AudioFormat[]
             {
-            new AudioFormat(
+            new AlawAudioFormat(AudioFormat.ALAW, new AudioFormat(
                 AudioFormat.ALAW,
                 8000,
                 8,
                 1,
                 Format.NOT_SPECIFIED,
                 Format.NOT_SPECIFIED
-            )};
+            )) };
         PLUGIN_NAME = "pcm to alaw converter";
     }
 
@@ -57,16 +57,24 @@ public class AlawEncoder extends com.ibm.media.codec.audio.AudioCodec
 
         supportedOutputFormats = new AudioFormat[]
             {
-            new AudioFormat(
+            new AlawAudioFormat(AudioFormat.ALAW, new AudioFormat(
                 AudioFormat.ALAW,
                 sampleRate,
                 8,
                 1,
                 Format.NOT_SPECIFIED,
                 Format.NOT_SPECIFIED
-            )};
+            ))};
 
         return supportedOutputFormats;
+    }
+    
+    @Override
+    public Format setOutputFormat(Format format)
+    {
+        if (format instanceof AudioFormat && AlawAudioFormat.ALAW.equals(format.getEncoding()))
+            format = new AlawAudioFormat(AlawAudioFormat.ALAW, format);
+        return super.setOutputFormat(format);
     }
 
     private int calculateOutputSize(int inputLength)

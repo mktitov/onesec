@@ -28,11 +28,17 @@ public class AlawPacketizer extends UlawPacketizer
 {
     public AlawPacketizer()
     {
-        this.supportedInputFormats = new AudioFormat[] {
-            new AudioFormat(AudioFormat.ALAW, -1.0D, 8, 1, -1, -1, 8, -1.0D, Format.byteArray) };
+        this.supportedInputFormats = new AudioFormat[] { 
+            new AlawAudioFormat(
+                AlawAudioFormat.ALAW,
+                new AudioFormat(AudioFormat.ALAW, -1.0D, 8, 1, -1, -1, 8, -1.0D, Format.byteArray)) 
+        };
 
-        this.defaultOutputFormats = new AudioFormat[] {
-            new AudioFormat(AlawAudioFormat.ALAW_RTP, -1.0D, 8, 1, -1, -1, 8, -1.0D, Format.byteArray) };
+        this.defaultOutputFormats = new AudioFormat[] { 
+            new AlawAudioFormat(
+                    AlawAudioFormat.ALAW_RTP,
+                    new AudioFormat(AlawAudioFormat.ALAW_RTP, -1.0D, 8, 1, -1, -1, 8, -1.0D, Format.byteArray))
+        };
 
         this.PLUGIN_NAME = "A-Law Packetizer";
     }
@@ -43,7 +49,10 @@ public class AlawPacketizer extends UlawPacketizer
         AudioFormat af = (AudioFormat)in;
 
         this.supportedOutputFormats = new AudioFormat[] {
-            new AudioFormat(AlawAudioFormat.ALAW_RTP, af.getSampleRate(), 8, 1, -1, -1, 8, -1.0D, Format.byteArray) };
+            new AlawAudioFormat(
+                    AlawAudioFormat.ALAW_RTP,
+                    new AudioFormat(AlawAudioFormat.ALAW_RTP, af.getSampleRate(), 8, 1, -1, -1, 8, -1.0D, Format.byteArray)) 
+        };
 
         return this.supportedOutputFormats;
     }
@@ -52,7 +61,7 @@ public class AlawPacketizer extends UlawPacketizer
     public Format setOutputFormat(Format format)
     {
         if (format instanceof AudioFormat && AlawAudioFormat.ALAW_RTP.equals(format.getEncoding()))
-            format = new AlawAudioFormat(format);
+            format = new AlawAudioFormat(AlawAudioFormat.ALAW_RTP, format);
         return super.setOutputFormat(format);
     }
 }

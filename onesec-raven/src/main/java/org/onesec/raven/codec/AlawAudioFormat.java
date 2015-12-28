@@ -30,9 +30,9 @@ public class AlawAudioFormat extends AudioFormat
     
     private double koef = 0d;
 
-    public AlawAudioFormat(Format format)
+    public AlawAudioFormat(String formatName, Format format)
     {
-        super(ALAW_RTP);
+        super(formatName);
         copy(format);
     }
 

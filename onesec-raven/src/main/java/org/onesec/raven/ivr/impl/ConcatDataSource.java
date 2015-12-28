@@ -173,8 +173,8 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
         return completionPromise.getFuture();
     }
 
-    private void replaceSourceProcessor(final SourceProcessor newSourceProcessor) {
-        if (stopped.get()) {
+    private void replaceSourceProcessor(final SourceProcessor newSourceProcessor, final boolean stopping) {
+        if (!stopping && stopped.get() ) {
             if (newSourceProcessor!=null) {
                 newSourceProcessor.getCompletionPromise().completeWithValue(null);
             }
@@ -261,7 +261,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
     public void close()  {
         if (!stopped.compareAndSet(false, true))
             return;
-        replaceSourceProcessor(null);
+        replaceSourceProcessor(null, true);
         buffers.clear();
         try {
             while (streamThreadRunning.get())
@@ -281,7 +281,7 @@ public class ConcatDataSource extends PushBufferDataSource implements AudioStrea
     public void reset() {
         if (logger.isDebugEnabled())
             logger.debug("Reseting audio stream");
-        replaceSourceProcessor(null);
+        replaceSourceProcessor(null, false);
     }
 
     void setStreamThreadRunning(boolean streamThreadRunning) {

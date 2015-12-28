@@ -37,7 +37,7 @@ public class CallsQueueVirtualOperatorNode extends AbstractOperatorNode {
     @Override
     protected boolean doProcessRequest(CallsQueue queue, CallQueueRequestController request
             , IvrConversationScenario conversationScenario, AudioFile greeting
-            , String operatorPhoneNumbers)
+            , String operatorPhoneNumbers, Integer inviteTimeout)
     {
         if (request.getOperatorPhoneNumbers()==null) {
             if (isLogLevelEnabled(LogLevel.ERROR))
@@ -46,7 +46,7 @@ public class CallsQueueVirtualOperatorNode extends AbstractOperatorNode {
             return false;
         }
         try {
-            commutate(queue, request, request.getOperatorPhoneNumbers(), conversationScenario, greeting);
+            commutate(queue, request, request.getOperatorPhoneNumbers(), inviteTimeout, conversationScenario, greeting);
             return true;
         } catch (Throwable e) {
             if (isLogLevelEnabled(LogLevel.ERROR))

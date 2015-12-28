@@ -27,6 +27,7 @@ import org.raven.ds.DataContext;
  */
 public interface CallQueueRequest
 {
+    
     /**
      * Returns the conversation for the call. Can return null if conversation is not assigned to
      * the request yet (lazy request)
