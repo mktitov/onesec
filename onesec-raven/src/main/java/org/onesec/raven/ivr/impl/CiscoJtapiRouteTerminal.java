@@ -282,6 +282,12 @@ public class CiscoJtapiRouteTerminal implements CiscoTerminalObserver, AddressOb
                         callingNumbers = new String[destinations.length];
                         Arrays.fill(callingNumbers, event.getCallingAddress().getName());
                     }
+                    if (logger.isDebugEnabled())
+                        logger.debug(String.format(
+                                "Routing call (%s) to destinations (%s), callingNumbers (%s)",
+                                event.getCallingAddress().getName(),
+                                Arrays.toString(destinations), 
+                                Arrays.toString(callingNumbers)));
                     sess.selectRoute(destinations, CiscoRouteSession.DEFAULT_SEARCH_SPACE, callingNumbers);
                 }
             }

@@ -294,10 +294,12 @@ public class  CommutationManagerCallImpl
         bindings.put(CALLS_COMMUTATION_MANAGER_BINDING, this);
         bindings.put(CALL_QUEUE_REQUEST_BINDING, manager.getRequest());
         callMoveToState(State.INVITING, null, null);
+        final String operNumber = getOperatorNumber();
+        final String abonentNumber = manager.getOperator().translateAbonentNumber(getRequest().getAbonentNumber(), operNumber);
         endpoint.invite(getOperatorNumber(), (int)manager.getInviteTimeout()/1000, 0
                 , new OperatorConversationListener()
                 , manager.getConversationScenario(), bindings, 
-                getRequest().getAbonentNumber());
+                abonentNumber);
     }
 
     public void commutateCalls() throws IvrConversationBridgeExeption {

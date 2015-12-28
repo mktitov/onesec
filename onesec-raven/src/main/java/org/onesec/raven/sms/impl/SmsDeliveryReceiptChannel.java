@@ -50,6 +50,9 @@ public class SmsDeliveryReceiptChannel extends AbstractDataSource {
     @NotNull @Parameter(defaultValue = "id:(?<messageId>(?:\\d|\\p{Alpha})+).*submit date:(?<submitDate>\\d+) done date:(?<doneDate>\\d+) stat:(?<status>\\p{Alpha}+) err:(?<errorCode>(?:\\d|\\p{Alpha})+).*")
     private String pattern;
     
+    @NotNull @Parameter(defaultValue = "yyMMddHHmm")
+    private String datePattern;
+    
     private Pattern regexpPattern;
 
     public SmsDeliveryReceiptChannel() {
@@ -81,7 +84,9 @@ public class SmsDeliveryReceiptChannel extends AbstractDataSource {
             Matcher matcher = regexpPattern.matcher(report);
             if (matcher.matches()) {
                 Record rec = deliveryReceiptSchema.createRecord();
-                SimpleDateFormat fmt = new SimpleDateFormat("yyMMddHHmm");
+//                SimpleDateFormat fmt = new SimpleDateFormat("yyMMddHHmm");
+                SimpleDateFormat fmt = new SimpleDateFormat(datePattern);
+                fmt.setLenient(false);
                 String messageId = matcher.group(MESSAGE_ID);
                 if (StringUtils.isNumeric(messageId))
                     rec.setValue(MESSAGE_ID, Long.toHexString(new Long(messageId)));
@@ -98,7 +103,7 @@ public class SmsDeliveryReceiptChannel extends AbstractDataSource {
                 getLogger().warn("Can't parse delivery receipt report: {}", report);
         } catch (Exception e) {
             if (isLogLevelEnabled(LogLevel.ERROR))
-                getLogger().error("Error creating DELIVERY RECEIPT report", e);
+                getLogger().error(String.format("Error creating DELIVERY RECEIPT report for response: %s", report), e);
         }
     }    
     
@@ -119,5 +124,13 @@ public class SmsDeliveryReceiptChannel extends AbstractDataSource {
 
     public void setPattern(String pattern) {
         this.pattern = pattern;
+    }    
+
+    public String getDatePattern() {
+        return datePattern;
+    }
+
+    public void setDatePattern(String datePattern) {
+        this.datePattern = datePattern;
     }    
 }

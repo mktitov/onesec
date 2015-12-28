@@ -70,4 +70,5 @@ public interface CallsQueueOperator extends Node, StatisticCollector {
     public String getPersonId();
     public String getPersonDesc();
     public boolean isActive();
+    public String translateAbonentNumber(String abonentNumber, String operatorNumber);
 }

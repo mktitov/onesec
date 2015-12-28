@@ -412,9 +412,11 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     }
 
     private void checkForOpponentPartyTransfered(String opponentNumber) {
-        if (!terminalAddress.equals(opponentNumber) && !ObjectUtils.in(opponentNumber, callingNumber, calledNumber)) {
-            String newNumber = getPartyNumber(true);
-            if (terminalAddress.equals(callingNumber))
+        if (   !terminalAddress.equals(opponentNumber) 
+            && !ObjectUtils.in(opponentNumber, callingNumber, calledNumber, call.getCallingAddress().getName())) 
+        {
+//            String newNumber = getPartyNumber(true);
+            if (terminalAddress.equals(call.getCallingAddress().getName()))
                 calledNumber = opponentNumber;
             else
                 callingNumber = opponentNumber;
@@ -437,6 +439,11 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
     
     private Address getCallingAddress() {
         Address addr = call.getModifiedCallingAddress();
+        if (logger.isDebugEnabled()) {
+            logger.debug("modified calling number: "+(addr==null?addr:addr.getName()));
+            logger.debug("current calling number display name: "+call.getCurrentCallingPartyDisplayName());
+            logger.debug("current calling number: "+(call.getCurrentCallingAddress()==null?null:call.getCurrentCallingAddress().getName()));
+        }            
         return addr != null? addr : call.getCallingAddress();
     }
 

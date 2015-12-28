@@ -25,6 +25,8 @@ import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
 import org.raven.conv.ConversationScenario;
 import org.raven.expr.impl.BindingSupportImpl;
+import org.raven.expr.impl.ScriptAttributeValueHandlerFactory;
+import org.raven.log.LogLevel;
 import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
 import org.weda.annotations.constraints.NotNull;
@@ -49,6 +51,12 @@ public class EndpointPoolRouteRule extends BaseNode implements CallRouteRuleProv
     
     @Parameter(valueHandlerType = NodeReferenceValueHandlerFactory.TYPE)
     private IvrConversationScenario conversationScenario;
+    
+    @Parameter(valueHandlerType = ScriptAttributeValueHandlerFactory.TYPE)
+    private String callingNumberTranslation;
+    
+    @NotNull @Parameter(defaultValue = "false")
+    private Boolean useCallingNumberTranslation;
 
     private BindingSupportImpl bindingSupport;
 
@@ -100,6 +108,23 @@ public class EndpointPoolRouteRule extends BaseNode implements CallRouteRuleProv
     public void setConversationScenario(IvrConversationScenario conversationScenario) {
         this.conversationScenario = conversationScenario;
     }
+
+    public String getCallingNumberTranslation() {
+        return callingNumberTranslation;
+    }
+
+    public void setCallingNumberTranslation(String callingNumberTranslation) {
+        this.callingNumberTranslation = callingNumberTranslation;
+    }
+
+    public Boolean getUseCallingNumberTranslation() {
+        return useCallingNumberTranslation;
+    }
+
+    public void setUseCallingNumberTranslation(Boolean useCallingNumberTranslation) {
+        this.useCallingNumberTranslation = useCallingNumberTranslation;
+    }
+
     
     private class RouteRule implements CallRouteRule {
         private final String ruleKey;
@@ -107,6 +132,7 @@ public class EndpointPoolRouteRule extends BaseNode implements CallRouteRuleProv
         private final IvrEndpointPool pool;
         private final long reserveTimeout;
         private final ConversationScenario conversationScenario;
+        private volatile String[] callingNumbers;
 
         public RouteRule(CiscoCallsRouterNode owner, IvrEndpointPool pool, long reserveTimeout, 
                 ConversationScenario conversationScenario) 
@@ -124,6 +150,14 @@ public class EndpointPoolRouteRule extends BaseNode implements CallRouteRuleProv
             try {
                 bindingSupport.put("callingNumber", callingNumber);
                 Boolean res = accept;
+                if (Boolean.TRUE.equals(res) && useCallingNumberTranslation) {
+                    callingNumbers = new String[]{callingNumberTranslation};
+                    if (isLogLevelEnabled(LogLevel.DEBUG))
+                        getLogger().debug(
+                            String.format("Calling number translated. Original (%s), Translated (%s)", 
+                                    callingNumber, callingNumbers[0]));
+                } else
+                    callingNumbers = null;
                 return res==null? false : res;
             } finally {
                 bindingSupport.reset();
@@ -141,7 +175,7 @@ public class EndpointPoolRouteRule extends BaseNode implements CallRouteRuleProv
         }
 
         public String[] getCallingNumbers() {
-            return null;
+            return callingNumbers;
         }
 
         public String getRuleKey() {

@@ -116,6 +116,11 @@ public class CallsQueueTransferOperatorNode extends BaseNode implements CallsQue
         return false;
     }
 
+    @Override
+    public String translateAbonentNumber(String abonentNumber, String operatorNumber) {
+        return abonentNumber;
+    }
+
     public CallsQueueOperator callTransferedFromOperator(String phoneNumber, CallsCommutationManager commutationManager) {
         throw new UnsupportedOperationException("Not supported yet.");
     }

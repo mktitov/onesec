@@ -55,6 +55,11 @@ public class CallsQueueVirtualOperatorNode extends AbstractOperatorNode {
         }
     }
 
+    @Override
+    public String translateAbonentNumber(String abonentNumber, String operatorNumber) {
+        return abonentNumber;
+    }
+
     public boolean isActive() {
         return true;
     }

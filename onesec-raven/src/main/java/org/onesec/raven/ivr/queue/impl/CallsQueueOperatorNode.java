@@ -22,6 +22,7 @@ import java.util.Date;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import javax.script.Bindings;
 import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.IvrConversationScenario;
 import org.onesec.raven.ivr.queue.CallQueueRequestController;
@@ -32,6 +33,8 @@ import org.onesec.raven.ivr.queue.event.impl.OperatorBusyTimerStartedImpl;
 import org.onesec.raven.ivr.queue.event.impl.OperatorBusyTimerStoppedImpl;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
+import org.raven.expr.impl.BindingSupportImpl;
+import org.raven.expr.impl.ScriptAttributeValueHandlerFactory;
 import org.raven.log.LogLevel;
 import org.raven.sched.impl.AbstractTask;
 import org.weda.annotations.constraints.NotNull;
@@ -44,6 +47,9 @@ import org.weda.annotations.constraints.NotNull;
 public class CallsQueueOperatorNode extends AbstractOperatorNode {
     //время (сек.) на которое оператор заблокируется (перейдет в состояние busy) в случае не успешного звонка
     public final static Integer ON_UNSUCCESS_CALL_BUSY_TIMEOUT = 1; 
+    public static final String OPERATOR_NUMBER_BINDING = "operatorNumber";
+    public static final String ABONENT_NUMBER_BINDING = "abonentNumber";
+
     
     @NotNull @Parameter
     private String phoneNumbers;
@@ -53,12 +59,21 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
     private String personDesc;
     @Parameter
     private Integer busyTimer;
+    
+    @Parameter(valueHandlerType = ScriptAttributeValueHandlerFactory.TYPE) 
+    private String abonentNumberTranslation;
+    
+    @NotNull @Parameter(defaultValue="false")
+    private Boolean useAbonentNumberTranslation;
+    
+    private BindingSupportImpl bindingSupport;
 
     private AtomicBoolean busy;
     private AtomicReference<CallsCommutationManager> commutationManager;
     private AtomicReference<String> request;
     private AtomicLong busyTimerEndTime;
     private AtomicBoolean busyByBusyTimer;
+//    private AtomicLong lastProcessTime;
     
     @Override
     protected void initFields() {
@@ -68,6 +83,14 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
         commutationManager = new AtomicReference<CallsCommutationManager>();
         busyTimerEndTime = new AtomicLong();
         busyByBusyTimer = new AtomicBoolean(false);
+        bindingSupport = new BindingSupportImpl();
+//        lastProcessTime = new AtomicLong();
+    }
+
+    @Override
+    public void formExpressionBindings(Bindings bindings) {
+        super.formExpressionBindings(bindings);
+        bindingSupport.addTo(bindings);
     }
 
     @Override
@@ -122,6 +145,22 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
         this.phoneNumbers = phoneNumbers;
     }
 
+    public String getAbonentNumberTranslation() {
+        return abonentNumberTranslation;
+    }
+
+    public void setAbonentNumberTranslation(String abonentNumberTranslation) {
+        this.abonentNumberTranslation = abonentNumberTranslation;
+    }
+
+    public Boolean getUseAbonentNumberTranslation() {
+        return useAbonentNumberTranslation;
+    }
+
+    public void setUseAbonentNumberTranslation(Boolean useAbonentNumberTranslation) {
+        this.useAbonentNumberTranslation = useAbonentNumberTranslation;
+    }
+
     @Override
     public String getPersonDesc() {
         return getOperatorDesc();
@@ -139,6 +178,20 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
     }
 
     @Override
+    public String translateAbonentNumber(String abonentNumber, String operatorNumber) {
+        if (useAbonentNumberTranslation) {
+            try {
+                bindingSupport.put(ABONENT_NUMBER_BINDING, abonentNumber);
+                bindingSupport.put(OPERATOR_NUMBER_BINDING, operatorNumber);
+                return abonentNumberTranslation;
+            } finally {
+                bindingSupport.reset();
+            }        
+        }
+        return abonentNumber;
+    }
+    
+    @Override
     protected boolean doProcessRequest(CallsQueue queue, CallQueueRequestController request
             , IvrConversationScenario conversationScenario, AudioFile greeting
             , String operatorPhoneNumbers, Integer inviteTimeout)
@@ -150,6 +203,10 @@ public class CallsQueueOperatorNode extends AbstractOperatorNode {
             onBusyRequests.incrementAndGet();
             return false;
         }
+        //todo: сделать проверку времени последней попытки использования
+//        final long _lastProcessTime = lastProcessTime.get();
+//        final long curTime = System.currentTimeMillis();
+//        if (_lastProcessTime != 0l && _lastProcessTime+getMa)
         try {
 //            timeoutEndTime.set(0);
             final SimpleDateFormat fmt = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
