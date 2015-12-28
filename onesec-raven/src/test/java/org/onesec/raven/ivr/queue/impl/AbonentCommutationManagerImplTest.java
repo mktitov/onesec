@@ -29,6 +29,8 @@ import org.onesec.raven.ivr.queue.event.DisconnectedQueueEvent;
 import org.onesec.raven.ivr.queue.event.ReadyToCommutateQueueEvent;
 import org.raven.ds.DataContext;
 import org.raven.log.LogLevel;
+import org.raven.sched.ExecutorService;
+import org.raven.sched.Task;
 import org.raven.tree.Node;
 import org.slf4j.Logger;
 /**
@@ -62,6 +64,7 @@ public class AbonentCommutationManagerImplTest {
         IvrConversationScenario scenario = createMock(IvrConversationScenario.class);
         IvrEndpointConversationEvent conversationEvent = createMock(IvrEndpointConversationEvent.class);
         IvrEndpointConversation conversation = createMock(IvrEndpointConversation.class);
+        ExecutorService executorService = createMock(ExecutorService.class);
         IvrEndpointConversationState convState = createMock(IvrEndpointConversationState.class);
         CallQueueRequestListener requestListener = createMock(CallQueueRequestListener.class);
         DisconnectedQueueEvent disconnectedEvent = createMock(DisconnectedQueueEvent.class);
@@ -86,11 +89,14 @@ public class AbonentCommutationManagerImplTest {
         commutationManager.abonentReadyToCommutate(conversation);
         //abonent conversation stopped
         expect(conversation.getState()).andReturn(convState);
+        expect(conversation.getExecutorService()).andReturn(executorService);
+        expect(conversation.getOwner()).andReturn(owner);
+        expect(executorService.executeQuietly(isA(Task.class))).andReturn(Boolean.TRUE);
         expect(convState.getId()).andReturn(IvrEndpointConversationState.TALKING);
         pool.releaseEndpoint(endpoint);
         
         replay(context, owner, logger, readyEvent, commutationManager, pool, endpoint, scenario
-                , conversationEvent, conversation, requestListener, disconnectedEvent, convState);
+                , conversationEvent, conversation, executorService, requestListener, disconnectedEvent, convState);
         
         AbonentCommutationManagerImpl manager = new AbonentCommutationManagerImpl(abonentNumber, 
                 queueId, priority, owner, context, pool, scenario, inviteTimeout, waitTimeout, null);
@@ -109,7 +115,7 @@ public class AbonentCommutationManagerImplTest {
         listener.conversationStopped(null);
         
         verify(context, owner, logger, readyEvent, commutationManager, pool, endpoint, scenario
-                , conversationEvent, conversation, requestListener, disconnectedEvent, convState);
+                , conversationEvent, conversation, executorService, requestListener, disconnectedEvent, convState);
     }
 
     public static EndpointRequest checkEndpointPoolRequest(final Node owner, 

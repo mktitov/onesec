@@ -39,7 +39,7 @@ import org.raven.tree.ResourceManager;
 public class SayNumberInQueueAction extends AbstractSayWordsAction
 {
     public final static String LAST_SAYED_NUMBER = "lastSayedNumber";
-    private final static String NAME = "Say number in queue action";
+    private final static String NAME = "Say number in queue";
 
     private final AudioFileNode preambleAudio;
     private final SayNumberInQueueActionNode owner;
@@ -56,7 +56,7 @@ public class SayNumberInQueueAction extends AbstractSayWordsAction
     }
 
     @Override
-    protected List<List> formWords(IvrEndpointConversation conversation)
+    protected List formWords(IvrEndpointConversation conversation)
     {
         Bindings bindings = conversation.getConversationScenarioState().getBindings();
         QueuedCallStatus callStatus = (QueuedCallStatus) bindings.get(QueueCallAction.QUEUED_CALL_STATUS_BINDING);

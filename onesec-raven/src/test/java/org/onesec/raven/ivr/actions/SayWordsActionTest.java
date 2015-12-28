@@ -15,17 +15,19 @@
  */
 package org.onesec.raven.ivr.actions;
 
+import java.util.List;
 import java.util.Locale;
-import org.junit.After;
+import javax.script.Bindings;
+import mockit.Mocked;
+import mockit.integration.junit4.JMockit;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.onesec.raven.Constants;
 import org.onesec.raven.OnesecRavenTestCase;
-import org.onesec.raven.ivr.IvrAction;
-import org.raven.conv.impl.ConversationScenarioStateImpl;
+import org.onesec.raven.ivr.IvrEndpointConversation;
+import org.raven.conv.ConversationScenarioState;
 import org.raven.log.LogLevel;
-import org.raven.sched.impl.ExecutorServiceNode;
-import org.raven.tree.Node;
 import org.raven.tree.impl.LoggerHelper;
 import org.raven.tree.impl.ResourcesNode;
 import org.slf4j.LoggerFactory;
@@ -34,52 +36,40 @@ import org.slf4j.LoggerFactory;
  *
  * @author Mikhail Titov
  */
+@RunWith(JMockit.class)
 public class SayWordsActionTest extends OnesecRavenTestCase {
     private LoggerHelper logger = new LoggerHelper(LogLevel.TRACE, "logger", "", LoggerFactory.getLogger(PauseActionTest.class));
     
-    private TestEndpointConversationNode conv;
     private SayWordsActionNode actionNode;
-    private Node wordsNode;
-    private ExecutorServiceNode executor;
     
     @Before
     public void prepare() throws Exception {
         ResourcesNode resources = (ResourcesNode) tree.getRootNode().getNode(ResourcesNode.NAME);
         resources.setDefaultLocale(new Locale("ru"));
-        
-        executor = new ExecutorServiceNode();
-        executor.setName("executor");
-        testsNode.addAndSaveChildren(executor);
-        executor.setCorePoolSize(40);
-        executor.setMaximumPoolSize(40);
-        assertTrue(executor.start());
-
-        conv = new TestEndpointConversationNode();
-        conv.setName("endpoint");
-        testsNode.addAndSaveChildren(conv);
-        conv.setExecutorService(executor);
-        conv.setConversationScenarioState(new ConversationScenarioStateImpl());
-        
+                
         actionNode = new SayWordsActionNode();
         actionNode.setName("action node");
         testsNode.addAndSaveChildren(actionNode);
         actionNode.getAttr(SayWordsActionNode.WORDS_NODE_ATTR).setValue(Constants.TIME_WORDS_RESOURCE);
     }
     
-    @After
-    public void afterTest() {
-        conv.stop();
-    }
-    
     @Test
-    public void test() throws Exception {
-        conv.setFileName("target/words.wav");
-        assertTrue(conv.start());
+    public void test(
+            @Mocked final IvrEndpointConversation conv,
+            @Mocked final ConversationScenarioState state,
+            @Mocked final Bindings bindings) 
+        throws Exception 
+    {        
         actionNode.setWords("вчера сегодня минут минуты");
         assertTrue(actionNode.start());
-        IvrAction action = actionNode.createAction();
+        SayWordsAction action = (SayWordsAction) actionNode.createAction();
         assertNotNull(action);
-        action.execute(conv, null, logger);
-        Thread.sleep(10000);
+        assertEquals(actionNode.getPauseBetweenWords().longValue(), action.getPauseBetweenWords());
+        assertEquals(0l, action.getPauseBetweenWordsGroups());
+        List sentences = action.formWords(conv);
+        assertNotNull(sentences);
+        assertEquals(1, sentences.size());
+        assertTrue(sentences.get(0) instanceof List);
+        assertArrayEquals(new String[]{"вчера", "сегодня", "минут", "минуты"}, ((List)sentences.get(0)).toArray());        
     }
 }

@@ -29,7 +29,7 @@ import org.onesec.raven.impl.Genus;
 import org.onesec.raven.impl.NumberToDigitConverter;
 import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.SayAnyActionException;
-import org.onesec.raven.ivr.Sentence;
+import org.onesec.raven.ivr.SentenceResult;
 import org.onesec.raven.ivr.SubactionSentencesResult;
 import org.onesec.raven.ivr.impl.SentenceImpl;
 import org.onesec.raven.ivr.impl.SubactionSentencesResultImpl;
@@ -60,19 +60,20 @@ public class SayAnyNumberSubaction extends AbstractSentenceSubaction {
         result = parseNumber(value);
     }
 
+    @Override
     public SubactionSentencesResult getResult() {
         return result;
     }
     
     private SubactionSentencesResult parseNumber(String value) throws SayAnyActionException {
-        List<Sentence> sentences = new LinkedList<Sentence>();
+        List<SentenceResult> sentences = new LinkedList<>();
         for (Long number: getNumbersSequence(value))
             sentences.add(createSentence(NumberToDigitConverter.getDigits(number, genus, enableZero)));
         return new SubactionSentencesResultImpl(pauseBetweenSentences, sentences);        
     }
     
-    private Sentence createSentence(List<String> digits) throws SayAnyActionException {
-        List<AudioFile> files = new LinkedList<AudioFile>();
+    private SentenceResult createSentence(List<String> digits) throws SayAnyActionException {
+        List<AudioFile> files = new LinkedList<>();
         for (String digit: digits)
             files.add(getAudioNode(digit));
         return new SentenceImpl(pauseBetweenWords, files);
@@ -82,7 +83,7 @@ public class SayAnyNumberSubaction extends AbstractSentenceSubaction {
         List<String> strNumbers = divideOnGroups(value);
         if (strNumbers.isEmpty())
             return Collections.EMPTY_LIST;
-        List<Long> numbers = new ArrayList<Long>(strNumbers.size());
+        List<Long> numbers = new ArrayList<>(strNumbers.size());
         for (String strNumber: strNumbers) 
             try {
                 int i=0;
@@ -108,7 +109,7 @@ public class SayAnyNumberSubaction extends AbstractSentenceSubaction {
                 if (matcher.matches()) {
                     if (matcher.groupCount()<1)
                         return Collections.EMPTY_LIST;
-                    ArrayList<String> groups = new ArrayList<String>(matcher.groupCount());
+                    ArrayList<String> groups = new ArrayList<>(matcher.groupCount());
                     for (int i=1; i<=matcher.groupCount(); ++i)
                         groups.add(matcher.group(i));
                     return groups;

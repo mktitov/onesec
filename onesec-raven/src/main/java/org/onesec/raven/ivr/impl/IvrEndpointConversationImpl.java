@@ -641,7 +641,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                 for (Map.Entry<String, Object> b: additionalBindings.entrySet())
                     conversationState.setBinding(b.getKey(), b.getValue(), BindingScope.CONVERSATION);
             additionalBindings = null;
-            actionsExecutor = new IvrActionExecutorFacade(this, new LoggerHelper(logger, callLog("")));
+            actionsExecutor = new ActionExecutorFacade(this, new LoggerHelper(logger, callLog("")));
 //            actionsExecutor = new IvrActionsExecutorImpl(this, executor);
 //            actionsExecutor.setLogPrefix(callId+" : ");
             this.bindingSupport = new BindingSupportImpl();
@@ -698,7 +698,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                     audioStream.reset();
                 conversationState.getBindings().put(DTMF_BINDING, ""+dtmfChar);
                 Collection<Node> actions = scenario.makeConversation(conversationState);
-                Collection<IvrAction> ivrActions = new ArrayList<>(10);
+                Collection<Action> ivrActions = new ArrayList<>(10);
                 String bindingId = null;
                 try {
                     bindingId = tree.addGlobalBindings(bindingSupport);
@@ -706,7 +706,7 @@ public class IvrEndpointConversationImpl implements IvrEndpointConversation
                     bindingSupport.put(DTMF_BINDING, ""+dtmfChar);
                     for (Node node: actions)
                         if (node instanceof IvrActionNode) {
-                            IvrAction action = ((IvrActionNode)node).createAction();
+                            Action action = ((IvrActionNode)node).createAction();
                             if (action!=null)
                                 ivrActions.add(action);
                         } else if (node instanceof GotoNode || node instanceof ConversationScenarioPoint)

@@ -18,29 +18,28 @@
 package org.onesec.raven.ivr.actions;
 
 import org.onesec.raven.ivr.CompletionCode;
-import org.onesec.raven.ivr.IvrActionStatus;
-import org.onesec.raven.ivr.IvrEndpointConversation;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class StopConversationAction extends AsyncAction
-{
-    public static final String NAME = "Stop conversation action";
+public class StopConversationAction extends AbstractAction {
+    public static final String NAME = "Stop conversation";
 
-    public StopConversationAction()
-    {
+    public StopConversationAction() {
         super(NAME);
     }
 
-    public boolean isFlowControlAction() {
-        return true;
+    @Override
+    protected ActionExecuted processExecuteMessage(Execute message) throws Exception {
+        sendExecuted(ACTION_EXECUTED_then_STOP);
+        message.getConversation().stopConversation(CompletionCode.COMPLETED_BY_ENDPOINT);        
+        return null;
     }
 
     @Override
-    protected void doExecute(IvrEndpointConversation conversation) throws Exception {
-        setStatus(IvrActionStatus.EXECUTED);
-        conversation.stopConversation(CompletionCode.COMPLETED_BY_ENDPOINT);
+    protected void processCancelMessage() throws Exception {
+        sendExecuted(ACTION_EXECUTED_then_STOP);
     }
+
 }

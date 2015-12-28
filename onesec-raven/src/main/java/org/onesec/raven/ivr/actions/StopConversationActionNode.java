@@ -17,7 +17,7 @@
 
 package org.onesec.raven.ivr.actions;
 
-import org.onesec.raven.ivr.IvrAction;
+import org.onesec.raven.ivr.Action;
 import org.onesec.raven.ivr.IvrActionNode;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.raven.annotations.NodeClass;
@@ -30,8 +30,8 @@ import org.raven.tree.impl.BaseNode;
 @NodeClass(parentNode=IvrConversationScenarioNode.class)
 public class StopConversationActionNode extends BaseNode implements IvrActionNode
 {
-    public IvrAction createAction()
-    {
+    @Override
+    public Action createAction() {
         return new StopConversationAction();
     }
 }

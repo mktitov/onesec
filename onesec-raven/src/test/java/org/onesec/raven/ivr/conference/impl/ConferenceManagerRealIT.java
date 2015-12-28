@@ -55,7 +55,7 @@ import org.raven.tree.impl.ContainerNode;
  *
  * @author Mikhail Titov
  */
-public class ConferenceManagerRealTest extends OnesecRavenTestCase {
+public class ConferenceManagerRealIT extends OnesecRavenTestCase {
     private final static String RP_TEST_NUMBER = "631616";
     
     private ProviderRegistry providerRegistry;

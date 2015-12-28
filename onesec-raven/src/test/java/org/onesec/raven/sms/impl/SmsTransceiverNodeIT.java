@@ -44,7 +44,7 @@ import org.raven.test.PushDataSource;
  *
  * @author Mikhail Titov
  */
-public class SmsTransceiverNodeTest extends OnesecRavenTestCase {
+public class SmsTransceiverNodeIT extends OnesecRavenTestCase {
     private ExecutorServiceNode executor;
     private SmsRecordSchemaNode schema;
     private PushDataSource ds;

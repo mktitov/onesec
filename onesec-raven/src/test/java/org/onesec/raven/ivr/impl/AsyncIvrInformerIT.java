@@ -54,7 +54,7 @@ import static org.onesec.raven.ivr.impl.IvrInformerRecordSchemaNode.*;
  *
  * @author Mikhail Titov
  */
-public class AsyncIvrInformerTest extends OnesecRavenTestCase
+public class AsyncIvrInformerIT extends OnesecRavenTestCase
 {
     private IvrEndpointPoolNode pool;
     private ExecutorServiceNode executor;

@@ -53,7 +53,7 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         Thread.sleep(500);
     }
 
-//    @Test
+    @Test
     public void sendOverRtpTest() throws Exception
     {
         OperationState state = sendOverRtp("target/test.wav", Codec.G711_MU_LAW, 
@@ -62,7 +62,7 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         Thread.sleep(5000);
     }
 
-//    @Test
+    @Test
     public void dataSourceListenerEventsTest() throws Exception
     {
         IncomingRtpStream irtp = manager.getIncomingRtpStream(manager);
@@ -85,7 +85,7 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         verify(listener);
     }
 
-//    @Test
+    @Test
     public void zenitTest() throws Exception
     {
         IncomingRtpStream irtp = manager.getIncomingRtpStream(manager);
@@ -100,7 +100,7 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         irtp.release();
     }
     
-//    @Test
+    @Test
     public void oneListenerTest() throws Exception {
         IncomingRtpStream irtp = manager.getIncomingRtpStream(manager);
         String address = getInterfaceAddress().getHostAddress();
@@ -127,7 +127,7 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         irtp.release();
     }
 
-//    @Test
+    @Test
     public void tenListenerTest() throws Exception
     {
         IncomingRtpStream irtp = manager.getIncomingRtpStream(manager);
@@ -151,7 +151,7 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         irtp.release();
     }
 
-//    @Test
+    @Test
     public void netty_tenListenerTest() throws Exception
     {
         IncomingRtpStream irtp = manager.getIncomingRtpStream(manager);
@@ -175,7 +175,7 @@ public class IncomingRtpStreamImplTest extends RtpManagerTestCase
         irtp.release();
     }
 
-//    @Test
+    @Test
     public void copyToConcatDataSource() throws Exception
     {
         IncomingRtpStream irtp = manager.getIncomingRtpStream(manager);

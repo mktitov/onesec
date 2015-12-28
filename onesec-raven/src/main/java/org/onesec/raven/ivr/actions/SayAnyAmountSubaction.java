@@ -22,7 +22,7 @@ import java.util.Map;
 import org.onesec.raven.impl.NumberToDigitConverter;
 import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.SayAnyActionException;
-import org.onesec.raven.ivr.Sentence;
+import org.onesec.raven.ivr.SentenceResult;
 import org.onesec.raven.ivr.SubactionSentencesResult;
 import org.onesec.raven.ivr.impl.SentenceImpl;
 import org.onesec.raven.ivr.impl.SubactionSentencesResultImpl;
@@ -43,16 +43,17 @@ public class SayAnyAmountSubaction extends AbstractSentenceSubaction {
         throws SayAnyActionException 
     {
         super(params, actionNode, defaultWordsNodes, resourceManager);
-        Sentence sentence = new SentenceImpl(pauseBetweenWords, parseAmount(value));
+        SentenceResult sentence = new SentenceImpl(pauseBetweenWords, parseAmount(value));
         result = new SubactionSentencesResultImpl(pauseBetweenSentences, Arrays.asList(sentence));
     }
 
+    @Override
     public SubactionSentencesResult getResult() {
         return result;
     }
 
     private List<AudioFile> parseAmount(String value) throws SayAnyActionException {
-        List<AudioFile> files = new LinkedList<AudioFile>();
+        List<AudioFile> files = new LinkedList<>();
         final boolean enableZero = parseEnableZero();
         for (String word: NumberToDigitConverter.getCurrencyDigits(Double.parseDouble(value), enableZero))
             files.add(getAudioNode(word));

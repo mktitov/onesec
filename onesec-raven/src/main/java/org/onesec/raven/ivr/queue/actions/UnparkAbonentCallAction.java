@@ -16,30 +16,33 @@
 package org.onesec.raven.ivr.queue.actions;
 
 import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.onesec.raven.ivr.actions.AsyncAction;
+import org.onesec.raven.ivr.actions.AbstractAction;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class UnparkAbonentCallAction extends AsyncAction {
+public class UnparkAbonentCallAction extends AbstractAction {
     
     public final static String NAME = "Unpark queue abonent call";
 
     public UnparkAbonentCallAction() {
-        super(NAME);
+        super(NAME, ACTION_EXECUTED_then_STOP);
     }
 
     @Override
-    protected void doExecute(IvrEndpointConversation conv) throws Exception {
+    protected ActionExecuted processExecuteMessage(Execute message) throws Exception {
+        final IvrEndpointConversation conv = message.getConversation();
         String parkDN = (String) conv.getConversationScenarioState().getBindings().get(
             ParkOperatorCallAction.PARK_NUMBER_BINDING);
         if (parkDN==null)
             throw new Exception("Can't find parked operator call");
         conv.unpark(parkDN);
+        return ACTION_EXECUTED_then_STOP;
     }
 
-    public boolean isFlowControlAction() {
-        return true;
+    @Override
+    protected void processCancelMessage() throws Exception {
+        sendExecuted(ACTION_EXECUTED_then_STOP);
     }
 }

@@ -20,66 +20,122 @@ package org.onesec.raven.ivr.actions;
 import java.io.InputStream;
 import javax.script.Bindings;
 import org.onesec.raven.ivr.AudioFile;
+import org.onesec.raven.ivr.AudioStream;
+import org.onesec.raven.ivr.Cacheable;
 import org.onesec.raven.ivr.InputStreamSource;
 import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.onesec.raven.ivr.impl.IvrUtils;
+import org.onesec.raven.ivr.PlayAudioDP;
+import org.raven.dp.DataProcessorFacade;
 import org.raven.expr.BindingSupport;
+import org.raven.tree.impl.LoggerHelper;
+import org.weda.services.TypeConverter;
 
 /**
  *
  * @author Mikhail Titov
  */
-public abstract class AbstractPlayAudioAction extends AsyncAction implements InputStreamSource
+public abstract class AbstractPlayAudioAction extends AbstractAction
 {
-    private AudioFile audioFile;
-    private Bindings bindings;
-
-    public AbstractPlayAudioAction(String actionName)
+    private final TypeConverter converter;
+    
+    public AbstractPlayAudioAction(String actionName, TypeConverter converter)
     {
         super(actionName);
+        this.converter = converter;
     }
 
-    protected abstract AudioFile getAudioFile(IvrEndpointConversation conversation);
-    
+    protected abstract Object getAudio(IvrEndpointConversation conversation) throws Exception;
+    protected abstract BindingSupport getBindingSupport();
+
     @Override
-    protected void doExecute(IvrEndpointConversation conversation) throws Exception
-    {
-        audioFile = getAudioFile(conversation);
-        bindings = conversation.getConversationScenarioState().getBindings();
-        if (audioFile==null){
-            if (logger.isDebugEnabled())
-                logger.debug("Nothing to play");
-            return;
-        }
-        if (logger.isDebugEnabled())
-            logger.debug("Playing audio from source ({})", audioFile.getPath());
-        IvrUtils.playAudioInAction(this, conversation, this, audioFile);
-        if (logger.isDebugEnabled())
-            logger.debug("Audio source ({}) successfuly played ", audioFile.getPath());
+    public Object processData(Object message) throws Exception {
+        if (message==PlayAudioDP.PLAYED) {
+            sendExecuted(ACTION_EXECUTED_then_EXECUTE_NEXT);
+            return VOID;
+        } else
+            return super.processData(message);
     }
 
-    public boolean isFlowControlAction() {
-        return false;
-    }
-
-    public InputStream getInputStream()
-    {
-        try {
-            BindingSupport bindingSupport = audioFile.getBindingSupport();
-            try {
-                if (bindingSupport!=null)
-                    bindingSupport.putAll(bindings);
-                return audioFile.getAudioFile().getDataStream();
-            } finally {
-                if (bindingSupport!=null)
-                    bindingSupport.reset();
+    @Override
+    protected ActionExecuted processExecuteMessage(Execute message) throws Exception {
+        final IvrEndpointConversation conversation = message.getConversation();
+        final AudioStream audioStream = conversation.getAudioStream();
+        final Object audio = doGetAudio(conversation);
+        if (audio==null){
+            if (getLogger().isDebugEnabled())
+                getLogger().debug("Nothing to play");
+            return ACTION_EXECUTED_then_EXECUTE_NEXT;
+        } else {
+            DataProcessorFacade player = getContext().addChild(getContext().createChild("Player", new PlayAudioDP(audioStream)));
+            InputStreamSource source;
+            Cacheable cacheInfo;
+            if (audio instanceof AudioFile) {
+                final Bindings bindings = conversation.getConversationScenarioState().getBindings();
+                source = new AudioSource((AudioFile)audio, getLogger(), bindings);
+                cacheInfo = (AudioFile)audio;
+            } else {
+                source = converter.convert(InputStreamSource.class, audio, null);
+                cacheInfo = null;
             }
-        }
-        catch (Exception ex) {
-            if (logger.isErrorEnabled())
-                logger.error(String.format("Error geting audio stream from audio file node (%s) ", audioFile.getPath())
-                    , ex);
+            getFacade().sendTo(player, new PlayAudioDP.PlayInputStreamSource(source, cacheInfo));
             return null;
         }
+    }
+    
+    @Override
+    protected void processCancelMessage() throws Exception {
+        sendExecuted(ACTION_EXECUTED_then_EXECUTE_NEXT);
+    }
+    
+    protected Object doGetAudio(IvrEndpointConversation conversation) throws Exception {
+        BindingSupport bindingSupport = prepareBindingSupport(conversation);
+        try {
+            return getAudio(conversation);
+        } finally {
+            if (bindingSupport!=null)
+                bindingSupport.reset();
+        }
+    }
+    
+    private BindingSupport prepareBindingSupport(IvrEndpointConversation conversation) {
+        BindingSupport bindingSupport = getBindingSupport();
+        if (bindingSupport!=null) {
+            final Bindings bindings = conversation.getConversationScenarioState().getBindings();
+            bindingSupport.putAll(bindings);
+        }
+        return bindingSupport;
+    }
+    
+    public static class AudioSource implements InputStreamSource {
+        private final AudioFile audioFile;
+        private final LoggerHelper logger;
+        private final Bindings bindings;
+
+        public AudioSource(AudioFile audioFile, LoggerHelper logger, Bindings bindings) {
+            this.audioFile = audioFile;
+            this.logger = logger;
+            this.bindings = bindings;
+        }
+
+        @Override
+        public InputStream getInputStream() {
+            try {
+                BindingSupport bindingSupport = audioFile.getBindingSupport();
+                try {
+                    if (bindingSupport!=null)
+                        bindingSupport.putAll(bindings);
+                    return audioFile.getAudioFile().getDataStream();
+                } finally {
+                    if (bindingSupport!=null)
+                        bindingSupport.reset();
+                }
+            }
+            catch (Exception ex) {
+                if (logger.isErrorEnabled())
+                    logger.error(String.format("Error geting audio stream from audio file node (%s) ", audioFile.getPath())
+                        , ex);
+                return null;
+            }
+        }    
     }
 }

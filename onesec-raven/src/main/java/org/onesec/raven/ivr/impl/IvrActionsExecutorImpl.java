@@ -22,6 +22,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import org.onesec.raven.ivr.Action;
 import org.onesec.raven.ivr.IvrAction;
 import org.onesec.raven.ivr.IvrActionException;
 import org.onesec.raven.ivr.IvrActionExecutor;
@@ -64,19 +65,24 @@ public class IvrActionsExecutorImpl implements Task, IvrActionExecutor
     public void stop() {
     }
 
-    public synchronized void executeActions(Collection<IvrAction> actions)
-            throws ExecutorServiceException, InterruptedException
-    {
-        cancelActionsExecution();
-        for (IvrAction action: actions)
-            if (action instanceof DtmfProcessPointAction)
-                for (char c: ((DtmfProcessPointAction)action).getDtmfs().toCharArray())
-                    defferedDtmfs.add(c);
-        this.actions = actions;
-        mustCancel = false;
-        running = true;
-        executorService.execute(this);
+    @Override
+    public void executeActions(Collection<Action> actions) throws ExecutorServiceException, InterruptedException {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
+
+//    public synchronized void executeActions(Collection<IvrAction> actions)
+//            throws ExecutorServiceException, InterruptedException
+//    {
+//        cancelActionsExecution();
+//        for (IvrAction action: actions)
+//            if (action instanceof DtmfProcessPointAction)
+//                for (char c: ((DtmfProcessPointAction)action).getDtmfs().toCharArray())
+//                    defferedDtmfs.add(c);
+//        this.actions = actions;
+//        mustCancel = false;
+//        running = true;
+//        executorService.execute(this);
+//    }
 
     public synchronized boolean hasDtmfProcessPoint(char dtmf)
     {
@@ -109,84 +115,84 @@ public class IvrActionsExecutorImpl implements Task, IvrActionExecutor
 
     public void run()
     {
-        try {
-            for (IvrAction action: actions) {
-//                action.setLogPrefix(logPrefix);
-                boolean executeAction = true;
-                try {
-                    statusMessage = String.format("Executing action (%s)", action.getName());
-                    if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
-                        conversation.getOwner().getLogger().debug(getStatusMessage());
-                    if (action instanceof DtmfProcessPointAction)
-                        synchronized(this){
-                            List dtmfs = new ArrayList(collectedDtmfs.size());
-                            String validDtmfs = ((DtmfProcessPointAction)action).getDtmfs();
-                            for (char c: collectedDtmfs)
-                                if (validDtmfs.indexOf(c)>=0)
-                                    dtmfs.add(c);
-                            for (char c: validDtmfs.toCharArray())
-                                defferedDtmfs.remove(c);
-                            executeAction = dtmfs.size()>0;
-                            if (executeAction)
-                                conversation.getConversationScenarioState().getBindings().put(
-                                        IvrEndpointConversation.DTMFS_BINDING, dtmfs);
-                        }
-                    if (executeAction)
-                        action.execute(conversation, null, null);
-                    else {
-                        statusMessage = String.format("Skipping execution of action (%s)", action.getName());
-                        if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
-                            conversation.getOwner().getLogger().debug(getStatusMessage());
-                    }
-                } catch (Throwable ex) {
-                    statusMessage = String.format("Action (%s) execution error", action.getName());
-                    if (conversation.getOwner().isLogLevelEnabled(LogLevel.ERROR))
-                        conversation.getOwner().getLogger().error(getStatusMessage(), ex);
-                    return;
-                }
-                boolean canceling = false;
-                while (executeAction && action.getStatus()!=IvrActionStatus.EXECUTED)
-                {
-                    if (!canceling && isMustCancel())
-                    {
-                        statusMessage = String.format(
-                                "Canceling (%s) action execution", action.getName());
-                        if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
-                            conversation.getOwner().getLogger().debug(getStatusMessage());
-                        try {
-                            action.cancel();
-                        } catch (IvrActionException ex) {
-                            statusMessage = String.format(
-                                    "Error canceling execution of the action (%s)"
-                                    , action.getName());
-                            if (conversation.getOwner().isLogLevelEnabled(LogLevel.ERROR))
-                                conversation.getOwner().getLogger().error(getStatusMessage(), ex);
-                        }
-                        canceling = true;
-                    }
-                    try {
-                        Thread.sleep(10);
-                    } catch (InterruptedException ex) {
-                        statusMessage = "Executor thread was interrupted";
-                        if (conversation.getOwner().isLogLevelEnabled(LogLevel.ERROR))
-                            conversation.getOwner().getLogger().error(getStatusMessage());
-                        Thread.currentThread().interrupt();
-                        return;
-                    }
-                }
-                if (isMustCancel() || (executeAction && action.isFlowControlAction()))
-                    return;
-            }
-        }
-        finally
-        {
-            running = false;
-            actions = null;
-            synchronized(this)
-            {
-                notifyAll();
-            }
-        }
+//        try {
+//            for (IvrAction action: actions) {
+////                action.setLogPrefix(logPrefix);
+//                boolean executeAction = true;
+//                try {
+//                    statusMessage = String.format("Executing action (%s)", action.getName());
+//                    if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
+//                        conversation.getOwner().getLogger().debug(getStatusMessage());
+//                    if (action instanceof DtmfProcessPointAction)
+//                        synchronized(this){
+//                            List dtmfs = new ArrayList(collectedDtmfs.size());
+//                            String validDtmfs = ((DtmfProcessPointAction)action).getDtmfs();
+//                            for (char c: collectedDtmfs)
+//                                if (validDtmfs.indexOf(c)>=0)
+//                                    dtmfs.add(c);
+//                            for (char c: validDtmfs.toCharArray())
+//                                defferedDtmfs.remove(c);
+//                            executeAction = dtmfs.size()>0;
+//                            if (executeAction)
+//                                conversation.getConversationScenarioState().getBindings().put(
+//                                        IvrEndpointConversation.DTMFS_BINDING, dtmfs);
+//                        }
+//                    if (executeAction)
+//                        action.execute(conversation, null, null);
+//                    else {
+//                        statusMessage = String.format("Skipping execution of action (%s)", action.getName());
+//                        if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
+//                            conversation.getOwner().getLogger().debug(getStatusMessage());
+//                    }
+//                } catch (Throwable ex) {
+//                    statusMessage = String.format("Action (%s) execution error", action.getName());
+//                    if (conversation.getOwner().isLogLevelEnabled(LogLevel.ERROR))
+//                        conversation.getOwner().getLogger().error(getStatusMessage(), ex);
+//                    return;
+//                }
+//                boolean canceling = false;
+//                while (executeAction && action.getStatus()!=IvrActionStatus.EXECUTED)
+//                {
+//                    if (!canceling && isMustCancel())
+//                    {
+//                        statusMessage = String.format(
+//                                "Canceling (%s) action execution", action.getName());
+//                        if (conversation.getOwner().isLogLevelEnabled(LogLevel.DEBUG))
+//                            conversation.getOwner().getLogger().debug(getStatusMessage());
+//                        try {
+//                            action.cancel();
+//                        } catch (IvrActionException ex) {
+//                            statusMessage = String.format(
+//                                    "Error canceling execution of the action (%s)"
+//                                    , action.getName());
+//                            if (conversation.getOwner().isLogLevelEnabled(LogLevel.ERROR))
+//                                conversation.getOwner().getLogger().error(getStatusMessage(), ex);
+//                        }
+//                        canceling = true;
+//                    }
+//                    try {
+//                        Thread.sleep(10);
+//                    } catch (InterruptedException ex) {
+//                        statusMessage = "Executor thread was interrupted";
+//                        if (conversation.getOwner().isLogLevelEnabled(LogLevel.ERROR))
+//                            conversation.getOwner().getLogger().error(getStatusMessage());
+//                        Thread.currentThread().interrupt();
+//                        return;
+//                    }
+//                }
+//                if (isMustCancel() || (executeAction && action.isFlowControlAction()))
+//                    return;
+//            }
+//        }
+//        finally
+//        {
+//            running = false;
+//            actions = null;
+//            synchronized(this)
+//            {
+//                notifyAll();
+//            }
+//        }
     }
 
     public void setLogPrefix(String logPrefix) {

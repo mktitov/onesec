@@ -28,6 +28,8 @@ public interface CommutationManagerCall
     public final static String CALLS_COMMUTATION_MANAGER_BINDING = "queueCommutationManager";
     public final static String CALL_QUEUE_REQUEST_BINDING = "queueRequest";
 
+    public enum State {INIT, NO_FREE_ENDPOINTS, INVITING, OPERATOR_READY, ABONENT_READY, 
+        COMMUTATED, CONVERSATION_STARTED, HANDLED, INVALID}
     /**
      * Returns the operator number (the B number)
      */

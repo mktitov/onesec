@@ -17,8 +17,9 @@
 
 package org.onesec.raven.ivr.queue.impl;
 
-import java.util.LinkedList;
-import java.util.List;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -37,6 +38,7 @@ import org.onesec.raven.ivr.queue.event.OperatorGreetingQueueEvent;
 import org.onesec.raven.ivr.queue.event.ReadyToCommutateQueueEvent;
 import org.onesec.raven.ivr.queue.event.RejectedQueueEvent;
 import org.raven.ds.DataContext;
+import org.raven.sched.impl.AbstractTask;
 import org.raven.tree.impl.LoggerHelper;
 
 /**
@@ -57,7 +59,7 @@ public class CallQueueRequestImpl implements QueuedCallStatus
     private CommutationManagerCall commutationManager;
     private AudioFile operatorGreeting;
     private final AtomicBoolean canceledFlag = new AtomicBoolean(false);
-    private final List<CallQueueRequestListener> listeners = new LinkedList<>();
+    private final Collection<CallQueueRequestListener> listeners = new ConcurrentLinkedQueue<>();
     private final DataContext context;
     private final AtomicReference<CallsQueue> lastQueue;
     private final AtomicLong lastQueuedTime; 
@@ -89,6 +91,12 @@ public class CallQueueRequestImpl implements QueuedCallStatus
         listener.conversationAssigned(conversation);
         if (canceledFlag.get())
             listener.requestCanceled("CANCELED");
+        synchronized(this) {
+            if (isCommutated())
+                fireCommutatedEvent(Arrays.asList(listener));
+            if (isDisconnected())
+                fireDisconnectedEvent(Arrays.asList(listener));
+        }
     }
 
     @Override
@@ -150,8 +158,10 @@ public class CallQueueRequestImpl implements QueuedCallStatus
                     continueConversation = true;
             } else if (event instanceof CommutatedQueueEvent) {
                 status = Status.COMMUTATED;
+                fireCommutatedEvent(listeners);
             } else if (event instanceof DisconnectedQueueEvent) {
                 status = Status.DISCONNECTED;
+                fireDisconnectedEvent(listeners);
             } else if (event instanceof NumberChangedQueueEvent) {
                 prevSerialNumber = serialNumber;
                 serialNumber = ((NumberChangedQueueEvent)event).getCurrentNumber();
@@ -193,6 +203,26 @@ public class CallQueueRequestImpl implements QueuedCallStatus
     private void fireRequestCanceled(String cause) {
         for (CallQueueRequestListener listener: listeners)
             listener.requestCanceled(cause);
+    }
+    
+    private void fireCommutatedEvent(final Collection<CallQueueRequestListener> listeners) {
+        if (!listeners.isEmpty()) 
+            conversation.getExecutorService().executeQuietly(new AbstractTask(conversation.getOwner(), "Delivering COMMUTATED event") {
+                @Override public void doRun() throws Exception {
+                    for (CallQueueRequestListener listener: listeners)
+                        listener.commutated();
+                }
+            });
+    }
+
+    private void fireDisconnectedEvent(final Collection<CallQueueRequestListener> listeners) {
+        if (!listeners.isEmpty()) 
+            conversation.getExecutorService().executeQuietly(new AbstractTask(conversation.getOwner(), "Delivering DISONNECTED event") {
+                @Override public void doRun() throws Exception {
+                    for (CallQueueRequestListener listener: listeners)
+                        listener.disconnected();
+                }
+            });
     }
 
     @Override

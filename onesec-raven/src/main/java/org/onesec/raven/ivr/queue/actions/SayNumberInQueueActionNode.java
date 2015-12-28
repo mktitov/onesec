@@ -17,18 +17,15 @@
 
 package org.onesec.raven.ivr.queue.actions;
 
-import javax.script.Bindings;
 import org.onesec.raven.Constants;
-import org.onesec.raven.ivr.IvrAction;
-import org.onesec.raven.ivr.IvrActionNode;
+import org.onesec.raven.ivr.Action;
+import org.onesec.raven.ivr.actions.AbstractActionNode;
 import org.onesec.raven.ivr.impl.AudioFileNode;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
-import org.raven.expr.impl.BindingSupportImpl;
 import org.raven.tree.Node;
 import org.raven.tree.ResourceManager;
-import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.NodeReferenceValueHandlerFactory;
 import org.raven.tree.impl.ResourceReferenceValueHandlerFactory;
 import org.weda.annotations.constraints.NotNull;
@@ -39,7 +36,7 @@ import org.weda.internal.annotations.Service;
  * @author Mikhail Titov
  */
 @NodeClass(parentNode=IvrConversationScenarioNode.class)
-public class SayNumberInQueueActionNode extends BaseNode implements IvrActionNode
+public class SayNumberInQueueActionNode extends AbstractActionNode
 {
     public final static String ACCEPT_SAY_NUMBER_ATTR = "acceptSayNumber";
     
@@ -60,21 +57,8 @@ public class SayNumberInQueueActionNode extends BaseNode implements IvrActionNod
     @NotNull @Parameter(defaultValue="true")
     private Boolean acceptSayNumber;
 
-    private BindingSupportImpl bindingSupport;
-
     @Override
-    protected void initFields() {
-        super.initFields();
-        bindingSupport = new BindingSupportImpl();
-    }
-
-    @Override
-    public void formExpressionBindings(Bindings bindings) {
-        super.formExpressionBindings(bindings);
-        bindingSupport.addTo(bindings);
-    }
-
-    public IvrAction createAction() {
+    protected Action doCreateAction() {
         return new SayNumberInQueueAction(this, bindingSupport, numbersNode, pauseBeetweenWords, 
             preambleAudio, resourceManager);
     }

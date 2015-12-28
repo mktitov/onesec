@@ -57,7 +57,7 @@ public class PlayActionTestHelper extends OnesecRavenTestCase {
     }
     
     protected void waitForAction(IvrAction action) throws InterruptedException {
-        while (action.getStatus()!=IvrActionStatus.EXECUTED)
-            Thread.sleep(10);
+//        while (action.getStatus()!=IvrActionStatus.EXECUTED)
+//            Thread.sleep(10);
     }
 }

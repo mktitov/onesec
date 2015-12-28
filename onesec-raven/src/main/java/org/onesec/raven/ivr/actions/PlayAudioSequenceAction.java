@@ -22,8 +22,8 @@ import javax.script.Bindings;
 import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.raven.RavenUtils;
-import org.raven.log.LogLevel;
-import org.raven.tree.Node;
+import org.raven.expr.BindingSupport;
+import org.weda.services.TypeConverter;
 
 /**
  *
@@ -31,23 +31,23 @@ import org.raven.tree.Node;
  */
 public class PlayAudioSequenceAction extends AbstractPlayAudioAction
 {
-    public final static String NAME = "Play audio sequence action";
+    public final static String NAME = "Play audio sequence";
     public final static String AUDIO_SEQUENCE_POSITION_BINDING = "audioSequencePosition";
 
     private final List<AudioFile> audioFiles;
-    private final Node owner;
+    private final PlayAudioSequenceActionNode owner;
     private final boolean randomPlay;
 
-    public PlayAudioSequenceAction(Node owner, List<AudioFile> audioFiles, boolean randomPlay)
+    public PlayAudioSequenceAction(PlayAudioSequenceActionNode owner, List<AudioFile> audioFiles, boolean randomPlay, TypeConverter converter)
     {
-        super(NAME);
+        super(NAME, converter);
         this.audioFiles = audioFiles;
         this.owner = owner;
         this.randomPlay = randomPlay;
     }
 
     @Override
-    protected AudioFile getAudioFile(IvrEndpointConversation conversation) 
+    protected Object getAudio(IvrEndpointConversation conversation) 
     {
         String posId = RavenUtils.generateKey(AUDIO_SEQUENCE_POSITION_BINDING, owner);
         Bindings bindings = conversation.getConversationScenarioState().getBindings();
@@ -56,19 +56,19 @@ public class PlayAudioSequenceAction extends AbstractPlayAudioAction
             ++pos;
         else if (randomPlay) {
             pos = getRandomPosition();
-            if (logger.isDebugEnabled())
-                logger.debug("Position ({}) selected randomly", pos);
         }
         if (pos==null || pos<0 || pos>=audioFiles.size())
             pos = 0;
         bindings.put(posId, pos);
-        if (logger.isDebugEnabled())
-            logger.debug("Selected audio file at position ({})", pos);
         return audioFiles.get(pos);
     }
 
-    private int getRandomPosition()
-    {
+    private int getRandomPosition() {
         return ((int)(Math.random()*10*audioFiles.size())) % audioFiles.size();
+    }
+
+    @Override
+    protected BindingSupport getBindingSupport() {
+        return owner.getBindingSupport();
     }
 }

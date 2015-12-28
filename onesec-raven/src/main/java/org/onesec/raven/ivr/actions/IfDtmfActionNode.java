@@ -48,7 +48,7 @@ public class IfDtmfActionNode extends BaseNode {
         Bindings bindings = new SimpleBindings();
         formExpressionBindings(bindings);
         String currentDtmf = (String) bindings.get(IvrEndpointConversation.DTMF_BINDING);
-        return dtmf.equals(currentDtmf)? super.getEffectiveChildrens() : null;
+        return dtmf.equals(currentDtmf)? super.getNodes(): null;
     }
 
     public String getDtmf() {

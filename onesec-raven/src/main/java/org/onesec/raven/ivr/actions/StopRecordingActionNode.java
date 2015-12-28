@@ -15,20 +15,19 @@
  */
 package org.onesec.raven.ivr.actions;
 
-import org.onesec.raven.ivr.IvrAction;
-import org.onesec.raven.ivr.IvrActionNode;
+import org.onesec.raven.ivr.Action;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.raven.annotations.NodeClass;
-import org.raven.tree.impl.BaseNode;
 
 /**
  *
  * @author Mikhail Titov
  */
 @NodeClass(parentNode=IvrConversationScenarioNode.class)
-public class StopRecordingActionNode extends BaseNode implements IvrActionNode {
-
-    public IvrAction createAction() {
+public class StopRecordingActionNode extends AbstractActionNode
+{
+    @Override
+    protected Action doCreateAction() {
         return new StopRecordingAction();
     }
 }

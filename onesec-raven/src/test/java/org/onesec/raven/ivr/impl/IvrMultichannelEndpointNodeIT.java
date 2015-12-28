@@ -52,7 +52,7 @@ import static org.easymock.EasyMock.*;
  *
  * @author Mikhail Titov
  */
-public class IvrMultichannelEndpointNodeTest extends OnesecRavenTestCase
+public class IvrMultichannelEndpointNodeIT extends OnesecRavenTestCase
 {
     private IvrMultichannelEndpointNode endpoint;
     private ExecutorServiceNode executor;

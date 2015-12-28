@@ -21,6 +21,7 @@ import io.netty.util.TimerTask;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -28,7 +29,7 @@ import org.junit.Test;
  * @author Mikhail Titov
  */
 public class HashedWheelTimerTest {
-    @Test
+    @Ignore @Test
     public void test() throws InterruptedException {
         HashedWheelTimer timer = new HashedWheelTimer(1000, TimeUnit.MICROSECONDS);
         final long delay = 100l;

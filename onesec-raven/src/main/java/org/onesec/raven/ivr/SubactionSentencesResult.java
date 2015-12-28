@@ -23,5 +23,5 @@ import java.util.List;
  */
 public interface SubactionSentencesResult extends SayAnySubactionResult {
     public long getPauseBetweenSentences();
-    public List<Sentence> getSentences();
+    public List<SentenceResult> getSentences();
 }

@@ -65,7 +65,7 @@ import org.raven.tree.impl.ContainerNode;
  *
  * @author Mikhail Titov
  */
-public class IvrEndpointConversationImplTest extends OnesecRavenTestCase
+public class IvrEndpointConversationImplIT extends OnesecRavenTestCase
 {
     private RtpStreamManagerNode manager;
     private ExecutorServiceNode executor;

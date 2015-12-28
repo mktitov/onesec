@@ -44,10 +44,10 @@ public class SayNumberAction extends AbstractSayWordsAction {
     }
 
     @Override
-    protected List<List> formWords(IvrEndpointConversation conversation) {
+    protected List formWords(IvrEndpointConversation conversation) {
         actionNode.getBindingSupport().putAll(conversation.getConversationScenarioState().getBindings());
         try {
-            List<List> res = new LinkedList<List>();
+            List<List> res = new LinkedList<>();
             for (Long number: actionNode.getNumbersSequence())
                 res.add(NumberToDigitConverter.getDigits(number, genus, enableZero));
             return res;

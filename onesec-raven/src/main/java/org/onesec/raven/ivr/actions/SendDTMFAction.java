@@ -15,13 +15,11 @@
  */
 package org.onesec.raven.ivr.actions;
 
-import org.onesec.raven.ivr.IvrEndpointConversation;
-
 /**
  *
  * @author Mikhail Titov
  */
-public class SendDTMFAction extends AsyncAction {
+public class SendDTMFAction extends AbstractAction {
     public final static String NAME = "Send DTMF";
     
     private final String dtmfs;
@@ -32,13 +30,15 @@ public class SendDTMFAction extends AsyncAction {
     }
 
     @Override
-    protected void doExecute(IvrEndpointConversation conversation) throws Exception {
-        if (logger.isDebugEnabled())
-            logger.debug("Sending DTMFs: "+dtmfs);
-        conversation.sendDTMF(dtmfs);
+    protected ActionExecuted processExecuteMessage(Execute message) throws Exception {
+        if (getLogger().isDebugEnabled())
+            getLogger().debug("Sending DTMFs: "+dtmfs);
+        message.getConversation().sendDTMF(dtmfs);
+        return ACTION_EXECUTED_then_EXECUTE_NEXT;
     }
 
-    public boolean isFlowControlAction() {
-        return false;
+    @Override
+    protected void processCancelMessage() throws Exception {
+        sendExecuted(ACTION_EXECUTED_then_EXECUTE_NEXT);        
     }
 }

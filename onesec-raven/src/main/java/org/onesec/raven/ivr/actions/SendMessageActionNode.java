@@ -18,15 +18,11 @@
 package org.onesec.raven.ivr.actions;
 
 import java.nio.charset.Charset;
-import javax.script.Bindings;
-import org.onesec.raven.ivr.IvrAction;
-import org.onesec.raven.ivr.IvrActionNode;
+import org.onesec.raven.ivr.Action;
 import org.onesec.raven.ivr.SendMessageDirection;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
-import org.raven.expr.impl.BindingSupportImpl;
-import org.raven.tree.impl.BaseNode;
 import org.weda.annotations.constraints.NotNull;
 
 /**
@@ -34,7 +30,7 @@ import org.weda.annotations.constraints.NotNull;
  * @author Mikhail Titov
  */
 @NodeClass(parentNode=IvrConversationScenarioNode.class)
-public class SendMessageActionNode extends BaseNode implements IvrActionNode
+public class SendMessageActionNode extends AbstractActionNode
 {
     @NotNull @Parameter(defaultValue="windows-1251")
     private Charset encoding;
@@ -45,21 +41,8 @@ public class SendMessageActionNode extends BaseNode implements IvrActionNode
     @NotNull @Parameter
     private SendMessageDirection sendDirection;
 
-    private BindingSupportImpl bindingSupport;
-
     @Override
-    protected void initFields() {
-        super.initFields();
-        bindingSupport = new BindingSupportImpl();
-    }
-
-    @Override
-    public void formExpressionBindings(Bindings bindings) {
-        super.formExpressionBindings(bindings);
-        bindingSupport.addTo(bindings);
-    }
-
-    public IvrAction createAction() {
+    protected Action doCreateAction() {
         return new SendMessageAction(this, bindingSupport);
     }
 

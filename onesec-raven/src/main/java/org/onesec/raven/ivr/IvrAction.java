@@ -18,13 +18,14 @@
 package org.onesec.raven.ivr;
 
 import org.onesec.raven.ivr.impl.IvrActionsExecutorImpl;
+import org.raven.dp.RavenFuture;
 import org.raven.tree.impl.LoggerHelper;
 
 /**
  *
  * @author Mikhail Titov
  */
-public interface IvrAction
+public interface IvrAction 
 {
     /**
      * Returns the action name.
@@ -35,23 +36,26 @@ public interface IvrAction
      * this action
      */
     public boolean isFlowControlAction();
+    
+//    public boolean isCanceled
     /**
      * Executes action for passed in the parameter endpoint
      * @throws IvrActionException
      */
-    public void execute(IvrEndpointConversation conversation, ActionStopListener listener, LoggerHelper logger) throws Exception;
+//    public void execute(IvrEndpointConversation conversation, ActionStopListener listener, LoggerHelper logger) throws Exception;
+    public RavenFuture<IvrAction, IvrActionException> execute(IvrEndpointConversation conversation, LoggerHelper logger);
     /**
      * Returns the action status
      */
-    public IvrActionStatus getStatus();
+//    public IvrActionStatus getStatus();
     /**
      * Cancels the action execution
      */
-    public void cancel() throws IvrActionException;
+//    public void cancel() throws IvrActionException;
     /**
      * Return the current action status message
      */
-    public String getStatusMessage();
+//    public String getStatusMessage();
 
 //    public void setLogPrefix(String prefix);
 //    public void setLogger(LoggerHelper logger);

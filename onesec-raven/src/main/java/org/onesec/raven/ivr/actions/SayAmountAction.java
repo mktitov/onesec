@@ -29,7 +29,7 @@ import org.raven.tree.ResourceManager;
  * @author Mikhail Titov
  */
 public class SayAmountAction extends AbstractSayWordsAction {
-    public final static String NAME = "Say amount action";
+    public final static String NAME = "Say amount";
     private final SayAmountActionNode actionNode;
 
     public SayAmountAction(SayAmountActionNode actionNode, List<Node> numbersNodes, long pauseBetweenWords, 
@@ -39,7 +39,8 @@ public class SayAmountAction extends AbstractSayWordsAction {
         this.actionNode = actionNode;
     }
 
-    protected List<List> formWords(IvrEndpointConversation conversation) {
+    @Override
+    protected List formWords(IvrEndpointConversation conversation) {
         actionNode.getBindingSupport().enableScriptExecution();
         try {
             actionNode.getBindingSupport().putAll(conversation.getConversationScenarioState().getBindings());

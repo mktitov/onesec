@@ -16,15 +16,14 @@
 package org.onesec.raven.ivr.queue.actions;
 
 import javax.script.Bindings;
-import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.onesec.raven.ivr.actions.AsyncAction;
+import org.onesec.raven.ivr.actions.AbstractAction;
 import org.onesec.raven.ivr.queue.CommutationManagerCall;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class CancelQueueRequestByOperatorAction extends AsyncAction {
+public class CancelQueueRequestByOperatorAction extends AbstractAction {
     private static String NAME = "Cancel queue request action";
 
     public CancelQueueRequestByOperatorAction() {
@@ -32,17 +31,30 @@ public class CancelQueueRequestByOperatorAction extends AsyncAction {
     }
 
     @Override
-    protected void doExecute(IvrEndpointConversation conv) throws Exception {
-        Bindings bindings = conv.getConversationScenarioState().getBindings();
+    protected ActionExecuted processExecuteMessage(Execute message) throws Exception {
+        final Bindings bindings = message.getConversation().getConversationScenarioState().getBindings();
         CommutationManagerCall commutationManager = (CommutationManagerCall) 
                 bindings.get(CommutationManagerCall.CALLS_COMMUTATION_MANAGER_BINDING);
         if (commutationManager==null)
             throw new Exception("CallsCommutationManager not found in the conversation scenario state");
         commutationManager.cancel();
+        return ACTION_EXECUTED_then_EXECUTE_NEXT;
     }
 
-    public boolean isFlowControlAction() {
-        return false;
+    @Override
+    protected void processCancelMessage() throws Exception {
+        sendExecuted(ACTION_EXECUTED_then_EXECUTE_NEXT);
     }
-    
+
+
+//    @Override
+//    protected void doExecute(IvrEndpointConversation conv) throws Exception {
+//        Bindings bindings = conv.getConversationScenarioState().getBindings();
+//        CommutationManagerCall commutationManager = (CommutationManagerCall) 
+//                bindings.get(CommutationManagerCall.CALLS_COMMUTATION_MANAGER_BINDING);
+//        if (commutationManager==null)
+//            throw new Exception("CallsCommutationManager not found in the conversation scenario state");
+//        commutationManager.cancel();
+//    }
+
 }

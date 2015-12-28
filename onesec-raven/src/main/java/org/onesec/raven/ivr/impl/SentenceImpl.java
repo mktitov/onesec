@@ -18,13 +18,13 @@ package org.onesec.raven.ivr.impl;
 
 import java.util.List;
 import org.onesec.raven.ivr.AudioFile;
-import org.onesec.raven.ivr.Sentence;
+import org.onesec.raven.ivr.SentenceResult;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class SentenceImpl implements Sentence {
+public class SentenceImpl implements SentenceResult {
     private final long pauseBetweenWords;
     private final List<AudioFile> words;
 

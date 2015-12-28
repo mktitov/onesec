@@ -24,7 +24,7 @@ import org.junit.*;
  */
 public class SmeTranseiverTest {
  
-    @Test
+    @Test @Ignore
     public void test() {
         SmeTransceiver.main(null);
     }

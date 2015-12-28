@@ -57,7 +57,7 @@ import org.onesec.raven.ivr.SendMessageDirection;
 /**
  * @author Mikhail Titov
  */
-public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
+public class CiscoJtapiTerminalIT extends OnesecRavenTestCase {
 //    private final static String TEST_NUMBER = "631798";
     private final static String TEST_NUMBER = "68000"; //звонить на 88137
     private final static String RP_TEST_NUMBER = "631690";
@@ -748,7 +748,7 @@ public class CiscoJtapiTerminalTest extends OnesecRavenTestCase {
         expect(term.getObjectName()).andReturn(termNode.getName()).anyTimes();
         expect(term.getObjectDescription()).andReturn("Terminal").anyTimes();
         expect(term.getAddress()).andReturn(address);
-        expect(term.getCodec()).andReturn(Codec.G711_A_LAW);
+        expect(term.getCodec()).andReturn(Codec.G729);
 //        expect(term.getCodec()).andReturn(Codec.AUTO);
         expect(term.getConversationScenario()).andReturn(scenario).anyTimes();
         expect(term.getEnableIncomingCalls()).andReturn(enableInCalls);

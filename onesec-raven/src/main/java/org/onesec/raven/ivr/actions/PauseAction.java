@@ -17,76 +17,39 @@
 
 package org.onesec.raven.ivr.actions;
 
-import org.onesec.raven.ivr.ActionStopListener;
-import org.onesec.raven.ivr.IvrActionException;
-import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.raven.sched.impl.AbstractTask;
-import org.raven.tree.Node;
-import org.raven.tree.impl.LoggerHelper;
+import java.util.concurrent.TimeUnit;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class PauseAction extends AbstractAction
-{
-    public static final String ACTION_NAME = "Pause action";
-    private final long interval;
-    private volatile ActionStopListener stopListener;
-    private volatile LoggerHelper logger;
-    private volatile PauseTask pauseTask;
-
-    public PauseAction(long interval)
-    {
-        super(ACTION_NAME);
-        this.interval = interval;
-        setStatusMessage("Pausing");
-    }
-
-    public boolean isFlowControlAction() {
-        return false;
-    }
-
-    @Override
-    public void execute(IvrEndpointConversation conversation, ActionStopListener listener, LoggerHelper logger) 
-            throws Exception 
-    {
-        this.stopListener = listener;
-        this.logger = new LoggerHelper(logger, getName()+". ");
-        if (this.logger.isDebugEnabled())
-            this.logger.debug("Pausing on "+interval+" ms");
-        pauseTask = new PauseTask(conversation.getOwner(), stopListener);
-        conversation.getExecutorService().execute(interval, pauseTask);
-    }
-
-    @Override
-    public void cancel() throws IvrActionException {
-        if (pauseTask!=null) 
-            pauseTask.cancel();
-        stopListener.actionExecuted(this);
-    }
-//    @Override
-//    protected void doExecute(IvrEndpointConversation conversation) throws Exception
-//    {
-//        if (logger.isDebugEnabled())
-//            logger.debug("Pausing on "+interval+" ms");
-//        long start = System.currentTimeMillis();
-//        do {
-//            TimeUnit.MILLISECONDS.sleep(10);
-//        } while (System.currentTimeMillis()-start<interval && !hasCancelRequest());
-//    }
+public class PauseAction extends AbstractAction {
+    private final static String UNPAUSE = "UNPAUSE";
     
-    private class PauseTask extends AbstractTask {
-        private final ActionStopListener stopListener;
+    private final long interval;
 
-        public PauseTask(Node taskNode, ActionStopListener stopListener) {
-            super(taskNode, "Pausing on "+interval+" ms");
-            this.stopListener = stopListener;
-        }
+    public PauseAction(long interval, TimeUnit intervalTimeUnit) {
+        super("Pause: "+intervalTimeUnit.toMillis(interval)+" ms");
+        this.interval = intervalTimeUnit.toMillis(interval);
+    }
 
-        @Override
-        public void doRun() throws Exception {
-            this.stopListener.actionExecuted(PauseAction.this);
-        }
+    @Override
+    protected ActionExecuted processExecuteMessage(Execute message) throws Exception {
+        getFacade().sendDelayed(interval, UNPAUSE);
+        return null;
+    }
+
+    @Override
+    protected void processCancelMessage() throws Exception {
+        getFacade().sendTo(getContext().getParent(), ACTION_EXECUTED_then_EXECUTE_NEXT);
+    }
+    
+    @Override
+    public Object processData(Object message) throws Exception {
+        if (message==UNPAUSE) {
+            processCancelMessage();
+            return VOID;
+        } else
+            return super.processData(message);          
     }
 }

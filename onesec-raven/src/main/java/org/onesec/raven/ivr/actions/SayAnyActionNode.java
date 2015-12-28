@@ -19,6 +19,7 @@ package org.onesec.raven.ivr.actions;
 import javax.script.SimpleBindings;
 import org.onesec.raven.Constants;
 import org.onesec.raven.impl.Genus;
+import org.onesec.raven.ivr.Action;
 import org.onesec.raven.ivr.IvrAction;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.raven.annotations.NodeClass;
@@ -36,7 +37,8 @@ import org.weda.internal.annotations.Service;
  * @author Mikhail Titov
  */
 @NodeClass(parentNode=IvrConversationScenarioNode.class)
-public class SayAnyActionNode extends AbstractActionNode {
+public class SayAnyActionNode extends AbstractActionNode 
+{
     public static final String WORDS_NODE_ATTR = "wordsNode";
     public static final String AMOUNT_NUMBERS_NODE_ATTR = "amountNumbersNode";
     public static final String NUMBERS_NODE_ATTR = "numbersNode";
@@ -88,7 +90,7 @@ public class SayAnyActionNode extends AbstractActionNode {
     private String actionsSequence;
 
     @Override
-    protected IvrAction doCreateAction() {
+    protected Action doCreateAction() {
         return !checkRepetition()? 
                 null :
                 new SayAnyAction(this, 
@@ -97,9 +99,9 @@ public class SayAnyActionNode extends AbstractActionNode {
                     NodeUtils.getAttrValuesByPrefixAndType(this, AMOUNT_NUMBERS_NODE_ATTR, Node.class),
                     wordsSentencePause, wordsWordPause, 
                     numbersGenus, numbersSentencePause, numbersWordPause, numbersEnableZero,
-                    amountWordPause, amountEnableZero, resourceManager);
+                    amountWordPause, amountEnableZero, resourceManager);        
     }
-        
+
     private boolean checkRepetition() {
         bindingSupport.enableScriptExecution();
         try {
@@ -110,13 +112,12 @@ public class SayAnyActionNode extends AbstractActionNode {
                 SimpleBindings bindings = new SimpleBindings();
                 formExpressionBindings(bindings);
                 int repetitionCount = ((Number) bindings.get(ConversationScenario.REPEITION_COUNT_PARAM)).intValue();
-                return repetitionCount-1==_playAtRepetition? true : false;
+                return repetitionCount-1==_playAtRepetition;
                 
             }
         } finally {
             bindingSupport.reset();
         }
-        
     }
 
     public Integer getPlayAtRepetition() {

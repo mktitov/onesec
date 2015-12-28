@@ -17,19 +17,15 @@
 
 package org.onesec.raven.ivr.actions;
 
-import org.onesec.raven.ivr.IvrAction;
 import org.onesec.raven.ivr.IvrActionNode;
 import org.raven.annotations.Parameter;
 import org.raven.ds.DataConsumer;
 import org.raven.ds.DataContext;
 import org.raven.ds.DataSource;
-import org.raven.expr.impl.BindingSupportImpl;
 import org.raven.expr.impl.ScriptAttributeValueHandlerFactory;
 import org.raven.tree.NodeAttribute;
-import org.raven.tree.impl.BaseNode;
-
-import javax.script.Bindings;
 import java.util.Collection;
+import org.onesec.raven.ivr.Action;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.raven.annotations.NodeClass;
 
@@ -38,40 +34,29 @@ import org.raven.annotations.NodeClass;
  * @author Mikhail Titov
  */
 @NodeClass(parentNode=IvrConversationScenarioNode.class)
-public class SendDataActionNode extends BaseNode implements IvrActionNode, DataSource
-{
+public class SendDataActionNode extends AbstractActionNode implements IvrActionNode, DataSource {
+    
     @Parameter(valueHandlerType=ScriptAttributeValueHandlerFactory.TYPE)
     private Object expression;
 
-    private BindingSupportImpl bindingSupport;
-
     @Override
-    protected void initFields() {
-        super.initFields();
-        bindingSupport = new BindingSupportImpl();
-    }
-
-    public IvrAction createAction() {
+    protected Action doCreateAction() {
         return new SendDataAction(bindingSupport, this);
     }
-
+    
+    @Override
     public boolean getDataImmediate(DataConsumer dataConsumer, DataContext context) {
         throw new UnsupportedOperationException("Pull mode not supported");
     }
 
+    @Override
     public Boolean getStopProcessingOnError() {
         return false;
     }
 
+    @Override
     public Collection<NodeAttribute> generateAttributes() {
         return null;
-    }
-
-    @Override
-    public void formExpressionBindings(Bindings bindings)
-    {
-        super.formExpressionBindings(bindings);
-        bindingSupport.addTo(bindings);
     }
 
     public Object getExpression() {
@@ -81,4 +66,5 @@ public class SendDataActionNode extends BaseNode implements IvrActionNode, DataS
     public void setExpression(Object expression) {
         this.expression = expression;
     }
+
 }

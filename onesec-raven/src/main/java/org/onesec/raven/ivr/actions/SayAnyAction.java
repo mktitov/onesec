@@ -25,10 +25,9 @@ import org.onesec.raven.impl.Genus;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.SayAnySubaction;
 import org.onesec.raven.ivr.SayAnySubactionResult;
-import org.onesec.raven.ivr.Sentence;
+import org.onesec.raven.ivr.SentenceResult;
 import org.onesec.raven.ivr.SubactionPauseResult;
 import org.onesec.raven.ivr.SubactionSentencesResult;
-import org.onesec.raven.ivr.impl.IvrUtils;
 import org.raven.tree.Node;
 import org.raven.tree.ResourceManager;
 
@@ -36,8 +35,9 @@ import org.raven.tree.ResourceManager;
  *
  * @author Mikhail Titov
  */
-public class SayAnyAction extends AsyncAction {
-    public final static String NAME = "Say any action";
+public class SayAnyAction extends AbstractSayWordsAction
+{
+    public final static String NAME = "Say any";
     private final static String[] EMPTY_ARR = new String[]{};
     
     private final List<Node> wordsNodes;
@@ -60,7 +60,7 @@ public class SayAnyAction extends AsyncAction {
             Genus numbersGenus, long numbersSentencePause, long numbersWordPause, boolean numbersEnableZero,
             long amountWordPause, boolean amountEnableZero, ResourceManager resourceManager) 
     {
-        super(NAME);
+        super(NAME, Collections.EMPTY_LIST, 0, 0, resourceManager);
         this.wordsNodes = wordsNodes;
         this.numbersNodes = numbersNodes;
         this.amountNumbersNodes = amountNumbersNodes;
@@ -77,36 +77,61 @@ public class SayAnyAction extends AsyncAction {
     }
 
     @Override
-    protected void doExecute(IvrEndpointConversation conv) throws Exception {
-        actionNode.getBindingSupport().putAll(conversation.getConversationScenarioState().getBindings());
+    protected List<Object> formWords(IvrEndpointConversation conversation) throws Exception {
+        final List senetences = new LinkedList();
+        actionNode.getBindingSupport().putAll(conversation.getConversationScenarioState().getBindings());        
         try {
             String actionsSeq = actionNode.getActionsSequence();
             for (SayAnySubaction subaction: parseActionsSequence(actionsSeq)) {
-                SayAnySubactionResult res = subaction.getResult();
-                if (res instanceof SubactionPauseResult) {
-                    IvrUtils.pauseInAction(this, ((SubactionPauseResult)res).getPause());
-                } else if (res instanceof SubactionSentencesResult) {
+                SayAnySubactionResult res = subaction.getResult();                
+                if (res instanceof SubactionPauseResult) 
+                    senetences.add(new Pause(((SubactionPauseResult)res).getPause()));
+                else if (res instanceof SubactionSentencesResult) {
                     SubactionSentencesResult sentences = (SubactionSentencesResult) res;
                     boolean first = true;
-                    for (Sentence sentence: sentences.getSentences()) {
-                        if (!first) IvrUtils.pauseInAction(this, sentences.getPauseBetweenSentences());
-                        else first = false;
-                        IvrUtils.playAudiosInAction(sentence.getWords(), this, conversation, sentence.getPauseBetweenWords());
+                    for (SentenceResult sentence: sentences.getSentences()) {
+                        senetences.add(new Sentence(sentences.getPauseBetweenSentences(), 
+                                sentence.getPauseBetweenWords(), sentence.getWords()));
                     }
                 }
             }
         } finally {
             actionNode.getBindingSupport().reset();
         }
+        return senetences.isEmpty()? Collections.EMPTY_LIST : senetences;
     }
+
+//    @Override
+//    protected void doExecute(IvrEndpointConversation conv) throws Exception {
+//        actionNode.getBindingSupport().putAll(conversation.getConversationScenarioState().getBindings());
+//        try {
+//            String actionsSeq = actionNode.getActionsSequence();
+//            for (SayAnySubaction subaction: parseActionsSequence(actionsSeq)) {
+//                SayAnySubactionResult res = subaction.getResult();
+//                if (res instanceof SubactionPauseResult) {
+//                    IvrUtils.pauseInAction(this, ((SubactionPauseResult)res).getPause());
+//                } else if (res instanceof SubactionSentencesResult) {
+//                    SubactionSentencesResult sentences = (SubactionSentencesResult) res;
+//                    boolean first = true;
+//                    for (Sentence sentence: sentences.getSentences()) {
+//                        if (!first) IvrUtils.pauseInAction(this, sentences.getPauseBetweenSentences());
+//                        else first = false;
+//                        IvrUtils.playAudiosInAction(sentence.getWords(), this, conversation, sentence.getPauseBetweenWords());
+//                    }
+//                }
+//            }
+//        } finally {
+//            actionNode.getBindingSupport().reset();
+//        }
+//    }
     
     private List<SayAnySubaction> parseActionsSequence(String actionsSeq) throws Exception {
         if (actionsSeq==null || actionsSeq.trim().isEmpty()) {
-            if (logger.isDebugEnabled())
-                logger.debug("Nothing to say!");
+            if (getLogger().isDebugEnabled())
+                getLogger().debug("Nothing to say!");
             return Collections.EMPTY_LIST;
         }
-        List<SayAnySubaction> subactions = new LinkedList<SayAnySubaction>();
+        List<SayAnySubaction> subactions = new LinkedList<>();
         for (String actionConfig: actionsSeq.trim().split("\\s+")) {
             try {
                 if (actionConfig.length()<2)
@@ -156,7 +181,7 @@ public class SayAnyAction extends AsyncAction {
 
     private Map<String, String> decodeParams(String[] paramsAndValue) throws Exception {
         String[] paramsSeq = paramsAndValue.length==1? EMPTY_ARR : paramsAndValue[0].split(";");
-        Map<String, String> params = new HashMap<String, String>();
+        Map<String, String> params = new HashMap<>();
         for (String paramConfig: paramsSeq) {
             String[] nameAndValue = paramConfig.split("=");
             if (nameAndValue.length!=2)

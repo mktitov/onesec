@@ -44,7 +44,7 @@ import org.raven.tree.Node;
  *
  * @author Mikhail Titov
  */
-public class IvrConversationsBridgeManagerNodeTest extends OnesecRavenTestCase
+public class IvrConversationsBridgeManagerNodeIT extends OnesecRavenTestCase
         implements ConversationCompletionCallback, IvrEndpointConversationListener
 {
     private static List<IvrEndpointConversationListener> conversationListeners;

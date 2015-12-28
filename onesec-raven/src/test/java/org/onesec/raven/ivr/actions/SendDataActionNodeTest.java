@@ -2,17 +2,23 @@ package org.onesec.raven.ivr.actions;
 
 import org.junit.Test;
 import org.junit.Before;
-import static org.easymock.EasyMock.*;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.raven.conv.ConversationScenarioState;
 import org.raven.ds.DataContext;
 import javax.script.Bindings;
 import javax.script.SimpleBindings;
+import mockit.Expectations;
+import mockit.Mocked;
+import mockit.Verifications;
+import mockit.integration.junit4.JMockit;
+import org.junit.runner.RunWith;
 import org.onesec.raven.OnesecRavenTestCase;
+import org.onesec.raven.ivr.Action;
 import org.raven.BindingNames;
 import org.raven.test.DataCollector;
 import org.raven.test.DataHandler;
 
+@RunWith(JMockit.class)
 public class SendDataActionNodeTest extends OnesecRavenTestCase
 {
     private SendDataActionNode actionNode;
@@ -34,54 +40,52 @@ public class SendDataActionNodeTest extends OnesecRavenTestCase
     }
     
     @Test
-    public void test() throws Exception
+    public void test(
+            @Mocked final Action.Execute execMessage,
+            @Mocked final IvrEndpointConversation conv,
+            @Mocked final ConversationScenarioState state,
+            @Mocked final DataHandler dataHandler) 
+        throws Exception
     {
-        Bindings bindings = new SimpleBindings();
+        final Bindings bindings = new SimpleBindings();
         bindings.put("world", "World!");
-        
-        IvrEndpointConversation conv = createMock(IvrEndpointConversation.class);
-        ConversationScenarioState state = createMock(ConversationScenarioState.class);
-        DataContext context = createMock(DataContext.class);
-        DataHandler dataHandler = createMock(DataHandler.class);
-
-        expect(conv.getConversationScenarioState()).andReturn(state).anyTimes();
-        expect(state.getBindings()).andReturn(bindings).anyTimes();
-        dataHandler.handleData(eq("Hello World!"), isA(DataContext.class));
-
-        replay(conv, state, context, dataHandler);
+        new Expectations() {{
+            state.getBindings(); result = bindings;            
+        }};
         
         collector.setDataHandler(dataHandler);
         actionNode.setExpression("'Hello '+world");
         SendDataAction action = (SendDataAction) actionNode.createAction();
-        action.doExecute(conv);
-
-        verify(conv, state, context, dataHandler);
+        Action.ActionExecuted res = action.processExecuteMessage(execMessage);
+        assertSame(AbstractAction.ACTION_EXECUTED_then_EXECUTE_NEXT, res);
+        new Verifications() {{
+            dataHandler.handleData("Hello World!", withInstanceOf(DataContext.class));
+        }};
     }
-
+    
     @Test
-    public void dataContextTest() throws Exception
+    public void dataContextTest(
+            @Mocked final Action.Execute execMessage,
+            @Mocked final IvrEndpointConversation conv,
+            @Mocked final ConversationScenarioState state,
+            @Mocked final DataHandler dataHandler,
+            @Mocked final DataContext dataContext) 
+        throws Exception
     {
-        Bindings bindings = new SimpleBindings();
+        final Bindings bindings = new SimpleBindings();
         bindings.put("world", "World!");
-
-        IvrEndpointConversation conv = createMock(IvrEndpointConversation.class);
-        ConversationScenarioState state = createMock(ConversationScenarioState.class);
-        DataContext context = createMock(DataContext.class);
-        DataHandler dataHandler = createMock(DataHandler.class);
-        DataContext dataContext = createMock(DataContext.class);
-
-        expect(conv.getConversationScenarioState()).andReturn(state).anyTimes();
-        expect(state.getBindings()).andReturn(bindings).anyTimes();
-        dataHandler.handleData(eq("Hello World!"), same(dataContext));
-
-        replay(conv, state, context, dataHandler);
-
         bindings.put(BindingNames.DATA_CONTEXT_BINDING, dataContext);
+        new Expectations() {{
+            state.getBindings(); result = bindings;            
+        }};
+        
         collector.setDataHandler(dataHandler);
         actionNode.setExpression("'Hello '+world");
         SendDataAction action = (SendDataAction) actionNode.createAction();
-        action.doExecute(conv);
-
-        verify(conv, state, context, dataHandler);
+        Action.ActionExecuted res = action.processExecuteMessage(execMessage);
+        assertSame(AbstractAction.ACTION_EXECUTED_then_EXECUTE_NEXT, res);
+        new Verifications() {{
+            dataHandler.handleData("Hello World!", withSameInstance(dataContext));
+        }};
     }
 }

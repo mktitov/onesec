@@ -60,7 +60,7 @@ public class SayNumberInQueueActionNodeTest extends OnesecRavenTestCase
     @Test
     public void acceptTest() throws Exception
     {
-        NodeAttribute attr = actionNode.getNodeAttribute(SayNumberInQueueActionNode.ACCEPT_SAY_NUMBER_ATTR);
+        NodeAttribute attr = actionNode.getAttr(SayNumberInQueueActionNode.ACCEPT_SAY_NUMBER_ATTR);
         attr.setValueHandlerType(ExpressionAttributeValueHandlerFactory.TYPE);
         attr.setValue("accept");
 

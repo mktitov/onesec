@@ -39,8 +39,8 @@ public class  CommutationManagerCallImpl
             , RequestControllerListener
 {
     public final static String SEARCHING_FOR_ENDPOINT_MSG = "Looking up for free endpoint in the pool (%s)";
-    public enum State {INIT, NO_FREE_ENDPOINTS, INVITING, OPERATOR_READY, ABONENT_READY, 
-        COMMUTATED, CONVERSATION_STARTED, HANDLED, INVALID}
+//    public enum State {INIT, NO_FREE_ENDPOINTS, INVITING, OPERATOR_READY, ABONENT_READY, 
+//        COMMUTATED, CONVERSATION_STARTED, HANDLED, INVALID}
     public final static Map<State, EnumSet<State>> TRANSITIONS = new EnumMap<>(State.class);
 
     private final CallsCommutationManager manager;
@@ -129,7 +129,7 @@ public class  CommutationManagerCallImpl
                     if (logger.isDebugEnabled())
                         logger.debug("Abonent ready to commutate");
                     addToLog("abonent ready to commutate");
-                    fireAbonentReadyEvent();
+//                    fireAbonentReadyEvent();
                     commutateCalls();
                     break;
                 case COMMUTATED: getRequest().fireCommutatedEvent(); break;
@@ -142,7 +142,7 @@ public class  CommutationManagerCallImpl
                     manager.getRequest().fireDisconnectedQueueEvent(completionCode==null?null:completionCode.name());
                     nextState = State.INVALID;
                     break;
-                case INVALID: 
+                case INVALID:                    
                     getRequest().removeRequestWrapperListener(this);
                     boolean success = ObjectUtils.in(state.get(), State.HANDLED, State.OPERATOR_READY, State.ABONENT_READY)
                                         || canceled.get();
@@ -162,12 +162,14 @@ public class  CommutationManagerCallImpl
                             conversation.stopConversation(CompletionCode.COMPLETED_BY_ENDPOINT);
                         manager.getEndpointPool().releaseEndpoint(endpoint);
                     }
+//                    fireCommutationInvalidatedEvent();
                     break;
             }
             if (logger.isDebugEnabled()) {
                 logger.debug("Successfully moved to state "+newState+" from state "+state.get());
             }
             state.set(newState);
+            fireStateChanged(newState, listeners);
         } catch (Throwable ex) {
             nextState = State.INVALID;
             if (logger.isErrorEnabled())
@@ -255,12 +257,13 @@ public class  CommutationManagerCallImpl
     }
 
     @Override
-    public void addListener(CallsCommutationManagerListener listener) {
+    public synchronized void addListener(CallsCommutationManagerListener listener) {
         listeners.add(listener);
+        fireStateChanged(state.get(), Arrays.asList(listener));
     }
 
     @Override
-    public void removeListener(CallsCommutationManagerListener listener) {
+    public synchronized void removeListener(CallsCommutationManagerListener listener) {
         listeners.remove(listener);
     }
 
@@ -359,18 +362,42 @@ public class  CommutationManagerCallImpl
     public int getPriority() {
         return manager.getRequest().getPriority();
     }
-
-    private void fireAbonentReadyEvent() {
-        final List<CallsCommutationManagerListener> _listeners = new ArrayList<>(listeners);
+    
+    private void fireStateChanged(final State state, List<CallsCommutationManagerListener> listeners) {        
+        final List<CallsCommutationManagerListener> _listeners = listeners!=null? listeners : new ArrayList<>(listeners);
         if (_listeners.isEmpty())
             return;
         manager.getExecutor().executeQuietly(new AbstractTask(manager.getOperator(), "Delivering abonent ready event") {
             @Override public void doRun() throws Exception {
                 for (CallsCommutationManagerListener listener: _listeners)
-                    listener.abonentReady();
+                    listener.stateChanged(state);
             }
         });
     }
+    
+//    private void fireAbonentReadyEvent() {
+//        final List<CallsCommutationManagerListener> _listeners = new ArrayList<>(listeners);
+//        if (_listeners.isEmpty())
+//            return;
+//        manager.getExecutor().executeQuietly(new AbstractTask(manager.getOperator(), "Delivering abonent ready event") {
+//            @Override public void doRun() throws Exception {
+//                for (CallsCommutationManagerListener listener: _listeners)
+//                    listener.abonentReady();
+//            }
+//        });
+//    }
+//    
+//    private void fireCommutationInvalidatedEvent(List<CallsCommutationManagerListener> listeners) {        
+//        final List<CallsCommutationManagerListener> _listeners = listeners!=null? listeners : new ArrayList<>(listeners);
+//        if (_listeners.isEmpty())
+//            return;
+//        manager.getExecutor().executeQuietly(new AbstractTask(manager.getOperator(), "Delivering commutation invalidated") {
+//            @Override public void doRun() throws Exception {
+//                for (CallsCommutationManagerListener listener: _listeners)
+//                    listener.commutationInvalidated();
+//            }
+//        });
+//    }
     
     private class ConversationStartedListener extends IvrEndpointConversationListenerAdapter {
         private final IvrConversationsBridge bridge;

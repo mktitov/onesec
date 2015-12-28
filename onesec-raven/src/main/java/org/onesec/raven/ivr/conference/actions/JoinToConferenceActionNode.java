@@ -15,7 +15,7 @@
  */
 package org.onesec.raven.ivr.conference.actions;
 
-import org.onesec.raven.ivr.IvrAction;
+import org.onesec.raven.ivr.Action;
 import org.onesec.raven.ivr.actions.AbstractActionNode;
 import org.onesec.raven.ivr.conference.impl.ConferenceManagerNode;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
@@ -45,12 +45,12 @@ public class JoinToConferenceActionNode extends AbstractActionNode {
     
     @NotNull @Parameter
     private String accessCode;
-    
+
     @Override
-    protected IvrAction doCreateAction() {
+    protected Action doCreateAction() {
         return new JoinToConferenceAction(conferenceManager, autoConnect, autoUnmute, conferenceId, accessCode);
     }
-
+    
     public ConferenceManagerNode getConferenceManager() {
         return conferenceManager;
     }

@@ -17,20 +17,24 @@
 
 package org.onesec.raven.ivr.actions;
 
+import org.onesec.raven.ivr.IvrAction;
+import org.onesec.raven.ivr.IvrActionException;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.raven.BindingNames;
+import org.raven.dp.impl.RavenPromise;
 import org.raven.ds.DataContext;
 import org.raven.ds.impl.DataContextImpl;
 import org.raven.ds.impl.DataSourceHelper;
 import org.raven.expr.BindingSupport;
+import org.raven.tree.impl.LoggerHelper;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class SendDataAction extends AsyncAction
+public class SendDataAction extends AbstractAction
 {
-    public final static String NAME = "Send data action";
+    public final static String NAME = "Send DATA";
 
     private final BindingSupport bindingSupport;
     private final SendDataActionNode actionNode;
@@ -42,11 +46,38 @@ public class SendDataAction extends AsyncAction
         this.actionNode = actionNode;
     }
 
+//    @Override
+//    protected void doExecute(IvrEndpointConversation conversation) throws Exception
+//    {
+//        try {
+//            bindingSupport.putAll(conversation.getConversationScenarioState().getBindings());
+//            DataContext dataContext = null;
+//            Object context = bindingSupport.get(BindingNames.DATA_CONTEXT_BINDING);
+//            if (context==null || !(context instanceof DataContext)) {
+//                dataContext = new DataContextImpl();
+//                bindingSupport.put(BindingNames.DATA_CONTEXT_BINDING, dataContext);
+//            } else
+//                dataContext = (DataContext) context;
+//            Object data = actionNode.getExpression();
+//            DataSourceHelper.sendDataToConsumers(actionNode, data, dataContext);
+//        } finally {
+//            bindingSupport.reset();
+//        }
+//    }
+
+//    @Override
+//    protected boolean doExecute(IvrEndpointConversation conversation, RavenPromise<IvrAction, IvrActionException> completionPromise, LoggerHelper logger) throws Exception {
+//        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+//    }
+
+//    public boolean isFlowControlAction() {
+//        return false;
+//    }
+
     @Override
-    protected void doExecute(IvrEndpointConversation conversation) throws Exception
-    {
+    protected ActionExecuted processExecuteMessage(Execute message) throws Exception {
         try {
-            bindingSupport.putAll(conversation.getConversationScenarioState().getBindings());
+            bindingSupport.putAll(message.getConversation().getConversationScenarioState().getBindings());
             DataContext dataContext = null;
             Object context = bindingSupport.get(BindingNames.DATA_CONTEXT_BINDING);
             if (context==null || !(context instanceof DataContext)) {
@@ -56,12 +87,14 @@ public class SendDataAction extends AsyncAction
                 dataContext = (DataContext) context;
             Object data = actionNode.getExpression();
             DataSourceHelper.sendDataToConsumers(actionNode, data, dataContext);
+            return ACTION_EXECUTED_then_EXECUTE_NEXT;
         } finally {
             bindingSupport.reset();
-        }
+        }        
     }
 
-    public boolean isFlowControlAction() {
-        return false;
+    @Override
+    protected void processCancelMessage() throws Exception {
+        sendExecuted(ACTION_EXECUTED_then_EXECUTE_NEXT);
     }
 }

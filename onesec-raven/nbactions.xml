@@ -12,10 +12,10 @@
             </properties>
         </action>
         <action>
-            <actionName>CUSTOM-validate</actionName>
-            <displayName>validate</displayName>
+            <actionName>CUSTOM-verify</actionName>
+            <displayName>verify</displayName>
             <goals>
-                <goal>validate</goal>
+                <goal>verify</goal>
             </goals>
         </action>
     </actions>

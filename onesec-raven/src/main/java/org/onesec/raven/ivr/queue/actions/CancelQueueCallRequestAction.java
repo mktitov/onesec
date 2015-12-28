@@ -18,15 +18,14 @@
 package org.onesec.raven.ivr.queue.actions;
 
 import org.onesec.raven.ivr.IvrActionException;
-import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.onesec.raven.ivr.actions.AsyncAction;
+import org.onesec.raven.ivr.actions.AbstractAction;
 import org.onesec.raven.ivr.queue.QueuedCallStatus;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class CancelQueueCallRequestAction extends AsyncAction
+public class CancelQueueCallRequestAction extends AbstractAction
 {
     public static final String ACTION_NAME = "Cancel queue call request";
 
@@ -34,19 +33,32 @@ public class CancelQueueCallRequestAction extends AsyncAction
         super(ACTION_NAME);
     }
 
-    public boolean isFlowControlAction() {
-        return false;
-    }
-
-    public void doExecute(IvrEndpointConversation conv) throws Exception {
-        QueuedCallStatus state = (QueuedCallStatus) conv.getConversationScenarioState().getBindings().get(
+    @Override
+    protected ActionExecuted processExecuteMessage(Execute message) throws Exception {
+        QueuedCallStatus state = (QueuedCallStatus) message.getConversation().getConversationScenarioState().getBindings().get(
                 QueueCallAction.QUEUED_CALL_STATUS_BINDING);
         if (state!=null) {
             state.cancel();
-            if (logger.isDebugEnabled())
-                logger.debug("Queue call request was canceled");
+            if (getLogger().isDebugEnabled())
+                getLogger().debug("Queue call request was canceled");
         }
+        return ACTION_EXECUTED_then_EXECUTE_NEXT;
     }
+
+    @Override
+    protected void processCancelMessage() throws Exception {
+        sendExecuted(ACTION_EXECUTED_then_EXECUTE_NEXT);
+    }
+
+//    public void doExecute(IvrEndpointConversation conv) throws Exception {
+//        QueuedCallStatus state = (QueuedCallStatus) conv.getConversationScenarioState().getBindings().get(
+//                QueueCallAction.QUEUED_CALL_STATUS_BINDING);
+//        if (state!=null) {
+//            state.cancel();
+//            if (logger.isDebugEnabled())
+//                logger.debug("Queue call request was canceled");
+//        }
+//    }
 
     public void cancel() throws IvrActionException {
     }

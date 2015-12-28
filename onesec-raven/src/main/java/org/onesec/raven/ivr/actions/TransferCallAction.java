@@ -24,14 +24,10 @@ import org.raven.expr.impl.BindingSupportImpl;
  *
  * @author Mikhail Titov
  */
-public class TransferCallAction extends AsyncAction
+public class TransferCallAction extends AbstractAction
 {
-    public final static String ACTION_NAME = "Transfer call action";
+    public final static String ACTION_NAME = "Transfer call";
     
-//    private final String address;
-//    private final boolean monitorTransfer;
-//    private final long callStartTimeout;
-//    private final long callEndTimeout;
     private final TransferCallActionNode actionNode;
 
     public TransferCallAction(TransferCallActionNode actionNode)
@@ -40,24 +36,26 @@ public class TransferCallAction extends AsyncAction
         this.actionNode = actionNode;
     }
 
-    public boolean isFlowControlAction() {
-        return false;
-    }
-
     @Override
-    protected void doExecute(IvrEndpointConversation conversation) throws Exception {
+    protected ActionExecuted processExecuteMessage(Execute message) throws Exception {
         BindingSupportImpl bindings = actionNode.getBindingSupport();
+        final IvrEndpointConversation conversation = message.getConversation();
         bindings.putAll(conversation.getConversationScenarioState().getBindings());
         actionNode.getBindingSupport().enableScriptExecution();
         try {
             String address = actionNode.getAddress();
-            setStatusMessage("Transfering call to the ("+address+") address");
-            if (logger.isDebugEnabled())
-                logger.debug("Transfering call to the ("+address+") address");
+            if (getLogger().isDebugEnabled())
+                getLogger().debug("Transfering call to the ("+address+") address");
             conversation.transfer(address, actionNode.getMonitorTransfer(), actionNode.getCallStartTimeout()*1000, 
                 actionNode.getCallEndTimeout()*1000);
         } finally {
             bindings.reset();
         }
+        return ACTION_EXECUTED_then_EXECUTE_NEXT;
+    }
+
+    @Override
+    protected void processCancelMessage() throws Exception {
+        sendExecuted(ACTION_EXECUTED_then_EXECUTE_NEXT);
     }
 }

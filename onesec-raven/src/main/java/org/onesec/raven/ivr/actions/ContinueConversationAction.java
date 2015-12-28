@@ -23,33 +23,62 @@ import org.raven.sched.impl.AbstractTask;
  *
  * @author Mikhail Titov
  */
-public class ContinueConversationAction extends AsyncAction {
+public class ContinueConversationAction extends AbstractAction {
 
     public ContinueConversationAction() {
-        super("Continue conversation action");
+        super("Continue conversation");
     }
 
-    public ContinueConversationAction(String actionName) {
-        super(actionName);
-    }
-
-    @Override
-    public boolean isFlowControlAction() {
-        return true;
+    protected ContinueConversationAction(String name) {
+        super(name);
     }
 
     @Override
-    protected void doExecute(final IvrEndpointConversation conversation) throws Exception {
-        conversation.getConversationScenarioState().switchToNextConversationPoint();
-        if (logger.isDebugEnabled())
-            logger.debug(
-                    "Executing transition to the conversation point ({})"
-                    , conversation.getConversationScenarioState().getConversationPoint().getPath());
-//        setStatus(IvrActionStatus.EXECUTED);
-        conversation.getExecutorService().execute(new AbstractTask(conversation.getOwner(), "Continue conversation") {
+    protected ActionExecuted processExecuteMessage(Execute message) throws Exception {
+        final IvrEndpointConversation conv = message.getConversation();
+        conv.getConversationScenarioState().switchToNextConversationPoint();
+        if (getLogger().isDebugEnabled())
+            getLogger().debug("Making transition to the conversation point ({})"
+                    , conv.getConversationScenarioState().getConversationPoint().getPath());
+        sendExecuted(ACTION_EXECUTED_then_STOP);
+        getContext().getExecutor().execute(new AbstractTask(getContext().getOwner(), "Continue conversation") {
             @Override public void doRun() throws Exception {
-                conversation.continueConversation(IvrEndpointConversation.EMPTY_DTMF);                
+                conv.continueConversation(IvrEndpointConversation.EMPTY_DTMF);                
             }
         });
+        return null;
     }
+
+    @Override
+    protected void processCancelMessage() throws Exception {
+        sendExecuted(ACTION_EXECUTED_then_STOP);
+    }
+
+//    public ContinueConversationAction() {
+//        super("Continue conversation action");
+//    }
+//
+//    public ContinueConversationAction(String actionName) {
+//        super(actionName);
+//    }
+//
+//    @Override
+//    public boolean isFlowControlAction() {
+//        return true;
+//    }
+//
+////    @Override
+//    protected void doExecute(final IvrEndpointConversation conversation) throws Exception {
+//        conversation.getConversationScenarioState().switchToNextConversationPoint();
+//        if (logger.isDebugEnabled())
+//            logger.debug(
+//                    "Executing transition to the conversation point ({})"
+//                    , conversation.getConversationScenarioState().getConversationPoint().getPath());
+////        setStatus(IvrActionStatus.EXECUTED);
+//        conversation.getExecutorService().execute(new AbstractTask(conversation.getOwner(), "Continue conversation") {
+//            @Override public void doRun() throws Exception {
+//                conversation.continueConversation(IvrEndpointConversation.EMPTY_DTMF);                
+//            }
+//        });
+//    }
 }

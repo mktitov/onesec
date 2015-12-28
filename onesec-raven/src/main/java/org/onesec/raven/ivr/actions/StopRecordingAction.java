@@ -17,33 +17,33 @@ package org.onesec.raven.ivr.actions;
 
 import javax.script.Bindings;
 import org.onesec.raven.ivr.CallRecorder;
-import org.onesec.raven.ivr.IvrEndpointConversation;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class StopRecordingAction extends AsyncAction {
+public class StopRecordingAction extends AbstractAction {
     
-    public final static String NAME = "Stop recording action";
+    public final static String NAME = "Stop recording";
 
     public StopRecordingAction() {
         super(NAME);
     }
-    
+
     @Override
-    protected void doExecute(IvrEndpointConversation conversation) throws Exception {
-        Bindings bindings = conversation.getConversationScenarioState().getBindings();
-        CallRecorder recorder = (CallRecorder) bindings.remove(
-                StartRecordingAction.RECORDER_BINDING);
-        if (recorder==null) {
-            if (logger.isWarnEnabled())
-                logger.warn("Can't stop recording because of recorder not found");
-        } else 
-            recorder.stopRecording(false);
+    protected void processCancelMessage() throws Exception {
+        sendExecuted(ACTION_EXECUTED_then_EXECUTE_NEXT);
     }
 
-    public boolean isFlowControlAction() {
-        return false;
+    @Override
+    protected ActionExecuted processExecuteMessage(Execute message) throws Exception {
+        Bindings bindings = message.getConversation().getConversationScenarioState().getBindings();
+        CallRecorder recorder = (CallRecorder) bindings.remove(StartRecordingAction.RECORDER_BINDING);
+        if (recorder==null) {
+            if (getLogger().isWarnEnabled())
+                getLogger().warn("Can't stop recording because of recorder not found");
+        } else 
+            recorder.stopRecording(false);
+        return ACTION_EXECUTED_then_EXECUTE_NEXT;
     }
 }

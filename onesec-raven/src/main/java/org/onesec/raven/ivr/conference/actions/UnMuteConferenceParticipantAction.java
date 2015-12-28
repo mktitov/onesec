@@ -15,14 +15,13 @@
  */
 package org.onesec.raven.ivr.conference.actions;
 
-import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.onesec.raven.ivr.actions.AsyncAction;
+import org.onesec.raven.ivr.actions.AbstractAction;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class UnMuteConferenceParticipantAction extends AsyncAction {
+public class UnMuteConferenceParticipantAction extends AbstractAction {
     public final static String NAME = "Unmute conference participant";
 
     public UnMuteConferenceParticipantAction() {
@@ -30,17 +29,18 @@ public class UnMuteConferenceParticipantAction extends AsyncAction {
     }
 
     @Override
-    protected void doExecute(IvrEndpointConversation conversation) throws Exception {
-        ConferenceSessionState state = (ConferenceSessionState)conversation
+    protected ActionExecuted processExecuteMessage(Execute message) throws Exception {
+        ConferenceSessionState state = (ConferenceSessionState)message.getConversation()
                 .getConversationScenarioState()
                 .getBindings()
                 .get(JoinToConferenceAction.CONFERENCE_STATE_BINDING);
         if (state!=null)
             state.unmute();
+        return ACTION_EXECUTED_then_EXECUTE_NEXT;
     }
 
-    public boolean isFlowControlAction() {
-        return false;
+    @Override
+    protected void processCancelMessage() throws Exception {
+        sendExecuted(ACTION_EXECUTED_then_EXECUTE_NEXT);
     }
-    
 }

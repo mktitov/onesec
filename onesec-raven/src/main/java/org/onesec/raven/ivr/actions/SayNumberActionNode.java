@@ -23,6 +23,7 @@ import java.util.List;
 import javax.script.Bindings;
 import org.onesec.raven.Constants;
 import org.onesec.raven.impl.Genus;
+import org.onesec.raven.ivr.Action;
 import org.onesec.raven.ivr.IvrAction;
 import org.onesec.raven.ivr.IvrActionNode;
 import org.onesec.raven.ivr.SubactionSentencesResult;
@@ -44,7 +45,7 @@ import org.weda.internal.annotations.Service;
  * @author Mikhail Titov
  */
 @NodeClass(parentNode=IvrConversationScenarioNode.class)
-public class SayNumberActionNode extends BaseNode implements IvrActionNode {
+public class SayNumberActionNode extends AbstractActionNode {
     
     public final static String NUMBER_ATTR = "number";
     
@@ -71,33 +72,16 @@ public class SayNumberActionNode extends BaseNode implements IvrActionNode {
     @NotNull @Parameter(defaultValue="false")
     private Boolean enableZero;
     
-    private BindingSupportImpl bindingSupport;
-
     @Override
-    protected void initFields() {
-        super.initFields();
-        bindingSupport = new BindingSupportImpl();
-    }
-
-    BindingSupportImpl getBindingSupport() {
-        return bindingSupport;
-    }
-
-    @Override
-    public void formExpressionBindings(Bindings bindings) {
-        super.formExpressionBindings(bindings);
-        bindingSupport.addTo(bindings);
-    }
-
-    public IvrAction createAction() {
+    protected Action doCreateAction() {
         return new SayNumberAction(this, 
                 NodeUtils.getAttrValuesByPrefixAndType(this, "numbersNode", Node.class), 
                 genus, pauseBetweenWords, pauseBetweenNumbers, enableZero, resourceManager);
     }
-    
+
     public Collection<Long> getNumbersSequence() {
         List<Pattern> patterns = NodeUtils.getChildsOfType(this, Pattern.class);
-        List<String> strNumbers = new LinkedList<String>();
+        List<String> strNumbers = new LinkedList<>();
         String _number = number;
         if (patterns.isEmpty()) 
             strNumbers.add(_number);
@@ -111,7 +95,7 @@ public class SayNumberActionNode extends BaseNode implements IvrActionNode {
             }
         if (strNumbers.isEmpty())
             return Collections.EMPTY_LIST;
-        List<Long> numbers = new ArrayList<Long>(strNumbers.size());
+        List<Long> numbers = new ArrayList<>(strNumbers.size());
         for (String strNumber: strNumbers) 
             try {
                 int i=0;

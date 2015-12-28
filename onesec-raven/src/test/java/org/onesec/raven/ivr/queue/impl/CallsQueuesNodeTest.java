@@ -27,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 import static org.easymock.EasyMock.*;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.onesec.core.StateWaitResult;
 import org.onesec.core.provider.ProviderController;
@@ -103,14 +104,14 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
             endpoint.stop();
     }
 
-//    @Test
+    @Test
     public void recordSchemaTest()
     {
         queues.setCdrRecordSchema(schema);
         assertTrue(queues.start());
     }
 
-//    @Test
+    @Test
     public void initNodesTest() {
         assertTrue(queues.start());
         
@@ -134,7 +135,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         assertTrue(authenticator instanceof OperatorRegistratorNode);
     }
 
-//    @Test
+    @Test
     public void badRecordSchemaTest()
     {
         RecordSchemaNode badSchema = new RecordSchemaNode();
@@ -146,14 +147,14 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         assertFalse(queues.start());
     }
 
-//    @Test
+    @Test
     public void withoutSchemaTest()
     {
         queues.setCdrRecordSchema(null);
         assertTrue(queues.start());
     }
     
-//    @Test
+    @Test
     public void queueCallOnStoppedNode()
     {
         CallQueueRequest req = createMock(CallQueueRequest.class);
@@ -174,7 +175,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         verify(req, conv);
     }
     
-//    @Test
+    @Test
     public void nullQueueIdTest()
     {
         CallQueueRequest req = createMock(CallQueueRequest.class);
@@ -197,7 +198,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         verify(req, conv);
     }
 
-//    @Test
+    @Test
     public void queueNotFoundTest() 
     {
         CallQueueRequest req = createMock(CallQueueRequest.class);
@@ -248,7 +249,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         verify(req, conv);
     }
     
-//    @Test
+    @Test
     public void foundTest()
     {
         assertTrue(queues.start());
@@ -266,6 +267,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         expect(req.getConversation()).andReturn(conv).anyTimes();
         expect(conv.getObjectName()).andReturn("call info").anyTimes();
         req.addRequestListener(isA(CallQueueRequestListener.class));
+        context.executeCallbacksOnEach(queues, req);
         
         replay(req, context);
         
@@ -277,7 +279,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         verify(req, context);
     }
     
-//    @Test
+    @Test
     public void fireOperatorBusyTimerStartedTest() throws Exception {
         queues.setCdrRecordSchema(schema);
         assertTrue(queues.start());
@@ -301,7 +303,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         assertEquals("d1", rec.getValue(OPERATOR_PERSON_DESC));
     }
     
-//    @Test
+    @Test
     public void fireOperatorBusyTimerStoppedTest() throws Exception {
         queues.setCdrRecordSchema(schema);
         assertTrue(queues.start());
@@ -324,7 +326,7 @@ public class CallsQueuesNodeTest extends OnesecRavenTestCase
         assertEquals("d1", rec.getValue(OPERATOR_PERSON_DESC));
     }
     
-    @Test
+    @Test @Ignore
     public void realTest() throws Exception
     {
         prepareRealTest();

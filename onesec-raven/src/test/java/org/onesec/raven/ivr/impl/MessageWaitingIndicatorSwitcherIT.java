@@ -37,7 +37,7 @@ import org.raven.sched.impl.ExecutorServiceNode;
  *
  * @author Mikhail Titov
  */
-public class MessageWaitingIndicatorSwitcherTest extends OnesecRavenTestCase {
+public class MessageWaitingIndicatorSwitcherIT extends OnesecRavenTestCase {
     private final static String TEST_NUMBER = "88024";
     
     private ProviderRegistry providerRegistry;

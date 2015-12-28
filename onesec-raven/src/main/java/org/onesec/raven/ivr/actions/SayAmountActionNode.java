@@ -17,17 +17,14 @@
 
 package org.onesec.raven.ivr.actions;
 
-import javax.script.Bindings;
+import java.util.List;
 import org.onesec.raven.Constants;
-import org.onesec.raven.ivr.IvrAction;
-import org.onesec.raven.ivr.IvrActionNode;
+import org.onesec.raven.ivr.Action;
 import org.onesec.raven.ivr.impl.IvrConversationScenarioNode;
 import org.raven.annotations.NodeClass;
 import org.raven.annotations.Parameter;
-import org.raven.expr.impl.BindingSupportImpl;
 import org.raven.tree.Node;
 import org.raven.tree.ResourceManager;
-import org.raven.tree.impl.BaseNode;
 import org.raven.tree.impl.ResourceReferenceValueHandlerFactory;
 import org.raven.util.NodeUtils;
 import org.weda.annotations.constraints.NotNull;
@@ -38,7 +35,7 @@ import org.weda.internal.annotations.Service;
  * @author Mikhail Titov
  */
 @NodeClass(parentNode=IvrConversationScenarioNode.class)
-public class SayAmountActionNode extends BaseNode implements IvrActionNode
+public class SayAmountActionNode extends AbstractActionNode
 {
     @Service
     private static ResourceManager resourceManager;
@@ -53,47 +50,26 @@ public class SayAmountActionNode extends BaseNode implements IvrActionNode
 
     @NotNull @Parameter(defaultValue="0")
     private Integer pauseBetweenWords;
-    
-    private BindingSupportImpl bindingSupport;
 
     @Override
-    protected void initFields() {
-        super.initFields();
-        bindingSupport = new BindingSupportImpl();
-    }
-
-    @Override
-    public void formExpressionBindings(Bindings bindings) {
-        super.formExpressionBindings(bindings);
-        bindingSupport.addTo(bindings);
-    }
-
-    public IvrAction createAction() {
-        return new SayAmountAction(this, NodeUtils.getAttrValuesByPrefixAndType(this, "numbersNode", Node.class), 
-                pauseBetweenWords, resourceManager);
+    protected Action doCreateAction() {
+        final List<Node> numbersNodes = NodeUtils.getAttrValuesByPrefixAndType(this, "numbersNode", Node.class);
+        return new SayAmountAction(this, numbersNodes, pauseBetweenWords, resourceManager);
     }
     
-    BindingSupportImpl getBindingSupport() {
-        return bindingSupport;
-    }
-
-    public Integer getPauseBetweenWords()
-    {
+    public Integer getPauseBetweenWords() {
         return pauseBetweenWords;
     }
 
-    public void setPauseBetweenWords(Integer pauseBetweenWords)
-    {
+    public void setPauseBetweenWords(Integer pauseBetweenWords) {
         this.pauseBetweenWords = pauseBetweenWords;
     }
 
-    public Node getNumbersNode()
-    {
+    public Node getNumbersNode() {
         return numbersNode;
     }
 
-    public void setNumbersNode(Node numbersNode)
-    {
+    public void setNumbersNode(Node numbersNode) {
         this.numbersNode = numbersNode;
     }
 

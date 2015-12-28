@@ -18,22 +18,20 @@
 package org.onesec.raven.ivr.impl;
 
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import javax.media.Buffer;
 import javax.media.protocol.FileTypeDescriptor;
 import javax.media.protocol.PushBufferDataSource;
 import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.AudioStream;
-import org.onesec.raven.ivr.AudioStreamSourceListener;
 import org.onesec.raven.ivr.BufferCache;
 import org.onesec.raven.ivr.Cacheable;
 import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.CodecManager;
 import org.onesec.raven.ivr.InputStreamSource;
 import org.onesec.raven.ivr.IvrEndpointConversation;
-import org.onesec.raven.ivr.actions.AsyncAction;
+import org.raven.dp.RavenFuture;
+import org.raven.dp.impl.CompletedFuture;
 import org.raven.sched.ExecutorService;
 import org.raven.tree.Node;
 import org.raven.tree.impl.LoggerHelper;
@@ -42,129 +40,141 @@ import org.raven.tree.impl.LoggerHelper;
  *
  * @author Mikhail Titov
  */
-public class IvrUtils
-{
+public class IvrUtils {
+    
     private IvrUtils()     {
     }
 
-    public static void playAudioInAction(AsyncAction action, IvrEndpointConversation conversation
+    public static RavenFuture playAudioInAction(IvrEndpointConversation conversation
             , InputStreamSource audio)
         throws InterruptedException
     {
-        playAudioInAction(action, conversation, audio, (Cacheable)null);
+        return playAudioInAction(conversation, audio, (Cacheable)null);
     }
 
-    public static void playAudioInAction(AsyncAction action, IvrEndpointConversation conversation
-            , InputStreamSource audio, AudioStreamSourceListener sourceListener)
-    {
-        playAudioInAction(action, conversation, audio, null, sourceListener);
-    }
-
-    public static void playAudioInAction(AsyncAction action, IvrEndpointConversation conversation
+    public static RavenFuture playAudioInAction(IvrEndpointConversation conversation
             , InputStreamSource audio, Cacheable cacheInfo)
-        throws InterruptedException
     {
         final AudioStream stream = conversation.getAudioStream();
         if (stream!=null){
-            if (cacheInfo==null || !cacheInfo.isCacheable())
-                stream.addSource(audio);
-            else
-                stream.addSource(cacheInfo.getCacheKey(), cacheInfo.getCacheChecksum(), audio);
-            waitWhilePlaying(action, conversation);
-        }
-    }
-    
-    public static void playAudioInAction(AsyncAction action, IvrEndpointConversation conversation
-            , InputStreamSource audio, Cacheable cacheInfo, AudioStreamSourceListener sourceListener)
-    {
-        final AudioStream stream = conversation.getAudioStream();
-        if (stream!=null) {
-            if (cacheInfo==null || !cacheInfo.isCacheable())
-                stream.addSource(audio, sourceListener);
-            else
-                stream.addSource(cacheInfo.getCacheKey(), cacheInfo.getCacheChecksum(), audio, sourceListener);
+            return cacheInfo==null || !cacheInfo.isCacheable()?
+                    stream.addSource(audio) :
+                    stream.addSource(cacheInfo.getCacheKey(), cacheInfo.getCacheChecksum(), audio);
 //            waitWhilePlaying(action, conversation);
-        } else
-            sourceListener.sourceProcessed();
-    }
-    
-    public static void pauseInAction(AsyncAction action, long pause) throws InterruptedException {
-        if (pause >= 0) {
-            final long endTime = System.currentTimeMillis() + pause;
-            while(!action.hasCancelRequest() && endTime>System.currentTimeMillis())
-                Thread.sleep(5);
         }
+        return new CompletedFuture(null, conversation.getExecutorService());
     }
     
-    public static void playAudiosInAction(List<AudioFile> audioFiles, AsyncAction action, 
+//    public static void playAudioInAction(AsyncAction action, IvrEndpointConversation conversation
+//            , InputStreamSource audio, Cacheable cacheInfo, AudioStreamSourceListener sourceListener)
+//    {
+//        final AudioStream stream = conversation.getAudioStream();
+//        if (stream!=null) {
+//            if (cacheInfo==null || !cacheInfo.isCacheable())
+//                stream.addSource(audio, sourceListener);
+//            else
+//                stream.addSource(cacheInfo.getCacheKey(), cacheInfo.getCacheChecksum(), audio, sourceListener);
+////            waitWhilePlaying(action, conversation);
+//        } else
+//            sourceListener.sourceProcessed();
+//    }
+    
+//    public static void pauseInAction(AsyncAction action, long pause) throws InterruptedException {
+//        if (pause >= 0) {
+//            final long endTime = System.currentTimeMillis() + pause;
+//            while(!action.hasCancelRequest() && endTime>System.currentTimeMillis())
+//                Thread.sleep(5);
+//        }
+//    }
+    
+    public static RavenFuture playAudiosInAction(List<AudioFile> audioFiles, RavenFuture action, 
             IvrEndpointConversation conversation, long pauseBetweenFragments) throws InterruptedException 
     {
-        if (pauseBetweenFragments <= 0) {
+//        if (pauseBetweenFragments <= 0) {
             final AudioStream audioStream = conversation.getAudioStream();
-            if (audioStream!=null) {
-                audioStream.playContinuously(audioFiles, Math.abs(pauseBetweenFragments));
-                waitWhilePlaying(action, conversation);
-            }
-        } else {
-            for (AudioFile file: audioFiles)
-                playAudioInAction(action, conversation, file);
-        }
-        
-    }
-    
-    public static void playAudiosInAction(List<AudioFile> audioFiles, final AsyncAction action, 
-            final IvrEndpointConversation conversation, long pauseBetweenFragments, 
-            final AudioStreamSourceListener sourceListener) 
-    {
-        if (audioFiles==null || audioFiles.isEmpty()) {
-            sourceListener.sourceProcessed();
-            return;
-        }
-        if (pauseBetweenFragments <= 0) {
-            final AudioStream audioStream = conversation.getAudioStream();
-            if (audioStream!=null) {
-                audioStream.playContinuously(audioFiles, Math.abs(pauseBetweenFragments), sourceListener);
-//                waitWhilePlaying(action, conversation);
-            } else
-                sourceListener.sourceProcessed();
-        } else {
-            final Iterator<AudioFile> it = audioFiles.iterator();
-            final AudioStreamSourceListener completionHandler = new AudioStreamSourceListener() {
-                    @Override public void sourceProcessed() {
-                        if (it.hasNext())
-                            sourceListener.sourceProcessed();
-                        else
-                            playAudioInAction(action, conversation, it.next(), this);
-                    }
-                };
+            return audioStream!=null?
+                    audioStream.playContinuously(audioFiles, Math.abs(pauseBetweenFragments)) :
+                    new CompletedFuture(null, conversation.getExecutorService());
+//        } 
+//        else {
+//            final RavenPromise promise = new RavenPromise(conversation.getExecutorService());
+//            
 //            for (AudioFile file: audioFiles)
-             playAudioInAction(action, conversation, it.next(), completionHandler);
-        }
+//                playAudioInAction(action, conversation, file);
+//            return promise.getFuture();
+//        }
         
     }
     
-    public static void waitWhilePlaying(AsyncAction action, IvrEndpointConversation conv) 
-            throws InterruptedException 
-    {
-        final AudioStream stream = conv.getAudioStream();        
-        while (stream!=null && !action.hasCancelRequest() && stream.isPlaying())
-            TimeUnit.MILLISECONDS.sleep(10);
-    }
+//    private static void playOne(final RavenFuture actionFuture, final Iterator<AudioFile> it, 
+//            final IvrEndpointConversation conversation, final RavenPromise promise) 
+//    {
+//        if (!it.hasNext() || actionFuture.isCancelled())
+//            promise.completeWithValue(null);
+//        else
+//            playAudioInAction(actionFuture, conversation, it.next()).onComplete(new FutureCallback() {
+//                @Override public void onSuccess(Object result) {
+//                    playOne(actionFuture, it, conversation, promise);
+//                }
+//                @Override public void onError(Throwable error) {
+//                    promise.completeWithValue(null);
+//                }
+//                @Override public void onCanceled() {
+//                    promise.completeWithValue(null);
+//                }
+//        });
+//    }
+    
+//    public static void playAudiosInAction(List<AudioFile> audioFiles, final AsyncAction action, 
+//            final IvrEndpointConversation conversation, long pauseBetweenFragments, 
+//            final AudioStreamSourceListener sourceListener) 
+//    {
+//        if (audioFiles==null || audioFiles.isEmpty()) {
+//            sourceListener.sourceProcessed();
+//            return;
+//        }
+//        if (pauseBetweenFragments <= 0) {
+//            final AudioStream audioStream = conversation.getAudioStream();
+//            if (audioStream!=null) {
+//                audioStream.playContinuously(audioFiles, Math.abs(pauseBetweenFragments), sourceListener);
+////                waitWhilePlaying(action, conversation);
+//            } else
+//                sourceListener.sourceProcessed();
+//        } else {
+//            final Iterator<AudioFile> it = audioFiles.iterator();
+//            final AudioStreamSourceListener completionHandler = new AudioStreamSourceListener() {
+//                    @Override public void sourceProcessed() {
+//                        if (it.hasNext())
+//                            sourceListener.sourceProcessed();
+//                        else
+//                            playAudioInAction(action, conversation, it.next(), this);
+//                    }
+//                };
+////            for (AudioFile file: audioFiles)
+//             playAudioInAction(action, conversation, it.next(), completionHandler);
+//        }
+//        
+//    }
+    
+//    public static void waitWhilePlaying(AsyncAction action, IvrEndpointConversation conv) 
+//            throws InterruptedException 
+//    {
+//        final AudioStream stream = conv.getAudioStream();        
+//        while (stream!=null && !action.hasCancelRequest() && stream.isPlaying())
+//            TimeUnit.MILLISECONDS.sleep(10);
+//    }
 
-    public static void playAudioInAction(AsyncAction action, IvrEndpointConversation conversation
-            , AudioFile audio)
-        throws InterruptedException
-    {
+    public static RavenFuture playAudioInAction(IvrEndpointConversation conversation, AudioFile audio) {
         AudioFileInputStreamSource source = new AudioFileInputStreamSource(audio, conversation.getOwner());
-        playAudioInAction(action, conversation, source, audio);
+        return playAudioInAction(conversation, source, audio);
     }
     
-    public static void playAudioInAction(AsyncAction action, IvrEndpointConversation conversation
-            , AudioFile audio, AudioStreamSourceListener sourceListener)
-    {
-        AudioFileInputStreamSource source = new AudioFileInputStreamSource(audio, conversation.getOwner());
-        playAudioInAction(action, conversation, source, audio, sourceListener);
-    }
+//    public static void playAudioInAction(AsyncAction action, IvrEndpointConversation conversation
+//            , AudioFile audio, AudioStreamSourceListener sourceListener)
+//    {
+//        AudioFileInputStreamSource source = new AudioFileInputStreamSource(audio, conversation.getOwner());
+//        playAudioInAction(action, conversation, source, audio, sourceListener);
+//    }
     
     public static PushBufferDataSource createSourceFromAudioFile(AudioFile audioFile, 
             CodecManager codecManager, ExecutorService executor, Node owner, BufferCache bufferCache, 

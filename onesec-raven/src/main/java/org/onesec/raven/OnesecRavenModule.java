@@ -40,6 +40,7 @@ import org.slf4j.Logger;
  */
 public class OnesecRavenModule {
     public static boolean ENABLE_LOADING_SOUND_RESOURCE = true;
+    public static boolean ENABLE_LOADING_TEMPLATES = true;
     
     public static void bind(ServiceBinder binder) {
         binder.bind(StateToNodeLogger.class, StateToNodeLoggerImpl.class);
@@ -99,13 +100,14 @@ public class OnesecRavenModule {
     }
     
     public static void contributeTemplateNodeBuildersProvider(Configuration<ResourceDescriptor> conf) {
-        String base = "/org/onesec/raven/templates/";
-        String vmail = "IVR/VMail/";
-        conf.add(new ResourceDescriptorImpl(base, vmail+"Recording scenario.xml"));
-        conf.add(new ResourceDescriptorImpl(base, vmail+"Listening scenario.xml"));
-        String conference = "IVR/Conference/";
-        conf.add(new ResourceDescriptorImpl(base, conference+"Conference.xml"));
-        conf.add(new ResourceDescriptorImpl(base, conference+"Conference HTTP API.xml"));
-        
+        if (ENABLE_LOADING_TEMPLATES) {
+            String base = "/org/onesec/raven/templates/";
+            String vmail = "IVR/VMail/";
+            conf.add(new ResourceDescriptorImpl(base, vmail+"Recording scenario.xml"));
+            conf.add(new ResourceDescriptorImpl(base, vmail+"Listening scenario.xml"));
+            String conference = "IVR/Conference/";
+            conf.add(new ResourceDescriptorImpl(base, conference+"Conference.xml"));
+            conf.add(new ResourceDescriptorImpl(base, conference+"Conference HTTP API.xml"));
+        }
     }
 }

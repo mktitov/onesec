@@ -15,29 +15,26 @@
  */
 package org.onesec.raven.ivr.actions;
 
-import org.onesec.raven.ivr.IvrEndpointConversation;
-
 /**
  *
  * @author Mikhail Titov
  */
-public class SimpleTransferCallAction extends AsyncAction {
-    public final static String NAME = "Simple transfer";
+public class SimpleTransferCallAction extends AbstractAction {
     private final String address;
 
-    public SimpleTransferCallAction(String address) {
-        super(NAME);
+    public SimpleTransferCallAction(final String address) {
+        super("Simple call transfer to: "+address);
         this.address = address;
     }
 
     @Override
-    protected void doExecute(IvrEndpointConversation conversation) throws Exception {
-        if (logger.isDebugEnabled())
-            logger.debug("Transfering call to address ({})", address);
-        conversation.transfer(address);
+    protected ActionExecuted processExecuteMessage(Execute message) throws Exception {
+        message.getConversation().transfer(address);
+        return ACTION_EXECUTED_then_EXECUTE_NEXT;
     }
 
-    public boolean isFlowControlAction() {
-        return false;
+    @Override
+    protected void processCancelMessage() throws Exception {
+        sendExecuted(ACTION_EXECUTED_then_EXECUTE_NEXT);
     }
 }

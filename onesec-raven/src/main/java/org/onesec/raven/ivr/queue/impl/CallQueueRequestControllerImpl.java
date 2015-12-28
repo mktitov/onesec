@@ -531,6 +531,14 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
             }
             conv.addConversationListener(new Listener());
         }
+
+        @Override
+        public void commutated() {
+        }
+
+        @Override
+        public void disconnected() {
+        }
     }
     
     private class Listener implements IvrEndpointConversationListener {

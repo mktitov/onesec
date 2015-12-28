@@ -17,21 +17,26 @@ package org.onesec.raven.ivr.actions;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.activation.DataSource;
 import javax.media.format.AudioFormat;
 import javax.media.protocol.FileTypeDescriptor;
 import javax.script.Bindings;
+import mockit.Delegate;
+import mockit.Expectations;
+import mockit.Mocked;
+import mockit.Verifications;
+import mockit.integration.junit4.JMockit;
 import org.apache.commons.io.IOUtils;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.*;
-import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.TestSchedulerNode;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.raven.cache.TemporaryFileManagerNode;
 import static org.easymock.EasyMock.*;
-import org.easymock.IArgumentMatcher;
-import org.easymock.internal.MocksControl;
+import org.junit.runner.RunWith;
+import org.onesec.raven.ivr.Action;
 import org.onesec.raven.ivr.BufferCache;
 import org.onesec.raven.ivr.Codec;
 import org.onesec.raven.ivr.CodecManager;
@@ -42,47 +47,37 @@ import org.onesec.raven.ivr.impl.BufferCacheImpl;
 import org.onesec.raven.ivr.impl.ConcatDataSource;
 import org.onesec.raven.ivr.impl.RTPManagerServiceImpl;
 import org.onesec.raven.ivr.impl.TestInputStreamSource;
+import org.onesec.raven.ivr.impl.TickingDataSource;
 import org.raven.BindingNames;
 import org.raven.conv.BindingScope;
 import org.raven.conv.ConversationScenarioState;
+import org.raven.dp.DataProcessor;
+import org.raven.dp.DataProcessorFacade;
 import org.raven.log.LogLevel;
-import org.raven.sched.ExecutorService;
 import org.raven.sched.impl.AbstractTask;
-import org.raven.sched.impl.ExecutorServiceNode;
 import org.raven.test.DataCollector;
-import org.raven.tree.Node;
+import org.raven.test.TestDataProcessorFacade;
 import org.raven.tree.impl.LoggerHelper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  *
  * @author Mikhail Titov
  */
-public class StartRecordingActionTest extends OnesecRavenTestCase {
-    private final static Logger logger = LoggerFactory.getLogger(StartRecordingActionTest.class);
-    
-    private ExecutorServiceNode executor;
+@RunWith(JMockit.class)
+public class StartRecordingActionTest extends ActionTestCase {
+
     private StartRecordingActionNode actionNode;
     private TemporaryFileManagerNode tempFileManager;
     private TestSchedulerNode scheduler;
     private CodecManager codecManager;
     private BufferCache bufferCache;
     private DataCollector collector;
-    private static StartRecordingAction.Recorder recorder;
     
     @Before
     public void prepare() {
         codecManager = registry.getService(CodecManager.class);
         RTPManagerServiceImpl rtpManagerService = new RTPManagerServiceImpl(logger, codecManager);
         bufferCache = new BufferCacheImpl(rtpManagerService, logger, codecManager);
-        
-        executor = new ExecutorServiceNode();
-        executor.setName("executor");
-        tree.getRootNode().addAndSaveChildren(executor);
-        executor.setCorePoolSize(10);
-        executor.setMaximumPoolSize(10);
-        assertTrue(executor.start());
         
         scheduler = new TestSchedulerNode();
         scheduler.setName("scheduler");
@@ -112,33 +107,55 @@ public class StartRecordingActionTest extends OnesecRavenTestCase {
     }
     
     @Test
-    public void test() throws Exception {
-        MocksControl control = new MocksControl(MocksControl.MockType.NICE);
-        IvrEndpointConversation conv = control.createMock(IvrEndpointConversation.class);
-        ConversationScenarioState state = control.createMock(ConversationScenarioState.class);
-        Bindings bindings = control.createMock(Bindings.class);
-        IncomingRtpStream inRtp = control.createMock(IncomingRtpStream.class);
-        
-        expect(conv.getConversationScenarioState()).andReturn(state).atLeastOnce();
-        expect(state.getBindings()).andReturn(bindings).atLeastOnce();
-        expect(bindings.get(BindingNames.DATA_CONTEXT_BINDING)).andReturn(null);
-        expect(bindings.get(StartRecordingAction.RECORDER_BINDING)).andReturn(null);
-        expect(conv.getOwner()).andReturn(actionNode);
-        expect(conv.getExecutorService()).andReturn(executor).atLeastOnce();
-        expect(conv.getIncomingRtpStream()).andReturn(inRtp);
-        expect(inRtp.addDataSourceListener(checkRtpListener(codecManager, executor, actionNode, bufferCache)
-                , isNull(AudioFormat.class))).andReturn(true);
-        state.setBinding(eq(StartRecordingAction.RECORDER_BINDING), isA(Recorder.class), eq(BindingScope.CONVERSATION));
-        expect(bindings.remove(StartRecordingAction.RECORDER_BINDING)).andReturn(null);
-        
-        control.replay();
-        
-        StartRecordingAction action = (StartRecordingAction) actionNode.createAction();
-        assertNotNull(action);
-        action.doExecute(conv);
+    public void test(
+            @Mocked final DataProcessor actionExecutorDP,
+            @Mocked final Action.Execute execMess,
+            @Mocked final IvrEndpointConversation conv,
+            @Mocked final ConversationScenarioState state,
+            @Mocked final IncomingRtpStream inRtp,
+            @Mocked final Bindings bindings) 
+        throws Exception 
+    {
+        final AtomicReference<Recorder> recorder = new AtomicReference<>();
+        new Expectations() {{
+            conv.getExecutorService(); result = executor;
+            conv.getIncomingRtpStream(); result = inRtp;
+            bindings.get(BindingNames.DATA_CONTEXT_BINDING); result = null;
+            bindings.get(StartRecordingAction.RECORDER_BINDING); result = null;
+            state.setBinding(StartRecordingAction.RECORDER_BINDING, withInstanceOf(Recorder.class), BindingScope.CONVERSATION);
+            inRtp.addDataSourceListener((IncomingRtpStreamDataSourceListener) anyObject(), (AudioFormat) withNull()); result = new Delegate() {
+                boolean addDataSourceListener(final IncomingRtpStreamDataSourceListener listener, AudioFormat format) {
+                    executor.executeQuietly(new AbstractTask(actionNode, "datasource executor") {
+                        @Override public void doRun() throws Exception {
+                            try {
+                                recorder.set((Recorder) listener);
+                                TestInputStreamSource source = new TestInputStreamSource("src/test/wav/test.wav");
+                                ConcatDataSource dataSource = new ConcatDataSource(
+                                        FileTypeDescriptor.WAVE, executor, codecManager, Codec.G711_MU_LAW, 240, 5
+                                        , 5, actionNode, bufferCache, new LoggerHelper(actionNode, null));
+                                TickingDataSource tickingSource = new TickingDataSource(dataSource, 30, new LoggerHelper(logger, null));
+                                
+                                tickingSource.start();
+                                dataSource.addSource(source);
+                                listener.dataSourceCreated(null, tickingSource);
+                            } catch (FileNotFoundException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }
+                    });
+                    return true;
+                };
+            };
+            bindings.remove(StartRecordingAction.RECORDER_BINDING); result = null;
+        }};
+        TestDataProcessorFacade actionExecutor = createActionExecutor(actionExecutorDP);
+        DataProcessorFacade action = createAction(actionExecutor, actionNode);
+        actionExecutor.setWaitForMessage(AbstractAction.ACTION_EXECUTED_then_EXECUTE_NEXT);
+        actionExecutor.sendTo(action, execMess);
+        actionExecutor.waitForMessage(100);
         Thread.sleep(1000);
-        assertNotNull(recorder);
-        recorder.stopRecording(false);
+        assertNotNull(recorder.get());
+        recorder.get().stopRecording(false);
         
         assertEquals(1, collector.getDataListSize());
         assertTrue(collector.getDataList().get(0) instanceof DataSource);
@@ -146,36 +163,9 @@ public class StartRecordingActionTest extends OnesecRavenTestCase {
         FileOutputStream out = new FileOutputStream("target/test.wav");
         IOUtils.copy(ds.getInputStream(), out);
         out.close();
-//        while (action.)
-        control.verify();
-    }
-    
-    public static IncomingRtpStreamDataSourceListener checkRtpListener(final CodecManager codecManager
-            , final ExecutorService executor, final Node actionNode, final BufferCache bufferCache) {
-        reportMatcher(new IArgumentMatcher() {
-            public boolean matches(final Object arg) {
-                executor.executeQuietly(new AbstractTask(actionNode, "datasource executor") {
-                    @Override public void doRun() throws Exception {
-                        try {
-                            recorder = (Recorder) arg;
-                            TestInputStreamSource source = new TestInputStreamSource("src/test/wav/test.wav");
-                            ConcatDataSource dataSource = new ConcatDataSource(
-                                    FileTypeDescriptor.WAVE, executor, codecManager, Codec.G711_MU_LAW, 240, 5
-                                    , 5, actionNode, bufferCache, new LoggerHelper(actionNode, null));
-                            IncomingRtpStreamDataSourceListener listener = (IncomingRtpStreamDataSourceListener) arg;
-                            dataSource.start();
-                            dataSource.addSource(source);
-                            listener.dataSourceCreated(null, dataSource);
-                        } catch (FileNotFoundException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-                });
-                return true;
-            }
-            public void appendTo(StringBuffer buffer) {
-            }
-        });
-        return null;
+        
+        new Verifications() {{
+            state.setBinding(StartRecordingAction.RECORDER_BINDING, withInstanceOf(Recorder.class), BindingScope.CONVERSATION);
+        }};
     }
 }

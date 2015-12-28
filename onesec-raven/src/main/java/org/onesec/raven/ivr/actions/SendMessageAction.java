@@ -24,34 +24,56 @@ import org.raven.expr.BindingSupport;
  *
  * @author Mikhail Titov
  */
-public class SendMessageAction extends AsyncAction
+public class SendMessageAction extends AbstractAction
 {
-    public final static String NAME = "Send message action";
-
     private final SendMessageActionNode actionNode;
     private final BindingSupport bindingSupport;
 
     public SendMessageAction(SendMessageActionNode actionNode, BindingSupport bindingSupport)
     {
-        super(NAME);
+        super("Send message to Cisco IP Phone");
         this.actionNode = actionNode;
         this.bindingSupport = bindingSupport;
     }
 
     @Override
-    protected void doExecute(IvrEndpointConversation conversation) throws Exception
-    {
+    protected ActionExecuted processExecuteMessage(Execute message) throws Exception {
         try {
-            bindingSupport.putAll(conversation.getConversationScenarioState().getBindings());
-            String message = actionNode.getMessage();
-            conversation.sendMessage(message, actionNode.getEncoding().name(), actionNode.getSendDirection());
+            final IvrEndpointConversation conv = message.getConversation();
+            bindingSupport.putAll(conv.getConversationScenarioState().getBindings());
+            String mess = actionNode.getMessage();
+            conv.sendMessage(mess, actionNode.getEncoding().name(), actionNode.getSendDirection());
+            return ACTION_EXECUTED_then_EXECUTE_NEXT;
         } finally {
             bindingSupport.reset();
         }
     }
 
-    public boolean isFlowControlAction() {
-        return false;
+    @Override
+    protected void processCancelMessage() throws Exception {
+        sendExecuted(ACTION_EXECUTED_then_EXECUTE_NEXT);
     }
+    
+//    @Override
+//    protected void doExecute(IvrEndpointConversation conversation) throws Exception
+//    {
+//        try {
+//            bindingSupport.putAll(conversation.getConversationScenarioState().getBindings());
+//            String message = actionNode.getMessage();
+//            conversation.sendMessage(message, actionNode.getEncoding().name(), actionNode.getSendDirection());
+//        } finally {
+//            bindingSupport.reset();
+//        }
+//    }
+
+//    @Override
+//    protected boolean doExecute(IvrEndpointConversation conversation, RavenPromise<IvrAction, IvrActionException> completionPromise, LoggerHelper logger) throws Exception {
+//        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+//    }
+//
+//    public boolean isFlowControlAction() {
+//        return false;
+//    }
+
 
 }

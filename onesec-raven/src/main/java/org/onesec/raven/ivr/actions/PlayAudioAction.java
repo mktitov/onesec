@@ -17,9 +17,9 @@
 
 package org.onesec.raven.ivr.actions;
 
-import org.onesec.raven.ivr.AudioFile;
 import org.onesec.raven.ivr.IvrEndpointConversation;
 import org.onesec.raven.ivr.impl.AudioFileNode;
+import org.raven.expr.BindingSupport;
 
 /**
  *
@@ -27,17 +27,21 @@ import org.onesec.raven.ivr.impl.AudioFileNode;
  */
 public class PlayAudioAction extends AbstractPlayAudioAction
 {
-    public final static String NAME = "Play audio action";
     private final AudioFileNode file;
 
     public PlayAudioAction(AudioFileNode audioFile)
     {
-        super(NAME);
+        super("Play: "+audioFile.getName(), null);
         this.file = audioFile;
     }
 
     @Override
-    protected AudioFile getAudioFile(IvrEndpointConversation conversation) {
+    protected Object getAudio(IvrEndpointConversation conversation) throws Exception {
         return file;
+    }
+
+    @Override
+    protected BindingSupport getBindingSupport() {
+        return null;
     }
 }

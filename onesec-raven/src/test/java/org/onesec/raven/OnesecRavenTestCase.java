@@ -23,7 +23,11 @@ import java.net.NetworkInterface;
 import java.util.Enumeration;
 import java.util.Set;
 import org.onesec.core.services.OnesecCoreModule;
+import org.raven.log.LogLevel;
+import org.raven.sched.ExecutorService;
+import org.raven.sched.impl.ExecutorServiceNode;
 import org.raven.test.RavenCoreTestCase;
+import org.raven.tree.impl.LoggerHelper;
 
 /**
  *
@@ -31,12 +35,20 @@ import org.raven.test.RavenCoreTestCase;
  */
 public class OnesecRavenTestCase extends RavenCoreTestCase
 {
+    protected LoggerHelper logger;
+    
     @Override
     protected void configureRegistry(Set<Class> builder)
     {
         super.configureRegistry(builder);
         builder.add(OnesecCoreModule.class);
         builder.add(OnesecRavenModule.class);
+    }
+
+    @Override
+    public void initTest() throws Exception {
+        super.initTest(); 
+        logger = createLogger();
     }
 
     public InetAddress getInterfaceAddress() throws Exception
@@ -62,5 +74,20 @@ public class OnesecRavenTestCase extends RavenCoreTestCase
         }
 
         throw new Exception("Interfaces not found");
+    }
+    
+    protected ExecutorServiceNode createExecutor() {
+        ExecutorServiceNode executor = new ExecutorServiceNode();
+        executor.setName("Executor");
+        testsNode.addAndSaveChildren(executor);
+        executor.setType(ExecutorService.Type.FORK_JOIN_POOL);
+        assertTrue(executor.start());
+        
+        return executor;
+    }
+    
+    protected LoggerHelper createLogger() {
+        testsNode.setLogLevel(LogLevel.TRACE);
+        return new LoggerHelper(testsNode, null);
     }
 }

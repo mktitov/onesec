@@ -22,6 +22,7 @@ import org.onesec.raven.ivr.IvrAction;
 import org.onesec.raven.ivr.IvrActionException;
 import org.onesec.raven.ivr.IvrActionStatus;
 import org.onesec.raven.ivr.IvrEndpointConversation;
+import org.raven.dp.RavenFuture;
 import org.raven.tree.impl.LoggerHelper;
 
 /**
@@ -46,37 +47,42 @@ public class TestPauseAction implements IvrAction
         return false;
     }
 
-    public void execute(IvrEndpointConversation conversation, final ActionStopListener stopListener, LoggerHelper logger) throws IvrActionException
-    {
-        setStatus(IvrActionStatus.EXECUTING);
-        new Thread(){
-            @Override
-            public void run()
-            {
-                try
-                {
-                    for (int i=0; i<50; ++i)
-                    {
-                        if (mustCancel)
-                        {
-                            canceled = true;
-                            return;
-                        }
-                        try {
-                            Thread.sleep(10);
-                        } catch (InterruptedException ex) {
-                        }
-                    }
-                }
-                finally
-                {
-                    setStatus(IvrActionStatus.EXECUTED);
-                    if (stopListener!=null)
-                        stopListener.actionExecuted(TestPauseAction.this);
-                }
-            }
-        }.start();
+    @Override
+    public RavenFuture<IvrAction, IvrActionException> execute(IvrEndpointConversation conversation, LoggerHelper logger) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
+
+//    public void execute(IvrEndpointConversation conversation, final ActionStopListener stopListener, LoggerHelper logger) throws IvrActionException
+//    {
+//        setStatus(IvrActionStatus.EXECUTING);
+//        new Thread(){
+//            @Override
+//            public void run()
+//            {
+//                try
+//                {
+//                    for (int i=0; i<50; ++i)
+//                    {
+//                        if (mustCancel)
+//                        {
+//                            canceled = true;
+//                            return;
+//                        }
+//                        try {
+//                            Thread.sleep(10);
+//                        } catch (InterruptedException ex) {
+//                        }
+//                    }
+//                }
+//                finally
+//                {
+//                    setStatus(IvrActionStatus.EXECUTED);
+//                    if (stopListener!=null)
+//                        stopListener.actionExecuted(TestPauseAction.this);
+//                }
+//            }
+//        }.start();
+//    }
 
     public synchronized IvrActionStatus getStatus() {
         return status;
