@@ -51,7 +51,7 @@ public class OnesecRavenTestCase extends RavenCoreTestCase
         logger = createLogger();
     }
 
-    public InetAddress getInterfaceAddress() throws Exception
+    public static InetAddress getInterfaceAddress() throws Exception
     {
         Enumeration<NetworkInterface> ifs = NetworkInterface.getNetworkInterfaces();
         while (ifs.hasMoreElements())
