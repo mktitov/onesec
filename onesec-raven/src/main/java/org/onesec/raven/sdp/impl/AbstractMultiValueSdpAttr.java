@@ -13,42 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.onesec.raven.sip.impl;
+package org.onesec.raven.sdp.impl;
 
 import io.netty.buffer.ByteBuf;
 import java.util.List;
+import org.onesec.raven.sdp.SdpAttr;
+import org.onesec.raven.sip.impl.AbstractMultiValueSipHeader;
 
 /**
  *
  * @author Mikhail Titov
  */
-public abstract class AbstractMultiValueSipHeader<T> extends AbstractSipHeader<T> {
-    protected final List<T> values;
-    
-    public AbstractMultiValueSipHeader(final String name, final List<String> values) {
-        super(name);
-        this.values = createValuesList(values);
-    }        
-    
-    protected abstract List<T> createValuesList(final List<String> stringValues);
-    
-    @Override
-    public T getFirstValue() {
-        return values.isEmpty()? null : values.get(0);
+public abstract class AbstractMultiValueSdpAttr<T> extends AbstractMultiValueSipHeader<T> implements SdpAttr<T>{
+
+    public AbstractMultiValueSdpAttr(String name, List<String> values) {
+        super(name, values);
     }
 
     @Override
-    public List<T> getValues() {
-        return values;    
-    }
-    
-    @Override
-    public ByteBuf writeTo(final ByteBuf buf) {
+    public ByteBuf writeTo(ByteBuf buf) {
         for (T value: values) {
-            buf.writeBytes(getBytesOfName()).writeByte(':').writeByte(' ');
+            buf.writeBytes(A_BYTES);
+            buf.writeBytes(getBytesOfName()).writeByte(':');
             buf.writeBytes(getBytesOfValue(value));
         }
         return buf;
     }    
-    
 }

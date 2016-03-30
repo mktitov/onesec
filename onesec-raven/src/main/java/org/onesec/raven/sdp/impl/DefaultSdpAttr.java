@@ -13,34 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.onesec.raven.sip.impl;
+package org.onesec.raven.sdp.impl;
 
-import org.onesec.raven.sip.SipHeader;
-
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  *
  * @author Mikhail Titov
- * @param <T>
  */
-public abstract class AbstractSipHeader<T> implements SipHeader<T> {
-    protected final String name;
+public class DefaultSdpAttr extends AbstractMultiValueSdpAttr<String> {
 
-    public AbstractSipHeader(final String name) {
-        this.name = name;
-    }        
-    
+    public DefaultSdpAttr(String name, List<String> values) {
+        super(name, values);
+    }
+
     @Override
-    public String getName() {
-        return name;
+    protected List<String> createValuesList(List<String> stringValues) {
+        return Collections.unmodifiableList(new ArrayList<>(stringValues));
     }
-    
-    protected byte[] getBytesOfName() {
-        return SipUtils.toBytes(name);
-    }
-    
-    protected byte[] getBytesOfValue(final T value) {
-        return SipUtils.toBytes(value.toString());
-    }
-
 }

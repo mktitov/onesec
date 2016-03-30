@@ -13,34 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.onesec.raven.sip.impl;
+package org.onesec.raven.sdp;
 
 import org.onesec.raven.sip.SipHeader;
-
+import org.onesec.raven.sip.impl.SipUtils;
 
 /**
  *
  * @author Mikhail Titov
- * @param <T>
  */
-public abstract class AbstractSipHeader<T> implements SipHeader<T> {
-    protected final String name;
-
-    public AbstractSipHeader(final String name) {
-        this.name = name;
-    }        
-    
-    @Override
-    public String getName() {
-        return name;
-    }
-    
-    protected byte[] getBytesOfName() {
-        return SipUtils.toBytes(name);
-    }
-    
-    protected byte[] getBytesOfValue(final T value) {
-        return SipUtils.toBytes(value.toString());
-    }
-
+public interface SdpAttr<T> extends SipHeader<T> {
+    public final static byte[] A_BYTES = SipUtils.toBytes("a=");
 }
