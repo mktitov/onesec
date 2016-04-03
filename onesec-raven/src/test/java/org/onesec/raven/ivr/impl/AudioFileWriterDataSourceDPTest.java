@@ -15,7 +15,10 @@
  */
 package org.onesec.raven.ivr.impl;
 
+import java.io.FileNotFoundException;
 import java.util.Set;
+import javax.media.protocol.FileTypeDescriptor;
+import javax.media.protocol.PushBufferDataSource;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -25,6 +28,7 @@ import static org.junit.Assert.*;
 import org.onesec.raven.OnesecRavenModule;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.ivr.CodecManager;
+import org.onesec.raven.ivr.InputStreamSource;
 import org.raven.dp.DataProcessor;
 import org.raven.dp.DataProcessorContext;
 import org.raven.dp.DataProcessorFacade;
@@ -62,7 +66,9 @@ public class AudioFileWriterDataSourceDPTest extends OnesecRavenTestCase {
     
     @Test
     public void testOneChannel() {
-        
+        TestDataProcessorFacade writer = createAudioWriter();
+                PushBufferDataSource ds = createDataSourceFromFile("src/test/wav/test2.wav");
+
     }
     
     protected TestDataProcessorFacade createAudioWriter() {
@@ -72,5 +78,12 @@ public class AudioFileWriterDataSourceDPTest extends OnesecRavenTestCase {
         return writer;
     }
     
+    private PushBufferDataSource createDataSourceFromFile(String filename) throws FileNotFoundException {
+        InputStreamSource source = new TestInputStreamSource(filename);
+        IssDataSource dataSource = new IssDataSource(source, FileTypeDescriptor.WAVE);
+        ContainerParserDataSource parser = new ContainerParserDataSource(codecManager, dataSource);
+        PullToPushConverterDataSource conv = new PullToPushConverterDataSource(parser, executor, testsNode);
+        return conv;
+    }
     
 }
