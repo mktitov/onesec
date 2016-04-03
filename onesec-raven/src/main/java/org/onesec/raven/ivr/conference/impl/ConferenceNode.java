@@ -907,6 +907,7 @@ public class ConferenceNode extends BaseNode implements Conference {
                     ConferenceNode.this, logger, false);
             recordingNode.setRecordingFile(filename);
             recordingNode.setRecordingStartTime(formatDate(startDate));
+//            fileWriter = null;
             fileWriter = new AudioFileWriterDataSource(
                     new File(filename), asyncDs, codecManager, FileTypeDescriptor.WAVE, this.logger);
             fileWriter.start();

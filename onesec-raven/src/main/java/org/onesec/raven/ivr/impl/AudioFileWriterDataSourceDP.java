@@ -79,7 +79,6 @@ public class AudioFileWriterDataSourceDP extends AbstractDataProcessorLogic {
                     }
                 //creating mux
                 mux = params.codecManager.buildMultiplexer(params.contentType);
-//                getContext().s
                 if (mux==null) {
                     getLogger().error(String.format("Not found multiplexer for content type (%s)", params.contentType));
                     getFacade().stop();
@@ -111,7 +110,7 @@ public class AudioFileWriterDataSourceDP extends AbstractDataProcessorLogic {
                     mux.open();
                     muxInitialized = true;
                     PushDataSource ds = (PushDataSource) mux.getDataOutput();
-                    ds.getStreams()[0].setTransferHandler(new AudioFileWriterDataSource.MuxTransferHandler());
+                    ds.getStreams()[0].setTransferHandler(new MuxTransferHandler());
                     ds.connect();
                     ds.start();
                     
@@ -129,7 +128,6 @@ public class AudioFileWriterDataSourceDP extends AbstractDataProcessorLogic {
                     become(RUN_STAGE);
                     return STARTED_MESSAGE;
                 } catch (Exception ex) {
-//                    processClose();
                     getFacade().stop();
                     return ERROR_MESSAGE;
                 }
@@ -290,17 +288,6 @@ public class AudioFileWriterDataSourceDP extends AbstractDataProcessorLogic {
                     return;
                 buffer.setSequenceNumber(trackID);
                 bufferProcessor.send(buffer);                
-////                System.out.println(">> processing buffer");
-////                if (firstBuffer) {
-////                    initMux(buffer);
-//////                    createFile();
-////                    firstBuffer = false;
-////                }
-//                while (!muxClosed.get() && mux.process(buffer, trackID) > 1) ;
-//                if (buffer.isEOM()) {
-//                    closeMux();
-//                    closeFile();
-//                }
             } catch (IOException ex) {
                 getFacade().send(new CloseTrack(trackID));
                 getLogger().error("Buffer transfer error in INBOUND hander", ex);
@@ -311,11 +298,6 @@ public class AudioFileWriterDataSourceDP extends AbstractDataProcessorLogic {
     
     private class MuxTransferHandler implements SourceTransferHandler, Seekable {
         private final byte[] buffer = new byte[128];
-//        public MuxTransferHandler() throws FileNotFoundException {
-//            if (logger.isDebugEnabled())
-//                logger.debug("Creating file ({})", file);
-//            out = new RandomAccessFile(file, "rw");
-//        }
 
         @Override
         public void transferData(PushSourceStream sourceStream) {
@@ -329,21 +311,6 @@ public class AudioFileWriterDataSourceDP extends AbstractDataProcessorLogic {
                     getLogger().error("Error writing to audio to file", ex);
                 getFacade().send(WRITE_TO_FILE_ERROR);
             }
-////            if (cnt==-1 || sourceStream.endOfStream())
-//                
-//            int dataLen = sourceStream.getMinimumTransferSize();
-////            System.out.println("dataLen: "+dataLen);
-//            if (dataLen>0) {
-//                byte[] data = new byte[dataLen];
-//                try {
-//                    int processedBytes = sourceStream.read(data, 0, dataLen);
-//                    out.write(data, 0, processedBytes);
-//                } catch (IOException ex) {
-//                    processError(ex);
-//                }
-//            }
-//            if (sourceStream.endOfStream())
-//                closeFile();
         }
 
         @Override
@@ -376,6 +343,4 @@ public class AudioFileWriterDataSourceDP extends AbstractDataProcessorLogic {
             return true;
         }
     }
-    
-    
 }

@@ -44,20 +44,20 @@ public class AudioFileWriterDataSource {
     private final AtomicBoolean muxClosed = new AtomicBoolean(false);
     private final AtomicBoolean muxInitialized = new AtomicBoolean(false);
 
-    public AudioFileWriterDataSource(File file, PushBufferDataSource[] dataSources
+    public AudioFileWriterDataSource(File file, PushBufferDataSource dataSources
             , CodecManager codecManager, String contentType, LoggerHelper logger) 
         throws FileWriterDataSourceException 
     {
         this.logger = new LoggerHelper(logger, "Audio file writer. ");
         this.file = file;
-        this.dataSources = dataSources;
+        this.dataSources = new PushBufferDataSource[]{dataSources};
         mux = codecManager.buildMultiplexer(contentType);
         if (mux==null) 
             throw new FileWriterDataSourceException(String.format(
                     "Not found multiplexer for content type (%s)", contentType));
         mux.setContentDescriptor(new ContentDescriptor(contentType));
-        mux.setNumTracks(dataSources.length);
-        for (int i=0; i<dataSources.length; i++)
+        mux.setNumTracks(this.dataSources.length);
+        for (int i=0; i<this.dataSources.length; i++)
             this.dataSources[0].getStreams()[0].setTransferHandler(new DataSourceTransferHandler(i));
     }
     
