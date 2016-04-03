@@ -40,6 +40,7 @@ import org.raven.tree.impl.LoggerHelper;
 /**
  *
  * @author Mikhail Titov
+ * @param <H>
  */
 public abstract class AbstractRealTimeMixer<H extends MixerHandler<H>> extends PushBufferDataSource 
     implements RealTimeDataSourceMarker
