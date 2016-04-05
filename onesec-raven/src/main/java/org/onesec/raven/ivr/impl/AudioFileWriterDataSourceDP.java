@@ -69,27 +69,27 @@ public class AudioFileWriterDataSourceDP extends AbstractDataProcessorLogic {
                     getFacade().stop();
                     return ERROR_MESSAGE;
                 }
-                //checking dataSources format
-                Format format = dataSources[0].getStreams()[0].getFormat();
-                for (int i=1; i<dataSources.length; ++i)
-                    if (!format.matches(dataSources[i].getStreams()[0].getFormat())) {
-                        getLogger().error("Audio formats not matches to one another in passed dataSources");
-                        getFacade().stop();
-                        return ERROR_MESSAGE;
-                    }
-                //creating mux
+//                //checking dataSources format
+//                Format format = dataSources[0].getStreams()[0].getFormat();
+//                for (int i=1; i<dataSources.length; ++i)
+//                    if (!format.matches(dataSources[i].getStreams()[0].getFormat())) {
+//                        getLogger().error("Audio formats not matches to one another in passed dataSources");
+//                        getFacade().stop();
+//                        return ERROR_MESSAGE;
+//                    }
+//                //creating mux
                 mux = params.codecManager.buildMultiplexer(params.contentType);
                 if (mux==null) {
                     getLogger().error(String.format("Not found multiplexer for content type (%s)", params.contentType));
                     getFacade().stop();
                     return ERROR_MESSAGE;
                 }
-                for (int i=0; i<dataSources.length; ++i)
-                    if (mux.setInputFormat(format, i)==null) {
-                        getFacade().stop();
-                        getLogger().error("Invalid mux format: "+format);
-                        return ERROR_MESSAGE;
-                    }
+//                for (int i=0; i<dataSources.length; ++i)
+//                    if (mux.setInputFormat(format, i)==null) {
+//                        getFacade().stop();
+//                        getLogger().error("Invalid mux format: "+format);
+//                        return ERROR_MESSAGE;
+//                    }
                 mux.setContentDescriptor(new ContentDescriptor(params.contentType));
                 mux.setNumTracks(dataSources.length);
                 become(START_STAGE);
@@ -105,6 +105,32 @@ public class AudioFileWriterDataSourceDP extends AbstractDataProcessorLogic {
         @Override public Object processData(Object message) throws Exception {
             if (message==START_MESSAGE) {
                 try {
+                    //initializing
+                    //creating mux
+                    
+                    //starting dataSources
+                    inboundTransferHanders = new InboundTransferHandler[dataSources.length];
+                    DataProcessorFacade bufferProcessor = getContext().addChild(
+                            getContext().createChild("Buffer processor", new BufferProcessor(mux)));
+                    for (int i=0; i<dataSources.length; i++) {
+                        dataSources[i].connect();
+                    }
+                    //checking dataSources format
+                    Format format = dataSources[0].getStreams()[0].getFormat();
+                    for (int i=1; i<dataSources.length; ++i)
+                        if (!format.matches(dataSources[i].getStreams()[0].getFormat())) {
+                            getLogger().error("Audio formats not matches to one another in passed dataSources");
+                            getFacade().stop();
+                            return ERROR_MESSAGE;
+                        }
+                    //setting mux input format
+                    for (int i=0; i<dataSources.length; ++i)
+                        if (mux.setInputFormat(format, i)==null) {
+                            getFacade().stop();
+                            getLogger().error("Invalid mux format: "+format);
+                            return ERROR_MESSAGE;
+                        }
+                    
                     //starting mux
                     out = new RandomAccessFile(file, "rw");
                     mux.open();
@@ -113,21 +139,18 @@ public class AudioFileWriterDataSourceDP extends AbstractDataProcessorLogic {
                     ds.getStreams()[0].setTransferHandler(new MuxTransferHandler());
                     ds.connect();
                     ds.start();
-                    
-                    //starting dataSources
-                    inboundTransferHanders = new InboundTransferHandler[dataSources.length];
-                    DataProcessorFacade bufferProcessor = getContext().addChild(
-                            getContext().createChild("Buffer processor", new BufferProcessor(mux)));
                     for (int i=0; i<dataSources.length; i++) {
                         InboundTransferHandler handler = new InboundTransferHandler(i, bufferProcessor);
                         inboundTransferHanders[i]=handler;
                         dataSources[i].getStreams()[0].setTransferHandler(handler);
-                        dataSources[i].connect();
                         dataSources[i].start();
                     }
+                    
                     become(RUN_STAGE);
                     return STARTED_MESSAGE;
                 } catch (Exception ex) {
+                    if (getLogger().isErrorEnabled())
+                        getLogger().error("Error start writing to file", ex);
                     getFacade().stop();
                     return ERROR_MESSAGE;
                 }
@@ -143,7 +166,7 @@ public class AudioFileWriterDataSourceDP extends AbstractDataProcessorLogic {
             } else if (message instanceof CloseTrack) {
                 closeChannel(((CloseTrack)message).trackID);
                 if (!hasActiveChannel())
-                    getFacade().send(STOPPED_MESSAGE);
+                    getFacade().send(STOP_MESSAGE);
                 return VOID;
             } else if (message==STOP_MESSAGE || message==WRITE_TO_FILE_ERROR) {
 //                processClose();
@@ -155,8 +178,8 @@ public class AudioFileWriterDataSourceDP extends AbstractDataProcessorLogic {
     };
 
     @Override
-    public void init(DataProcessorFacade facade, DataProcessorContext context) {
-        context.become(INIT_STAGE, true);
+    public void postInit() {
+        getContext().become(INIT_STAGE, true);
     }
 
     @Override
@@ -184,8 +207,8 @@ public class AudioFileWriterDataSourceDP extends AbstractDataProcessorLogic {
     private boolean hasActiveChannel() {
         for (InboundTransferHandler handler: inboundTransferHanders) 
             if (handler!=null)
-                return false;
-        return true;
+                return true;
+        return false;
     }
     
     private void processClose() {
@@ -244,6 +267,11 @@ public class AudioFileWriterDataSourceDP extends AbstractDataProcessorLogic {
 
         public CloseTrack(int trackID) {
             this.trackID = trackID;
+        }
+
+        @Override
+        public String toString() {
+            return "CloseTrack: "+trackID;
         }
     }
     

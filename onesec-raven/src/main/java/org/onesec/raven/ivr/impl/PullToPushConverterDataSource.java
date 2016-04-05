@@ -34,8 +34,8 @@ public class PullToPushConverterDataSource extends PushBufferDataSource {
     private final PullBufferDataSource source;
     private final ExecutorService executor;
     private final PullToPushConverterDataStream[] streams;
-    private AtomicBoolean connected = new AtomicBoolean();
-    private AtomicBoolean started = new AtomicBoolean();
+    private final AtomicBoolean connected = new AtomicBoolean();
+    private final AtomicBoolean started = new AtomicBoolean();
 
     public PullToPushConverterDataSource(PullBufferDataSource source, ExecutorService executor, Node owner) {
         this.source = source;

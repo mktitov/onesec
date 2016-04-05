@@ -15,23 +15,20 @@
  */
 package org.onesec.raven.ivr.impl;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import javax.media.protocol.FileTypeDescriptor;
 import javax.media.protocol.PushBufferDataSource;
-import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
-import static org.junit.Assert.*;
 import org.onesec.raven.OnesecRavenModule;
 import org.onesec.raven.OnesecRavenTestCase;
 import org.onesec.raven.ivr.CodecManager;
 import org.onesec.raven.ivr.InputStreamSource;
-import org.raven.dp.DataProcessor;
-import org.raven.dp.DataProcessorContext;
-import org.raven.dp.DataProcessorFacade;
+import org.raven.dp.RavenFuture;
 import org.raven.log.LogLevel;
 import org.raven.sched.ExecutorService;
 import org.raven.test.TestDataProcessorFacade;
@@ -39,6 +36,8 @@ import org.raven.test.TestDataProcessorFacadeConfig;
 import org.raven.tree.impl.LoggerHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import static org.onesec.raven.ivr.impl.AudioFileWriterDataSourceDP.*;
+import org.raven.dp.DataProcessorFacade;
 
 /**
  *
@@ -65,10 +64,40 @@ public class AudioFileWriterDataSourceDPTest extends OnesecRavenTestCase {
     }
     
     @Test
-    public void testOneChannel() {
+    public void testOneChannel() throws Exception {
         TestDataProcessorFacade writer = createAudioWriter();
-                PushBufferDataSource ds = createDataSourceFromFile("src/test/wav/test2.wav");
-
+        PushBufferDataSource ds = createDataSourceFromFile("src/test/wav/test2.wav");
+        File out = new File("target/audio_writer_testOneChannel.wav");
+        ask(writer, new Init(out, new PushBufferDataSource[]{ds}, codecManager, FileTypeDescriptor.WAVE), INITIALIZED_MESSAGE, 100);
+        ask(writer, START_MESSAGE, STARTED_MESSAGE, 100);
+        waitForStop(writer, 15);
+//        RavenFuture res = writer.ask();
+//        assertEquals(INITIALIZED_MESSAGE, res.get(100, TimeUnit.MILLISECONDS));
+        
+    }
+    
+    @Test
+    public void testTwoChannel() throws Exception {
+        TestDataProcessorFacade writer = createAudioWriter();
+        PushBufferDataSource ds1 = createDataSourceFromFile("src/test/wav/test.wav");
+        PushBufferDataSource ds2 = createDataSourceFromFile("src/test/wav/test2.wav");
+        File out = new File("target/audio_writer_testTwoChannel.wav");
+        ask(writer, new Init(out, new PushBufferDataSource[]{ds1, ds2}, codecManager, FileTypeDescriptor.WAVE), INITIALIZED_MESSAGE, 100);
+        ask(writer, START_MESSAGE, STARTED_MESSAGE, 100);
+        waitForStop(writer, 15);
+//        assertEquals(true, writer.watch().get(15, TimeUnit.SECONDS));
+//        RavenFuture res = writer.ask();
+//        assertEquals(INITIALIZED_MESSAGE, res.get(100, TimeUnit.MILLISECONDS));
+        
+    }
+    
+    private void ask(DataProcessorFacade facade, Object req, Object resp, long timeout) throws Exception {
+        RavenFuture res = facade.ask(req);
+        assertEquals(resp, res.get(timeout, TimeUnit.MILLISECONDS));        
+    }
+    
+    private void waitForStop(DataProcessorFacade facade, long timeout) throws Exception {
+        assertEquals(true, facade.watch().get(timeout, TimeUnit.SECONDS));        
     }
     
     protected TestDataProcessorFacade createAudioWriter() {
