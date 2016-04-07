@@ -15,6 +15,7 @@
  */
 package org.onesec.raven.ivr.impl;
 
+import com.ibm.media.codec.audio.alaw.JavaDecoder;
 import com.sun.media.codec.audio.ulaw.Packetizer;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -26,6 +27,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.media.*;
 import javax.media.format.AudioFormat;
 import javax.media.protocol.ContentDescriptor;
+import org.onesec.raven.codec.AlawDecoder;
 import org.onesec.raven.codec.AlawDepacketizer;
 import org.onesec.raven.codec.AlawEncoder;
 import org.onesec.raven.codec.AlawPacketizer;
@@ -64,13 +66,24 @@ public class CodecManagerImpl implements CodecManager {
                 , up.getSupportedInputFormats(), up.getSupportedOutputFormats(null)
                 , PlugInManager.CODEC);
         logger.debug("New ULAW packetizier codec ({}) successfully added", UlawPacketizer.class.getName());
+        
+        if (PlugInManager.removePlugIn(JavaDecoder.class.getName(), PlugInManager.CODEC))
+            logger.debug("ALAW decoder codec (with offset bug) ({}) successfully removed", JavaDecoder.class.getName());
+        
+        AlawDecoder alawDe = new AlawDecoder();
+        PlugInManager.addPlugIn(
+                AlawDecoder.class.getName(), 
+                alawDe.getSupportedInputFormats(), 
+                alawDe.getSupportedOutputFormats(null), 
+                PlugInManager.CODEC);
+        logger.debug("ALAW decoder codec ({}) successfully added", AlawDecoder.class.getName());
 
         AlawEncoder en = new AlawEncoder();
         PlugInManager.addPlugIn(AlawEncoder.class.getName()
                 , en.getSupportedInputFormats()
 				, en.getSupportedOutputFormats(null)
                 , PlugInManager.CODEC);
-        logger.debug("ALAW codec ({}) successfully added", AlawEncoder.class.getName());
+        logger.debug("ALAW encoder codec ({}) successfully added", AlawEncoder.class.getName());
 
         AlawPacketizer p = new AlawPacketizer();
         PlugInManager.addPlugIn(AlawPacketizer.class.getName()

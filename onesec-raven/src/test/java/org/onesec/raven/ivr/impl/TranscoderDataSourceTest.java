@@ -68,7 +68,7 @@ public class TranscoderDataSourceTest extends Assert {
         expect(owner.isLogLevelEnabled(anyObject(LogLevel.class))).andReturn(Boolean.TRUE).anyTimes();
         replay(executor, owner);
         
-        InputStreamSource source = new TestInputStreamSource("src/test/wav/test.wav");
+        InputStreamSource source = new TestInputStreamSource("src/test/wav/test_alaw.wav");
         IssDataSource dataSource = new IssDataSource(source, FileTypeDescriptor.WAVE);
         ContainerParserDataSource parser = new ContainerParserDataSource(codecManager, dataSource);
         PullToPushConverterDataSource conv = new PullToPushConverterDataSource(parser, executor, owner);
