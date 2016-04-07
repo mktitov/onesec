@@ -21,6 +21,7 @@ import java.io.RandomAccessFile;
 import javax.media.Buffer;
 import javax.media.Format;
 import javax.media.Multiplexer;
+import javax.media.format.AudioFormat;
 import javax.media.protocol.BufferTransferHandler;
 import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.PushBufferDataSource;
@@ -91,7 +92,7 @@ public class AudioFileWriterDataSourceDP extends AbstractDataProcessorLogic {
 //                        return ERROR_MESSAGE;
 //                    }
                 mux.setContentDescriptor(new ContentDescriptor(params.contentType));
-                mux.setNumTracks(dataSources.length);
+                mux.setNumTracks(1);
                 become(START_STAGE);
                 initialized = true;
                 return INITIALIZED_MESSAGE;
@@ -116,7 +117,7 @@ public class AudioFileWriterDataSourceDP extends AbstractDataProcessorLogic {
                         dataSources[i].connect();
                     }
                     //checking dataSources format
-                    Format format = dataSources[0].getStreams()[0].getFormat();
+                    AudioFormat format = (AudioFormat)dataSources[0].getStreams()[0].getFormat();
                     for (int i=1; i<dataSources.length; ++i)
                         if (!format.matches(dataSources[i].getStreams()[0].getFormat())) {
                             getLogger().error("Audio formats not matches to one another in passed dataSources");
@@ -124,12 +125,17 @@ public class AudioFileWriterDataSourceDP extends AbstractDataProcessorLogic {
                             return ERROR_MESSAGE;
                         }
                     //setting mux input format
-                    for (int i=0; i<dataSources.length; ++i)
-                        if (mux.setInputFormat(format, i)==null) {
-                            getFacade().stop();
-                            getLogger().error("Invalid mux format: "+format);
-                            return ERROR_MESSAGE;
-                        }
+                    getLogger().debug("Format: "+format.getEncoding());
+                    AudioFormat muxFormat = new AudioFormat(format.getEncoding(), format.getSampleRate(), 
+                            format.getSampleSizeInBits(), dataSources.length, format.getEndian(), format.getSigned(), 
+                            format.getSampleSizeInBits(), format.getFrameRate(), byte[].class);
+                    mux.setInputFormat(muxFormat, 1);
+//                    for (int i=0; i<dataSources.length; ++i)
+//                        if (mux.setInputFormat(format, i)==null) {
+//                            getFacade().stop();
+//                            getLogger().error("Invalid mux format: "+format);
+//                            return ERROR_MESSAGE;
+//                        }
                     
                     //starting mux
                     out = new RandomAccessFile(file, "rw");
@@ -286,6 +292,7 @@ public class AudioFileWriterDataSourceDP extends AbstractDataProcessorLogic {
         public Object processData(Object message) throws Exception {
             if (message instanceof Buffer) {
                 Buffer buffer = (Buffer)message;
+                buffer.setTimeStamp(System.nanoTime());
                 int trackId = (int) buffer.getSequenceNumber();
                 while (mux.process(buffer, trackId) > 1) ;
                 if (buffer.isEOM())
