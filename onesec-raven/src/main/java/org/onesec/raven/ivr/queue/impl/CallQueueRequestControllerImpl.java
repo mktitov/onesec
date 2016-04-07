@@ -107,6 +107,9 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
             cdrFields = cdr.getSchema().getFieldsMap();
             cdr.setValue(QUEUED_TIME, getTimestamp());
             cdr.setValue(PRIORITY, request.getPriority());
+            cdr.setValue(CALLING_NUMBER, lazyRequest? 
+                    ((LazyCallQueueRequest)request).getAbonentNumber() : 
+                    request.getConversation().getCallingNumber());
         } else
             cdr = null;
     }
