@@ -303,6 +303,38 @@ public class AudioFileWriterDataSourceDP extends AbstractDataProcessorLogic {
         }        
     }
     
+    private static class FileWriter extends AbstractDataProcessorLogic implements Completion {
+        private final AudioFormat fmt;
+        private final int channels;
+        private final File file;
+        
+        private boolean initialized = false;
+
+        public FileWriter(AudioFormat fmt, int channels, File file) {
+            this.fmt = fmt;
+            this.channels = channels;
+            this.file = file;
+        }
+
+        @Override
+        public Object processData(Object message) throws Exception {
+            if (message instanceof Buffer) {
+                if (!initialized) {
+                    createFile();
+                    writeHeader();
+                }
+                return VOID;
+            } else
+                return UNHANDLED;
+        }
+
+        private void writeHeader() {
+        }        
+
+        private void createFile() {
+        }
+    }
+    
 //    privte
     
     private class InboundTransferHandler implements BufferTransferHandler {
