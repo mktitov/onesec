@@ -20,7 +20,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.script.Bindings;
+import mockit.Delegate;
 import mockit.Expectations;
 import mockit.Mocked;
 import mockit.StrictExpectations;
@@ -205,8 +208,56 @@ public class ActionExecutorFacadeTest extends OnesecRavenTestCase {
         }};
     }
     
+    @Test
+    public void throttleExecutionTest(
+            @Mocked final Handler handler1
+    ) throws Exception {
+        final AtomicInteger counter = new AtomicInteger();
+        final AtomicReference<String> lastName = new AtomicReference<>();
+        new Expectations() {{
+            handler1.processData(withInstanceOf(Action.Execute.class)); result = new Delegate() {
+                public Object processData(Action.Execute action) {
+                    counter.incrementAndGet();
+                    return AbstractAction.ACTION_EXECUTED_then_STOP;
+                }                
+            };
+            handler1.setActionName(anyString); result = new Delegate() {
+                public void actionName(String name) {
+                    lastName.set(name);
+                }
+            };
+        }};
+        ActionExecutorFacade actionsExecutor = new ActionExecutorFacade(conversation, logger);
+        int i;
+        for (i=0; i<ActionExecutorDP.CHECK_SPEED_AT_CYCLE+1; i++) {
+            actionsExecutor.executeActions(Arrays.asList((Action)new SimpleAction(handler1, "action"+(i+1))));
+            Thread.sleep(5);
+//            actionsExecutor.cancelActionsExecution();            
+        }        
+        Thread.sleep(20);
+        assertEquals(ActionExecutorDP.CHECK_SPEED_AT_CYCLE, counter.get());
+        Thread.sleep(200l);
+        assertEquals(ActionExecutorDP.CHECK_SPEED_AT_CYCLE+1, counter.get());
+        
+        //every next execution will be delayed on 200ms
+        actionsExecutor.executeActions(Arrays.asList((Action)new SimpleAction(handler1, "action"+(i++))));
+        Thread.sleep(20);
+        assertEquals(ActionExecutorDP.CHECK_SPEED_AT_CYCLE+1, counter.get());
+        Thread.sleep(200l);
+        assertEquals(ActionExecutorDP.CHECK_SPEED_AT_CYCLE+2, counter.get());
+        
+        //checking that delayed actions will be ignored if actionsExecutor cancels action executing
+        actionsExecutor.executeActions(Arrays.asList((Action)new SimpleAction(handler1, "action"+(i++))));
+        Thread.sleep(5);
+        actionsExecutor.executeActions(Arrays.asList((Action)new SimpleAction(handler1, "last action")));
+        Thread.sleep(210);
+        assertEquals(ActionExecutorDP.CHECK_SPEED_AT_CYCLE+3, counter.get());
+        assertEquals("last action", lastName.get());
+    }
+    
     private interface Handler {
         public Object processData(Object message);
+        public void setActionName(String name);
     }    
     
     private class SimpleAction extends AbstractAction {
@@ -225,8 +276,10 @@ public class ActionExecutorFacadeTest extends OnesecRavenTestCase {
         @Override
         public Object processData(Object dataPackage) throws Exception {
             Object result = null;
-            if (handler!=null)
+            if (handler!=null) {
                 result = handler.processData(dataPackage);
+                handler.setActionName(getName());
+            }
             if (result instanceof Action.ActionExecuted)
                 getFacade().sendTo(getContext().getParent(), result);            
             return VOID;

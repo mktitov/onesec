@@ -303,7 +303,7 @@ public class AudioFileWriterDataSourceDP extends AbstractDataProcessorLogic {
         }        
     }
     
-    private static class FileWriter extends AbstractDataProcessorLogic implements Completion {
+    private static class FileWriter extends AbstractDataProcessorLogic {//implements Completion {
         private final AudioFormat fmt;
         private final int channels;
         private final File file;

@@ -23,9 +23,7 @@ import javax.script.Bindings;
 import mockit.Delegate;
 import mockit.Expectations;
 import mockit.Mocked;
-import mockit.StrictExpectations;
 import mockit.Verifications;
-import mockit.VerificationsInOrder;
 import mockit.integration.junit4.JMockit;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -79,6 +77,7 @@ public class QueueCallActionTest extends ActionTestCase {
         actionExecutor.setWaitForMessage(AbstractAction.ACTION_EXECUTED_then_EXECUTE_NEXT);
         action.send(executeMessage);
         assertTrue(actionExecutor.waitForMessage(100));
+        action.askStop().get();
         
         new Verifications() {{
             CallQueueRequestImpl req1, req2;
@@ -116,6 +115,7 @@ public class QueueCallActionTest extends ActionTestCase {
         actionExecutor.setWaitForMessage(AbstractAction.ACTION_EXECUTED_then_EXECUTE_NEXT);
         action.send(executeMessage);
         assertTrue(actionExecutor.waitForMessage(100));
+        action.askStop().get();
         
         new Verifications() {{
             CallQueueRequestImpl req1, req2;
@@ -160,13 +160,90 @@ public class QueueCallActionTest extends ActionTestCase {
             };
             state.enableDtmfProcessing();
             state.getBindings().put(IvrEndpointConversation.DISABLE_AUDIO_STREAM_RESET, false);
-            
+            request.removeRequestListener((CallQueueRequestListener) withNotNull());            
         }};
         TestDataProcessorFacade actionExecutor = createActionExecutor(actionExecutorDP);
         DataProcessorFacade action = createAction(actionExecutor, new QueueCallAction(null, true, true, 1, "queue_1", true, "1122"));
         actionExecutor.setWaitForMessage(AbstractAction.ACTION_EXECUTED_then_EXECUTE_NEXT);
         action.send(executeMessage);
         assertTrue(actionExecutor.waitForMessage(100));
+        action.askStop().get();
+    }
+    
+    //Commutation test with greeting but without greeting audio
+    @Test public void commutationPhaseWithGreeting2(
+            @Mocked final DataProcessor actionExecutorDP,
+            @Mocked final Action.Execute executeMessage,
+            @Mocked final IvrEndpointConversation conv,
+            @Mocked final ConversationScenarioState state,
+            @Mocked final Bindings bindings,
+            @Mocked final QueuedCallStatus request
+    ) throws Exception 
+    {
+        new Expectations() {{
+            conv.getConversationScenarioState(); result = state;
+            state.getBindings(); result = bindings;
+            bindings.get(QUEUED_CALL_STATUS_BINDING); result = request;
+            request.isReadyToCommutate(); result = true;
+            request.getOperatorGreeting(); result = null;
+            final List<CallQueueRequestListener> listeners = new LinkedList<>();
+            request.addRequestListener(withCapture(listeners));
+            bindings.put(IvrEndpointConversation.DISABLE_AUDIO_STREAM_RESET, true);
+            request.replayToReadyToCommutate(); result = new Delegate() {
+                void replayToReadyToCommutate() {
+                    listeners.get(0).commutated();
+                }
+            };
+            state.disableDtmfProcessing(); result = new Delegate() {
+                void disableDtmfProcessing() {
+                    listeners.get(0).disconnected();
+                }
+            };
+            state.enableDtmfProcessing();
+            state.getBindings().put(IvrEndpointConversation.DISABLE_AUDIO_STREAM_RESET, false);
+            request.removeRequestListener((CallQueueRequestListener) withNotNull());            
+        }};
+        TestDataProcessorFacade actionExecutor = createActionExecutor(actionExecutorDP);
+        DataProcessorFacade action = createAction(actionExecutor, new QueueCallAction(null, true, true, 1, "queue_1", true, "1122"));
+        actionExecutor.setWaitForMessage(AbstractAction.ACTION_EXECUTED_then_EXECUTE_NEXT);
+        action.send(executeMessage);
+        assertTrue(actionExecutor.waitForMessage(100));
+        action.askStop().get();
+    }
+    
+    //Checking commutation if QueuedCallStatus.isCommutated()
+    @Test public void commutatedTest(
+            @Mocked final DataProcessor actionExecutorDP,
+            @Mocked final Action.Execute executeMessage,
+            @Mocked final IvrEndpointConversation conv,
+            @Mocked final ConversationScenarioState state,
+            @Mocked final Bindings bindings,
+            @Mocked final QueuedCallStatus request
+    ) throws Exception 
+    {
+        new Expectations() {{
+            conv.getConversationScenarioState(); result = state;
+            state.getBindings(); result = bindings;
+            bindings.get(QUEUED_CALL_STATUS_BINDING); result = request;
+            request.isReadyToCommutate(); result = false;
+            request.isCommutated(); result = true;
+            final List<CallQueueRequestListener> listeners = new LinkedList<>();
+            request.addRequestListener(withCapture(listeners));
+            state.disableDtmfProcessing(); result = new Delegate() {
+                void disableDtmfProcessing() {
+                    listeners.get(0).disconnected();
+                }
+            };
+            state.enableDtmfProcessing();
+            state.getBindings().put(IvrEndpointConversation.DISABLE_AUDIO_STREAM_RESET, false);
+            request.removeRequestListener((CallQueueRequestListener) withNotNull());
+        }};
+        TestDataProcessorFacade actionExecutor = createActionExecutor(actionExecutorDP);
+        DataProcessorFacade action = createAction(actionExecutor, new QueueCallAction(null, true, true, 1, "queue_1", true, "1122"));
+        actionExecutor.setWaitForMessage(AbstractAction.ACTION_EXECUTED_then_EXECUTE_NEXT);
+        action.send(executeMessage);
+        assertTrue(actionExecutor.waitForMessage(100));
+        action.askStop().get();
     }
     
     @Test public void commutationPhaseWithoutGreetingTest(

@@ -35,53 +35,46 @@ public class AudioFileWriterDataSource {
 //    private final Node owner;
     private final LoggerHelper logger;
     private final File file;
-    private final PushBufferDataSource[] dataSources;
+    private final PushBufferDataSource dataSource;
 //    private final String logPrefix;
     private final Multiplexer mux;
     private boolean firstBuffer = true;
     private RandomAccessFile out;
     private final AtomicBoolean fileClosed = new AtomicBoolean(false);
     private final AtomicBoolean muxClosed = new AtomicBoolean(false);
-    private final AtomicBoolean muxInitialized = new AtomicBoolean(false);
+    private volatile boolean muxInitialized = false;
 
-    public AudioFileWriterDataSource(File file, PushBufferDataSource dataSources
+    public AudioFileWriterDataSource(File file, PushBufferDataSource dataSource
             , CodecManager codecManager, String contentType, LoggerHelper logger) 
         throws FileWriterDataSourceException 
     {
         this.logger = new LoggerHelper(logger, "Audio file writer. ");
         this.file = file;
-        this.dataSources = new PushBufferDataSource[]{dataSources};
+        this.dataSource = dataSource;
         mux = codecManager.buildMultiplexer(contentType);
         if (mux==null) 
             throw new FileWriterDataSourceException(String.format(
                     "Not found multiplexer for content type (%s)", contentType));
         mux.setContentDescriptor(new ContentDescriptor(contentType));
-        mux.setNumTracks(this.dataSources.length);
-        for (int i=0; i<this.dataSources.length; i++)
-            this.dataSources[0].getStreams()[0].setTransferHandler(new DataSourceTransferHandler(i));
+        mux.setNumTracks(1);
+        this.dataSource.getStreams()[0].setTransferHandler(new DataSourceTransferHandler());
     }
     
     public void start() throws IOException {
-        for (PushBufferDataSource dataSource: dataSources) {
-            dataSource.connect();
-            dataSource.start();
-        }
+        dataSource.connect();
+        dataSource.start();
     }
     
     public void stop() {
         closeMux();
         closeFile();
         try {
-            for (PushBufferDataSource dataSource: dataSources)
-                try {
-                    dataSource.stop();
-                } finally {
-                    dataSource.disconnect();
-                }
+            dataSource.stop();
         } catch (IOException ex) {
             if (logger.isErrorEnabled())
                 logger.error("Error stopping data source", ex);
         }
+        dataSource.disconnect();
     }
     
 //    private void createFile() {
@@ -117,7 +110,7 @@ public class AudioFileWriterDataSource {
             if (mux!=null && mux.getDataOutput()!=null) {
                 if (logger.isDebugEnabled())
                     logger.debug("Closing mux");
-                if (muxInitialized.get()) 
+                if (muxInitialized) 
                     mux.close();
                 mux.getDataOutput().stop();
                 mux.getDataOutput().disconnect();
@@ -130,8 +123,7 @@ public class AudioFileWriterDataSource {
     
     private void processError(Exception error) {
         out = null;
-        for (PushBufferDataSource dataSource: dataSources)
-            dataSource.getStreams()[0].setTransferHandler(null);
+        dataSource.getStreams()[0].setTransferHandler(null);
         if (logger.isErrorEnabled())
             logger.error("Error writing data to file ({})", file, error);
         closeMux();
@@ -139,22 +131,20 @@ public class AudioFileWriterDataSource {
     }
     
     private void initMux(Buffer buffer) {
-        if (muxInitialized.compareAndSet(false, true) && !muxClosed.get()) {
-            if (logger.isDebugEnabled())
-                logger.debug("Initializing multiplexer");
-            Format fmt = mux.setInputFormat(buffer.getFormat(), 0);
-            try {
-                if (fmt==null) 
-                    throw new Exception("Not supported format: "+buffer.getFormat());
-                mux.open();
-//                muxInitialized = true;
-                PushDataSource ds = (PushDataSource) mux.getDataOutput();
-                ds.getStreams()[0].setTransferHandler(new MuxTransferHandler());
-                ds.connect();
-                ds.start();
-            } catch (Exception ex) {
-                processError(ex);
-            }
+        if (logger.isDebugEnabled())
+            logger.debug("Initializing multiplexer");
+        Format fmt = mux.setInputFormat(buffer.getFormat(), 0);
+        try {
+            if (fmt==null) 
+                throw new Exception("Not supported format: "+buffer.getFormat());
+            mux.open();
+            muxInitialized = true;
+            PushDataSource ds = (PushDataSource) mux.getDataOutput();
+            ds.getStreams()[0].setTransferHandler(new MuxTransferHandler());
+            ds.connect();
+            ds.start();
+        } catch (Exception ex) {
+            processError(ex);
         }
     }
     
@@ -206,11 +196,6 @@ public class AudioFileWriterDataSource {
     }
     
     private class DataSourceTransferHandler implements BufferTransferHandler {
-        private final int trackID;
-
-        public DataSourceTransferHandler(int trackID) {
-            this.trackID = trackID;
-        }
 
         public void transferData(PushBufferStream sourceStream) {
             try {
@@ -224,7 +209,7 @@ public class AudioFileWriterDataSource {
 //                    createFile();
                     firstBuffer = false;
                 }
-                while (!muxClosed.get() && mux.process(buffer, trackID) > 1) ;
+                while (!muxClosed.get() && mux.process(buffer, 0) > 1) ;
                 if (buffer.isEOM()) {
                     closeMux();
                     closeFile();

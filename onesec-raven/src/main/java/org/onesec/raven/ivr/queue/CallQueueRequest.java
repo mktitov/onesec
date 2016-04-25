@@ -67,8 +67,16 @@ public interface CallQueueRequest
      * Returns <b>true</b> if the request was canceled from the abonent scenario side
      */
     public boolean isCanceled();
-
+    /**
+     * Adds request listener
+     * @param listener 
+     */
     public void addRequestListener(CallQueueRequestListener listener);
+    /**
+     * Removes request listener
+     * @param listener 
+     */
+    public void removeRequestListener(CallQueueRequestListener listener);
     /**
      * Returns data context
      */

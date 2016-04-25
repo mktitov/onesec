@@ -54,6 +54,7 @@ public class QueueCallAction extends AbstractAction
     private final String operatorPhoneNumbers;
     
     private IvrEndpointConversation conversation;
+    private RequestListener requestListener;
 
     public QueueCallAction(CallQueueRequestSender requestSender
             , boolean continueConversationOnReadyToCommutate, boolean continueConversationOnReject
@@ -87,6 +88,13 @@ public class QueueCallAction extends AbstractAction
 
     public CallQueueRequestSender getRequestSender() {
         return requestSender;
+    }
+
+    @Override
+    public void postStop() {
+        super.postStop();
+        if (requestListener!=null)
+            requestListener.removeListener();
     }
     
     //play greeting behaviour. Processing cancel event, disconnect event, 
@@ -139,15 +147,19 @@ public class QueueCallAction extends AbstractAction
                     getLogger().debug("Operator and abonent are ready to commutate. Commutating...");
                 return VOID;
             } else if (message==COMMUTATED) {
-                become(commutated);
-                conversation.getConversationScenarioState().disableDtmfProcessing();
-                if (getLogger().isDebugEnabled())
-                    getLogger().debug("Abonent and operator were commutated. Waiting for disconnected event...");
-                return VOID;
+                return becomeCommutated();
             }
             return UNHANDLED;
         }
-    }.andThen(disonnected).andThen(cancel);;
+    }.andThen(disonnected).andThen(cancel);
+
+    private Object becomeCommutated() {
+        become(commutated);
+        conversation.getConversationScenarioState().disableDtmfProcessing();
+        if (getLogger().isDebugEnabled())
+            getLogger().debug("Abonent and operator were commutated. Waiting for disconnected event...");
+        return VOID;
+    }
 
     private final Behaviour commutated = new Behaviour("Commutated") {
         @Override public Object processData(Object dataPackage) throws Exception {
@@ -173,13 +185,21 @@ public class QueueCallAction extends AbstractAction
             requestSender.sendCallQueueRequest(callStatus, context);
             return ACTION_EXECUTED_then_EXECUTE_NEXT;
         } else if (callStatus.isReadyToCommutate()) {
-            callStatus.addRequestListener(new RequestListener());
-            if (playOperatorGreeting)
+            requestListener = new RequestListener(callStatus);
+            callStatus.addRequestListener(requestListener);
+            if (playOperatorGreeting && callStatus.getOperatorGreeting()!=null)
                 become(new PlayGreeting(callStatus.getOperatorGreeting(), callStatus).andThen(cancel));
             else {
                 become(commutating);
                 getFacade().send(callStatus);
             }
+            return null;
+        } else if (callStatus.isCommutated()) { //“ака€ ситуаци€ может возникнуть тогда, когда проверка 
+                                                //callStatus.isReadyToCommutate() в коде выше, отработает 
+                                                //раньше continueConversationOnReadyToCommutate
+            requestListener = new RequestListener(callStatus);
+            callStatus.addRequestListener(requestListener);
+            becomeCommutated();
             return null;
         } else
             return ACTION_EXECUTED_then_EXECUTE_NEXT;
@@ -191,6 +211,15 @@ public class QueueCallAction extends AbstractAction
     }
     
     private class RequestListener implements CallQueueRequestListener {
+        private final QueuedCallStatus callStatus;
+
+        public RequestListener(QueuedCallStatus callStatus) {
+            this.callStatus = callStatus;
+        }
+        
+        public void removeListener() {
+            callStatus.removeRequestListener(this);
+        }
 
         @Override public void requestCanceled(String cause) { }
         @Override public void conversationAssigned(IvrEndpointConversation conversation) { }

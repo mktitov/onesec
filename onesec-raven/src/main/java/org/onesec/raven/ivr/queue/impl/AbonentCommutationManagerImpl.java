@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import org.onesec.raven.ivr.*;
 import org.onesec.raven.ivr.impl.IvrEndpointConversationListenerAdapter;
+import org.onesec.raven.ivr.impl.IvrEndpointPoolNode;
 import org.onesec.raven.ivr.queue.AbonentCommutationManager;
 import org.onesec.raven.ivr.queue.CallQueueRequestListener;
 import org.onesec.raven.ivr.queue.CallsQueue;
@@ -36,6 +37,7 @@ import org.onesec.raven.ivr.queue.event.ReadyToCommutateQueueEvent;
 import org.onesec.raven.ivr.queue.event.RejectedQueueEvent;
 import org.raven.ds.DataContext;
 import org.raven.log.LogLevel;
+import org.raven.sched.ExecutorService;
 import org.raven.sched.ExecutorServiceException;
 import org.raven.sched.impl.AbstractTask;
 import org.raven.tree.Node;
@@ -53,6 +55,7 @@ public class AbonentCommutationManagerImpl implements LazyCallQueueRequest, Abon
     private final String callingNumber;
     private final Node owner;
     private final IvrEndpointPool endpointPool;
+    private final ExecutorService executor;
     private final IvrConversationScenario conversationScenario;
     private final int inviteTimeout;
     private final long endpointWaitTimeout;
@@ -79,6 +82,7 @@ public class AbonentCommutationManagerImpl implements LazyCallQueueRequest, Abon
         this.owner = owner;
         this.context = context;
         this.endpointPool = endpointPool;
+        this.executor = ((IvrEndpointPoolNode)endpointPool).getExecutor();
         this.conversationScenario = conversationScenario;
         this.inviteTimeout = inviteTimeout;
         this.endpointWaitTimeout = endpointWaitTimeout;
@@ -97,15 +101,28 @@ public class AbonentCommutationManagerImpl implements LazyCallQueueRequest, Abon
                 fireDisconnectedEvent(Arrays.asList(listener));
         }
     }
+
+    @Override
+    public void removeRequestListener(CallQueueRequestListener listener) {
+        synchronized(listeners) {
+            listeners.remove(listener);
+        }
+    }
     
     private void fireDisconnectedEvent(final Collection<CallQueueRequestListener> listeners) {
-        if (!listeners.isEmpty()) 
-            conversation.getExecutorService().executeQuietly(new AbstractTask(conversation.getOwner(), "Delivering DISONNECTED event") {
-                @Override public void doRun() throws Exception {
-                    for (CallQueueRequestListener listener: listeners)
-                        listener.disconnected();
-                }
-            });
+        final IvrEndpointConversation _conversation = conversation;
+        if (!listeners.isEmpty()) {
+//            if (_conversation!=null)
+                executor.executeQuietly(new AbstractTask(_conversation==null?owner:_conversation.getOwner(), "Delivering DISONNECTED event") {
+                    @Override public void doRun() throws Exception {
+                        for (CallQueueRequestListener listener: listeners)
+                            listener.disconnected();
+                    }
+                });
+//            else
+//                for (CallQueueRequestListener listener: listeners)
+//                    listener.disconnected();
+        }
     }
 
     @Override

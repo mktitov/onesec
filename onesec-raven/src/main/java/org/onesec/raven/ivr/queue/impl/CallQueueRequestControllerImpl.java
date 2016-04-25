@@ -124,6 +124,10 @@ public class CallQueueRequestControllerImpl implements CallQueueRequestControlle
 
     public void addRequestListener(CallQueueRequestListener listener) { }
 
+    @Override
+    public void removeRequestListener(CallQueueRequestListener listener) {
+    }
+
     public void addRequestWrapperListener(RequestControllerListener listener) {
         synchronized (listeners) {
             listeners.add(listener);

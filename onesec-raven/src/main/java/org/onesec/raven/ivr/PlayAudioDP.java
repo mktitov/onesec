@@ -138,7 +138,7 @@ public class PlayAudioDP extends AbstractDataProcessorLogic {
 
         @Override
         public String toString() {
-            return "PLAY_AUDIO_FILE: "+audioFile==null?null:audioFile.getName();
+            return "PLAY_AUDIO_FILE: "+(audioFile==null? null : audioFile.getName());
         }
     }
     
