@@ -100,6 +100,11 @@ public class CallQueueRequestImpl implements QueuedCallStatus
     }
 
     @Override
+    public void removeRequestListener(CallQueueRequestListener listener) {
+        listeners.remove(listener);
+    }
+    
+    @Override
     public synchronized Status getStatus() {
         return status;
     }

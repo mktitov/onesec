@@ -42,7 +42,8 @@ public class IssStream implements PullSourceStream, Seekable
     }
     
     public void reset() {
-        inputBuffer.position(0);
+        if (inputBuffer!=null)
+            inputBuffer.position(0);
     }
 
     public ContentDescriptor getContentDescriptor()

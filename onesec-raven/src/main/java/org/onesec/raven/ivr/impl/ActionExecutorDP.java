@@ -39,6 +39,9 @@ import org.raven.ds.TimeoutMessageSelector;
  */
 public class ActionExecutorDP extends AbstractDataProcessorLogic {
     private final static String EXECUTE_NEXT_ACTION = "EXECUTE_NEXT_ACTION";
+    public final static int CHECK_SPEED_AT_CYCLE = 32;
+    private final static long MAX_TIME_PER_EXECUTION = 10;
+    private final static long THROTTLE_DELAY = 200;
     private final IvrEndpointConversation conversation;
     private final Set<Character> deferredDtmfs = new HashSet<>();
     private final List<Character> collectedDtmfs = new ArrayList<>();
@@ -48,6 +51,9 @@ public class ActionExecutorDP extends AbstractDataProcessorLogic {
     private DataProcessorFacade currentAction;
 //    private ActionStopListener actionStopListener = new StopListener();
     private long actionId = 0;
+    private int speedCheckCounter = 0;
+    private long lastCheckSpeedTime = 0;
+    private boolean throttled = false;
     private long executionCycleId = 0;
 
     public ActionExecutorDP(IvrEndpointConversation conversation) {
@@ -79,22 +85,65 @@ public class ActionExecutorDP extends AbstractDataProcessorLogic {
         @Override public Object processData(Object message) throws Exception {
             if (message instanceof ExecuteActions) {
 //                actionId=0;
-                Collection<Action> actions = ((ExecuteActions)message).actions;
-                actionsForExecute = actions.iterator();
-                getFacade().send(EXECUTE_NEXT_ACTION);
-                deferredDtmfs.clear();
-                collectedDtmfs.clear();
-                currentAction = null;
-                for (Action action: actions)
-                    if (action instanceof DtmfProcessPointAction) 
-                        for (char c: ((DtmfProcessPointAction)action).getDtmfs().toCharArray())
-                            deferredDtmfs.add(c);
-                become(executing);
+                ++executionCycleId;
+                if (throttled) {
+                    getFacade().sendDelayed(THROTTLE_DELAY, new ThrottledActionExecution((ExecuteActions) message, executionCycleId));
+                    return VOID;
+                }
+                if (speedCheckCounter==0)
+                    lastCheckSpeedTime = System.currentTimeMillis();
+                if (speedCheckCounter>=CHECK_SPEED_AT_CYCLE) {
+                    speedCheckCounter = 0;
+                    if (System.currentTimeMillis()-lastCheckSpeedTime < CHECK_SPEED_AT_CYCLE * MAX_TIME_PER_EXECUTION) {
+                        //матюгаемся матом
+                        if (getLogger().isWarnEnabled()) {
+                            getLogger().warn("Detected TOO FAST ACTIONS REEXECUTION. Every reexecution will be throttled on {}ms", THROTTLE_DELAY);                            
+                            getLogger().warn("Throttled actions sequence: "+getActionsNames(message));
+                        }
+                        throttled = true;
+                        getContext().stash();
+                        getContext().unstashAll();
+                        return VOID;
+                    }
+                } else 
+                    ++speedCheckCounter;
+                initActionsExecution((ExecuteActions) message);
+                return VOID;
+            } else if (message instanceof ThrottledActionExecution) {
+                ThrottledActionExecution wrapper = (ThrottledActionExecution) message;
+                if (wrapper.executionCycleId!=executionCycleId)
+                    return VOID;
+                initActionsExecution(wrapper.executeActionsMessage);
                 return VOID;
             } else if (message==CANCEL_ACTIONS_EXECUTION)
                 return true;
             else 
                 return UNHANDLED;
+        }
+
+        private StringBuilder getActionsNames(Object message) {
+            StringBuilder actionNames = new StringBuilder();
+            boolean first = true;
+            for (Action action: ((ExecuteActions)message).actions) {
+                if (!first)  actionNames.append(", ");
+                else first = false;
+                actionNames.append(action.getName());
+            }
+            return actionNames;
+        }
+
+        public void initActionsExecution(ExecuteActions message) {
+            Collection<Action> actions = (message).actions;
+            actionsForExecute = actions.iterator();
+            getFacade().send(EXECUTE_NEXT_ACTION);
+            deferredDtmfs.clear();
+            collectedDtmfs.clear();
+            currentAction = null;
+            for (Action action: actions)
+                if (action instanceof DtmfProcessPointAction)
+                    for (char c: ((DtmfProcessPointAction)action).getDtmfs().toCharArray())
+                        deferredDtmfs.add(c);
+            become(executing);
         }
     }.andThen(processDtmfRequests);
     
@@ -298,6 +347,21 @@ public class ActionExecutorDP extends AbstractDataProcessorLogic {
     public Object processData(Object dataPackage) throws Exception {
         return UNHANDLED;
 //        return VOID;
+    }
+    
+    private final class ThrottledActionExecution {
+        private final ExecuteActions executeActionsMessage;
+        private final long executionCycleId;
+
+        public ThrottledActionExecution(ExecuteActions executeActionsMessage, long executionCycleId) {
+            this.executeActionsMessage = executeActionsMessage;
+            this.executionCycleId = executionCycleId;
+        }        
+
+        @Override
+        public String toString() {
+            return "THROTTLED_ACTION_EXECUTION";
+        }        
     }
     
     private class Execute implements Action.Execute {
