@@ -18,6 +18,7 @@ package org.onesec.raven.ivr.impl;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.channels.FileChannel;
 import javax.annotation.processing.Completion;
 import javax.media.Buffer;
 import javax.media.Multiplexer;
@@ -51,12 +52,23 @@ public class AudioFileWriterDataSourceDP extends AbstractDataProcessorLogic {
     
     private File file;
     private PushBufferDataSource[] dataSources;
-    private Multiplexer mux;
+//    private Multiplexer mux;
     private boolean initialized;
     private boolean muxInitialized;
     private InboundTransferHandler[] inboundTransferHanders;
     private RandomAccessFile out;
             
+    @Override
+    public void postInit() {
+        getContext().become(INIT_STAGE, true);
+    }
+
+    @Override
+    public void postStop() {
+        if (initialized)
+            processClose();
+    }
+
     private final Behaviour INIT_STAGE = new Behaviour("INIT_STAGE") {
         @Override public Object processData(Object message) throws Exception {
             if (message instanceof Init) {
@@ -78,20 +90,20 @@ public class AudioFileWriterDataSourceDP extends AbstractDataProcessorLogic {
 //                        return ERROR_MESSAGE;
 //                    }
 //                //creating mux
-                mux = params.codecManager.buildMultiplexer(params.contentType);
-                if (mux==null) {
-                    getLogger().error(String.format("Not found multiplexer for content type (%s)", params.contentType));
-                    getFacade().stop();
-                    return ERROR_MESSAGE;
-                }
+//                mux = params.codecManager.buildMultiplexer(params.contentType);
+//                if (mux==null) {
+//                    getLogger().error(String.format("Not found multiplexer for content type (%s)", params.contentType));
+//                    getFacade().stop();
+//                    return ERROR_MESSAGE;
+//                }
 //                for (int i=0; i<dataSources.length; ++i)
 //                    if (mux.setInputFormat(format, i)==null) {
 //                        getFacade().stop();
 //                        getLogger().error("Invalid mux format: "+format);
 //                        return ERROR_MESSAGE;
 //                    }
-                mux.setContentDescriptor(new ContentDescriptor(params.contentType));
-                mux.setNumTracks(1);
+//                mux.setContentDescriptor(new ContentDescriptor(params.contentType));
+//                mux.setNumTracks(1);
                 become(START_STAGE);
                 initialized = true;
                 return INITIALIZED_MESSAGE;
@@ -110,8 +122,9 @@ public class AudioFileWriterDataSourceDP extends AbstractDataProcessorLogic {
                     
                     //starting dataSources
                     inboundTransferHanders = new InboundTransferHandler[dataSources.length];
+                    out = new RandomAccessFile(file, "rw");
                     DataProcessorFacade bufferProcessor = getContext().addChild(
-                            getContext().createChild("Buffer processor", new BufferProcessor(mux)));
+                            getContext().createChild("File writer ("+file.getName()+")", new FileWriter(out.getChannel())));
                     for (int i=0; i<dataSources.length; i++) {
                         dataSources[i].connect();
                     }
@@ -128,7 +141,7 @@ public class AudioFileWriterDataSourceDP extends AbstractDataProcessorLogic {
                     AudioFormat muxFormat = new AudioFormat(format.getEncoding(), format.getSampleRate(), 
                             format.getSampleSizeInBits(), dataSources.length, format.getEndian(), format.getSigned(), 
                             format.getSampleSizeInBits(), format.getFrameRate(), byte[].class);
-                    mux.setInputFormat(muxFormat, 1);
+//                    mux.setInputFormat(muxFormat, 1);
 //                    for (int i=0; i<dataSources.length; ++i)
 //                        if (mux.setInputFormat(format, i)==null) {
 //                            getFacade().stop();
@@ -137,13 +150,12 @@ public class AudioFileWriterDataSourceDP extends AbstractDataProcessorLogic {
 //                        }
                     
                     //starting mux
-                    out = new RandomAccessFile(file, "rw");
-                    mux.open();
+//                    mux.open();
                     muxInitialized = true;
-                    PushDataSource ds = (PushDataSource) mux.getDataOutput();
-                    ds.getStreams()[0].setTransferHandler(new MuxTransferHandler());
-                    ds.connect();
-                    ds.start();
+//                    PushDataSource ds = (PushDataSource) mux.getDataOutput();
+//                    ds.getStreams()[0].setTransferHandler(new MuxTransferHandler());
+//                    ds.connect();
+//                    ds.start();
                     for (int i=0; i<dataSources.length; i++) {
                         InboundTransferHandler handler = new InboundTransferHandler(i, bufferProcessor);
                         inboundTransferHanders[i]=handler;
@@ -183,17 +195,6 @@ public class AudioFileWriterDataSourceDP extends AbstractDataProcessorLogic {
     };
 
     @Override
-    public void postInit() {
-        getContext().become(INIT_STAGE, true);
-    }
-
-    @Override
-    public void postStop() {
-        if (initialized)
-            processClose();
-    }
-
-    @Override
     public void childTerminated(DataProcessorFacade child) {
     }
     
@@ -229,14 +230,14 @@ public class AudioFileWriterDataSourceDP extends AbstractDataProcessorLogic {
                 }
             } finally {
                 try {
-                    if (mux!=null && mux.getDataOutput()!=null) {
-                        if (muxInitialized) 
-                            mux.close();
-                        PushDataSource ds = (PushDataSource) mux.getDataOutput();
-                        ds.getStreams()[0].setTransferHandler(null);
-                        mux.getDataOutput().stop();
-                        mux.getDataOutput().disconnect();
-                    }
+//                    if (mux!=null && mux.getDataOutput()!=null) {
+//                        if (muxInitialized) 
+//                            mux.close();
+//                        PushDataSource ds = (PushDataSource) mux.getDataOutput();
+//                        ds.getStreams()[0].setTransferHandler(null);
+//                        mux.getDataOutput().stop();
+//                        mux.getDataOutput().disconnect();
+//                    }
                 } finally {
                     if (out!=null)
                         out.close();
@@ -280,11 +281,27 @@ public class AudioFileWriterDataSourceDP extends AbstractDataProcessorLogic {
         }
     }
     
-    private static class BufferProcessor extends AbstractDataProcessorLogic {
-        private final Multiplexer mux;
+    private static class FileWriter extends AbstractDataProcessorLogic {
+//        private final Multiplexer mux;
+//        private final RandomAccessFile file;
+        private final FileChannel channel;
+        private final AudioFormat format;
+        private final int channels;
+        //we need to know the audio format and the number of datasources
 
-        public BufferProcessor(Multiplexer mux) {
-            this.mux = mux;
+        public FileWriter(FileChannel file) {
+//            this.mux = mux;
+//            this.file = file;
+            this.channel = file.getChannel();
+        }
+
+        @Override
+        public void postStop() {
+            super.postStop(); 
+        }
+
+        private void initFile() {
+            
         }
 
         @Override @SuppressWarnings("empty-statement")
@@ -302,7 +319,7 @@ public class AudioFileWriterDataSourceDP extends AbstractDataProcessorLogic {
         }        
     }
     
-    private static class FileWriter extends AbstractDataProcessorLogic {//implements Completion {
+    private static class FileWriter1 extends AbstractDataProcessorLogic {//implements Completion {
         private final AudioFormat fmt;
         private final int channels;
         private final File file;

@@ -78,7 +78,7 @@ public class CallRecorderNodeTest extends OnesecRavenTestCase {
         assertTrue(bridgeManager.start());
     }
     
-//    @Test
+    @Test
     public void filterTest() {
         IvrConversationsBridge bridge = createMock(IvrConversationsBridge.class);
         IvrEndpointConversation conv1 = createMock("conv1", IvrEndpointConversation.class);
