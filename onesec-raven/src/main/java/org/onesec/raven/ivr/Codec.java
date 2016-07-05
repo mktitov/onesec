@@ -30,6 +30,8 @@ import org.onesec.raven.codec.g729.G729AudioFormat;
 public enum Codec
 {
     AUTO(-1), G711_MU_LAW(0), G711_A_LAW(8), G729(11), LINEAR(100);
+    
+//    public final static int BITS_PER_SAMPLE = 16;
 
     private final int payload;
     private final AudioFormat audioFormat;
@@ -41,11 +43,13 @@ public enum Codec
         switch (payload){
             case 11 :
                 ciscoMediaCapabilities = new CiscoMediaCapability[]{new CiscoMediaCapability(11, 60)};
-                audioFormat = new G729AudioFormat(AudioFormat.G729_RTP, new AudioFormat(AudioFormat.G729_RTP, 8000d, 8, 1));
+                audioFormat = new G729AudioFormat(AudioFormat.G729_RTP, 
+                        new AudioFormat(AudioFormat.G729_RTP, 8000d, 8, 1));
                 break;
             case 8 :
                 ciscoMediaCapabilities = new CiscoMediaCapability[]{new CiscoMediaCapability(2, 60)};
-                audioFormat = new AlawAudioFormat(AlawAudioFormat.ALAW_RTP, new AudioFormat(AlawAudioFormat.ALAW_RTP, 8000d, 8, 1));
+                audioFormat = new AlawAudioFormat(AlawAudioFormat.ALAW_RTP, 
+                        new AudioFormat(AlawAudioFormat.ALAW_RTP, 8000d, 8, 1));
                 break;
             case 100:
                 ciscoMediaCapabilities = null;

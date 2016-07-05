@@ -16,6 +16,7 @@
 package org.onesec.raven.ivr.impl;
 
 import com.ibm.media.codec.audio.alaw.JavaDecoder;
+import com.ibm.media.codec.audio.rc.RCModule;
 import com.sun.media.codec.audio.ulaw.Packetizer;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -380,6 +381,11 @@ public class CodecManagerImpl implements CodecManager {
         }
         
         public CodecConfig createCodecConfig() throws Exception {
+//            Format outFormat = outputFormat;
+//            if (codecClass.isInstance(RCModule.class)) {
+//                if (((AudioFormat)inputFormat).getChannels() != ((AudioFormat)outputFormat).getChannels())
+//                    ((AudioFormat)outputFormat).
+//            }                
             return new CodecConfigImpl((Codec)codecClass.newInstance(), outputFormat, inputFormat);
         }
     }

@@ -19,6 +19,7 @@ package org.onesec.raven.codec;
 
 import javax.media.Format;
 import javax.media.format.AudioFormat;
+import org.onesec.raven.ivr.Codec;
 
 /**
  *

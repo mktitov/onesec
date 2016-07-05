@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import javax.media.Controller;
 import javax.media.DataSink;
+import javax.media.Format;
 import javax.media.Manager;
 import javax.media.MediaLocator;
 import javax.media.Processor;
@@ -41,7 +42,7 @@ import org.slf4j.LoggerFactory;
 public class JMFHelper
 {
     private final static Logger logger = LoggerFactory.getLogger(JMFHelper.class);
-    public static AudioFormat DEFAULT_FORMAT = new AudioFormat(AudioFormat.LINEAR, 16000, 16, 1
+    public static AudioFormat DEFAULT_FORMAT = new AudioFormat(AudioFormat.LINEAR, 8000, 16, 1
                     , AudioFormat.LITTLE_ENDIAN, AudioFormat.SIGNED);
 
     public static OperationController writeToFile(DataSource dataSource, final String filename)

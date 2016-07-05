@@ -284,6 +284,7 @@ public class AudioFileWriterDataSourceDP extends AbstractDataProcessorLogic {
     private static class FileWriter extends AbstractDataProcessorLogic {
 //        private final Multiplexer mux;
 //        private final RandomAccessFile file;
+        
         private final FileChannel channel;
         private final AudioFormat format;
         private final int channels;
@@ -292,7 +293,10 @@ public class AudioFileWriterDataSourceDP extends AbstractDataProcessorLogic {
         public FileWriter(FileChannel file) {
 //            this.mux = mux;
 //            this.file = file;
-            this.channel = file.getChannel();
+//            this.channel = file.getChannel();
+            channel = null;
+            format = null;
+            channels = 1;
         }
 
         @Override
@@ -310,7 +314,7 @@ public class AudioFileWriterDataSourceDP extends AbstractDataProcessorLogic {
                 Buffer buffer = (Buffer)message;
                 buffer.setTimeStamp(System.nanoTime());
                 int trackId = (int) buffer.getSequenceNumber();
-                while (mux.process(buffer, trackId) > 1) ;
+//                while (mux.process(buffer, trackId) > 1) ;
                 if (buffer.isEOM())
                     getContext().getParent().send(new CloseTrack(trackId));
                 return VOID;
@@ -326,7 +330,7 @@ public class AudioFileWriterDataSourceDP extends AbstractDataProcessorLogic {
         
         private boolean initialized = false;
 
-        public FileWriter(AudioFormat fmt, int channels, File file) {
+        public FileWriter1(AudioFormat fmt, int channels, File file) {
             this.fmt = fmt;
             this.channels = channels;
             this.file = file;

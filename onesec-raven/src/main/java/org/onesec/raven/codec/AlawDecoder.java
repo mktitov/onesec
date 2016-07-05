@@ -21,6 +21,7 @@ import javax.media.Buffer;
 import javax.media.Control;
 import javax.media.Format;
 import javax.media.format.AudioFormat;
+import org.onesec.raven.ivr.Codec;
 
 /**
  *
@@ -62,7 +63,8 @@ public class AlawDecoder extends AudioCodec {
     protected Format[] getMatchingOutputFormats(Format in) {
         AudioFormat af = (AudioFormat) in;
 
-        this.supportedOutputFormats = new AudioFormat[]{new AudioFormat(AudioFormat.LINEAR, af.getSampleRate(), 16, af.getChannels(), 0, 1)};
+        this.supportedOutputFormats = new AudioFormat[]{
+            new AudioFormat(AudioFormat.LINEAR, af.getSampleRate(), 16, af.getChannels(), 0, 1)};
 
         return this.supportedOutputFormats;
     }

@@ -76,13 +76,13 @@ public class RealTimeMixerTest extends Assert {
         System.out.println("!! RES: "+(r|b));
     }
     
-//    @Test
+    @Test
     public void mixOneStream() throws Exception {
         trainMocks();
         replay(executor, owner);
         
         RealTimeMixer merger = new RealTimeMixer(codecManager, owner, "", executor, 0, 0);
-        merger.addDataSource(createDataSourceFromFile("src/test/wav/test2.wav"));
+        merger.addDataSource(createDataSourceFromFile("src/test/wav/test11_8k.wav"));
 //        merger.addDataSource(createDataSourceFromFile("src/test/wav/1sec_silence.wav"));
         merger.connect();
         JMFHelper.OperationController controller = JMFHelper.writeToFile(merger, "target/merger_1_source.wav");
@@ -93,15 +93,14 @@ public class RealTimeMixerTest extends Assert {
         verify(executor, owner);
     }
     
-//    @Test
+    @Test
     public void mergeOneStreamLittlePackets() throws Exception {
         trainMocks();
         replay(executor, owner);
         
         RealTimeMixer merger = new RealTimeMixer(codecManager, owner, ""
                 , executor, 0, 3);
-        merger.addDataSource(new BufferSplitterDataSource(
-                createDataSourceFromFile("src/test/wav/test2.wav"), 240, codecManager, loggerHelper));
+        merger.addDataSource(createDataSourceFromFile("src/test/wav/test2.wav", 240));
         merger.connect();
         JMFHelper.OperationController controller = JMFHelper.writeToFile(merger, "target/merger_1l_source.wav");
         TimeUnit.SECONDS.sleep(4);
@@ -111,7 +110,7 @@ public class RealTimeMixerTest extends Assert {
         verify(executor, owner);
     }
     
-//    @Test
+    @Test
     public void mergeTwoStreams() throws Exception {
         trainMocks();
         replay(executor, owner);
@@ -129,17 +128,15 @@ public class RealTimeMixerTest extends Assert {
         verify(executor, owner);
     }
     
-//    @Test
+    @Test
     public void mergeTwoStreamsLittlePackets() throws Exception {
         trainMocks();
         replay(executor, owner);
         
-        RealTimeMixer merger = new RealTimeMixer(codecManager, owner, ""
-                , executor, 0, 3);
+        RealTimeMixer merger = new RealTimeMixer(codecManager, owner, "", executor, 0, 3);
         PushBufferDataSource ds = createDataSourceFromFile("src/test/wav/test2.wav");
-        merger.addDataSource(new BufferSplitterDataSource(ds, 160, codecManager, loggerHelper));
-        merger.addDataSource(new BufferSplitterDataSource(
-                createDataSourceFromFile("src/test/wav/test.wav"), 160, codecManager, loggerHelper));
+        merger.addDataSource(createDataSourceFromFile("src/test/wav/test2.wav", 160));
+        merger.addDataSource(createDataSourceFromFile("src/test/wav/test.wav", 240));
         merger.connect();
         JMFHelper.OperationController controller = JMFHelper.writeToFile(merger, "target/merger_2l_sources.wav");
         TimeUnit.SECONDS.sleep(4);
@@ -158,7 +155,7 @@ public class RealTimeMixerTest extends Assert {
         TranscoderDataSource tds1 = new TranscoderDataSource(codecManager, ds
                 , Codec.G729.getAudioFormat(), new LoggerHelper(owner, null));
         RealTimeMixer merger = new RealTimeMixer(codecManager, owner, ""
-                , executor, 0, 10);
+                , executor, 0, 0);
         merger.addDataSource(tds1);
         merger.addDataSource(ds);
         merger.addDataSource(createDataSourceFromFile("src/test/wav/test.wav"));
@@ -192,11 +189,15 @@ public class RealTimeMixerTest extends Assert {
     }
     
     private PushBufferDataSource createDataSourceFromFile(String filename) throws Exception {
+        return createDataSourceFromFile(filename, 320);
+    }
+    
+    private PushBufferDataSource createDataSourceFromFile(String filename, int packetsSize) throws Exception {
         InputStreamSource source = new TestInputStreamSource(filename);
         IssDataSource dataSource = new IssDataSource(source, FileTypeDescriptor.WAVE);
         ContainerParserDataSource parser = new ContainerParserDataSource(codecManager, dataSource);
         PullToPushConverterDataSource conv = new PullToPushConverterDataSource(parser, executor, owner);
-        return new BufferSplitterDataSource(conv, 160, codecManager, loggerHelper);
+        return new BufferSplitterDataSource(conv, packetsSize, codecManager, loggerHelper);
     }
     
     private void trainMocks() throws ExecutorServiceException {

@@ -74,7 +74,7 @@ public class BufferSplitterDataSourceTest extends Assert {
     public void test() throws Exception {
         PullToPushConverterDataSource fileSource = createSourceFromFile();
         BufferSplitterDataSource splitterSource = new BufferSplitterDataSource(
-                fileSource, 160, codecManager, loggerHelper);
+                fileSource, 480, codecManager, loggerHelper);
         writeToFile(splitterSource, "splitter_res.wav");
         Thread.sleep(5000);
     }
@@ -149,7 +149,7 @@ public class BufferSplitterDataSourceTest extends Assert {
     }
 
     private PullToPushConverterDataSource createSourceFromFile() throws FileNotFoundException {
-        InputStreamSource source = new TestInputStreamSource("src/test/wav/test.wav");
+        InputStreamSource source = new TestInputStreamSource("src/test/wav/test11_8k.wav");
         IssDataSource dataSource = new IssDataSource(source, FileTypeDescriptor.WAVE);
         ContainerParserDataSource parser = new ContainerParserDataSource(codecManager, dataSource);
         PullToPushConverterDataSource conv = new PullToPushConverterDataSource(parser, executor, owner);

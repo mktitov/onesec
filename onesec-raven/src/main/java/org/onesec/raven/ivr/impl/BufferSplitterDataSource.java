@@ -17,6 +17,7 @@ package org.onesec.raven.ivr.impl;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicLong;
 import javax.media.Buffer;
 import javax.media.Format;
 import javax.media.Time;
@@ -44,8 +45,9 @@ public class BufferSplitterDataSource extends PushBufferDataSource {
     private final BufferCacheListener bufferCacheListener;
     private final ExecutorService executor;
     private final Node owner;
-    public final static AudioFormat FORMAT = new AudioFormat(AudioFormat.LINEAR, 8000d, 8, 1, -1
-            , 0, 8, 16000.0, byte[].class);
+    public final static AudioFormat FORMAT = new AudioFormat(
+            AudioFormat.LINEAR, 8000d, 16, 1, AudioFormat.LITTLE_ENDIAN, AudioFormat.SIGNED, 16, 16000.0, Format.byteArray);
+            //, -1, 0, 8, 16000.0, byte[].class);
 
     public BufferSplitterDataSource(PushBufferDataSource source, int maxBufferSize, 
             CodecManager codecManager, LoggerHelper logger) throws CodecManagerException 
@@ -58,8 +60,8 @@ public class BufferSplitterDataSource extends PushBufferDataSource {
             ExecutorService executor, Node owner) 
         throws CodecManagerException 
     {
-        this.source = new TranscoderDataSource(codecManager, source, FORMAT, logger);
         this.logger = new LoggerHelper(logger, "Buffer Splitter. ");
+        this.source = new TranscoderDataSource(codecManager, source, FORMAT, this.logger);
         this.bufferCacheListener = bufferCacheListener;
         this.executor = executor;
         this.owner = owner;
@@ -126,7 +128,7 @@ public class BufferSplitterDataSource extends PushBufferDataSource {
         }
 
         public Format getFormat() {
-            return sourceStream.getFormat();
+            return FORMAT;
         }
 
         public void read(Buffer buf) throws IOException {
@@ -164,18 +166,20 @@ public class BufferSplitterDataSource extends PushBufferDataSource {
                 if (sourceBuf.isDiscard())
                     return;
                 byte[] data = (byte[]) sourceBuf.getData();
-                int len = sourceBuf.getLength();
-                int pos = 0;
-                TickHelper ticker = new TickHelper(maxBufferSize/8);
+                final int len = sourceBuf.getLength();
+                int pos = sourceBuf.getOffset();
+                TickHelper ticker = new TickHelper(maxBufferSize/FORMAT.getSampleSizeInBits());
                 while (pos<=len) {
-                    int clen = Math.min(maxBufferSize, len-pos);
+                    int clen = Math.min(maxBufferSize, len-pos); 
+                    //выравниваем кол-во элементов по bitsPerSample
+                    clen = clen * 8 / FORMAT.getSampleSizeInBits() * (FORMAT.getSampleSizeInBits()/8); 
                     byte[] newData = new byte[clen];
                     System.arraycopy(data, pos, newData, 0, clen);
                     buffer = new Buffer();
                     buffer.setData(newData);
                     buffer.setFormat(sourceBuf.getFormat());
                     buffer.setOffset(0);
-                    buffer.setLength(clen);
+                    buffer.setLength(clen);                    
                     pos += clen==0? 1 : clen;
                     if (bufferCacheListener!=null)
                         buffers.add(buffer);
@@ -188,6 +192,7 @@ public class BufferSplitterDataSource extends PushBufferDataSource {
                         transferHandler.transferData(this);
                     ticker.sleep();
                 }
+                System.out.println("Buffer complete");
             } catch (Throwable e) {
                 if (logger.isErrorEnabled()) 
                     logger.error("Transfer data error", e);

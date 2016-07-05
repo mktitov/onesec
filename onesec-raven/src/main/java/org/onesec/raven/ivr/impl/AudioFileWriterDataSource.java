@@ -125,7 +125,7 @@ public class AudioFileWriterDataSource {
         out = null;
         dataSource.getStreams()[0].setTransferHandler(null);
         if (logger.isErrorEnabled())
-            logger.error("Error writing data to file ({})", file, error);
+            logger.error(String.format("Error writing data to file (%s)", file), error);
         closeMux();
         closeFile();
     }

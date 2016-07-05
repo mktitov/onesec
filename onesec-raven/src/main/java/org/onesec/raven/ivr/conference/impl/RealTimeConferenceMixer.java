@@ -18,12 +18,9 @@ package org.onesec.raven.ivr.conference.impl;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.media.Buffer;
 import javax.media.Format;
 import javax.media.Time;
-import javax.media.format.AudioFormat;
 import javax.media.protocol.BufferTransferHandler;
 import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.PushBufferDataSource;
@@ -43,7 +40,7 @@ import org.raven.tree.impl.LoggerHelper;
  * @author Mikhail Titov
  */
 public class RealTimeConferenceMixer extends AbstractRealTimeMixer {
-    private static final byte[] EMPTY_BUFFER = new byte[BUFFER_SIZE];
+    private static final byte[] EMPTY_BUFFER = new byte[BYTE_BUFFER_SIZE];
 
     public RealTimeConferenceMixer(CodecManager codecManager, Node owner, LoggerHelper logger, 
         ExecutorService executor, int noiseLevel, double maxGainCoef) 

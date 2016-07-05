@@ -93,6 +93,26 @@ public class CodecManagerImplTest extends Assert {
     }
     
     @Test
+    public void buildCodecChainTest3() throws Exception {
+        AudioFormat f1 = new AudioFormat(
+                AudioFormat.LINEAR, 11025, 16, 1, AudioFormat.LITTLE_ENDIAN, AudioFormat.SIGNED, 16, 22050., Format.byteArray);
+        AudioFormat f2 = new AudioFormat(
+                AudioFormat.LINEAR, 8000d, 16, 1, AudioFormat.LITTLE_ENDIAN, AudioFormat.UNSIGNED, 16, 16000.0, Format.byteArray);
+        CodecConfig[] codecs = manager.buildCodecChain(f1, f2);
+        assertNotNull(codecs);
+        for (CodecConfig codec: codecs) {
+            logger.debug("CODEC: {}", codec.getCodec());
+            logger.debug("   INPUT  FORMAT: {}", codec.getInputFormat());
+            logger.debug("   OUTPUT FORMAT: {}", codec.getOutputFormat());
+        }
+        assertEquals(1, codecs.length);
+        assertEquals(RCModule.class, codecs[0].getCodec().getClass());
+        assertEquals(f1, codecs[0].getInputFormat());
+        assertEquals(f2, codecs[0].getOutputFormat());
+        
+    }
+    
+    @Test
     public void buildMultiplexerTest() throws Exception {
         Multiplexer mux = manager.buildMultiplexer(FileTypeDescriptor.WAVE);
         assertNotNull(mux);

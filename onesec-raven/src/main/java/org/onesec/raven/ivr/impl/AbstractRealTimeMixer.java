@@ -29,6 +29,7 @@ import javax.media.protocol.ContentDescriptor;
 import javax.media.protocol.PushBufferDataSource;
 import javax.media.protocol.PushBufferStream;
 import org.onesec.raven.RingQueue;
+import org.onesec.raven.codec.ByteUtils;
 import org.onesec.raven.ivr.CodecManager;
 import org.onesec.raven.ivr.MixerHandler;
 import org.onesec.raven.ivr.RealTimeDataSourceMarker;
@@ -47,10 +48,17 @@ public abstract class AbstractRealTimeMixer<H extends MixerHandler<H>> extends P
 {
     public final static long TICK_INTERVAL = 20;
     public final static int BUFFER_SIZE = (int) (TICK_INTERVAL * 8);
+    public final static int BYTE_BUFFER_SIZE = BUFFER_SIZE * 2;
     public final static ContentDescriptor CONTENT_DESCRIPTOR = new ContentDescriptor(ContentDescriptor.RAW);
-    public final static AudioFormat FORMAT = new AudioFormat(AudioFormat.LINEAR, 8000d, 8, 1, -1
-            , 0, 8, 16000.0, byte[].class);
-    
+    public final static AudioFormat FORMAT = new AudioFormat(AudioFormat.LINEAR, 8000d, 16, 1, AudioFormat.LITTLE_ENDIAN
+            , AudioFormat.SIGNED, 16, 16000., Format.byteArray);
+    private final static byte[] SILENCE_DATA = new byte[BUFFER_SIZE*2]; 
+        
+    static {
+        for (int i=0; i<SILENCE_DATA.length; i+=2)
+            ByteUtils.writeSignedShortAsUnsigned(i, 0, SILENCE_DATA, true);
+    }
+
     protected final LoggerHelper logger;
     protected final CodecManager codecManager;
     protected final Node owner;
@@ -167,8 +175,15 @@ public abstract class AbstractRealTimeMixer<H extends MixerHandler<H>> extends P
     public static Buffer createBuffer(Buffer buf, int[] data, byte[] byteData, int len, int streamsCount, 
             double maxGainCoef, int bufferSize) 
     {
-        if (streamsCount==0) Arrays.fill(byteData, (byte)127);
-        else  {
+        int byteLen = len * 2;
+//        int byteLen = len;
+//        if (streamsCount==0) Arrays.fill(byteData, (byte)0);
+        if (streamsCount==0) {
+//            System.arraycopy(SILENCE_DATA, 0, byteData, 0, SILENCE_DATA.length);
+            Arrays.fill(byteData, (byte)0);
+//            System.out.println("WRITING SILIENCE");
+//            System.out.println("S: "+Arrays.toString(SILENCE_DATA));
+        } else  {
             double koef = maxGainCoef;
             if (koef>1.01 || streamsCount>1) {
                 int max=0;
@@ -176,27 +191,35 @@ public abstract class AbstractRealTimeMixer<H extends MixerHandler<H>> extends P
                     data[i] = data[i]/streamsCount;
                     max = max(max, abs(data[i]));
                 }
-                koef = min(max>0? 127./max : 1., maxGainCoef);
-            }
+                koef = min(max>0? 32767./max : 1., maxGainCoef);
+            } 
             koef = min(maxGainCoef, koef);
-            for (int i=0; i<len; ++i) {
-                if (koef>1.01) 
-                    data[i] = (int) (koef*data[i]);
-                byteData[i] = (byte) (data[i]+127);
+            int k =0;
+            for (int i=0; i<byteLen; i+=2) {
+                if (koef>1.01) {
+//                    System.out.println("Gaining!!!"); 
+                    data[k] = (int) (koef*data[k]);
+                }
+//                ByteUtils.writeSignedShortAsUnsigned(i, data[k++], byteData, true);
+                ByteUtils.writeShort(i, data[k++], byteData, true);
             }
         }
 //        Buffer buf = new Buffer();
         buf.setFormat(FORMAT);
         buf.setData(byteData);
+//        System.out.println("W: "+Arrays.toString(byteData));
         buf.setOffset(0);
-        buf.setLength(len==0? bufferSize : len);
+        buf.setLength(len==0? bufferSize : byteLen);
         return buf;
     }
     
     private class Stream implements PushBufferStream, Task {
         private final int[] data = new int[BUFFER_SIZE];
         private final int[] workData = new int[BUFFER_SIZE];
-        private final byte[] byteData = new byte[BUFFER_SIZE];
+        private final int BYTES_BUFFER_SIZE = BUFFER_SIZE * 2; //16bit per sample
+//        private final int BYTES_BUFFER_SIZE = BUFFER_SIZE; //16bit per sample
+        private final byte[] byteData = new byte[BYTES_BUFFER_SIZE]; 
+//        private final short[] byteData = new short[BUFFER_SIZE]; 
         
         private volatile Buffer bufferToTranssmit;
         private volatile BufferTransferHandler transferHandler;
@@ -286,9 +309,9 @@ public abstract class AbstractRealTimeMixer<H extends MixerHandler<H>> extends P
                     prevHandler = handler;
                 handler = handler.getNextHandler();
             }
-            applyBufferToHandlers(firstHandler, data, maxlen, streamsCount, maxGainCoef, BUFFER_SIZE);
+            applyBufferToHandlers(firstHandler, data, maxlen, streamsCount, maxGainCoef, BYTE_BUFFER_SIZE);
             bufferToTranssmit = createBuffer(new Buffer(), data, byteData, maxlen, streamsCount, maxGainCoef, 
-                    BUFFER_SIZE);
+                    BYTES_BUFFER_SIZE);
             BufferTransferHandler _transferHandler = transferHandler;
             if (_transferHandler!=null)
                 _transferHandler.transferData(this);
@@ -303,7 +326,7 @@ public abstract class AbstractRealTimeMixer<H extends MixerHandler<H>> extends P
             }
             Arrays.fill(workData, 0);
             Buffer buffer = bufferQueue.peek();
-            int len = BUFFER_SIZE; int offset = 0; int max=0;
+            int len = BYTES_BUFFER_SIZE; int offset = 0; int max=0;
             while (buffer!=null && len>0) {
                 int buflen = buffer.getLength();
                 if (buffer.isDiscard()) {
@@ -313,14 +336,17 @@ public abstract class AbstractRealTimeMixer<H extends MixerHandler<H>> extends P
                     byte[] bufdata = (byte[]) buffer.getData();
                     int bufOffset = buffer.getOffset();
                     int bytesToRead = min(len, buflen);
-                    for (int i=bufOffset; i<bufOffset+bytesToRead; ++i) {
-                        int val = (bufdata[i] & 0x00FF) - 127;
+                    int lastPos = bufOffset+bytesToRead;
+//                    System.out.println(String.format("R. (%d) Buf len: %s, bytes to read: %s", System.currentTimeMillis(), buflen, bytesToRead));
+                    for (int i=bufOffset; i<lastPos; i+=2) {
+                        int val = ByteUtils.readSignedShort(i, bufdata, true);
                         max = max(max, abs(val));
                         workData[offset++] = val;
                     }
                     if (bytesToRead==buflen || buffer.isEOM()) {
                         bufferQueue.pop();
                         buffer = bufferQueue.peek();
+//                        System.out.println("Buf processed reading next: "+buffer);
                     } else {
                         buffer.setOffset(bufOffset+bytesToRead);
                         buffer.setLength(buflen-bytesToRead);

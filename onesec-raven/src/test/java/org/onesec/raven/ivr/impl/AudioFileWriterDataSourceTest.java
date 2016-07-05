@@ -55,7 +55,7 @@ public class AudioFileWriterDataSourceTest {
         tasksFinished = 0;
     }
     
-//    @Test
+    @Test
     public void test() throws Exception {
         trainMocks();
         replay(executor, owner);
